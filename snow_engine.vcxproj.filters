@@ -13,10 +13,30 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{09c12f39-5ae9-4d86-be98-2d7ad30dc275}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="precompiled_header">
+      <UniqueIdentifier>{b1b412e6-6a2d-49d9-82ad-74d425f024f7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\RenderApp.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stdafx.cpp">
+      <Filter>precompiled_header</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\RenderApp.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stdafx.h">
+      <Filter>precompiled_header</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
