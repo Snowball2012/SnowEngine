@@ -4,8 +4,6 @@
 
 #include "RenderApp.h"
 
-using Microsoft::WRL::ComPtr;
-
 int APIENTRY WinMain( HINSTANCE hinstance, HINSTANCE prev_instance, LPSTR cmd_line, int show_cmd )
 {
 #if defined( DEBUG ) | defined( _DEBUG )

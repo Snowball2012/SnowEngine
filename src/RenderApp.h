@@ -1,6 +1,10 @@
 #pragma once
 
 #include <Luna/d3dApp.h>
+#include <Luna/MathHelper.h>
+#include <Luna/UploadBuffer.h>
+
+#include "FrameResource.h"
 
 class RenderApp: public D3DApp
 {
@@ -21,4 +25,42 @@ private:
 	virtual void OnMouseDown( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseUp( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseMove( WPARAM btnState, int x, int y ) override;
+
+	// build functions
+	void BuildDescriptorHeaps();
+	void BuildConstantBuffers();
+	void BuildRootSignature();
+	void BuildShadersAndInputLayout();
+	void BuildBoxGeometry();
+	void BuildPSO();
+	void BuildFrameResources();
+
+	static const int num_frame_resources = 3;
+	std::vector<FrameResource> m_frame_resources;
+	FrameResource* m_cur_frame_resource = nullptr;
+	int m_cur_fr_idx = 0;
+
+	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
+	ComPtr<ID3D12DescriptorHeap> m_cbv_heap = nullptr;
+
+	boost::optional<UploadBuffer<ObjectConstants>> m_object_cb;
+
+	std::unordered_map<std::string, MeshGeometry> m_geometry;
+
+	ComPtr<ID3DBlob> m_vs_bytecode = nullptr;
+	ComPtr<ID3DBlob> m_ps_bytecode = nullptr;
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
+
+	ComPtr<ID3D12PipelineState> m_pso = nullptr;
+
+	DirectX::XMFLOAT4X4 m_world = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 m_proj = MathHelper::Identity4x4();
+
+	float m_theta = 1.5f * DirectX::XM_PI;
+	float m_phi = DirectX::XM_PIDIV4;
+	float m_radius = 5.0f;
+
+	POINT m_last_mouse_pos;
 };

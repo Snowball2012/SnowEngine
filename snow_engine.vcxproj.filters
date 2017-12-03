@@ -19,6 +19,9 @@
     <Filter Include="precompiled_header">
       <UniqueIdentifier>{b1b412e6-6a2d-49d9-82ad-74d425f024f7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{35223a1b-fdbf-4126-9d5f-3d3c67795c8f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -30,6 +33,9 @@
     <ClCompile Include="src\stdafx.cpp">
       <Filter>precompiled_header</Filter>
     </ClCompile>
+    <ClCompile Include="src\FrameResource.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -38,5 +44,16 @@
     <ClInclude Include="src\stdafx.h">
       <Filter>precompiled_header</Filter>
     </ClInclude>
+    <ClInclude Include="src\FrameResource.h">
+      <Filter>core</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders\ps.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\vs.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
