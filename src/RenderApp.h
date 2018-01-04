@@ -35,6 +35,10 @@ private:
 	void BuildPSO();
 	void BuildFrameResources();
 
+	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
+	std::unordered_map<std::string, SubmeshGeometry>& LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices );
+
+
 	static const int num_frame_resources = 3;
 	std::vector<FrameResource> m_frame_resources;
 	FrameResource* m_cur_frame_resource = nullptr;

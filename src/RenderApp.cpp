@@ -7,7 +7,6 @@ using namespace DirectX;
 RenderApp::RenderApp( HINSTANCE hinstance ): D3DApp( hinstance )
 {
 	mMainWndCaption = L"Snow Engine";
-	//Set4xMsaaState( true );
 }
 
 bool RenderApp::Initialize()
@@ -134,13 +133,16 @@ void RenderApp::Draw( const GameTimer& gt )
 
 	mCommandList->SetGraphicsRootSignature( m_root_signature.Get() );
 
-	mCommandList->IASetVertexBuffers( 0, 1, &m_geometry.cbegin()->second.VertexBufferView() );
-	mCommandList->IASetIndexBuffer( &m_geometry.cbegin()->second.IndexBufferView() );
-	mCommandList->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-
 	mCommandList->SetGraphicsRootDescriptorTable( 0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart() );
 
-	mCommandList->DrawIndexedInstanced( (m_geometry.begin()->second).DrawArgs["box"].IndexCount, 1, 0, 0, 0 );
+	for ( const auto& geom_item : m_geometry )
+	{
+		mCommandList->IASetVertexBuffers( 0, 1, &geom_item.second.VertexBufferView() );
+		mCommandList->IASetIndexBuffer( &geom_item.second.IndexBufferView() );
+		mCommandList->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+		for ( const auto& submesh : geom_item.second.DrawArgs )
+			mCommandList->DrawIndexedInstanced( submesh.second.IndexCount, 1, submesh.second.StartIndexLocation, submesh.second.BaseVertexLocation, 0 );
+	}
 
 	// swap transition
 	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
@@ -278,8 +280,10 @@ void RenderApp::BuildShadersAndInputLayout()
 
 void RenderApp::BuildBoxGeometry()
 {
-	std::array<Vertex, 8> vertices =
+	// box and pyramid, 2 submeshes
+	std::array<Vertex, 8 + 5> vertices =
 	{
+		// box
 		Vertex( { XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
 		Vertex( { XMFLOAT3( -1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Black ) } ),
 		Vertex( { XMFLOAT3( +1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Red ) } ),
@@ -287,11 +291,20 @@ void RenderApp::BuildBoxGeometry()
 		Vertex( { XMFLOAT3( -1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Blue ) } ),
 		Vertex( { XMFLOAT3( -1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Yellow ) } ),
 		Vertex( { XMFLOAT3( +1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Cyan ) } ),
-		Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } )
+		Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } ),
+
+		// pyramid
+		Vertex( { XMFLOAT3( -1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
+		Vertex( { XMFLOAT3( -1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
+		Vertex( { XMFLOAT3( +1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
+		Vertex( { XMFLOAT3( +1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
+		Vertex( { XMFLOAT3( +0.0f, 3.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
 	};
 
-	std::array<std::uint16_t, 36> indices =
+	std::array<std::uint16_t, 36 + 18> indices =
 	{
+		// box
+
 		// front face
 		0, 1, 2,
 		0, 2, 3,
@@ -314,35 +327,61 @@ void RenderApp::BuildBoxGeometry()
 
 		// bottom face
 		4, 0, 3,
-		4, 3, 7
+		4, 3, 7,
+
+		// pyramid
+		8, 9, 12,
+		9, 10, 12,
+		10, 11, 12,
+		11, 8, 12,
+		10, 9, 8,
+		8, 11, 10
 	};
 
-	const UINT vb_byte_size = UINT( vertices.size() ) * sizeof( Vertex );
-	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( std::uint16_t );
-
-	auto& box_geom = m_geometry.emplace( "box_geom", MeshGeometry() ).first->second;
-	box_geom.Name = "box_geom";
-
-	ThrowIfFailed( D3DCreateBlob( vb_byte_size, &box_geom.VertexBufferCPU ) );
-	CopyMemory( box_geom.VertexBufferCPU->GetBufferPointer(), vertices.data(), vb_byte_size );
-
-	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &box_geom.IndexBufferCPU ) );
-	CopyMemory( box_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
-
-	box_geom.VertexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), vertices.data(), vb_byte_size, box_geom.VertexBufferUploader );
-	box_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), indices.data(), ib_byte_size, box_geom.IndexBufferUploader );
-
-	box_geom.VertexByteStride = sizeof( Vertex );
-	box_geom.VertexBufferByteSize = vb_byte_size;
-	box_geom.IndexFormat = DXGI_FORMAT_R16_UINT;
-	box_geom.IndexBufferByteSize = ib_byte_size;
+	auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "box_geom", vertices, indices );
 
 	SubmeshGeometry submesh;
-	submesh.IndexCount = UINT( indices.size() );
+	submesh.IndexCount = 36;
 	submesh.StartIndexLocation = 0;
 	submesh.BaseVertexLocation = 0;
 
-	box_geom.DrawArgs["box"] = submesh;
+	submeshes["box"] = submesh;
+
+	submesh.IndexCount = 18;
+	submesh.StartIndexLocation = 36;
+	submesh.BaseVertexLocation = 0;
+
+	submeshes["pyramid"] = submesh;
+}
+
+template<DXGI_FORMAT index_format, class VCRange, class ICRange>
+std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices )
+{
+	using vertex_type = decltype( *vertices.data() );
+	using index_type = decltype( *indices.data() );
+	static_assert( index_format == DXGI_FORMAT_R16_UINT && sizeof( index_type ) == 2, "Wrong index type in LoadGeometry" ); // todo: enum -> sizeof map check
+
+	const UINT vb_byte_size = UINT( vertices.size() ) * sizeof( vertex_type );
+	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( index_type );
+
+	auto& new_geom = m_geometry.emplace( name, MeshGeometry() ).first->second;
+	new_geom.Name = std::move( name );
+
+	ThrowIfFailed( D3DCreateBlob( vb_byte_size, &new_geom.VertexBufferCPU ) );
+	CopyMemory( new_geom.VertexBufferCPU->GetBufferPointer(), vertices.data(), vb_byte_size );
+
+	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
+	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
+
+	new_geom.VertexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
+	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+
+	new_geom.VertexByteStride = sizeof( vertex_type );
+	new_geom.VertexBufferByteSize = vb_byte_size;
+	new_geom.IndexFormat = index_format;
+	new_geom.IndexBufferByteSize = ib_byte_size;
+
+	return new_geom.DrawArgs;
 }
 
 void RenderApp::BuildPSO()
