@@ -2,9 +2,16 @@
 
 #include "RenderApp.h"
 
+#include <WindowsX.h>
+
+#include <boost/interprocess/shared_memory_object.hpp>
+#include <boost/interprocess/mapped_region.hpp>
+#include <cetonia/parser.h>
+
 using namespace DirectX;
 
-RenderApp::RenderApp( HINSTANCE hinstance ): D3DApp( hinstance )
+RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
+	: D3DApp( hinstance ), m_cmd_line( cmd_line )
 {
 	mMainWndCaption = L"Snow Engine";
 }
@@ -22,7 +29,7 @@ bool RenderApp::Initialize()
 	BuildConstantBuffers();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	BuildBoxGeometry();
+	BuildGeometry();
 	BuildPSO();
 
 	ThrowIfFailed( mCommandList->Close() );
@@ -41,15 +48,6 @@ void RenderApp::OnResize()
 	// Need to recompute projection matrix
 	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 1000.0f );
 	XMStoreFloat4x4( &m_proj, proj );
-}
-
-namespace
-{
-	struct Vertex
-	{
-		XMFLOAT3 pos;
-		XMFLOAT4 color;
-	};
 }
 
 namespace
@@ -89,13 +87,12 @@ void RenderApp::Update( const GameTimer& gt )
 	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
 	XMStoreFloat4x4( &m_view, view );
 
-	XMMATRIX world = XMLoadFloat4x4( &m_world );
 	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
-	const auto& mvp = world * view * proj;
+	const auto& vp = view * proj;
 
 	// do update
 	ObjectConstants obj_constants;
-	XMStoreFloat4x4( &obj_constants.model_view_proj, XMMatrixTranspose( mvp ) );
+	XMStoreFloat4x4( &obj_constants.model_view_proj, XMMatrixTranspose( vp ) );
 	m_cur_frame_resource->object_cb->CopyData( 0, obj_constants );
 }
 
@@ -195,10 +192,10 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 		float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
 
 		// Update the camera radius based on input.
-		m_radius += dx - dy;
+		m_radius += (dx - dy) * m_radius;
 
 		// Restrict the radius.
-		m_radius = MathHelper::Clamp( m_radius, 3.0f, 15.0f );
+		m_radius = MathHelper::Clamp( m_radius, 3.0f, 1000.0f );
 	}
 
 	m_last_mouse_pos.x = x;
@@ -278,80 +275,100 @@ void RenderApp::BuildShadersAndInputLayout()
 	};
 }
 
-void RenderApp::BuildBoxGeometry()
+void RenderApp::BuildGeometry()
 {
-	// box and pyramid, 2 submeshes
-	std::array<Vertex, 8 + 5> vertices =
+	if ( strlen( m_cmd_line ) == 0 )
 	{
-		// box
-		Vertex( { XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
-		Vertex( { XMFLOAT3( -1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Black ) } ),
-		Vertex( { XMFLOAT3( +1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Red ) } ),
-		Vertex( { XMFLOAT3( +1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
-		Vertex( { XMFLOAT3( -1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Blue ) } ),
-		Vertex( { XMFLOAT3( -1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Yellow ) } ),
-		Vertex( { XMFLOAT3( +1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Cyan ) } ),
-		Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } ),
+		// box and pyramid, 2 submeshes
+		std::array<Vertex, 8 + 5> vertices =
+		{
+			// box
+			Vertex( { XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
+			Vertex( { XMFLOAT3( -1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Black ) } ),
+			Vertex( { XMFLOAT3( +1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Red ) } ),
+			Vertex( { XMFLOAT3( +1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
+			Vertex( { XMFLOAT3( -1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Blue ) } ),
+			Vertex( { XMFLOAT3( -1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Yellow ) } ),
+			Vertex( { XMFLOAT3( +1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Cyan ) } ),
+			Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } ),
 
-		// pyramid
-		Vertex( { XMFLOAT3( -1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
-		Vertex( { XMFLOAT3( -1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
-		Vertex( { XMFLOAT3( +1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
-		Vertex( { XMFLOAT3( +1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
-		Vertex( { XMFLOAT3( +0.0f, 3.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
-	};
+			// pyramid
+			Vertex( { XMFLOAT3( -1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
+			Vertex( { XMFLOAT3( -1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
+			Vertex( { XMFLOAT3( +1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
+			Vertex( { XMFLOAT3( +1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
+			Vertex( { XMFLOAT3( +0.0f, 3.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
+		};
 
-	std::array<std::uint16_t, 36 + 18> indices =
+		std::array<std::uint16_t, 36 + 18> indices =
+		{
+			// box
+
+			// front face
+			0, 1, 2,
+			0, 2, 3,
+
+			// back face
+			4, 6, 5,
+			4, 7, 6,
+
+			// left face
+			4, 5, 1,
+			4, 1, 0,
+
+			// right face
+			3, 2, 6,
+			3, 6, 7,
+
+			// top face
+			1, 5, 6,
+			1, 6, 2,
+
+			// bottom face
+			4, 0, 3,
+			4, 3, 7,
+
+			// pyramid
+			8, 9, 12,
+			9, 10, 12,
+			10, 11, 12,
+			11, 8, 12,
+			10, 9, 8,
+			8, 11, 10
+		};
+
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "box_geom", vertices, indices );
+
+		SubmeshGeometry submesh;
+		submesh.IndexCount = 36;
+		submesh.StartIndexLocation = 0;
+		submesh.BaseVertexLocation = 0;
+
+		submeshes["box"] = submesh;
+
+		submesh.IndexCount = 18;
+		submesh.StartIndexLocation = 36;
+		submesh.BaseVertexLocation = 0;
+
+		submeshes["pyramid"] = submesh;
+	}
+	else
 	{
-		// box
+		std::ifstream file;
+		file.open( m_cmd_line );
+		if ( ! file.is_open() )
+			throw SnowEngineException( "can't read .obj" );
+		MeshData mesh_data = ObjImporter().ParseObj( file );
 
-		// front face
-		0, 1, 2,
-		0, 2, 3,
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "main", mesh_data.m_vertices, mesh_data.m_faces );
 
-		// back face
-		4, 6, 5,
-		4, 7, 6,
+		SubmeshGeometry submesh;
+		submesh.IndexCount = UINT( mesh_data.m_faces.size() );
+		submesh.StartIndexLocation = 0;
+		submesh.BaseVertexLocation = 0;
 
-		// left face
-		4, 5, 1,
-		4, 1, 0,
-
-		// right face
-		3, 2, 6,
-		3, 6, 7,
-
-		// top face
-		1, 5, 6,
-		1, 6, 2,
-
-		// bottom face
-		4, 0, 3,
-		4, 3, 7,
-
-		// pyramid
-		8, 9, 12,
-		9, 10, 12,
-		10, 11, 12,
-		11, 8, 12,
-		10, 9, 8,
-		8, 11, 10
-	};
-
-	auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "box_geom", vertices, indices );
-
-	SubmeshGeometry submesh;
-	submesh.IndexCount = 36;
-	submesh.StartIndexLocation = 0;
-	submesh.BaseVertexLocation = 0;
-
-	submeshes["box"] = submesh;
-
-	submesh.IndexCount = 18;
-	submesh.StartIndexLocation = 36;
-	submesh.BaseVertexLocation = 0;
-
-	submeshes["pyramid"] = submesh;
+		submeshes["main_sub"] = submesh;
+	}
 }
 
 template<DXGI_FORMAT index_format, class VCRange, class ICRange>
@@ -423,4 +440,85 @@ void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
 		m_frame_resources.emplace_back( md3dDevice.Get(), 1, 1 );
+}
+
+
+LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
+{
+	switch ( msg )
+	{
+		case WM_KEYUP:
+		{
+			if ( wParam == VK_ESCAPE )
+			{
+				PostQuitMessage( 0 );
+			}
+			else if ( (int)wParam == VK_F2 )
+			{
+				Set4xMsaaState( !m4xMsaaState );
+			}
+			else
+			{
+				OnKeyUp( wParam );
+			}
+
+			return 0;
+		}
+	}
+
+	return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
+}
+
+using namespace boost::interprocess;
+void RenderApp::OnKeyUp( WPARAM btn )
+{
+	// entry point for cetonia
+	if ( (int)btn == VK_F8 )
+	{
+		try
+		{
+			struct remover
+			{
+				~remover()
+				{
+					shared_memory_object::remove( "cetonia" );
+				}
+			} onremove;
+			shared_memory_object shm( open_or_create, "cetonia", read_only );
+
+			mapped_region region( shm, read_only );
+			if ( region.get_size() == 0 )
+			{
+				return;
+			}
+
+			size_t msg_size = *reinterpret_cast<const size_t*>( region.get_address() );
+
+			const char* msg = reinterpret_cast<const char*>( region.get_address() ) + sizeof( size_t );
+
+			size_t stride = 0;
+			while ( stride < msg_size )
+			{
+				size_t token_shift;
+				ctToken token;
+				if ( ctFailed( ctParseToken( msg + stride, msg_size - stride, &token, &token_shift ) ) || ! ctIsTokenValid( token.type ) )
+					throw SnowEngineException( "fail in ctParseToken" );
+
+				stride += token_shift;
+
+				switch ( token.type )
+				{
+				case CT_Line2d:
+				{
+					constexpr int not_implemented = 0;
+					_ASSERTE( not_implemented );
+				}
+				}
+			}
+		}
+		catch ( ... )
+		{
+			throw SnowEngineException( "fail in cetonia" );
+		}
+	}
 }

@@ -12,7 +12,7 @@ int APIENTRY WinMain( HINSTANCE hinstance, HINSTANCE prev_instance, LPSTR cmd_li
 
 	try
 	{
-		RenderApp app( hinstance );
+		RenderApp app( hinstance, cmd_line );
 
 		if ( ! app.Initialize() )
 			return 1;

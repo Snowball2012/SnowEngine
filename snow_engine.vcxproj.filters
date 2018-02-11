@@ -22,6 +22,9 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{35223a1b-fdbf-4126-9d5f-3d3c67795c8f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="serialization">
+      <UniqueIdentifier>{ed8d0140-91da-4d40-b79b-b3f8b4436eee}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -36,6 +39,9 @@
     <ClCompile Include="src\FrameResource.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\ObjImporter.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -46,6 +52,9 @@
     </ClInclude>
     <ClInclude Include="src\FrameResource.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ObjImporter.h">
+      <Filter>serialization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -5,11 +5,13 @@
 #include <Luna/UploadBuffer.h>
 
 #include "FrameResource.h"
+#include "ObjImporter.h"
+
 
 class RenderApp: public D3DApp
 {
 public:
-	RenderApp( HINSTANCE hinstance );
+	RenderApp( HINSTANCE hinstance, LPSTR cmd_line );
 	RenderApp( const RenderApp& rhs ) = delete;
 	RenderApp& operator=( const RenderApp& rhs ) = delete;
 
@@ -17,6 +19,8 @@ public:
 	virtual bool Initialize() override;
 
 private:
+
+	// D3DApp
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
@@ -26,12 +30,17 @@ private:
 	virtual void OnMouseUp( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseMove( WPARAM btnState, int x, int y ) override;
 
+	virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
+
+	// MsgProc event handlers
+	void OnKeyUp( WPARAM btn );
+
 	// build functions
 	void BuildDescriptorHeaps();
 	void BuildConstantBuffers();
 	void BuildRootSignature();
 	void BuildShadersAndInputLayout();
-	void BuildBoxGeometry();
+	void BuildGeometry();
 	void BuildPSO();
 	void BuildFrameResources();
 
@@ -67,4 +76,6 @@ private:
 	float m_radius = 5.0f;
 
 	POINT m_last_mouse_pos;
+
+	LPSTR m_cmd_line;
 };
