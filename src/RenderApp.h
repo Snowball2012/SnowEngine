@@ -6,7 +6,9 @@
 
 #include "FrameResource.h"
 #include "ObjImporter.h"
+#include <cetonia/parser.h>
 
+struct ctTokenLine2d;
 
 class RenderApp: public D3DApp
 {
@@ -44,14 +46,24 @@ private:
 	void BuildPSO();
 	void BuildFrameResources();
 
+	// Make geometry
+	const std::array<uint16_t, 6> m_line_indices =
+	{
+		3, 2, 0,
+		1, 3, 0
+	};
+	std::vector<ctTokenLine2d> m_new_lines;
+	void MakeLineVertices( const ctTokenLine2d& line, Vertex vertices[4] ) const;
+
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
 	std::unordered_map<std::string, SubmeshGeometry>& LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices );
-
 
 	static const int num_frame_resources = 3;
 	std::vector<FrameResource> m_frame_resources;
 	FrameResource* m_cur_frame_resource = nullptr;
 	int m_cur_fr_idx = 0;
+
+	uint64_t m_cetonia_counter = 0;
 
 	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
 	ComPtr<ID3D12DescriptorHeap> m_cbv_heap = nullptr;

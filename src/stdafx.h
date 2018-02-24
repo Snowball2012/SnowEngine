@@ -4,6 +4,8 @@
 #include <unordered_map>
 
 #include <boost/optional.hpp>
+#include <boost/range.hpp>
+#include <boost/range/algorithm.hpp>
 
 #include <wrl.h>
 template<typename T>

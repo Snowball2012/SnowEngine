@@ -110,9 +110,12 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\cetonia\bin\x64\Release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cetonia.lib;libluna_d.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -143,9 +146,12 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\cetonia\bin\x64\Release</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>cetonia.lib;libluna.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\FrameResource.cpp" />

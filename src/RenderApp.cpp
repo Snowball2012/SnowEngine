@@ -29,7 +29,28 @@ bool RenderApp::Initialize()
 	BuildConstantBuffers();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	BuildGeometry();
+	/*{
+		std::vector<ctTokenLine2d> new_lines;
+		new_lines.push_back( { {0, 0}, {0, 1}, {0,0,0}, 0.1 } );
+		std::vector<Vertex> vertices;
+		vertices.resize( 4 * new_lines.size() );
+
+		for ( int i = 0; i < new_lines.size(); ++i )
+		{
+			MakeLineVertices( new_lines[i], vertices.data() + i * 4 );
+		}
+
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, m_line_indices );
+		for ( int i = 0; i < new_lines.size(); ++i )
+		{
+			SubmeshGeometry submesh;
+			submesh.IndexCount = 6;
+			submesh.StartIndexLocation = 0;
+			submesh.BaseVertexLocation = i * 4;
+			submeshes[std::to_string( i )] = submesh;
+		}
+	}*/
+	//BuildGeometry();
 	BuildPSO();
 
 	ThrowIfFailed( mCommandList->Close() );
@@ -90,6 +111,33 @@ void RenderApp::Update( const GameTimer& gt )
 	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
 	const auto& vp = view * proj;
 
+	if ( ! m_new_lines.empty() )
+	{
+		ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
+
+		std::vector<Vertex> vertices;
+		vertices.resize( 4 * m_new_lines.size() );
+
+		for ( int i = 0; i < m_new_lines.size(); ++i )
+			MakeLineVertices( m_new_lines[i], vertices.data() + i * 4 );
+
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, m_line_indices );
+		for ( int i = 0; i < m_new_lines.size(); ++i )
+		{
+			SubmeshGeometry submesh;
+			submesh.IndexCount = 6;
+			submesh.StartIndexLocation = 0;
+			submesh.BaseVertexLocation = i * 4;
+			submeshes[std::to_string( i )] = submesh;
+		}
+		m_new_lines.clear();
+
+		ThrowIfFailed( mCommandList->Close() );
+		ID3D12CommandList* cmd_lists[] = { mCommandList.Get() };
+		mCommandQueue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+
+		FlushCommandQueue();
+	}
 	// do update
 	ObjectConstants obj_constants;
 	XMStoreFloat4x4( &obj_constants.model_view_proj, XMMatrixTranspose( vp ) );
@@ -442,6 +490,75 @@ void RenderApp::BuildFrameResources()
 		m_frame_resources.emplace_back( md3dDevice.Get(), 1, 1 );
 }
 
+namespace
+{
+	// temporary
+	XMFLOAT3 operator-( const XMFLOAT3& lhs, const XMFLOAT3& rhs )
+	{
+		return XMFLOAT3( lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z );
+	}
+
+	XMFLOAT3 operator+( const XMFLOAT3& lhs, const XMFLOAT3& rhs )
+	{
+		return XMFLOAT3( lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z );
+	}
+
+	XMFLOAT3 operator*( const XMFLOAT3& lhs, float mod )
+	{
+		return XMFLOAT3( lhs.x * mod, lhs.y * mod, lhs.z * mod );
+	}
+
+	XMFLOAT3 operator*( float mod, const XMFLOAT3& op )
+	{
+		return op*mod;
+	}
+
+	XMFLOAT3& operator*=( XMFLOAT3& op, float mod )
+	{
+		op = mod * op;
+		return op;
+	}
+
+	XMFLOAT3 operator/( const XMFLOAT3& lhs, float mod )
+	{
+		return XMFLOAT3( lhs.x / mod, lhs.y / mod, lhs.z / mod );
+	}
+
+	float XMFloat3LenSquared( const XMFLOAT3& op )
+	{
+		return op.x * op.x + op.y * op.y + op.z * op.z;
+	}
+
+	float XMFloat3Normalize( XMFLOAT3& lhs )
+	{
+		float res = sqrt( XMFloat3LenSquared( lhs ) );
+		lhs = lhs / res;
+		return res;
+	}
+}
+
+void RenderApp::MakeLineVertices( const ctTokenLine2d& line, Vertex vertices[4] ) const
+{
+	XMFLOAT3 p1( float(line.p1.x), float(line.p1.y), 0.f );
+	XMFLOAT3 p2( float(line.p2.x), float(line.p2.y), 0.f );
+
+	XMFLOAT3 left_dir = p2 - p1;
+	std::swap( left_dir.x, left_dir.y );
+	left_dir.x *= -1.f;
+	XMFloat3Normalize( left_dir );
+
+	left_dir *= float(line.thickness);
+
+	for ( int i : { 0, 1 } )
+	{
+		vertices[i].pos = p1 + ( i * 2 - 1 ) * left_dir;
+		vertices[i + 2].pos = p2 + ( i * 2 - 1 ) * left_dir;
+	}
+
+	for ( int i = 0; i < 4; ++i )
+		vertices[i].color = XMFLOAT4( float(line.color.r), float(line.color.g), float(line.color.b), 1.f );
+}
+
 
 LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
@@ -475,6 +592,7 @@ void RenderApp::OnKeyUp( WPARAM btn )
 	// entry point for cetonia
 	if ( (int)btn == VK_F8 )
 	{
+		std::vector<ctTokenLine2d> new_lines;
 		try
 		{
 			struct remover
@@ -486,11 +604,16 @@ void RenderApp::OnKeyUp( WPARAM btn )
 			} onremove;
 			shared_memory_object shm( open_or_create, "cetonia", read_only );
 
-			mapped_region region( shm, read_only );
-			if ( region.get_size() == 0 )
-			{
+			boost::interprocess::offset_t shm_size;
+			if ( ! shm.get_size( shm_size ) )
 				return;
-			}
+
+			if ( shm_size == 0 )
+				return;
+
+			mapped_region region( shm, read_only, 0, shm_size );
+			if ( region.get_size() == 0 )
+				return;
 
 			size_t msg_size = *reinterpret_cast<const size_t*>( region.get_address() );
 
@@ -508,11 +631,11 @@ void RenderApp::OnKeyUp( WPARAM btn )
 
 				switch ( token.type )
 				{
-				case CT_Line2d:
-				{
-					constexpr int not_implemented = 0;
-					_ASSERTE( not_implemented );
-				}
+					case CT_Line2d:
+					{
+						new_lines.emplace_back( token.data.l2d );
+						break;
+					}
 				}
 			}
 		}
@@ -520,5 +643,8 @@ void RenderApp::OnKeyUp( WPARAM btn )
 		{
 			throw SnowEngineException( "fail in cetonia" );
 		}
+
+		if ( ! new_lines.empty() )
+			std::swap( m_new_lines, new_lines );
 	}
 }
