@@ -647,4 +647,9 @@ void RenderApp::OnKeyUp( WPARAM btn )
 		if ( ! new_lines.empty() )
 			std::swap( m_new_lines, new_lines );
 	}
+	else if ( (int)btn == VK_F7 )
+	{
+		// potential leak! Todo: correct memory management for gpu
+		m_geometry.clear();
+	}
 }
