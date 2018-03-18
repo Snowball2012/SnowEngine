@@ -25,6 +25,12 @@
     <Filter Include="serialization">
       <UniqueIdentifier>{ed8d0140-91da-4d40-b79b-b3f8b4436eee}</UniqueIdentifier>
     </Filter>
+    <Filter Include="content_generation">
+      <UniqueIdentifier>{0c74ac19-56cb-46a4-9586-8aaa03e98267}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="utils">
+      <UniqueIdentifier>{a4b32f1b-8dd1-4667-ba27-9076876fda90}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -42,6 +48,12 @@
     <ClCompile Include="src\ObjImporter.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
+    <ClCompile Include="src\GeomGeneration.cpp">
+      <Filter>content_generation</Filter>
+    </ClCompile>
+    <ClCompile Include="src\XMMath.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -55,6 +67,15 @@
     </ClInclude>
     <ClInclude Include="src\ObjImporter.h">
       <Filter>serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RenderData.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GeomGeneration.h">
+      <Filter>content_generation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\XMMath.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

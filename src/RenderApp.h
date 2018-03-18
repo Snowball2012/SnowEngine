@@ -46,14 +46,8 @@ private:
 	void BuildPSO();
 	void BuildFrameResources();
 
-	// Make geometry
-	const std::array<uint16_t, 6> m_line_indices =
-	{
-		3, 2, 0,
-		1, 3, 0
-	};
+	// cetonia
 	std::vector<ctTokenLine2d> m_new_lines;
-	void MakeLineVertices( const ctTokenLine2d& line, Vertex vertices[4] ) const;
 
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
 	std::unordered_map<std::string, SubmeshGeometry>& LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices );

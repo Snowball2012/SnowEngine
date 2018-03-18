@@ -7,6 +7,8 @@
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
 
+#include "XMMath.h"
+
 #include <wrl.h>
 template<typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;

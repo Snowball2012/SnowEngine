@@ -155,6 +155,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\FrameResource.cpp" />
+    <ClCompile Include="src\GeomGeneration.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\ObjImporter.cpp" />
     <ClCompile Include="src\RenderApp.cpp">
@@ -165,12 +166,16 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\XMMath.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\FrameResource.h" />
+    <ClInclude Include="src\GeomGeneration.h" />
     <ClInclude Include="src\ObjImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
+    <ClInclude Include="src\RenderData.h" />
     <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="src\XMMath.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">

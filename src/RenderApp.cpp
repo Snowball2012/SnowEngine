@@ -2,6 +2,8 @@
 
 #include "RenderApp.h"
 
+#include "GeomGeneration.h"
+
 #include <WindowsX.h>
 
 #include <boost/interprocess/shared_memory_object.hpp>
@@ -29,28 +31,7 @@ bool RenderApp::Initialize()
 	BuildConstantBuffers();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();
-	/*{
-		std::vector<ctTokenLine2d> new_lines;
-		new_lines.push_back( { {0, 0}, {0, 1}, {0,0,0}, 0.1 } );
-		std::vector<Vertex> vertices;
-		vertices.resize( 4 * new_lines.size() );
-
-		for ( int i = 0; i < new_lines.size(); ++i )
-		{
-			MakeLineVertices( new_lines[i], vertices.data() + i * 4 );
-		}
-
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, m_line_indices );
-		for ( int i = 0; i < new_lines.size(); ++i )
-		{
-			SubmeshGeometry submesh;
-			submesh.IndexCount = 6;
-			submesh.StartIndexLocation = 0;
-			submesh.BaseVertexLocation = i * 4;
-			submeshes[std::to_string( i )] = submesh;
-		}
-	}*/
-	//BuildGeometry();
+	BuildGeometry();
 	BuildPSO();
 
 	ThrowIfFailed( mCommandList->Close() );
@@ -69,19 +50,6 @@ void RenderApp::OnResize()
 	// Need to recompute projection matrix
 	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 1000.0f );
 	XMStoreFloat4x4( &m_proj, proj );
-}
-
-namespace
-{
-	XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta )
-	{
-		XMFLOAT3 res;
-
-		res.x = radius * sinf( phi ) * cosf( theta );
-		res.z = radius * sinf( phi ) * sinf( theta );
-		res.y = radius * cosf( phi );
-		return res;
-	}
 }
 
 void RenderApp::Update( const GameTimer& gt )
@@ -119,9 +87,9 @@ void RenderApp::Update( const GameTimer& gt )
 		vertices.resize( 4 * m_new_lines.size() );
 
 		for ( int i = 0; i < m_new_lines.size(); ++i )
-			MakeLineVertices( m_new_lines[i], vertices.data() + i * 4 );
+			GeomGeneration::MakeLineVertices( m_new_lines[i], vertices.data() + i * 4 );
 
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, m_line_indices );
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, GeomGeneration::line_indices );
 		for ( int i = 0; i < m_new_lines.size(); ++i )
 		{
 			SubmeshGeometry submesh;
@@ -488,75 +456,6 @@ void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
 		m_frame_resources.emplace_back( md3dDevice.Get(), 1, 1 );
-}
-
-namespace
-{
-	// temporary
-	XMFLOAT3 operator-( const XMFLOAT3& lhs, const XMFLOAT3& rhs )
-	{
-		return XMFLOAT3( lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z );
-	}
-
-	XMFLOAT3 operator+( const XMFLOAT3& lhs, const XMFLOAT3& rhs )
-	{
-		return XMFLOAT3( lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z );
-	}
-
-	XMFLOAT3 operator*( const XMFLOAT3& lhs, float mod )
-	{
-		return XMFLOAT3( lhs.x * mod, lhs.y * mod, lhs.z * mod );
-	}
-
-	XMFLOAT3 operator*( float mod, const XMFLOAT3& op )
-	{
-		return op*mod;
-	}
-
-	XMFLOAT3& operator*=( XMFLOAT3& op, float mod )
-	{
-		op = mod * op;
-		return op;
-	}
-
-	XMFLOAT3 operator/( const XMFLOAT3& lhs, float mod )
-	{
-		return XMFLOAT3( lhs.x / mod, lhs.y / mod, lhs.z / mod );
-	}
-
-	float XMFloat3LenSquared( const XMFLOAT3& op )
-	{
-		return op.x * op.x + op.y * op.y + op.z * op.z;
-	}
-
-	float XMFloat3Normalize( XMFLOAT3& lhs )
-	{
-		float res = sqrt( XMFloat3LenSquared( lhs ) );
-		lhs = lhs / res;
-		return res;
-	}
-}
-
-void RenderApp::MakeLineVertices( const ctTokenLine2d& line, Vertex vertices[4] ) const
-{
-	XMFLOAT3 p1( float(line.p1.x), float(line.p1.y), 0.f );
-	XMFLOAT3 p2( float(line.p2.x), float(line.p2.y), 0.f );
-
-	XMFLOAT3 left_dir = p2 - p1;
-	std::swap( left_dir.x, left_dir.y );
-	left_dir.x *= -1.f;
-	XMFloat3Normalize( left_dir );
-
-	left_dir *= float(line.thickness);
-
-	for ( int i : { 0, 1 } )
-	{
-		vertices[i].pos = p1 + ( i * 2 - 1 ) * left_dir;
-		vertices[i + 2].pos = p2 + ( i * 2 - 1 ) * left_dir;
-	}
-
-	for ( int i = 0; i < 4; ++i )
-		vertices[i].color = XMFLOAT4( float(line.color.r), float(line.color.g), float(line.color.b), 1.f );
 }
 
 
