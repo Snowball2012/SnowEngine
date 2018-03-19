@@ -6,7 +6,7 @@
 
 namespace GeomGeneration
 {
-	const std::array<uint16_t, 6> line_indices =
+	constexpr std::array<uint16_t, 6> line_indices =
 	{
 		3, 2, 0,
 		1, 3, 0
