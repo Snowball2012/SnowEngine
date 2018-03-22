@@ -26,12 +26,13 @@ bool RenderApp::Initialize()
 	// create box, load to gpu through upload heap to default heap
 	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
-	BuildFrameResources();
+	BuildGeometry();
+	BuildRenderItems();
+	BuildFrameResources();	
 	BuildDescriptorHeaps();
 	BuildConstantBuffers();
 	BuildRootSignature();
-	BuildShadersAndInputLayout();
-	BuildGeometry();
+	BuildShadersAndInputLayout();	
 	BuildPSO();
 
 	ThrowIfFailed( mCommandList->Close() );
@@ -66,18 +67,6 @@ void RenderApp::Update( const GameTimer& gt )
 		CloseHandle( event_handle );
 	}
 
-	// Update mvp matrix then update constant buffer on gpu
-	const auto& cartesian = SphericalToCartesian( m_radius, m_phi, m_theta );
-
-	XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
-	XMVECTOR target = XMVectorZero();
-	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-
-	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMStoreFloat4x4( &m_view, view );
-
-	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
-	const auto& vp = view * proj;
 
 	if ( ! m_new_lines.empty() )
 	{
@@ -106,10 +95,35 @@ void RenderApp::Update( const GameTimer& gt )
 
 		FlushCommandQueue();
 	}
-	// do update
-	ObjectConstants obj_constants;
-	XMStoreFloat4x4( &obj_constants.model_view_proj, XMMatrixTranspose( vp ) );
-	m_cur_frame_resource->object_cb->CopyData( 0, obj_constants );
+	
+	// Update pass constants
+	const auto& cartesian = SphericalToCartesian( m_radius, m_phi, m_theta );
+
+	XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
+	XMVECTOR target = XMVectorZero();
+	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+
+	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
+	XMStoreFloat4x4( &m_view, view );
+
+	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
+	const auto& vp = view * proj;
+	
+	PassConstants pc;
+	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
+	m_cur_frame_resource->pass_cb->CopyData( 0, pc );
+
+	// Update object constants if needed
+	for ( int i = 0; i < m_renderitems.size(); ++i )
+	{
+		if ( m_renderitems[i].n_frames_dirty > 0 )
+		{
+			ObjectConstants obj_constants;
+			XMStoreFloat4x4( &obj_constants.model, XMMatrixTranspose( XMLoadFloat4x4( &m_renderitems[i].world_mat ) ) );
+			m_cur_frame_resource->object_cb->CopyData( m_renderitems[i].cb_idx, obj_constants );
+			m_renderitems[i].n_frames_dirty--;
+		}
+	}
 }
 
 
@@ -145,16 +159,15 @@ void RenderApp::Draw( const GameTimer& gt )
 	mCommandList->SetDescriptorHeaps( _countof( descriptor_heaps ), descriptor_heaps );
 
 	mCommandList->SetGraphicsRootSignature( m_root_signature.Get() );
+	mCommandList->SetGraphicsRootDescriptorTable( 1, CD3DX12_GPU_DESCRIPTOR_HANDLE( m_cbv_heap->GetGPUDescriptorHandleForHeapStart() ).Offset( ( num_frame_resources * m_renderitems.size() + m_cur_fr_idx ) * mCbvSrvUavDescriptorSize ) );
 
-	mCommandList->SetGraphicsRootDescriptorTable( 0, m_cbv_heap->GetGPUDescriptorHandleForHeapStart() );
-
-	for ( const auto& geom_item : m_geometry )
+	for ( const auto& render_item : m_renderitems )
 	{
-		mCommandList->IASetVertexBuffers( 0, 1, &geom_item.second.VertexBufferView() );
-		mCommandList->IASetIndexBuffer( &geom_item.second.IndexBufferView() );
+		mCommandList->SetGraphicsRootDescriptorTable( 0, CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbv_heap->GetGPUDescriptorHandleForHeapStart()).Offset( ( render_item.cb_idx + m_cur_fr_idx * m_renderitems.size() ) * mCbvSrvUavDescriptorSize ) );
+		mCommandList->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
+		mCommandList->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
 		mCommandList->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-		for ( const auto& submesh : geom_item.second.DrawArgs )
-			mCommandList->DrawIndexedInstanced( submesh.second.IndexCount, 1, submesh.second.StartIndexLocation, submesh.second.BaseVertexLocation, 0 );
+		mCommandList->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}
 
 	// swap transition
@@ -221,7 +234,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 void RenderApp::BuildDescriptorHeaps()
 {
 	D3D12_DESCRIPTOR_HEAP_DESC cbv_heap_desc;
-	cbv_heap_desc.NumDescriptors = 3;
+	cbv_heap_desc.NumDescriptors = UINT( num_frame_resources * ( m_renderitems.size() + num_passes ) );
 	cbv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	cbv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbv_heap_desc.NodeMask = 0;
@@ -233,34 +246,56 @@ void RenderApp::BuildConstantBuffers()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
 	{
-		m_frame_resources[i].object_cb = std::make_unique<UploadBuffer<ObjectConstants>>( md3dDevice.Get(), 1, true );
+		// object cb
+		m_frame_resources[i].object_cb = std::make_unique<UploadBuffer<ObjectConstants>>( md3dDevice.Get(), UINT( m_renderitems.size() ), true );
 
-		UINT obj_cb_bytesize = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
+		const UINT obj_cb_bytesize = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 
 		D3D12_GPU_VIRTUAL_ADDRESS cb_address = m_frame_resources[i].object_cb->Resource()->GetGPUVirtualAddress();
 
-		int box_cbuf_index = 0;
-		cb_address += box_cbuf_index * obj_cb_bytesize;
-
-		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
+		for ( int renderitem_cbuf_index = 0; renderitem_cbuf_index < m_renderitems.size(); ++renderitem_cbuf_index )
 		{
-			cbv_desc.BufferLocation = cb_address;
-			cbv_desc.SizeInBytes = obj_cb_bytesize;
+			cb_address += renderitem_cbuf_index * obj_cb_bytesize;
+
+			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
+			{
+				cbv_desc.BufferLocation = cb_address;
+				cbv_desc.SizeInBytes = obj_cb_bytesize;
+			}
+			CD3DX12_CPU_DESCRIPTOR_HANDLE cbv_handle( m_cbv_heap->GetCPUDescriptorHandleForHeapStart(), ( i * m_renderitems.size() + renderitem_cbuf_index ) * md3dDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
+			md3dDevice->CreateConstantBufferView( &cbv_desc, cbv_handle );
 		}
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cbv_handle( m_cbv_heap->GetCPUDescriptorHandleForHeapStart(), i * md3dDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
-		md3dDevice->CreateConstantBufferView( &cbv_desc, cbv_handle );
+
+		// pass cb
+		m_frame_resources[i].pass_cb = std::make_unique<UploadBuffer<PassConstants>>( md3dDevice.Get(), 1, true );
+
+		const uint32_t pass_cb_bytesize = d3dUtil::CalcConstantBufferByteSize( sizeof( PassConstants ) );
+
+		cb_address = m_frame_resources[i].pass_cb->Resource()->GetGPUVirtualAddress();
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC pass_cbv_desc;
+		{
+			pass_cbv_desc.BufferLocation = cb_address;
+			pass_cbv_desc.SizeInBytes = pass_cb_bytesize;
+		}
+		CD3DX12_CPU_DESCRIPTOR_HANDLE pass_cbv_handle( m_cbv_heap->GetCPUDescriptorHandleForHeapStart(), ( m_renderitems.size() * num_frame_resources + i ) * md3dDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
+		md3dDevice->CreateConstantBufferView( &pass_cbv_desc, pass_cbv_handle );
 	}
 }
 
 void RenderApp::BuildRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slot_root_parameter[1];
+	CD3DX12_ROOT_PARAMETER slot_root_parameter[2];
 
 	CD3DX12_DESCRIPTOR_RANGE cbv_table;
 	cbv_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0 );
 	slot_root_parameter[0].InitAsDescriptorTable( 1, &cbv_table );
+	CD3DX12_DESCRIPTOR_RANGE pass_cbv_table;
+	pass_cbv_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1 );
+	slot_root_parameter[1].InitAsDescriptorTable( 1, &pass_cbv_table );
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( 1, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
+
+	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( 2, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;
@@ -309,11 +344,11 @@ void RenderApp::BuildGeometry()
 			Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } ),
 
 			// pyramid
-			Vertex( { XMFLOAT3( -1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
-			Vertex( { XMFLOAT3( -1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
-			Vertex( { XMFLOAT3( +1.0f, 2.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
-			Vertex( { XMFLOAT3( +1.0f, 2.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
-			Vertex( { XMFLOAT3( +0.0f, 3.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
+			Vertex( { XMFLOAT3( -1.0f, 0.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
+			Vertex( { XMFLOAT3( -1.0f, 0.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
+			Vertex( { XMFLOAT3( +1.0f, 0.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
+			Vertex( { XMFLOAT3( +1.0f, 0.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
+			Vertex( { XMFLOAT3( +0.0f, 1.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
 		};
 
 		std::array<std::uint16_t, 36 + 18> indices =
@@ -345,15 +380,15 @@ void RenderApp::BuildGeometry()
 			4, 3, 7,
 
 			// pyramid
-			8, 9, 12,
-			9, 10, 12,
-			10, 11, 12,
-			11, 8, 12,
-			10, 9, 8,
-			8, 11, 10
+			0, 1, 4,
+			1, 2, 4,
+			2, 3, 4,
+			3, 0, 4,
+			2, 1, 0,
+			0, 3, 2
 		};
 
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "box_geom", vertices, indices );
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "base_geom", vertices, indices );
 
 		SubmeshGeometry submesh;
 		submesh.IndexCount = 36;
@@ -364,7 +399,7 @@ void RenderApp::BuildGeometry()
 
 		submesh.IndexCount = 18;
 		submesh.StartIndexLocation = 36;
-		submesh.BaseVertexLocation = 0;
+		submesh.BaseVertexLocation = 8;
 
 		submeshes["pyramid"] = submesh;
 	}
@@ -376,7 +411,7 @@ void RenderApp::BuildGeometry()
 			throw SnowEngineException( "can't read .obj" );
 		MeshData mesh_data = ObjImporter().ParseObj( file );
 
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "main", mesh_data.m_vertices, mesh_data.m_faces );
+		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "file_geom", mesh_data.m_vertices, mesh_data.m_faces );
 
 		SubmeshGeometry submesh;
 		submesh.IndexCount = UINT( mesh_data.m_faces.size() );
@@ -384,6 +419,36 @@ void RenderApp::BuildGeometry()
 		submesh.BaseVertexLocation = 0;
 
 		submeshes["main_sub"] = submesh;
+	}
+}
+
+void RenderApp::BuildRenderItems()
+{
+	{
+		RenderItem box;
+		box.cb_idx = 0;
+
+		box.geom = &m_geometry["base_geom"];
+		const auto& submesh = box.geom->DrawArgs["box"];
+		box.n_frames_dirty = num_frame_resources;
+		box.index_count = submesh.IndexCount;
+		box.index_offset = submesh.StartIndexLocation;
+		box.vertex_offset = submesh.BaseVertexLocation;
+		m_renderitems.push_back( box );
+	}
+	{
+		RenderItem pyramid;
+		pyramid.cb_idx = 1;
+
+		pyramid.geom = &m_geometry["base_geom"];
+		const auto& submesh = pyramid.geom->DrawArgs["pyramid"];
+		pyramid.n_frames_dirty = num_frame_resources;
+		pyramid.index_count = submesh.IndexCount;
+		pyramid.index_offset = submesh.StartIndexLocation;
+		pyramid.vertex_offset = submesh.BaseVertexLocation;
+		auto transformed = XMMatrixMultiply( XMLoadFloat4x4( &pyramid.world_mat ), XMMatrixTranslation( 0.f, 4.f, 0.f) );
+		XMStoreFloat4x4( &pyramid.world_mat, std::move( transformed ) );
+		m_renderitems.push_back( pyramid );
 	}
 }
 
@@ -455,7 +520,7 @@ void RenderApp::BuildPSO()
 void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
-		m_frame_resources.emplace_back( md3dDevice.Get(), 1, 1 );
+		m_frame_resources.emplace_back( md3dDevice.Get(), 1, m_renderitems.size() );
 }
 
 
