@@ -85,7 +85,8 @@ private:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
 
-	ComPtr<ID3D12PipelineState> m_pso = nullptr;
+	ComPtr<ID3D12PipelineState> m_pso_main = nullptr;
+	ComPtr<ID3D12PipelineState> m_pso_wireframe = nullptr;
 
 	// camera
 	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
@@ -94,6 +95,8 @@ private:
 	float m_theta = 1.5f * DirectX::XM_PI;
 	float m_phi = DirectX::XM_PIDIV2;
 	float m_radius = 5.0f;
+
+	bool m_wireframe_mode = false;
 
 	// inputs
 	POINT m_last_mouse_pos;

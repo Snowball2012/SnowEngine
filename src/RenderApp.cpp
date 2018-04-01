@@ -141,7 +141,7 @@ void RenderApp::Draw( const GameTimer& gt )
 	ThrowIfFailed( m_cur_frame_resource->cmd_list_alloc->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( mCommandList->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), m_pso.Get() ) );
+	ThrowIfFailed( mCommandList->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), ( m_wireframe_mode ? m_pso_wireframe : m_pso_main ).Get() ) );
 
 	// state transition( for back buffer )
 	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
@@ -498,7 +498,11 @@ void RenderApp::BuildPSO()
 
 	pso_desc.DSVFormat = mDepthStencilFormat;
 
-	ThrowIfFailed( md3dDevice->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso ) ) );
+	ThrowIfFailed( md3dDevice->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_main ) ) );
+
+	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	ThrowIfFailed( md3dDevice->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_wireframe ) ) );
 }
 
 void RenderApp::BuildFrameResources()
@@ -536,5 +540,7 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 
 void RenderApp::OnKeyUp( WPARAM btn )
 {
-	// 'w' - wireframe mode
+	// 'F2' - wireframe mode
+	if ( (int)btn == VK_F3 )
+		m_wireframe_mode = ! m_wireframe_mode;
 }
