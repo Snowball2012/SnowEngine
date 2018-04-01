@@ -6,9 +6,6 @@
 
 #include "FrameResource.h"
 #include "ObjImporter.h"
-#include <cetonia/parser.h>
-
-struct ctTokenLine2d;
 
 class RenderApp: public D3DApp
 {
@@ -26,7 +23,15 @@ private:
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
+	void UpdateAndWaitForFrameResource();
+	// isolated from FrameResources logic
+	void UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb );
+	void UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb );
+	void UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb );
+	void UpdateWaves( const GameTimer& gt );
+
 	virtual void Draw( const GameTimer& gt ) override;
+	virtual void Draw_MainPass( ID3D12GraphicsCommandList* cmd_list );
 
 	virtual void OnMouseDown( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseUp( WPARAM btnState, int x, int y ) override;
@@ -47,14 +52,20 @@ private:
 	void BuildPSO();
 	void BuildFrameResources();
 
-	// cetonia
-	uint64_t m_cetonia_counter = 0;
-	std::vector<ctTokenLine2d> m_new_lines;
-
 	// geometry
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
-	std::unordered_map<std::string, SubmeshGeometry>& LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices );
-	std::unordered_map<std::string, MeshGeometry> m_geometry;
+	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
+	std::unordered_map<std::string, MeshGeometry> m_static_geometry;
+
+	template <DXGI_FORMAT index_format, class ICRange>
+	void LoadDynamicGeometryIndices( const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
+	MeshGeometry m_dynamic_geometry;
+
+	// waves
+	static constexpr size_t grid_nx = 50;
+	static constexpr size_t grid_ny = 50;
+	std::vector<Vertex> m_waves_cpu_vertices;
+	size_t m_waves_indices_count;
 
 	// resources
 	static constexpr int num_frame_resources = 3;
@@ -68,9 +79,6 @@ private:
 
 	// pipeline
 	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
-	ComPtr<ID3D12DescriptorHeap> m_cbv_heap = nullptr;
-
-	boost::optional<UploadBuffer<ObjectConstants>> m_object_cb;
 	
 	ComPtr<ID3DBlob> m_vs_bytecode = nullptr;
 	ComPtr<ID3DBlob> m_ps_bytecode = nullptr;

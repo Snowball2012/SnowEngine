@@ -171,6 +171,7 @@
   <ItemGroup>
     <ClInclude Include="src\FrameResource.h" />
     <ClInclude Include="src\GeomGeneration.h" />
+    <ClInclude Include="src\GeomGeneration.hpp" />
     <ClInclude Include="src\ObjImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
     <ClInclude Include="src\RenderData.h" />

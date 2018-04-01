@@ -62,9 +62,6 @@
     <ClInclude Include="src\stdafx.h">
       <Filter>precompiled_header</Filter>
     </ClInclude>
-    <ClInclude Include="src\FrameResource.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="src\ObjImporter.h">
       <Filter>serialization</Filter>
     </ClInclude>
@@ -76,6 +73,12 @@
     </ClInclude>
     <ClInclude Include="src\XMMath.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GeomGeneration.hpp">
+      <Filter>content_generation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FrameResource.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

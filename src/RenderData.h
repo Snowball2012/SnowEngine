@@ -2,6 +2,12 @@
 
 #include <Luna/d3dUtil.h>
 
+struct Vertex
+{
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT4 color;
+};
+
 struct RenderItem
 {
 	// geom

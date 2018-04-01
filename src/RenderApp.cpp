@@ -55,48 +55,21 @@ void RenderApp::OnResize()
 
 void RenderApp::Update( const GameTimer& gt )
 {
-	m_cur_fr_idx = ( m_cur_fr_idx + 1 ) % num_frame_resources;
-	m_cur_frame_resource = m_frame_resources.data() + m_cur_fr_idx;
+	UpdateAndWaitForFrameResource();
 
-	// wait for gpu to complete (i - 2)th frame;
-	if ( m_cur_frame_resource->fence != 0 && mFence->GetCompletedValue() < m_cur_frame_resource->fence )
-	{
-		HANDLE event_handle = CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
-		ThrowIfFailed( mFence->SetEventOnCompletion( m_cur_frame_resource->fence, event_handle ) );
-		WaitForSingleObject( event_handle, INFINITE );
-		CloseHandle( event_handle );
-	}
+	UpdateWaves( gt );
+	UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
 
-
-	if ( ! m_new_lines.empty() )
-	{
-		ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
-
-		std::vector<Vertex> vertices;
-		vertices.resize( 4 * m_new_lines.size() );
-
-		for ( int i = 0; i < m_new_lines.size(); ++i )
-			GeomGeneration::MakeLineVertices( m_new_lines[i], vertices.data() + i * 4 );
-
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( std::to_string( m_cetonia_counter++ ), vertices, GeomGeneration::line_indices );
-		for ( int i = 0; i < m_new_lines.size(); ++i )
-		{
-			SubmeshGeometry submesh;
-			submesh.IndexCount = 6;
-			submesh.StartIndexLocation = 0;
-			submesh.BaseVertexLocation = i * 4;
-			submeshes[std::to_string( i )] = submesh;
-		}
-		m_new_lines.clear();
-
-		ThrowIfFailed( mCommandList->Close() );
-		ID3D12CommandList* cmd_lists[] = { mCommandList.Get() };
-		mCommandQueue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
-
-		FlushCommandQueue();
-	}
-	
 	// Update pass constants
+	UpdatePassConstants( gt, *m_cur_frame_resource->pass_cb );
+
+	// Update object constants if needed
+	for ( auto& renderitem : m_renderitems )
+		UpdateRenderItem( renderitem, *m_cur_frame_resource->object_cb );
+}
+
+void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb )
+{
 	const auto& cartesian = SphericalToCartesian( m_radius, m_phi, m_theta );
 
 	XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
@@ -108,21 +81,52 @@ void RenderApp::Update( const GameTimer& gt )
 
 	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
 	const auto& vp = view * proj;
-	
+
 	PassConstants pc;
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
-	m_cur_frame_resource->pass_cb->CopyData( 0, pc );
 
-	// Update object constants if needed
-	for ( int i = 0; i < m_renderitems.size(); ++i )
+	pass_cb.CopyData( 0, pc );
+}
+
+void RenderApp::UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb )
+{
+	if ( renderitem.n_frames_dirty > 0 )
 	{
-		if ( m_renderitems[i].n_frames_dirty > 0 )
-		{
-			ObjectConstants obj_constants;
-			XMStoreFloat4x4( &obj_constants.model, XMMatrixTranspose( XMLoadFloat4x4( &m_renderitems[i].world_mat ) ) );
-			m_cur_frame_resource->object_cb->CopyData( m_renderitems[i].cb_idx, obj_constants );
-			m_renderitems[i].n_frames_dirty--;
-		}
+		ObjectConstants obj_constants;
+		XMStoreFloat4x4( &obj_constants.model, XMMatrixTranspose( XMLoadFloat4x4( &renderitem.world_mat ) ) );
+		obj_cb.CopyData( renderitem.cb_idx, obj_constants );
+		renderitem.n_frames_dirty--;
+	}
+}
+
+void RenderApp::UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb )
+{
+	for ( size_t i = 0; i < m_waves_cpu_vertices.size(); ++i )
+		dynamic_vb.CopyData( int( i ), m_waves_cpu_vertices[i] );
+
+	m_dynamic_geometry.VertexBufferGPU = dynamic_vb.Resource();
+}
+
+void RenderApp::UpdateWaves( const GameTimer& gt )
+{
+	const float t = gt.TotalTime();
+
+	for ( auto& vertex : m_waves_cpu_vertices )
+		vertex.pos = XMFLOAT3( vertex.pos.x, 1.f*( sinf( 4.f * vertex.pos.x + 3.f*t ) + cosf( vertex.pos.y + 1.f*t ) + 0.3*cosf( 4.f * vertex.pos.z + 2.f*t ) ), vertex.pos.z );
+}
+
+void RenderApp::UpdateAndWaitForFrameResource()
+{
+	m_cur_fr_idx = ( m_cur_fr_idx + 1 ) % num_frame_resources;
+	m_cur_frame_resource = m_frame_resources.data() + m_cur_fr_idx;
+
+	// wait for gpu to complete (i - 2)th frame;
+	if ( m_cur_frame_resource->fence != 0 && mFence->GetCompletedValue() < m_cur_frame_resource->fence )
+	{
+		HANDLE event_handle = CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
+		ThrowIfFailed( mFence->SetEventOnCompletion( m_cur_frame_resource->fence, event_handle ) );
+		WaitForSingleObject( event_handle, INFINITE );
+		CloseHandle( event_handle );
 	}
 }
 
@@ -151,24 +155,8 @@ void RenderApp::Draw( const GameTimer& gt )
 	mCommandList->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
 	mCommandList->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
-	// set render target
-	mCommandList->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
-
-	// set resources
-	ID3D12DescriptorHeap* descriptor_heaps[] = { m_cbv_heap.Get() };
-	mCommandList->SetDescriptorHeaps( _countof( descriptor_heaps ), descriptor_heaps );
-
-	mCommandList->SetGraphicsRootSignature( m_root_signature.Get() );
-	mCommandList->SetGraphicsRootDescriptorTable( 1, CD3DX12_GPU_DESCRIPTOR_HANDLE( m_cbv_heap->GetGPUDescriptorHandleForHeapStart() ).Offset( ( num_frame_resources * m_renderitems.size() + m_cur_fr_idx ) * mCbvSrvUavDescriptorSize ) );
-
-	for ( const auto& render_item : m_renderitems )
-	{
-		mCommandList->SetGraphicsRootDescriptorTable( 0, CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbv_heap->GetGPUDescriptorHandleForHeapStart()).Offset( ( render_item.cb_idx + m_cur_fr_idx * m_renderitems.size() ) * mCbvSrvUavDescriptorSize ) );
-		mCommandList->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
-		mCommandList->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
-		mCommandList->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-		mCommandList->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
-	}
+	// passes
+	Draw_MainPass( mCommandList.Get() );
 
 	// swap transition
 	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
@@ -184,6 +172,26 @@ void RenderApp::Draw( const GameTimer& gt )
 	mCurrBackBuffer = ( mCurrBackBuffer + 1 ) % SwapChainBufferCount;
 
 	FlushCommandQueue();
+}
+
+void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
+{
+	// set render target
+	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
+
+	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
+	cmd_list->SetGraphicsRootConstantBufferView( 1, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
+
+	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
+	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
+	for ( const auto& render_item : m_renderitems )
+	{
+		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
+		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
+		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
+		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+		cmd_list->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
+	}
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
@@ -233,13 +241,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 
 void RenderApp::BuildDescriptorHeaps()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC cbv_heap_desc;
-	cbv_heap_desc.NumDescriptors = UINT( num_frame_resources * ( m_renderitems.size() + num_passes ) );
-	cbv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	cbv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	cbv_heap_desc.NodeMask = 0;
-
-	ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &cbv_heap_desc, IID_PPV_ARGS( &m_cbv_heap ) ) );
+	// no heaps =(
 }
 
 void RenderApp::BuildConstantBuffers()
@@ -248,38 +250,8 @@ void RenderApp::BuildConstantBuffers()
 	{
 		// object cb
 		m_frame_resources[i].object_cb = std::make_unique<UploadBuffer<ObjectConstants>>( md3dDevice.Get(), UINT( m_renderitems.size() ), true );
-
-		const UINT obj_cb_bytesize = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
-
-		D3D12_GPU_VIRTUAL_ADDRESS cb_address = m_frame_resources[i].object_cb->Resource()->GetGPUVirtualAddress();
-
-		for ( int renderitem_cbuf_index = 0; renderitem_cbuf_index < m_renderitems.size(); ++renderitem_cbuf_index )
-		{
-			cb_address += renderitem_cbuf_index * obj_cb_bytesize;
-
-			D3D12_CONSTANT_BUFFER_VIEW_DESC cbv_desc;
-			{
-				cbv_desc.BufferLocation = cb_address;
-				cbv_desc.SizeInBytes = obj_cb_bytesize;
-			}
-			CD3DX12_CPU_DESCRIPTOR_HANDLE cbv_handle( m_cbv_heap->GetCPUDescriptorHandleForHeapStart(), ( i * m_renderitems.size() + renderitem_cbuf_index ) * md3dDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
-			md3dDevice->CreateConstantBufferView( &cbv_desc, cbv_handle );
-		}
-
 		// pass cb
-		m_frame_resources[i].pass_cb = std::make_unique<UploadBuffer<PassConstants>>( md3dDevice.Get(), 1, true );
-
-		const uint32_t pass_cb_bytesize = d3dUtil::CalcConstantBufferByteSize( sizeof( PassConstants ) );
-
-		cb_address = m_frame_resources[i].pass_cb->Resource()->GetGPUVirtualAddress();
-
-		D3D12_CONSTANT_BUFFER_VIEW_DESC pass_cbv_desc;
-		{
-			pass_cbv_desc.BufferLocation = cb_address;
-			pass_cbv_desc.SizeInBytes = pass_cb_bytesize;
-		}
-		CD3DX12_CPU_DESCRIPTOR_HANDLE pass_cbv_handle( m_cbv_heap->GetCPUDescriptorHandleForHeapStart(), ( m_renderitems.size() * num_frame_resources + i ) * md3dDevice->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ) );
-		md3dDevice->CreateConstantBufferView( &pass_cbv_desc, pass_cbv_handle );
+		m_frame_resources[i].pass_cb = std::make_unique<UploadBuffer<PassConstants>>( md3dDevice.Get(), num_passes, true );
 	}
 }
 
@@ -287,13 +259,8 @@ void RenderApp::BuildRootSignature()
 {
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[2];
 
-	CD3DX12_DESCRIPTOR_RANGE cbv_table;
-	cbv_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0 );
-	slot_root_parameter[0].InitAsDescriptorTable( 1, &cbv_table );
-	CD3DX12_DESCRIPTOR_RANGE pass_cbv_table;
-	pass_cbv_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 1 );
-	slot_root_parameter[1].InitAsDescriptorTable( 1, &pass_cbv_table );
-
+	slot_root_parameter[0].InitAsConstantBufferView( 0 );
+	slot_root_parameter[1].InitAsConstantBufferView( 1 );
 
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( 2, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
@@ -326,135 +293,133 @@ void RenderApp::BuildShadersAndInputLayout()
 	};
 }
 
+namespace
+{
+	float hillsHeight( float x, float z )
+	{
+		return 0.3f*( z*sinf( 0.1f*x ) + x*cosf( 0.1f*z ) );
+	}
+
+	XMFLOAT4 colorByHeight( float height )
+	{
+		// Color the vertex based on its height.
+		if ( height < -10.0f )
+		{
+			// Sandy beach color.
+			return XMFLOAT4( 1.0f, 0.96f, 0.62f, 1.0f );
+		}
+		else if ( height < 5.0f )
+		{
+			// Light yellow-green.
+			return  XMFLOAT4( 0.48f, 0.77f, 0.46f, 1.0f );
+		}
+		else if ( height < 12.0f )
+		{
+			// Dark yellow-green.
+			return XMFLOAT4( 0.1f, 0.48f, 0.19f, 1.0f );
+		}
+		else if ( height < 20.0f )
+		{
+			// Dark brown.
+			return XMFLOAT4( 0.45f, 0.39f, 0.34f, 1.0f );
+		}
+		else
+		{
+			// White snow.
+			return XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );
+		}
+	}
+}
+
 void RenderApp::BuildGeometry()
 {
-	if ( strlen( m_cmd_line ) == 0 )
+	// static
+
 	{
-		// box and pyramid, 2 submeshes
-		std::array<Vertex, 8 + 5> vertices =
+		auto grid = GeomGeneration::MakeArrayGrid<grid_nx, grid_ny>( 160, 160 );
+
+		for ( auto& vertex : grid.first )
 		{
-			// box
-			Vertex( { XMFLOAT3( -1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
-			Vertex( { XMFLOAT3( -1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Black ) } ),
-			Vertex( { XMFLOAT3( +1.0f, +1.0f, -1.0f ), XMFLOAT4( Colors::Red ) } ),
-			Vertex( { XMFLOAT3( +1.0f, -1.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
-			Vertex( { XMFLOAT3( -1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Blue ) } ),
-			Vertex( { XMFLOAT3( -1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Yellow ) } ),
-			Vertex( { XMFLOAT3( +1.0f, +1.0f, +1.0f ), XMFLOAT4( Colors::Cyan ) } ),
-			Vertex( { XMFLOAT3( +1.0f, -1.0f, +1.0f ), XMFLOAT4( Colors::Magenta ) } ),
+			vertex.pos.y = hillsHeight( vertex.pos.x, vertex.pos.z );
+			vertex.color = colorByHeight( vertex.pos.y );
+		}
 
-			// pyramid
-			Vertex( { XMFLOAT3( -1.0f, 0.0f, -1.0f ), XMFLOAT4( Colors::White ) } ),
-			Vertex( { XMFLOAT3( -1.0f, 0.0f, +1.0f ), XMFLOAT4( Colors::Black ) } ),
-			Vertex( { XMFLOAT3( +1.0f, 0.0f, +1.0f ), XMFLOAT4( Colors::Red ) } ),
-			Vertex( { XMFLOAT3( +1.0f, 0.0f, -1.0f ), XMFLOAT4( Colors::Green ) } ),
-			Vertex( { XMFLOAT3( +0.0f, 1.0f, +0.0f ), XMFLOAT4( Colors::Blue ) } ),
-		};
-
-		std::array<std::uint16_t, 36 + 18> indices =
-		{
-			// box
-
-			// front face
-			0, 1, 2,
-			0, 2, 3,
-
-			// back face
-			4, 6, 5,
-			4, 7, 6,
-
-			// left face
-			4, 5, 1,
-			4, 1, 0,
-
-			// right face
-			3, 2, 6,
-			3, 6, 7,
-
-			// top face
-			1, 5, 6,
-			1, 6, 2,
-
-			// bottom face
-			4, 0, 3,
-			4, 3, 7,
-
-			// pyramid
-			0, 1, 4,
-			1, 2, 4,
-			2, 3, 4,
-			3, 0, 4,
-			2, 1, 0,
-			0, 3, 2
-		};
-
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "base_geom", vertices, indices );
+		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R16_UINT>( "land_grid", grid.first, grid.second, mCommandList.Get() );
 
 		SubmeshGeometry submesh;
-		submesh.IndexCount = 36;
+		submesh.IndexCount = UINT( grid.second.size() );
 		submesh.StartIndexLocation = 0;
 		submesh.BaseVertexLocation = 0;
 
-		submeshes["box"] = submesh;
-
-		submesh.IndexCount = 18;
-		submesh.StartIndexLocation = 36;
-		submesh.BaseVertexLocation = 8;
-
-		submeshes["pyramid"] = submesh;
+		submeshes["grid"] = submesh;
 	}
-	else
-	{
-		std::ifstream file;
-		file.open( m_cmd_line );
-		if ( ! file.is_open() )
-			throw SnowEngineException( "can't read .obj" );
-		MeshData mesh_data = ObjImporter().ParseObj( file );
 
-		auto& submeshes = LoadGeometry<DXGI_FORMAT_R16_UINT>( "file_geom", mesh_data.m_vertices, mesh_data.m_faces );
+	// dynamic
+	{
+		m_waves_indices_count = GeomGeneration::GetGridNIndices( grid_nx, grid_ny );
+		std::vector<uint16_t> waves_indices;
+		waves_indices.reserve( m_waves_indices_count );
+
+		const size_t vertex_cnt = grid_nx * grid_ny;
+		m_waves_cpu_vertices.reserve( vertex_cnt );
+
+		GeomGeneration::MakeGrid( grid_nx, grid_ny, 160, 160
+			, [&]( float x, float y )
+			{
+			m_waves_cpu_vertices.emplace_back( Vertex{ DirectX::XMFLOAT3( x, 0, y ), DirectX::XMFLOAT4( 0.5f, 0.5f, 0.8f, 1.0f ) } );
+			}
+			, [&]( size_t idx )
+			{
+				waves_indices.emplace_back( uint16_t( idx ) );
+			} );
+
+		LoadDynamicGeometryIndices<DXGI_FORMAT_R16_UINT>( waves_indices, mCommandList.Get() );
+
+		m_dynamic_geometry.Name = "main";
+		m_dynamic_geometry.VertexByteStride = sizeof( Vertex );
+		m_dynamic_geometry.VertexBufferByteSize = UINT( m_dynamic_geometry.VertexByteStride * m_waves_cpu_vertices.size() );
 
 		SubmeshGeometry submesh;
-		submesh.IndexCount = UINT( mesh_data.m_faces.size() );
+		submesh.IndexCount = UINT( m_waves_indices_count );
 		submesh.StartIndexLocation = 0;
 		submesh.BaseVertexLocation = 0;
 
-		submeshes["main_sub"] = submesh;
+		m_dynamic_geometry.DrawArgs["waves"] = submesh;
 	}
 }
 
 void RenderApp::BuildRenderItems()
 {
+	auto init_from_submesh = []( const SubmeshGeometry& submesh, RenderItem& renderitem )
 	{
-		RenderItem box;
-		box.cb_idx = 0;
+		renderitem.n_frames_dirty = num_frame_resources;
+		renderitem.index_count = submesh.IndexCount;
+		renderitem.index_offset = submesh.StartIndexLocation;
+		renderitem.vertex_offset = submesh.BaseVertexLocation;
+	};
 
-		box.geom = &m_geometry["base_geom"];
-		const auto& submesh = box.geom->DrawArgs["box"];
-		box.n_frames_dirty = num_frame_resources;
-		box.index_count = submesh.IndexCount;
-		box.index_offset = submesh.StartIndexLocation;
-		box.vertex_offset = submesh.BaseVertexLocation;
-		m_renderitems.push_back( box );
+	{
+		RenderItem land;
+		land.cb_idx = 0;
+		land.geom = &m_static_geometry["land_grid"];
+		init_from_submesh( land.geom->DrawArgs["grid"], land );
+		m_renderitems.push_back( land );
 	}
-	{
-		RenderItem pyramid;
-		pyramid.cb_idx = 1;
 
-		pyramid.geom = &m_geometry["base_geom"];
-		const auto& submesh = pyramid.geom->DrawArgs["pyramid"];
-		pyramid.n_frames_dirty = num_frame_resources;
-		pyramid.index_count = submesh.IndexCount;
-		pyramid.index_offset = submesh.StartIndexLocation;
-		pyramid.vertex_offset = submesh.BaseVertexLocation;
-		auto transformed = XMMatrixMultiply( XMLoadFloat4x4( &pyramid.world_mat ), XMMatrixTranslation( 0.f, 4.f, 0.f) );
-		XMStoreFloat4x4( &pyramid.world_mat, std::move( transformed ) );
-		m_renderitems.push_back( pyramid );
+	{
+		RenderItem waves;
+		waves.cb_idx = 1;
+		waves.geom = &m_dynamic_geometry;
+		init_from_submesh( waves.geom->DrawArgs["waves"], waves );
+		m_renderitems.push_back( waves );
 	}
 }
 
 template<DXGI_FORMAT index_format, class VCRange, class ICRange>
-std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadGeometry( std::string name, const VCRange& vertices, const ICRange& indices )
+std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list )
 {
+	_ASSERTE( cmd_list );
+
 	using vertex_type = decltype( *vertices.data() );
 	using index_type = decltype( *indices.data() );
 	static_assert( index_format == DXGI_FORMAT_R16_UINT && sizeof( index_type ) == 2, "Wrong index type in LoadGeometry" ); // todo: enum -> sizeof map check
@@ -462,7 +427,7 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadGeometry( std::
 	const UINT vb_byte_size = UINT( vertices.size() ) * sizeof( vertex_type );
 	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( index_type );
 
-	auto& new_geom = m_geometry.emplace( name, MeshGeometry() ).first->second;
+	auto& new_geom = m_static_geometry.emplace( name, MeshGeometry() ).first->second;
 	new_geom.Name = std::move( name );
 
 	ThrowIfFailed( D3DCreateBlob( vb_byte_size, &new_geom.VertexBufferCPU ) );
@@ -471,8 +436,8 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadGeometry( std::
 	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
 	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
 
-	new_geom.VertexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
-	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), mCommandList.Get(), indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+	new_geom.VertexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
+	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
 
 	new_geom.VertexByteStride = sizeof( vertex_type );
 	new_geom.VertexBufferByteSize = vb_byte_size;
@@ -480,6 +445,25 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadGeometry( std::
 	new_geom.IndexBufferByteSize = ib_byte_size;
 
 	return new_geom.DrawArgs;
+}
+
+template<DXGI_FORMAT index_format, class ICRange>
+void RenderApp::LoadDynamicGeometryIndices( const ICRange& indices, ID3D12GraphicsCommandList* cmd_list )
+{
+	using index_type = decltype( *indices.data() );
+	static_assert( index_format == DXGI_FORMAT_R16_UINT && sizeof( index_type ) == 2, "Wrong index type in LoadGeometry" ); // todo: enum -> sizeof map check
+
+	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( index_type );
+
+	auto& new_geom = m_dynamic_geometry;
+
+	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
+	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
+
+	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+
+	new_geom.IndexFormat = index_format;
+	new_geom.IndexBufferByteSize = ib_byte_size;
 }
 
 void RenderApp::BuildPSO()
@@ -520,7 +504,7 @@ void RenderApp::BuildPSO()
 void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
-		m_frame_resources.emplace_back( md3dDevice.Get(), 1, m_renderitems.size() );
+		m_frame_resources.emplace_back( md3dDevice.Get(), 1, UINT( m_renderitems.size() ), UINT( m_waves_cpu_vertices.size() ) );
 }
 
 
@@ -550,70 +534,7 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 	return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
 }
 
-using namespace boost::interprocess;
 void RenderApp::OnKeyUp( WPARAM btn )
 {
-	// entry point for cetonia
-	if ( (int)btn == VK_F8 )
-	{
-		std::vector<ctTokenLine2d> new_lines;
-		try
-		{
-			struct remover
-			{
-				~remover()
-				{
-					shared_memory_object::remove( "cetonia" );
-				}
-			} onremove;
-			shared_memory_object shm( open_or_create, "cetonia", read_only );
-
-			boost::interprocess::offset_t shm_size;
-			if ( ! shm.get_size( shm_size ) )
-				return;
-
-			if ( shm_size == 0 )
-				return;
-
-			mapped_region region( shm, read_only, 0, shm_size );
-			if ( region.get_size() == 0 )
-				return;
-
-			size_t msg_size = *reinterpret_cast<const size_t*>( region.get_address() );
-
-			const char* msg = reinterpret_cast<const char*>( region.get_address() ) + sizeof( size_t );
-
-			size_t stride = 0;
-			while ( stride < msg_size )
-			{
-				size_t token_shift;
-				ctToken token;
-				if ( ctFailed( ctParseToken( msg + stride, msg_size - stride, &token, &token_shift ) ) || ! ctIsTokenValid( token.type ) )
-					throw SnowEngineException( "fail in ctParseToken" );
-
-				stride += token_shift;
-
-				switch ( token.type )
-				{
-					case CT_Line2d:
-					{
-						new_lines.emplace_back( token.data.l2d );
-						break;
-					}
-				}
-			}
-		}
-		catch ( ... )
-		{
-			throw SnowEngineException( "fail in cetonia" );
-		}
-
-		if ( ! new_lines.empty() )
-			std::swap( m_new_lines, new_lines );
-	}
-	else if ( (int)btn == VK_F7 )
-	{
-		// potential leak! Todo: correct memory management for gpu
-		m_geometry.clear();
-	}
+	// 'w' - wireframe mode
 }

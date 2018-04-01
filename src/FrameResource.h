@@ -3,10 +3,11 @@
 #include <Luna/UploadBuffer.h>
 
 #include "RenderData.h"
+#include "ObjImporter.h"
 
 struct FrameResource
 {
-	FrameResource( ID3D12Device* device, UINT passCount, UINT objectCount );
+	FrameResource( ID3D12Device* device, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt );
 
 	// We cannot reset the allocator until the GPU is done processing the commands.
 	// So each frame needs their own allocator.
@@ -16,6 +17,7 @@ struct FrameResource
 	// that reference it.  So each frame needs their own cbuffers.
 	std::unique_ptr<UploadBuffer<PassConstants>> pass_cb = nullptr;
 	std::unique_ptr<UploadBuffer<ObjectConstants>> object_cb = nullptr;
+	std::unique_ptr<UploadBuffer<Vertex>> dynamic_geom_vb = nullptr;
 
 	// Fence value to mark commands up to this fence point.  This lets us
 	// check if these frame resources are still in use by the GPU.
