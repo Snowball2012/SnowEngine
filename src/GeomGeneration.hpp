@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GeomGeneration.h"
-
+#include "XMMath.h"
 
 namespace GeomGeneration
 {
@@ -65,5 +65,29 @@ namespace GeomGeneration
 		MakeGrid( nx, ny, size_x, size_y, vertex_collector, index_collector );
 
 		return res;
+	}
+
+	template<class VertexPosRandomAccessRange, class IndexRandomAccessRange, class fnNormalCollector>
+	void CalcAverageNormals( const IndexRandomAccessRange& indices, const VertexPosRandomAccessRange& vertices, fnNormalCollector&& nc )
+	{
+		static_assert( std::is_same_v<std::decay_t<decltype( vertices[0] )>, XMFLOAT3>, "vertex position must be XMFLOAT3" );
+
+		for ( const auto idx : indices )
+			nc( idx ) = XMFLOAT3( 0, 0, 0 );
+
+		for ( size_t i = 2; i < indices.size(); i += 3 )
+		{
+			XMVECTOR i_pos = XMLoadFloat3( &vertices[indices[i]] );
+			// clockwise triangles
+			XMFLOAT3 normal;
+			XMStoreFloat3( &normal, XMVector3Normalize( XMVector3Cross( XMLoadFloat3( &vertices[indices[i - 1]] ) - i_pos,
+																		XMLoadFloat3( &vertices[indices[i - 2]] ) - i_pos ) ) );
+			
+			for ( size_t j = 0; j < 3; ++j )
+				nc( indices[i - j] ) += normal;
+		}
+
+		for ( const auto idx : indices )
+			XMFloat3Normalize( nc( idx ) );
 	}
 }

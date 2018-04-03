@@ -29,6 +29,11 @@ namespace GeomGeneration
 	// specialization of MakeGrid for static array
 	template<size_t nx, size_t ny>
 	std::pair<GridVertices<nx, ny>, GridIndices<nx, ny>> MakeArrayGrid( float size_x, float size_y );
+
+	// fnNormalCollector = []( size_t vertex_idx ) -> XMFLOAT3&
+	// unsafe, every index in indices must be < size(vertices)
+	template<class VertexPosRandomAccessRange, class IndexRandomAccessRange, class fnNormalCollector>
+	void CalcAverageNormals( const IndexRandomAccessRange& indices, const VertexPosRandomAccessRange& vertices, fnNormalCollector&& nc );
 }
 
 #include "GeomGeneration.hpp"

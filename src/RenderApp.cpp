@@ -6,9 +6,7 @@
 
 #include <WindowsX.h>
 
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <cetonia/parser.h>
+#include <boost/range/adaptors.hpp>
 
 using namespace DirectX;
 
@@ -112,7 +110,11 @@ void RenderApp::UpdateWaves( const GameTimer& gt )
 	const float t = gt.TotalTime();
 
 	for ( auto& vertex : m_waves_cpu_vertices )
-		vertex.pos = XMFLOAT3( vertex.pos.x, 1.f*( sinf( 4.f * vertex.pos.x + 3.f*t ) + cosf( vertex.pos.y + 1.f*t ) + 0.3*cosf( 4.f * vertex.pos.z + 2.f*t ) ), vertex.pos.z );
+		vertex.pos = XMFLOAT3( vertex.pos.x, 1.f*( sinf( 4.f * vertex.pos.x + 3.f*t ) + cosf( vertex.pos.y + 1.f*t ) + 0.3f*cosf( 4.f * vertex.pos.z + 2.f*t ) ), vertex.pos.z );
+
+	GeomGeneration::CalcAverageNormals( m_waves_cpu_indices,
+										m_waves_cpu_vertices | boost::adaptors::transformed( []( Vertex& vertex )->const XMFLOAT3&{ return vertex.pos; } ),
+										[this]( size_t idx )->XMFLOAT3& { return m_waves_cpu_vertices[idx].normal; } );
 }
 
 void RenderApp::UpdateAndWaitForFrameResource()
@@ -289,7 +291,8 @@ void RenderApp::BuildShadersAndInputLayout()
 	m_input_layout =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 }
 
@@ -333,6 +336,9 @@ namespace
 
 void RenderApp::BuildGeometry()
 {
+	static constexpr size_t grid_nx = 50;
+	static constexpr size_t grid_ny = 50;
+
 	// static
 
 	{
@@ -343,6 +349,10 @@ void RenderApp::BuildGeometry()
 			vertex.pos.y = hillsHeight( vertex.pos.x, vertex.pos.z );
 			vertex.color = colorByHeight( vertex.pos.y );
 		}
+
+		GeomGeneration::CalcAverageNormals( grid.second,
+											grid.first | boost::adaptors::transformed( []( Vertex& vertex )->const XMFLOAT3&{ return vertex.pos; } ),
+											[&grid]( size_t idx )->XMFLOAT3&{ return grid.first[idx].normal; } );
 
 		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R16_UINT>( "land_grid", grid.first, grid.second, mCommandList.Get() );
 
@@ -356,9 +366,8 @@ void RenderApp::BuildGeometry()
 
 	// dynamic
 	{
-		m_waves_indices_count = GeomGeneration::GetGridNIndices( grid_nx, grid_ny );
-		std::vector<uint16_t> waves_indices;
-		waves_indices.reserve( m_waves_indices_count );
+		constexpr size_t waves_indices_count = GeomGeneration::GetGridNIndices( grid_nx, grid_ny );
+		m_waves_cpu_indices.reserve( waves_indices_count );
 
 		const size_t vertex_cnt = grid_nx * grid_ny;
 		m_waves_cpu_vertices.reserve( vertex_cnt );
@@ -370,17 +379,17 @@ void RenderApp::BuildGeometry()
 			}
 			, [&]( size_t idx )
 			{
-				waves_indices.emplace_back( uint16_t( idx ) );
+				m_waves_cpu_indices.emplace_back( uint16_t( idx ) );
 			} );
 
-		LoadDynamicGeometryIndices<DXGI_FORMAT_R16_UINT>( waves_indices, mCommandList.Get() );
+		LoadDynamicGeometryIndices<DXGI_FORMAT_R16_UINT>( m_waves_cpu_indices, mCommandList.Get() );
 
 		m_dynamic_geometry.Name = "main";
 		m_dynamic_geometry.VertexByteStride = sizeof( Vertex );
 		m_dynamic_geometry.VertexBufferByteSize = UINT( m_dynamic_geometry.VertexByteStride * m_waves_cpu_vertices.size() );
 
 		SubmeshGeometry submesh;
-		submesh.IndexCount = UINT( m_waves_indices_count );
+		submesh.IndexCount = UINT( waves_indices_count );
 		submesh.StartIndexLocation = 0;
 		submesh.BaseVertexLocation = 0;
 

@@ -62,10 +62,9 @@ private:
 	MeshGeometry m_dynamic_geometry;
 
 	// waves
-	static constexpr size_t grid_nx = 50;
-	static constexpr size_t grid_ny = 50;
+	
 	std::vector<Vertex> m_waves_cpu_vertices;
-	size_t m_waves_indices_count;
+	std::vector<uint16_t> m_waves_cpu_indices;
 
 	// resources
 	static constexpr int num_frame_resources = 3;

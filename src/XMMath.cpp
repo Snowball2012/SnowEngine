@@ -4,17 +4,23 @@
 
 using namespace DirectX;
 
- XMFLOAT3 operator-( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
+XMFLOAT3 operator-( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
 {
 	return  XMFLOAT3( lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z );
 }
 
- XMFLOAT3 operator+( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
+XMFLOAT3 operator+( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
 {
 	return  XMFLOAT3( lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z );
 }
 
- XMFLOAT3 operator*( const  XMFLOAT3& lhs, float mod )
+XMFLOAT3& operator+=( XMFLOAT3& op, const XMFLOAT3& rhs )
+{
+	op = op + rhs;
+	return op;
+}
+
+XMFLOAT3 operator*( const  XMFLOAT3& lhs, float mod )
 {
 	return  XMFLOAT3( lhs.x * mod, lhs.y * mod, lhs.z * mod );
 }
@@ -24,13 +30,13 @@ using namespace DirectX;
 	return op*mod;
 }
 
- XMFLOAT3& operator*=(  XMFLOAT3& op, float mod )
+XMFLOAT3& operator*=(  XMFLOAT3& op, float mod )
 {
 	op = mod * op;
 	return op;
 }
 
- XMFLOAT3 operator/( const XMFLOAT3& lhs, float mod )
+XMFLOAT3 operator/( const XMFLOAT3& lhs, float mod )
 {
 	return  XMFLOAT3( lhs.x / mod, lhs.y / mod, lhs.z / mod );
 }

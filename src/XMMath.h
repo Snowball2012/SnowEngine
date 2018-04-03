@@ -4,6 +4,7 @@
 
 DirectX::XMFLOAT3 operator-( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator+( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
+DirectX::XMFLOAT3& operator+=( DirectX::XMFLOAT3& op, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator*( const DirectX::XMFLOAT3& lhs, float mod );
 DirectX::XMFLOAT3 operator*( float mod, const DirectX::XMFLOAT3& op );
 DirectX::XMFLOAT3& operator*=( DirectX::XMFLOAT3& op, float mod );
