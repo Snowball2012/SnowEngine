@@ -62,3 +62,11 @@ XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta )
 	res.y = radius * cosf( phi );
 	return res;
 }
+
+DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m )
+{
+	XMMATRIX zeroed_translation = m;
+	zeroed_translation.r[3] = XMVectorSet( 0, 0, 0, 1 );
+	XMVECTOR det = XMMatrixDeterminant( zeroed_translation );
+	return XMMatrixTranspose( XMMatrixInverse( &det, zeroed_translation ) );
+}

@@ -54,6 +54,9 @@
     <ClCompile Include="src\XMMath.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\RenderData.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -86,6 +89,9 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\vs.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\lighting_utils.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>

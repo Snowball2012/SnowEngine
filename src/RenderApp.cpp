@@ -4,10 +4,6 @@
 
 #include "GeomGeneration.h"
 
-#include <WindowsX.h>
-
-#include <boost/range/adaptors.hpp>
-
 using namespace DirectX;
 
 RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
@@ -25,6 +21,8 @@ bool RenderApp::Initialize()
 	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
 	BuildGeometry();
+	BuildMaterials();
+	BuildLights();
 	BuildRenderItems();
 	BuildFrameResources();	
 	BuildDescriptorHeaps();
@@ -58,12 +56,15 @@ void RenderApp::Update( const GameTimer& gt )
 	UpdateWaves( gt );
 	UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
 
-	// Update pass constants
-	UpdatePassConstants( gt, *m_cur_frame_resource->pass_cb );
 
 	// Update object constants if needed
 	for ( auto& renderitem : m_renderitems )
 		UpdateRenderItem( renderitem, *m_cur_frame_resource->object_cb );
+
+	
+
+	// Update pass constants
+	UpdatePassConstants( gt, *m_cur_frame_resource->pass_cb );
 }
 
 void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb )
@@ -82,8 +83,49 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConst
 
 	PassConstants pc;
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
+	pc.Proj = m_proj;
+	pc.View = m_view;
+
+	UpdateLights( pc );
 
 	pass_cb.CopyData( 0, pc );
+}
+
+void RenderApp::UpdateLights( PassConstants& pc )
+{
+	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
+	for ( const auto& light : m_lights )
+	{
+		switch ( light.second.type )
+		{
+		case Light::Type::Parallel:
+			parallel_lights.push_back( &light.second.data );
+			break;
+		case Light::Type::Point:
+			point_lights.push_back( &light.second.data );
+			break;
+		case Light::Type::Spotlight:
+			spotlights.push_back( &light.second.data );
+			break;
+		default:
+			throw std::exception( "not implemented" );
+		}
+	}
+
+	if ( parallel_lights.size() + point_lights.size() + spotlights.size() > MAX_LIGHTS )
+		throw std::exception( "too many lights" );
+
+	pc.n_parallel_lights = int( parallel_lights.size() );
+	pc.n_point_lights = int( point_lights.size() );
+	pc.n_spotlight_lights = int( spotlights.size() );
+
+	size_t light_offset = 0;
+	for ( const LightConstants* light : boost::range::join( parallel_lights,
+															boost::range::join( point_lights,
+																				spotlights ) ) )
+	{
+		pc.lights[light_offset++] = *light;
+	}
 }
 
 void RenderApp::UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb )
@@ -182,13 +224,14 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
 
 	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
-	cmd_list->SetGraphicsRootConstantBufferView( 1, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
+	cmd_list->SetGraphicsRootConstantBufferView( 2, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
 
 	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
 	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : m_renderitems )
 	{
 		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
+		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
 		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
 		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
 		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -259,12 +302,13 @@ void RenderApp::BuildConstantBuffers()
 
 void RenderApp::BuildRootSignature()
 {
-	CD3DX12_ROOT_PARAMETER slot_root_parameter[2];
+	constexpr int nparams = 3;
+	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-	slot_root_parameter[0].InitAsConstantBufferView( 0 );
-	slot_root_parameter[1].InitAsConstantBufferView( 1 );
+	for ( int i = 0; i < nparams; ++i )
+		slot_root_parameter[i].InitAsConstantBufferView( i );
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( 2, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
+	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;
@@ -340,7 +384,6 @@ void RenderApp::BuildGeometry()
 	static constexpr size_t grid_ny = 50;
 
 	// static
-
 	{
 		auto grid = GeomGeneration::MakeArrayGrid<grid_nx, grid_ny>( 160, 160 );
 
@@ -397,6 +440,36 @@ void RenderApp::BuildGeometry()
 	}
 }
 
+void RenderApp::BuildMaterials()
+{
+	{
+		auto& grass_material = m_materials.emplace( "grass", StaticMaterial() ).first->second;
+		auto& grass_data = grass_material.mat_constants;
+		grass_data.mat_transform = MathHelper::Identity4x4();
+		grass_data.diffuse_albedo = XMFLOAT4( 0.3f, 0.7f, 0.25f, 1.0f );
+		grass_data.fresnel_r0 = XMFLOAT3( 0.6f, 0.7f, 0.5f );
+		grass_data.roughness = 0.8f;
+		grass_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+	}
+	{
+		auto& water_material = m_materials.emplace( "water", StaticMaterial() ).first->second;
+		auto& water_data = water_material.mat_constants;
+		water_data.mat_transform = MathHelper::Identity4x4();
+		water_data.diffuse_albedo = XMFLOAT4( 0.3f, 0.4f, 0.6f, 1.0f );
+		water_data.fresnel_r0 = XMFLOAT3( 1.f, 1.f, 1.f );
+		water_data.roughness = 0.2f;
+		water_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+	}
+}
+
+void RenderApp::BuildLights()
+{
+	auto& parallel_light = m_lights.emplace( "sun", Light{ Light::Type::Parallel, {} } ).first->second.data;
+	parallel_light.strength = XMFLOAT3( 1.0f, 1.0f, 1.0f );
+	parallel_light.dir = XMFLOAT3( 0.2f, 0.7f, -0.3f );
+	XMFloat3Normalize( parallel_light.dir );
+}
+
 void RenderApp::BuildRenderItems()
 {
 	auto init_from_submesh = []( const SubmeshGeometry& submesh, RenderItem& renderitem )
@@ -411,6 +484,7 @@ void RenderApp::BuildRenderItems()
 		RenderItem land;
 		land.cb_idx = 0;
 		land.geom = &m_static_geometry["land_grid"];
+		land.material = &m_materials["grass"];
 		init_from_submesh( land.geom->DrawArgs["grid"], land );
 		m_renderitems.push_back( land );
 	}
@@ -419,6 +493,7 @@ void RenderApp::BuildRenderItems()
 		RenderItem waves;
 		waves.cb_idx = 1;
 		waves.geom = &m_dynamic_geometry;
+		waves.material = &m_materials["water"];
 		init_from_submesh( waves.geom->DrawArgs["waves"], waves );
 		m_renderitems.push_back( waves );
 	}

@@ -26,6 +26,7 @@ private:
 	void UpdateAndWaitForFrameResource();
 	// isolated from FrameResources logic
 	void UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb );
+	void UpdateLights( PassConstants& pc );
 	void UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb );
 	void UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb );
 	void UpdateWaves( const GameTimer& gt );
@@ -48,6 +49,8 @@ private:
 	void BuildRootSignature();
 	void BuildShadersAndInputLayout();
 	void BuildGeometry();
+	void BuildMaterials();
+	void BuildLights();
 	void BuildRenderItems();
 	void BuildPSO();
 	void BuildFrameResources();
@@ -61,8 +64,11 @@ private:
 	void LoadDynamicGeometryIndices( const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
 	MeshGeometry m_dynamic_geometry;
 
+	// lighting and materials
+	std::unordered_map<std::string, StaticMaterial> m_materials;
+	std::unordered_map<std::string, Light> m_lights;
+
 	// waves
-	
 	std::vector<Vertex> m_waves_cpu_vertices;
 	std::vector<uint16_t> m_waves_cpu_indices;
 

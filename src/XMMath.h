@@ -14,3 +14,5 @@ float XMFloat3LenSquared( const DirectX::XMFLOAT3& op );
 float XMFloat3Normalize( DirectX::XMFLOAT3& lhs );
 
 DirectX::XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta );
+
+DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m );
