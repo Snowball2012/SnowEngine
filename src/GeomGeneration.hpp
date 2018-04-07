@@ -54,7 +54,6 @@ namespace GeomGeneration
 		{
 			auto& vertex = res.first[last_vertex++];
 			vertex.pos = DirectX::XMFLOAT3( x, 0, z );
-			vertex.color = DirectX::XMFLOAT4( 0, 0, 0, 1 );
 		};
 
 		auto index_collector = [&]( size_t idx )
@@ -80,8 +79,8 @@ namespace GeomGeneration
 			XMVECTOR i_pos = XMLoadFloat3( &vertices[indices[i]] );
 			// clockwise triangles
 			XMFLOAT3 normal;
-			XMStoreFloat3( &normal, XMVector3Normalize( XMVector3Cross( XMLoadFloat3( &vertices[indices[i - 1]] ) - i_pos,
-																		XMLoadFloat3( &vertices[indices[i - 2]] ) - i_pos ) ) );
+			XMStoreFloat3( &normal, XMVector3Normalize( XMVector3Cross( XMLoadFloat3( &vertices[indices[i - 2]] ) - i_pos,
+																		XMLoadFloat3( &vertices[indices[i - 1]] ) - i_pos ) ) );
 			
 			for ( size_t j = 0; j < 3; ++j )
 				nc( indices[i - j] ) += normal;

@@ -7,8 +7,6 @@ MeshData ObjImporter::ParseObj( std::istream& input ) const
 	std::vector<Vertex> vertices;
 	std::vector<uint16_t> faces;
 
-	constexpr DirectX::XMFLOAT4 default_color{ 0.1f, 0.1f, 0.1f, 1.f };
-
 	std::string first_word;
 	while ( input >> first_word )
 	{
@@ -17,7 +15,6 @@ MeshData ObjImporter::ParseObj( std::istream& input ) const
 			vertices.emplace_back();
 			auto& new_vertex = vertices.back();
 			input >> new_vertex.pos.x >> new_vertex.pos.y >> new_vertex.pos.z;
-			new_vertex.color = default_color;
 		}
 		else if ( first_word == "f" )
 		{

@@ -85,6 +85,7 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConst
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
 	pc.Proj = m_proj;
 	pc.View = m_view;
+	XMStoreFloat3( &pc.EyePosW, pos );
 
 	UpdateLights( pc );
 
@@ -335,8 +336,7 @@ void RenderApp::BuildShadersAndInputLayout()
 	m_input_layout =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 28, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 }
 
@@ -345,36 +345,6 @@ namespace
 	float hillsHeight( float x, float z )
 	{
 		return 0.3f*( z*sinf( 0.1f*x ) + x*cosf( 0.1f*z ) );
-	}
-
-	XMFLOAT4 colorByHeight( float height )
-	{
-		// Color the vertex based on its height.
-		if ( height < -10.0f )
-		{
-			// Sandy beach color.
-			return XMFLOAT4( 1.0f, 0.96f, 0.62f, 1.0f );
-		}
-		else if ( height < 5.0f )
-		{
-			// Light yellow-green.
-			return  XMFLOAT4( 0.48f, 0.77f, 0.46f, 1.0f );
-		}
-		else if ( height < 12.0f )
-		{
-			// Dark yellow-green.
-			return XMFLOAT4( 0.1f, 0.48f, 0.19f, 1.0f );
-		}
-		else if ( height < 20.0f )
-		{
-			// Dark brown.
-			return XMFLOAT4( 0.45f, 0.39f, 0.34f, 1.0f );
-		}
-		else
-		{
-			// White snow.
-			return XMFLOAT4( 1.0f, 1.0f, 1.0f, 1.0f );
-		}
 	}
 }
 
@@ -390,7 +360,6 @@ void RenderApp::BuildGeometry()
 		for ( auto& vertex : grid.first )
 		{
 			vertex.pos.y = hillsHeight( vertex.pos.x, vertex.pos.z );
-			vertex.color = colorByHeight( vertex.pos.y );
 		}
 
 		GeomGeneration::CalcAverageNormals( grid.second,
@@ -418,7 +387,7 @@ void RenderApp::BuildGeometry()
 		GeomGeneration::MakeGrid( grid_nx, grid_ny, 160, 160
 			, [&]( float x, float y )
 			{
-			m_waves_cpu_vertices.emplace_back( Vertex{ DirectX::XMFLOAT3( x, 0, y ), DirectX::XMFLOAT4( 0.5f, 0.5f, 0.8f, 1.0f ) } );
+			m_waves_cpu_vertices.emplace_back( Vertex{ DirectX::XMFLOAT3( x, 0, y ) } );
 			}
 			, [&]( size_t idx )
 			{
@@ -448,16 +417,16 @@ void RenderApp::BuildMaterials()
 		grass_data.mat_transform = MathHelper::Identity4x4();
 		grass_data.diffuse_albedo = XMFLOAT4( 0.3f, 0.7f, 0.25f, 1.0f );
 		grass_data.fresnel_r0 = XMFLOAT3( 0.6f, 0.7f, 0.5f );
-		grass_data.roughness = 0.8f;
+		grass_data.roughness = 1.0f;
 		grass_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 	{
 		auto& water_material = m_materials.emplace( "water", StaticMaterial() ).first->second;
 		auto& water_data = water_material.mat_constants;
 		water_data.mat_transform = MathHelper::Identity4x4();
-		water_data.diffuse_albedo = XMFLOAT4( 0.3f, 0.4f, 0.6f, 1.0f );
-		water_data.fresnel_r0 = XMFLOAT3( 1.f, 1.f, 1.f );
-		water_data.roughness = 0.2f;
+		water_data.diffuse_albedo = XMFLOAT4( 0.0f, 0.2f, 0.6f, 1.0f );
+		water_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
+		water_data.roughness = 0.0f;
 		water_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 }

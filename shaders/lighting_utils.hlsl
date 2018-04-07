@@ -47,4 +47,28 @@ cbuffer cbPerPass : register( b2 )
 	int n_spotlight_lights = 0;
 }
 
-// TODO: rendering equation
+// all outputs are not normalized
+float3 halfvector( float3 to_source, float3 to_camera )
+{
+	return to_source + to_camera;
+}
+
+float lambert( float3 to_source, float3 normal )
+{
+	return dot( normal, to_source );
+}
+
+float3 fresnel_schlick( float3 fresnel_r0, float source_to_normal_angle_cos )
+{
+	return fresnel_r0 + ( float3( 1.0f, 1.0f, 1.0f ) - fresnel_r0 ) * pow( 1.0f - source_to_normal_angle_cos, 5 );
+}
+
+// correct only if lambert term is above 0 and triangle is facing camera
+float3 specular_strength( float3 fresnel_r0, float3 normal, float3 halfvector, float roughness )
+{
+	float shininess = ( 1.0f - roughness ) * 256.0f;
+	float dot_nh = dot( normal, halfvector );
+	float3 spec_power = fresnel_schlick( fresnel_r0, dot_nh ) * ( shininess + 8.0f ) / 8.0f * pow( dot_nh, shininess );
+	spec_power = spec_power / ( spec_power + 1.0f );
+	return  spec_power;
+}

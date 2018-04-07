@@ -21,7 +21,4 @@ void GeomGeneration::MakeLineVertices( const ctTokenLine2d& line, Vertex vertice
 		vertices[i].pos = p1 + ( i * 2.f - 1 ) * left_dir;
 		vertices[i + 2].pos = p2 + ( i * 2.f - 1 ) * left_dir;
 	}
-
-	for ( int i = 0; i < 4; ++i )
-		vertices[i].color = XMFLOAT4( float( line.color.r ), float( line.color.g ), float( line.color.b ), 1.f );
 }
