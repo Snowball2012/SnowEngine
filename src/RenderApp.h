@@ -4,6 +4,8 @@
 #include <Luna/MathHelper.h>
 #include <Luna/UploadBuffer.h>
 
+#include <dxtk12/Keyboard.h>
+
 #include "FrameResource.h"
 #include "ObjImporter.h"
 
@@ -23,6 +25,7 @@ private:
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
+	
 	void UpdateAndWaitForFrameResource();
 	// isolated from FrameResources logic
 	void UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb );
@@ -30,6 +33,9 @@ private:
 	void UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb );
 	void UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb );
 	void UpdateWaves( const GameTimer& gt );
+	// input
+	void ReadEventKeys();
+	void ReadKeyboardState( const GameTimer& gt );
 
 	virtual void Draw( const GameTimer& gt ) override;
 	virtual void Draw_MainPass( ID3D12GraphicsCommandList* cmd_list );
@@ -39,9 +45,6 @@ private:
 	virtual void OnMouseMove( WPARAM btnState, int x, int y ) override;
 
 	virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
-
-	// MsgProc event handlers
-	void OnKeyUp( WPARAM btn );
 
 	// build functions
 	void BuildDescriptorHeaps();
@@ -97,13 +100,17 @@ private:
 	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_proj = MathHelper::Identity4x4();
 
-	float m_theta = 1.5f * DirectX::XM_PI;
-	float m_phi = DirectX::XM_PIDIV2;
-	float m_radius = 5.0f;
+	float m_theta = 0.7f * DirectX::XM_PI;
+	float m_phi = 0.5f * DirectX::XM_PIDIV2;
+	float m_radius = 200.0f;
+
+	float m_sun_theta = 1.5f * DirectX::XM_PI;
+	float m_sun_phi = 1.5f * DirectX::XM_PIDIV2;
 
 	bool m_wireframe_mode = false;
 
 	// inputs
+	std::unique_ptr<DirectX::Keyboard> m_keyboard;
 	POINT m_last_mouse_pos;
 	LPSTR m_cmd_line;
 };

@@ -17,6 +17,8 @@ bool RenderApp::Initialize()
 	if ( ! D3DApp::Initialize() )
 		return false;
 
+	m_keyboard = std::make_unique<DirectX::Keyboard>();
+
 	// create box, load to gpu through upload heap to default heap
 	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
@@ -53,18 +55,45 @@ void RenderApp::Update( const GameTimer& gt )
 {
 	UpdateAndWaitForFrameResource();
 
+	ReadKeyboardState( gt );
+
 	UpdateWaves( gt );
 	UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
-
 
 	// Update object constants if needed
 	for ( auto& renderitem : m_renderitems )
 		UpdateRenderItem( renderitem, *m_cur_frame_resource->object_cb );
 
-	
-
 	// Update pass constants
 	UpdatePassConstants( gt, *m_cur_frame_resource->pass_cb );
+}
+
+void RenderApp::ReadEventKeys()
+{
+	auto kb_state = m_keyboard->GetState();
+	if ( kb_state.F3 )
+		m_wireframe_mode = !m_wireframe_mode;
+}
+
+void RenderApp::ReadKeyboardState( const GameTimer& gt )
+{
+	auto kb_state = m_keyboard->GetState();
+
+	constexpr float angle_per_second = XM_PIDIV2;
+
+	float angle_step = angle_per_second * gt.DeltaTime();
+
+	if ( kb_state.Left )
+		m_sun_theta -= angle_step;
+	if ( kb_state.Right )
+		m_sun_theta += angle_step;
+	if ( kb_state.Up )
+		m_sun_phi += angle_step;
+	if ( kb_state.Down )
+		m_sun_phi -= angle_step;
+
+	m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
+	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
 }
 
 void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb )
@@ -94,6 +123,10 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConst
 
 void RenderApp::UpdateLights( PassConstants& pc )
 {
+	// update sun dir
+	auto& sun_light = m_lights["sun"];
+	sun_light.data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
+
 	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
 	for ( const auto& light : m_lights )
 	{
@@ -564,36 +597,18 @@ void RenderApp::BuildFrameResources()
 		m_frame_resources.emplace_back( md3dDevice.Get(), 1, UINT( m_renderitems.size() ), UINT( m_waves_cpu_vertices.size() ) );
 }
 
-
 LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
 	switch ( msg )
 	{
+		case WM_KEYDOWN:
+		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
-		{
-			if ( wParam == VK_ESCAPE )
-			{
-				PostQuitMessage( 0 );
-			}
-			else if ( (int)wParam == VK_F2 )
-			{
-				Set4xMsaaState( !m4xMsaaState );
-			}
-			else
-			{
-				OnKeyUp( wParam );
-			}
-
-			return 0;
-		}
+		case WM_SYSKEYUP:
+			Keyboard::ProcessMessage( msg, wParam, lParam );
+			ReadEventKeys();
+			break;
 	}
 
 	return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
-}
-
-void RenderApp::OnKeyUp( WPARAM btn )
-{
-	// 'F2' - wireframe mode
-	if ( (int)btn == VK_F3 )
-		m_wireframe_mode = ! m_wireframe_mode;
 }

@@ -9,6 +9,7 @@
 #include <boost/range/join.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/algorithm/algorithm.hpp>
+#include <boost/algorithm/clamp.hpp>
 #include <boost/container/static_vector.hpp>
 
 namespace bc = boost::container;
