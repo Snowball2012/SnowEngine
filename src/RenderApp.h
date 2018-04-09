@@ -28,10 +28,10 @@ private:
 	
 	void UpdateAndWaitForFrameResource();
 	// isolated from FrameResources logic
-	void UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb );
+	void UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb );
 	void UpdateLights( PassConstants& pc );
-	void UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb );
-	void UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb );
+	void UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb );
+	void UpdateDynamicGeometry( Utils::UploadBuffer<Vertex>& dynamic_vb );
 	void UpdateWaves( const GameTimer& gt );
 	// input
 	void ReadEventKeys();

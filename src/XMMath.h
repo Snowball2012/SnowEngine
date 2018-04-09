@@ -16,3 +16,11 @@ float XMFloat3Normalize( DirectX::XMFLOAT3& lhs );
 DirectX::XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta );
 
 DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m );
+
+constexpr DirectX::XMFLOAT4X4 Identity4x4 =
+{
+		1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+};

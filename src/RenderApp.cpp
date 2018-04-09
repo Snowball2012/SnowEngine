@@ -96,7 +96,7 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
 }
 
-void RenderApp::UpdatePassConstants( const GameTimer& gt, UploadBuffer<PassConstants>& pass_cb )
+void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb )
 {
 	const auto& cartesian = SphericalToCartesian( m_radius, m_phi, m_theta );
 
@@ -162,7 +162,7 @@ void RenderApp::UpdateLights( PassConstants& pc )
 	}
 }
 
-void RenderApp::UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectConstants>& obj_cb )
+void RenderApp::UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb )
 {
 	if ( renderitem.n_frames_dirty > 0 )
 	{
@@ -173,7 +173,7 @@ void RenderApp::UpdateRenderItem( RenderItem& renderitem, UploadBuffer<ObjectCon
 	}
 }
 
-void RenderApp::UpdateDynamicGeometry( UploadBuffer<Vertex>& dynamic_vb )
+void RenderApp::UpdateDynamicGeometry( Utils::UploadBuffer<Vertex>& dynamic_vb )
 {
 	for ( size_t i = 0; i < m_waves_cpu_vertices.size(); ++i )
 		dynamic_vb.CopyData( int( i ), m_waves_cpu_vertices[i] );
@@ -328,9 +328,9 @@ void RenderApp::BuildConstantBuffers()
 	for ( int i = 0; i < num_frame_resources; ++i )
 	{
 		// object cb
-		m_frame_resources[i].object_cb = std::make_unique<UploadBuffer<ObjectConstants>>( md3dDevice.Get(), UINT( m_renderitems.size() ), true );
+		m_frame_resources[i].object_cb = std::make_unique<Utils::UploadBuffer<ObjectConstants>>( md3dDevice.Get(), UINT( m_renderitems.size() ), true );
 		// pass cb
-		m_frame_resources[i].pass_cb = std::make_unique<UploadBuffer<PassConstants>>( md3dDevice.Get(), num_passes, true );
+		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( md3dDevice.Get(), num_passes, true );
 	}
 }
 
@@ -363,8 +363,8 @@ void RenderApp::BuildRootSignature()
 
 void RenderApp::BuildShadersAndInputLayout()
 {
-	m_vs_bytecode = d3dUtil::LoadBinary( L"shaders/vs.cso" );
-	m_ps_bytecode = d3dUtil::LoadBinary( L"shaders/ps.cso" );
+	m_vs_bytecode = Utils::LoadBinary( L"shaders/vs.cso" );
+	m_ps_bytecode = Utils::LoadBinary( L"shaders/ps.cso" );
 
 	m_input_layout =
 	{
@@ -522,8 +522,8 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
 	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
 
-	new_geom.VertexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
-	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+	new_geom.VertexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
+	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
 
 	new_geom.VertexByteStride = sizeof( vertex_type );
 	new_geom.VertexBufferByteSize = vb_byte_size;
@@ -546,7 +546,7 @@ void RenderApp::LoadDynamicGeometryIndices( const ICRange& indices, ID3D12Graphi
 	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
 	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
 
-	new_geom.IndexBufferGPU = d3dUtil::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
 
 	new_geom.IndexFormat = index_format;
 	new_geom.IndexBufferByteSize = ib_byte_size;

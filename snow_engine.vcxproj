@@ -105,7 +105,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\cetonia\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
@@ -139,7 +139,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\cetonia\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
     <Link>
@@ -163,6 +163,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\RenderData.cpp" />
+    <ClCompile Include="src\RenderUtils.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -176,6 +177,7 @@
     <ClInclude Include="src\ObjImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
     <ClInclude Include="src\RenderData.h" />
+    <ClInclude Include="src\RenderUtils.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\XMMath.h" />
   </ItemGroup>

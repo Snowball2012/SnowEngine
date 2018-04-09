@@ -57,6 +57,9 @@
     <ClCompile Include="src\RenderData.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\RenderUtils.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -83,6 +86,9 @@
     <ClInclude Include="src\FrameResource.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="src\RenderUtils.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -93,6 +99,8 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\lighting_utils.hlsl" />
+    <None Include="shaders\lighting_utils.hlsl">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
