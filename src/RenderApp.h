@@ -52,6 +52,7 @@ private:
 	void BuildRootSignature();
 	void BuildShadersAndInputLayout();
 	void BuildGeometry();
+	void LoadAndBuildTextures();
 	void BuildMaterials();
 	void BuildLights();
 	void BuildRenderItems();
@@ -67,9 +68,13 @@ private:
 	void LoadDynamicGeometryIndices( const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
 	MeshGeometry m_dynamic_geometry;
 
-	// lighting and materials
+	// lighting, materials and textures
 	std::unordered_map<std::string, StaticMaterial> m_materials;
 	std::unordered_map<std::string, Light> m_lights;
+	std::unordered_map<std::string, StaticTexture> m_textures;
+
+	// descriptor heaps
+	ComPtr<ID3D12DescriptorHeap> m_srv_heap = nullptr;
 
 	// waves
 	std::vector<Vertex> m_waves_cpu_vertices;

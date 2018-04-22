@@ -4,6 +4,8 @@
 
 #include "GeomGeneration.h"
 
+#include <dxtk12/DDSTextureLoader.h>
+
 using namespace DirectX;
 
 RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
@@ -23,6 +25,7 @@ bool RenderApp::Initialize()
 	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
 	BuildGeometry();
+	LoadAndBuildTextures();
 	BuildMaterials();
 	BuildLights();
 	BuildRenderItems();
@@ -320,7 +323,11 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 
 void RenderApp::BuildDescriptorHeaps()
 {
-	// no heaps =(
+	D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc;
+	srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srv_heap_desc.NumDescriptors = 1;
+	ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
 }
 
 void RenderApp::BuildConstantBuffers()
@@ -383,8 +390,8 @@ namespace
 
 void RenderApp::BuildGeometry()
 {
-	static constexpr size_t grid_nx = 50;
-	static constexpr size_t grid_ny = 50;
+	constexpr size_t grid_nx = 50;
+	constexpr size_t grid_ny = 50;
 
 	// static
 	{
@@ -440,6 +447,31 @@ void RenderApp::BuildGeometry()
 
 		m_dynamic_geometry.DrawArgs["waves"] = submesh;
 	}
+}
+
+void RenderApp::LoadAndBuildTextures()
+{
+	auto& crate = m_textures.emplace( "crate", StaticTexture() ).first->second;
+	std::unique_ptr<uint8_t[]> dds_data;
+	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( md3dDevice.Get(), L"resources/textures/WoodCrate01.dds", crate.texture_gpu.GetAddressOf(), dds_data, subresources ) );
+
+	size_t total_size = 0;
+	for ( const auto& subresource : subresources )
+		total_size += subresource.SlicePitch;
+
+	// create upload buffer
+	ThrowIfFailed( md3dDevice->CreateCommittedResource(
+		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
+		D3D12_HEAP_FLAG_NONE,
+		&CD3DX12_RESOURCE_DESC::Buffer( total_size ),
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS( crate.texture_uploader.GetAddressOf() ) ) );
+
+	// base resource is now in COPY_DEST STATE, no barrier required 
+	UpdateSubresources( mCommandList.Get(), crate.texture_gpu.Get(), crate.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
+	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( crate.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
 }
 
 void RenderApp::BuildMaterials()

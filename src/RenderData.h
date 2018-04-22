@@ -96,6 +96,12 @@ struct StaticMaterial
 	void LoadToGPU( ID3D12Device& device, ID3D12GraphicsCommandList& cmd_list );
 };
 
+struct StaticTexture
+{
+	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
+};
+
 struct RenderItem
 {
 	// geom
