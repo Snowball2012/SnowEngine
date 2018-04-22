@@ -327,6 +327,7 @@ void RenderApp::BuildDescriptorHeaps()
 	srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	srv_heap_desc.NumDescriptors = 1;
+	srv_heap_desc.NodeMask = 0;
 	ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
 }
 
