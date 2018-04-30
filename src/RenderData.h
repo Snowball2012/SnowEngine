@@ -72,19 +72,22 @@ struct Vertex
 {
 	DirectX::XMFLOAT3 pos;
 	DirectX::XMFLOAT3 normal;
+	DirectX::XMFLOAT2 uv;
 };
 
 struct MaterialConstants
 {
 	DirectX::XMFLOAT4X4 mat_transform;
-	DirectX::XMFLOAT4 diffuse_albedo;
 	DirectX::XMFLOAT3 fresnel_r0;
+
 	float roughness;
 };
 
 struct StaticMaterial
 {
 	MaterialConstants mat_constants;
+
+	int srv_heap_idx = -1;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_gpu = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_uploader = nullptr;

@@ -5,6 +5,9 @@
 #include "GeomGeneration.h"
 
 #include <dxtk12/DDSTextureLoader.h>
+#include <dxtk12/DirectXHelpers.h>
+
+#include <d3d12sdklayers.h>
 
 using namespace DirectX;
 
@@ -24,13 +27,13 @@ bool RenderApp::Initialize()
 	// create box, load to gpu through upload heap to default heap
 	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
-	BuildGeometry();
+	BuildDescriptorHeaps();
 	LoadAndBuildTextures();
+	BuildGeometry();
 	BuildMaterials();
 	BuildLights();
 	BuildRenderItems();
-	BuildFrameResources();	
-	BuildDescriptorHeaps();
+	BuildFrameResources();
 	BuildConstantBuffers();
 	BuildRootSignature();
 	BuildShadersAndInputLayout();	
@@ -39,7 +42,6 @@ bool RenderApp::Initialize()
 	ThrowIfFailed( mCommandList->Close() );
 	ID3D12CommandList* cmd_lists[] = { mCommandList.Get() };
 	mCommandQueue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
-
 	FlushCommandQueue();
 
 	return true;
@@ -260,15 +262,22 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	// set render target
 	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
 
+	ID3D12DescriptorHeap* srv_heap = m_srv_heap.Get();
+	cmd_list->SetDescriptorHeaps( 1, &srv_heap );
+
 	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
-	cmd_list->SetGraphicsRootConstantBufferView( 2, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
+	cmd_list->SetGraphicsRootConstantBufferView( 3, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
 
 	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
 	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : m_renderitems )
 	{
+		CD3DX12_GPU_DESCRIPTOR_HANDLE tex_gpu( m_srv_heap->GetGPUDescriptorHandleForHeapStart() );
+		tex_gpu.Offset( render_item.material->srv_heap_idx, mCbvSrvUavDescriptorSize );
+
 		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
-		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
+		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );		
+		cmd_list->SetGraphicsRootDescriptorTable( 2, tex_gpu );
 		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
 		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
 		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -323,12 +332,14 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 
 void RenderApp::BuildDescriptorHeaps()
 {
-	D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc;
-	srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	srv_heap_desc.NumDescriptors = 1;
-	srv_heap_desc.NodeMask = 0;
-	ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
+	// srv heap
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
+		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		srv_heap_desc.NumDescriptors = 1;
+		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
+	}
 }
 
 void RenderApp::BuildConstantBuffers()
@@ -344,13 +355,19 @@ void RenderApp::BuildConstantBuffers()
 
 void RenderApp::BuildRootSignature()
 {
-	constexpr int nparams = 3;
+	constexpr int nparams = 4;
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-	for ( int i = 0; i < nparams; ++i )
+	for ( int i = 0; i < 2; ++i )
 		slot_root_parameter[i].InitAsConstantBufferView( i );
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
+	CD3DX12_DESCRIPTOR_RANGE desc_table( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
+	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table, D3D12_SHADER_VISIBILITY_ALL );
+
+	slot_root_parameter[3].InitAsConstantBufferView( 2 );
+
+	const auto& static_samplers = BuildStaticSamplers();
+	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter, UINT( static_samplers.size() ), static_samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;
@@ -377,7 +394,8 @@ void RenderApp::BuildShadersAndInputLayout()
 	m_input_layout =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 }
 
@@ -406,7 +424,7 @@ void RenderApp::BuildGeometry()
 		GeomGeneration::CalcAverageNormals( grid.second,
 											grid.first | boost::adaptors::transformed( []( Vertex& vertex )->const XMFLOAT3&{ return vertex.pos; } ),
 											[&grid]( size_t idx )->XMFLOAT3&{ return grid.first[idx].normal; } );
-
+		
 		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R16_UINT>( "land_grid", grid.first, grid.second, mCommandList.Get() );
 
 		SubmeshGeometry submesh;
@@ -433,6 +451,10 @@ void RenderApp::BuildGeometry()
 			, [&]( size_t idx )
 			{
 				m_waves_cpu_indices.emplace_back( uint16_t( idx ) );
+			}
+			, [&]( size_t idx, DirectX::XMFLOAT2 uv )
+			{
+				m_waves_cpu_vertices[idx].uv = uv;
 			} );
 
 		LoadDynamicGeometryIndices<DXGI_FORMAT_R16_UINT>( m_waves_cpu_indices, mCommandList.Get() );
@@ -453,13 +475,12 @@ void RenderApp::BuildGeometry()
 void RenderApp::LoadAndBuildTextures()
 {
 	auto& crate = m_textures.emplace( "crate", StaticTexture() ).first->second;
+
 	std::unique_ptr<uint8_t[]> dds_data;
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( md3dDevice.Get(), L"resources/textures/WoodCrate01.dds", crate.texture_gpu.GetAddressOf(), dds_data, subresources ) );
 
-	size_t total_size = 0;
-	for ( const auto& subresource : subresources )
-		total_size += subresource.SlicePitch;
+	size_t total_size = GetRequiredIntermediateSize( crate.texture_gpu.Get(), 0, UINT( subresources.size() ) );
 
 	// create upload buffer
 	ThrowIfFailed( md3dDevice->CreateCommittedResource(
@@ -473,6 +494,10 @@ void RenderApp::LoadAndBuildTextures()
 	// base resource is now in COPY_DEST STATE, no barrier required 
 	UpdateSubresources( mCommandList.Get(), crate.texture_gpu.Get(), crate.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
 	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( crate.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
+	crate.texture_gpu->SetName( L"crate_tex" );
+	crate.texture_uploader->SetName( L"crate_uploader" );
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle( m_srv_heap->GetCPUDescriptorHandleForHeapStart(), 0, mCbvSrvUavDescriptorSize );
+	CreateShaderResourceView( md3dDevice.Get(), crate.texture_gpu.Get(), handle );
 }
 
 void RenderApp::BuildMaterials()
@@ -481,19 +506,28 @@ void RenderApp::BuildMaterials()
 		auto& grass_material = m_materials.emplace( "grass", StaticMaterial() ).first->second;
 		auto& grass_data = grass_material.mat_constants;
 		grass_data.mat_transform = MathHelper::Identity4x4();
-		grass_data.diffuse_albedo = XMFLOAT4( 0.3f, 0.7f, 0.25f, 1.0f );
 		grass_data.fresnel_r0 = XMFLOAT3( 0.6f, 0.7f, 0.5f );
 		grass_data.roughness = 1.0f;
+		grass_material.srv_heap_idx = 0; // todo: replace
 		grass_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 	{
 		auto& water_material = m_materials.emplace( "water", StaticMaterial() ).first->second;
 		auto& water_data = water_material.mat_constants;
 		water_data.mat_transform = MathHelper::Identity4x4();
-		water_data.diffuse_albedo = XMFLOAT4( 0.0f, 0.2f, 0.6f, 1.0f );
 		water_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
 		water_data.roughness = 0.0f;
+		water_material.srv_heap_idx = 0; // todo: replace
 		water_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+	}
+	{
+		auto& wood_material = m_materials.emplace( "wood", StaticMaterial() ).first->second;
+		auto& wood_data = wood_material.mat_constants;
+		wood_data.mat_transform = MathHelper::Identity4x4();
+		wood_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
+		wood_data.roughness = 1.0f;
+		wood_material.srv_heap_idx = 0;
+		wood_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 }
 
@@ -557,6 +591,10 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 
 	new_geom.VertexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
 	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+
+
+	new_geom.VertexBufferGPU->SetName( L"vbuffer" );
+
 
 	new_geom.VertexByteStride = sizeof( vertex_type );
 	new_geom.VertexBufferByteSize = vb_byte_size;
@@ -628,6 +666,63 @@ void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
 		m_frame_resources.emplace_back( md3dDevice.Get(), 1, UINT( m_renderitems.size() ), UINT( m_waves_cpu_vertices.size() ) );
+}
+
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> RenderApp::BuildStaticSamplers() const
+{
+	// Applications usually only need a handful of samplers.  So just define them all up front
+	// and keep them available as part of the root signature.  
+
+	const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
+		0, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP ); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
+		1, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP ); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
+		2, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP ); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
+		3, // shaderRegister
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP ); // addressW
+
+	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
+		4, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
+		0.0f,                             // mipLODBias
+		8 );                               // maxAnisotropy
+
+	const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
+		5, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
+		0.0f,                              // mipLODBias
+		8 );                                // maxAnisotropy
+
+	return {
+		pointWrap, pointClamp,
+		linearWrap, linearClamp,
+		anisotropicWrap, anisotropicClamp };
 }
 
 LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )

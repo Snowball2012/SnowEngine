@@ -59,6 +59,8 @@ private:
 	void BuildPSO();
 	void BuildFrameResources();
 
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> BuildStaticSamplers() const;
+
 	// geometry
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
 	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );

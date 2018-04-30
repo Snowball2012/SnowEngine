@@ -5,14 +5,17 @@
 
 namespace GeomGeneration
 {
-	template<class fnVertexCollector, class fnIndexCollector>
-	void MakeGrid( size_t nx, size_t ny, float size_x, float size_y, fnVertexCollector&& vertex_collector, fnIndexCollector&& index_collector )
+	template<class fnVertexCollector, class fnIndexCollector, class fnUVCollector>
+	void MakeGrid( size_t nx, size_t ny, float size_x, float size_y, fnVertexCollector&& vertex_collector, fnIndexCollector&& index_collector, fnUVCollector&& uv_collector )
 	{
 		const float halfx = size_x / 2;
 		const float halfy = size_y / 2;
 		for ( size_t j = 0; j < ny; ++j )
 			for ( size_t i = 0; i < nx; ++i )
+			{
 				vertex_collector( float( i ) / float( nx ) * size_x - halfx, float( j ) / float( ny ) * size_y - halfy );
+				uv_collector( nx * j + i, DirectX::XMFLOAT2( float( i ) / float( nx - 1 ), float( ny - 1 - j ) / float( ny - 1 ) ) );
+			}
 
 		for ( size_t j = 0; j < ny - 1; ++j )
 			for ( size_t i = 0; i < nx - 1; ++i )
@@ -61,7 +64,12 @@ namespace GeomGeneration
 			res.second[last_idx++] = uint16_t( idx );
 		};
 
-		MakeGrid( nx, ny, size_x, size_y, vertex_collector, index_collector );
+		auto uv_collector = [&]( size_t idx, const DirectX::XMFLOAT2& uv )
+		{
+			res.first[idx].uv = uv;
+		};
+
+		MakeGrid( nx, ny, size_x, size_y, vertex_collector, index_collector, uv_collector );
 
 		return res;
 	}

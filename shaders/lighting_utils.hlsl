@@ -19,7 +19,6 @@ cbuffer cbPerObject : register( b0 )
 cbuffer cbPerMaterial : register( b1 )
 {
 	float4x4 transform;
-	float4 diffuse_albedo;
 	float3 fresnel_r0;
 	float roughness;
 }
@@ -46,6 +45,15 @@ cbuffer cbPerPass : register( b2 )
 	int n_point_lights = 0;
 	int n_spotlight_lights = 0;
 }
+
+SamplerState point_wrap_sampler : register( s0 );
+SamplerState point_clamp_sampler : register( s1 );
+SamplerState linear_wrap_sampler : register( s2 );
+SamplerState linear_clamp_sampler : register( s3 );
+SamplerState anisotropic_wrap_sampler : register( s4 );
+SamplerState anisotropic_clamp_sampler : register( s5 );
+
+Texture2D albedo_map : register( t0 );
 
 // all outputs are not normalized
 float3 halfvector( float3 to_source, float3 to_camera )

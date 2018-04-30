@@ -4,6 +4,7 @@ struct VertexIn
 {
 	float3 pos : POSITION;
 	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
 };
 
 struct VertexOut
@@ -11,6 +12,7 @@ struct VertexOut
 	float4 pos : SV_POSITION;
 	float3 pos_w : POSITION;
 	float3 normal : NORMAL;
+	float2 uv : TEXCOORD;
 };
 
 VertexOut main( VertexIn vin )
@@ -20,5 +22,6 @@ VertexOut main( VertexIn vin )
 	vout.pos_w = vin.pos;
 	vout.pos = mul( float4( vin.pos, 1.0f ), mvp_mat );
 	vout.normal = mul( float4( vin.normal, 0.0f ), model_mat ).xyz;
+	vout.uv = vin.uv;
 	return vout;
 }
