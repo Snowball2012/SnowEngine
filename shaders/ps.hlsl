@@ -25,6 +25,7 @@ float3 rendering_equation( float3 to_source, float3 to_camera, float3 normal, fl
 float4 main( PixelIn pin ) : SV_TARGET
 {
 	float3 res_color = float3( 0.0f, 0.0f, 0.0f );
+	//res_color = pin.normal / 2.0f + float3( 0.5f, 0.5f, 0.5f );
 	for ( int light_idx = 0; light_idx < n_parallel_lights; ++light_idx )
 		res_color += rendering_equation( lights[light_idx].dir,
 										 normalize( eye_pos_w - pin.pos_w ),

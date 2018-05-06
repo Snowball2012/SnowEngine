@@ -46,6 +46,9 @@ private:
 
 	virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
 
+	// load model
+	void LoadModel( const std::string& filename );
+
 	// build functions
 	void BuildDescriptorHeaps();
 	void BuildConstantBuffers();
@@ -53,6 +56,7 @@ private:
 	void BuildShadersAndInputLayout();
 	void BuildGeometry();
 	void LoadAndBuildTextures();
+	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name, int srv_idx );
 	void BuildMaterials();
 	void BuildLights();
 	void BuildRenderItems();
@@ -60,6 +64,9 @@ private:
 	void BuildFrameResources();
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> BuildStaticSamplers() const;
+
+	// external geometry
+	StaticMesh m_ext_mesh;
 
 	// geometry
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
@@ -107,12 +114,12 @@ private:
 	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_proj = MathHelper::Identity4x4();
 
-	float m_theta = 0.7f * DirectX::XM_PI;
-	float m_phi = 0.5f * DirectX::XM_PIDIV2;
-	float m_radius = 200.0f;
+	float m_theta = 1.1f * DirectX::XM_PI;
+	float m_phi = 0.8f * DirectX::XM_PIDIV2;
+	float m_radius = 15.0f;
 
-	float m_sun_theta = 1.5f * DirectX::XM_PI;
-	float m_sun_phi = 1.5f * DirectX::XM_PIDIV2;
+	float m_sun_theta = 0.25f * DirectX::XM_PI;
+	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;
 
 	bool m_wireframe_mode = false;
 

@@ -105,16 +105,19 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cetonia.lib;DirectXTK12.lib;libluna_d.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cetonia.lib;DirectXTK12.lib;libfbxsdk.lib;libluna_d.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)</Command>
+      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -139,18 +142,21 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_65_1;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
+      <PreprocessorDefinitions>FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>cetonia.lib;DirectXTK12.lib;libluna.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>3rdparty\boost_1_65_1\lib64-msvc-14.1;3rdparty\d3d12book_luna_src\lib;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cetonia.lib;DirectXTK12.lib;libfbxsdk.lib;libluna.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)</Command>
+      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
+</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

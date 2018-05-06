@@ -14,6 +14,7 @@ struct Light
 cbuffer cbPerObject : register( b0 )
 {
 	float4x4 model_mat;
+	float4x4 model_inv_transpose_mat;
 }
 
 cbuffer cbPerMaterial : register( b1 )

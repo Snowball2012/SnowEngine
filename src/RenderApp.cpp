@@ -15,12 +15,17 @@ RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
 	: D3DApp( hinstance ), m_cmd_line( cmd_line )
 {
 	mMainWndCaption = L"Snow Engine";
+	mClientWidth = 1920;
+	mClientHeight = 1080;
 }
 
 bool RenderApp::Initialize()
 {
 	if ( ! D3DApp::Initialize() )
 		return false;
+
+	if ( strlen( m_cmd_line ) != 0 )
+		LoadModel( m_cmd_line );
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
 
@@ -52,7 +57,7 @@ void RenderApp::OnResize()
 	D3DApp::OnResize();
 
 	// Need to recompute projection matrix
-	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 1000.0f );
+	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100000.0f );
 	XMStoreFloat4x4( &m_proj, proj );
 }
 
@@ -62,8 +67,8 @@ void RenderApp::Update( const GameTimer& gt )
 
 	ReadKeyboardState( gt );
 
-	UpdateWaves( gt );
-	UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
+	//UpdateWaves( gt );
+	//UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
 
 	// Update object constants if needed
 	for ( auto& renderitem : m_renderitems )
@@ -173,6 +178,7 @@ void RenderApp::UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<Ob
 	{
 		ObjectConstants obj_constants;
 		XMStoreFloat4x4( &obj_constants.model, XMMatrixTranspose( XMLoadFloat4x4( &renderitem.world_mat ) ) );
+		XMStoreFloat4x4( &obj_constants.model_inv_transpose, XMMatrixTranspose( InverseTranspose( XMLoadFloat4x4( &renderitem.world_mat ) ) ) );
 		obj_cb.CopyData( renderitem.cb_idx, obj_constants );
 		renderitem.n_frames_dirty--;
 	}
@@ -323,7 +329,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 		m_radius += (dx - dy) * m_radius;
 
 		// Restrict the radius.
-		m_radius = MathHelper::Clamp( m_radius, 3.0f, 1000.0f );
+		m_radius = MathHelper::Clamp( m_radius, 3.0f, 100000.0f );
 	}
 
 	m_last_mouse_pos.x = x;
@@ -337,7 +343,7 @@ void RenderApp::BuildDescriptorHeaps()
 		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 1;
+		srv_heap_desc.NumDescriptors = 1 + m_ext_mesh.textures.size();
 		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
 	}
 }
@@ -409,78 +415,37 @@ namespace
 
 void RenderApp::BuildGeometry()
 {
-	constexpr size_t grid_nx = 50;
-	constexpr size_t grid_ny = 50;
-
 	// static
 	{
-		auto grid = GeomGeneration::MakeArrayGrid<grid_nx, grid_ny>( 160, 160 );
+		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R32_UINT>( "main", m_ext_mesh.vertices, m_ext_mesh.indices, mCommandList.Get() );
 
-		for ( auto& vertex : grid.first )
+		for ( const auto& cpu_submesh : m_ext_mesh.submeshes )
 		{
-			vertex.pos.y = hillsHeight( vertex.pos.x, vertex.pos.z );
+			SubmeshGeometry submesh;
+			submesh.IndexCount = UINT( cpu_submesh.nindices );
+			submesh.StartIndexLocation = UINT( cpu_submesh.index_offset );
+			submesh.BaseVertexLocation = 0;
+			submeshes[cpu_submesh.name] = submesh;
 		}
-
-		GeomGeneration::CalcAverageNormals( grid.second,
-											grid.first | boost::adaptors::transformed( []( Vertex& vertex )->const XMFLOAT3&{ return vertex.pos; } ),
-											[&grid]( size_t idx )->XMFLOAT3&{ return grid.first[idx].normal; } );
-		
-		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R16_UINT>( "land_grid", grid.first, grid.second, mCommandList.Get() );
-
-		SubmeshGeometry submesh;
-		submesh.IndexCount = UINT( grid.second.size() );
-		submesh.StartIndexLocation = 0;
-		submesh.BaseVertexLocation = 0;
-
-		submeshes["grid"] = submesh;
-	}
-
-	// dynamic
-	{
-		constexpr size_t waves_indices_count = GeomGeneration::GetGridNIndices( grid_nx, grid_ny );
-		m_waves_cpu_indices.reserve( waves_indices_count );
-
-		const size_t vertex_cnt = grid_nx * grid_ny;
-		m_waves_cpu_vertices.reserve( vertex_cnt );
-
-		GeomGeneration::MakeGrid( grid_nx, grid_ny, 160, 160
-			, [&]( float x, float y )
-			{
-			m_waves_cpu_vertices.emplace_back( Vertex{ DirectX::XMFLOAT3( x, 0, y ) } );
-			}
-			, [&]( size_t idx )
-			{
-				m_waves_cpu_indices.emplace_back( uint16_t( idx ) );
-			}
-			, [&]( size_t idx, DirectX::XMFLOAT2 uv )
-			{
-				m_waves_cpu_vertices[idx].uv = uv;
-			} );
-
-		LoadDynamicGeometryIndices<DXGI_FORMAT_R16_UINT>( m_waves_cpu_indices, mCommandList.Get() );
-
-		m_dynamic_geometry.Name = "main";
-		m_dynamic_geometry.VertexByteStride = sizeof( Vertex );
-		m_dynamic_geometry.VertexBufferByteSize = UINT( m_dynamic_geometry.VertexByteStride * m_waves_cpu_vertices.size() );
-
-		SubmeshGeometry submesh;
-		submesh.IndexCount = UINT( waves_indices_count );
-		submesh.StartIndexLocation = 0;
-		submesh.BaseVertexLocation = 0;
-
-		m_dynamic_geometry.DrawArgs["waves"] = submesh;
 	}
 }
 
 void RenderApp::LoadAndBuildTextures()
 {
-	auto& crate = m_textures.emplace( "crate", StaticTexture() ).first->second;
+	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder", 0 );
+	for ( size_t i = 0; i < m_ext_mesh.textures.size(); ++i )
+		LoadStaticDDSTexture( std::wstring( m_ext_mesh.textures[i].begin(), m_ext_mesh.textures[i].end() ).c_str(), m_ext_mesh.textures[i], i + 1 );
+}
+
+void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string& name, int srv_idx )
+{
+	auto& texture = m_textures.emplace( name, StaticTexture() ).first->second;
 
 	std::unique_ptr<uint8_t[]> dds_data;
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( md3dDevice.Get(), L"resources/textures/WoodCrate01.dds", crate.texture_gpu.GetAddressOf(), dds_data, subresources ) );
+	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( md3dDevice.Get(), filename, texture.texture_gpu.GetAddressOf(), dds_data, subresources ) );
 
-	size_t total_size = GetRequiredIntermediateSize( crate.texture_gpu.Get(), 0, UINT( subresources.size() ) );
+	size_t total_size = GetRequiredIntermediateSize( texture.texture_gpu.Get(), 0, UINT( subresources.size() ) );
 
 	// create upload buffer
 	ThrowIfFailed( md3dDevice->CreateCommittedResource(
@@ -489,45 +454,36 @@ void RenderApp::LoadAndBuildTextures()
 		&CD3DX12_RESOURCE_DESC::Buffer( total_size ),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS( crate.texture_uploader.GetAddressOf() ) ) );
+		IID_PPV_ARGS( texture.texture_uploader.GetAddressOf() ) ) );
 
 	// base resource is now in COPY_DEST STATE, no barrier required 
-	UpdateSubresources( mCommandList.Get(), crate.texture_gpu.Get(), crate.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
-	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( crate.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
-	crate.texture_gpu->SetName( L"crate_tex" );
-	crate.texture_uploader->SetName( L"crate_uploader" );
-	CD3DX12_CPU_DESCRIPTOR_HANDLE handle( m_srv_heap->GetCPUDescriptorHandleForHeapStart(), 0, mCbvSrvUavDescriptorSize );
-	CreateShaderResourceView( md3dDevice.Get(), crate.texture_gpu.Get(), handle );
+	UpdateSubresources( mCommandList.Get(), texture.texture_gpu.Get(), texture.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
+	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( texture.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
+	CD3DX12_CPU_DESCRIPTOR_HANDLE handle( m_srv_heap->GetCPUDescriptorHandleForHeapStart(), srv_idx, mCbvSrvUavDescriptorSize );
+	CreateShaderResourceView( md3dDevice.Get(), texture.texture_gpu.Get(), handle );
 }
 
 void RenderApp::BuildMaterials()
 {
 	{
-		auto& grass_material = m_materials.emplace( "grass", StaticMaterial() ).first->second;
-		auto& grass_data = grass_material.mat_constants;
-		grass_data.mat_transform = MathHelper::Identity4x4();
-		grass_data.fresnel_r0 = XMFLOAT3( 0.6f, 0.7f, 0.5f );
-		grass_data.roughness = 1.0f;
-		grass_material.srv_heap_idx = 0; // todo: replace
-		grass_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+		auto& placeholder_material = m_materials.emplace( "placeholder", StaticMaterial() ).first->second;
+		auto& mat_data = placeholder_material.mat_constants;
+		mat_data.mat_transform = MathHelper::Identity4x4();
+		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
+		mat_data.roughness = 1.0f;
+		placeholder_material.srv_heap_idx = 0;
+		placeholder_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
+
+	for ( int i = 0; i < m_ext_mesh.materials.size(); ++i )
 	{
-		auto& water_material = m_materials.emplace( "water", StaticMaterial() ).first->second;
-		auto& water_data = water_material.mat_constants;
-		water_data.mat_transform = MathHelper::Identity4x4();
-		water_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
-		water_data.roughness = 0.0f;
-		water_material.srv_heap_idx = 0; // todo: replace
-		water_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
-	}
-	{
-		auto& wood_material = m_materials.emplace( "wood", StaticMaterial() ).first->second;
-		auto& wood_data = wood_material.mat_constants;
-		wood_data.mat_transform = MathHelper::Identity4x4();
-		wood_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
-		wood_data.roughness = 1.0f;
-		wood_material.srv_heap_idx = 0;
-		wood_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+		auto& material = m_materials.emplace( m_ext_mesh.materials[i].first, StaticMaterial() ).first->second;
+		auto& mat_data = material.mat_constants;
+		mat_data.mat_transform = MathHelper::Identity4x4();
+		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
+		mat_data.roughness = 1.0f;
+		material.srv_heap_idx = m_ext_mesh.materials[i].second + 1;
+		material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 }
 
@@ -539,32 +495,50 @@ void RenderApp::BuildLights()
 	XMFloat3Normalize( parallel_light.dir );
 }
 
-void RenderApp::BuildRenderItems()
+namespace
 {
-	auto init_from_submesh = []( const SubmeshGeometry& submesh, RenderItem& renderitem )
+	void initFromSubmesh ( const SubmeshGeometry& submesh, RenderItem& renderitem )
 	{
-		renderitem.n_frames_dirty = num_frame_resources;
 		renderitem.index_count = submesh.IndexCount;
 		renderitem.index_offset = submesh.StartIndexLocation;
 		renderitem.vertex_offset = submesh.BaseVertexLocation;
 	};
 
+	void initFromSubmesh ( const StaticMesh::Submesh& submesh, RenderItem& renderitem )
 	{
-		RenderItem land;
-		land.cb_idx = 0;
-		land.geom = &m_static_geometry["land_grid"];
-		land.material = &m_materials["grass"];
-		init_from_submesh( land.geom->DrawArgs["grid"], land );
-		m_renderitems.push_back( land );
-	}
+		renderitem.index_count = submesh.nindices;
+		renderitem.index_offset = submesh.index_offset;
+		renderitem.vertex_offset = 0;
+		renderitem.world_mat = submesh.transform;
+	};
+}
 
+void RenderApp::BuildRenderItems()
+{
+	auto init_from_submesh = []( const auto& submesh, RenderItem& renderitem )
 	{
-		RenderItem waves;
-		waves.cb_idx = 1;
-		waves.geom = &m_dynamic_geometry;
-		waves.material = &m_materials["water"];
-		init_from_submesh( waves.geom->DrawArgs["waves"], waves );
-		m_renderitems.push_back( waves );
+		renderitem.n_frames_dirty = num_frame_resources;
+		initFromSubmesh( submesh, renderitem );
+	};
+
+	m_renderitems.reserve( m_ext_mesh.submeshes.size() );
+
+	size_t idx = 0;
+	for ( const auto& submesh : m_ext_mesh.submeshes )
+	{
+		RenderItem item;
+		item.cb_idx = int( idx++ );
+		item.geom = &m_static_geometry["main"];
+		const int material_idx = submesh.material_idx;
+		std::string material_name;
+		if ( material_idx < 0 )
+			material_name = "placeholder";
+		else
+			material_name = m_ext_mesh.materials[material_idx].first;
+
+		item.material = &m_materials[material_name];
+		init_from_submesh( submesh, item );
+		m_renderitems.push_back( item );
 	}
 }
 
@@ -575,7 +549,8 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 
 	using vertex_type = decltype( *vertices.data() );
 	using index_type = decltype( *indices.data() );
-	static_assert( index_format == DXGI_FORMAT_R16_UINT && sizeof( index_type ) == 2, "Wrong index type in LoadGeometry" ); // todo: enum -> sizeof map check
+	static_assert( ( index_format == DXGI_FORMAT_R16_UINT && sizeof( index_type ) == 2 )
+				   || ( index_format == DXGI_FORMAT_R32_UINT && sizeof( index_type ) == 4 ), "Wrong index type in LoadGeometry" ); // todo: enum -> sizeof map check
 
 	const UINT vb_byte_size = UINT( vertices.size() ) * sizeof( vertex_type );
 	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( index_type );
@@ -591,10 +566,6 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 
 	new_geom.VertexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
 	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
-
-
-	new_geom.VertexBufferGPU->SetName( L"vbuffer" );
-
 
 	new_geom.VertexByteStride = sizeof( vertex_type );
 	new_geom.VertexBufferByteSize = vb_byte_size;
@@ -739,4 +710,9 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 	}
 
 	return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
+}
+
+void RenderApp::LoadModel( const std::string& filename )
+{
+	LoadFbxFromFile( filename, m_ext_mesh );
 }

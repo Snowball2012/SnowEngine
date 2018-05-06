@@ -1,8 +1,13 @@
 #pragma once
 
+#include <algorithm>
+#include <iostream>
+#include <numeric>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
+#include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>

@@ -4,6 +4,30 @@
 
 #include <DirectXCollision.h>
 
+struct Vertex
+{
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT3 normal;
+	DirectX::XMFLOAT2 uv;
+};
+
+struct StaticMesh
+{
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+	std::vector<std::string> textures;
+	std::vector<std::pair<std::string, int>> materials;
+	struct Submesh
+	{
+		std::string name;
+		size_t nindices;
+		size_t index_offset;
+		int material_idx;
+		DirectX::XMFLOAT4X4 transform;
+	};
+	std::vector<Submesh> submeshes;
+};
+
 struct SubmeshGeometry
 {
 	UINT IndexCount = 0;
@@ -68,13 +92,6 @@ struct MeshGeometry
 	}
 };
 
-struct Vertex
-{
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 normal;
-	DirectX::XMFLOAT2 uv;
-};
-
 struct MaterialConstants
 {
 	DirectX::XMFLOAT4X4 mat_transform;
@@ -125,6 +142,7 @@ struct RenderItem
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 model = Identity4x4;
+	DirectX::XMFLOAT4X4 model_inv_transpose = Identity4x4;
 };
 
 struct LightConstants
