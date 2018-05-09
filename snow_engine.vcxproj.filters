@@ -60,6 +60,9 @@
     <ClCompile Include="src\RenderUtils.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\DescriptorHeap.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -87,6 +90,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\RenderUtils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DescriptorHeap.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

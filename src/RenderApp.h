@@ -7,6 +7,7 @@
 #include <dxtk12/Keyboard.h>
 
 #include "FrameResource.h"
+#include "DescriptorHeap.h"
 #include "ObjImporter.h"
 
 class RenderApp: public D3DApp
@@ -56,7 +57,7 @@ private:
 	void BuildShadersAndInputLayout();
 	void BuildGeometry();
 	void LoadAndBuildTextures();
-	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name, int srv_idx );
+	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
 	void BuildMaterials();
 	void BuildLights();
 	void BuildRenderItems();
@@ -83,7 +84,7 @@ private:
 	std::unordered_map<std::string, StaticTexture> m_textures;
 
 	// descriptor heaps
-	ComPtr<ID3D12DescriptorHeap> m_srv_heap = nullptr;
+	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
 
 	// waves
 	std::vector<Vertex> m_waves_cpu_vertices;

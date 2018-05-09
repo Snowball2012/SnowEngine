@@ -4,6 +4,8 @@
 
 #include <DirectXCollision.h>
 
+#include "DescriptorHeap.h"
+
 struct Vertex
 {
 	DirectX::XMFLOAT3 pos;
@@ -104,7 +106,7 @@ struct StaticMaterial
 {
 	MaterialConstants mat_constants;
 
-	int srv_heap_idx = -1;
+	D3D12_GPU_DESCRIPTOR_HANDLE albedo_desc;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_gpu = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_uploader = nullptr;
@@ -120,6 +122,8 @@ struct StaticTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
+
+	std::unique_ptr<Descriptor> main_srv = nullptr;
 };
 
 struct RenderItem

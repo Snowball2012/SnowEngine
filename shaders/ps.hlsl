@@ -12,7 +12,7 @@ float3 rendering_equation( float3 to_source, float3 to_camera, float3 normal, fl
 {
 	float lambert_term = dot( to_source, normal );
 
-	float4 diffuse_albedo = albedo_map.Sample( linear_wrap_sampler, uv );
+	float4 diffuse_albedo = albedo_map.Sample( anisotropic_wrap_sampler, uv );
 
 	return ( lambert_term * light_strength )
 		* ( diffuse_albedo.rgb

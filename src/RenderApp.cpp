@@ -268,7 +268,7 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	// set render target
 	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
 
-	ID3D12DescriptorHeap* srv_heap = m_srv_heap.Get();
+	ID3D12DescriptorHeap* srv_heap = m_srv_heap->GetInterface();
 	cmd_list->SetDescriptorHeaps( 1, &srv_heap );
 
 	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
@@ -278,12 +278,9 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : m_renderitems )
 	{
-		CD3DX12_GPU_DESCRIPTOR_HANDLE tex_gpu( m_srv_heap->GetGPUDescriptorHandleForHeapStart() );
-		tex_gpu.Offset( render_item.material->srv_heap_idx, mCbvSrvUavDescriptorSize );
-
 		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
 		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );		
-		cmd_list->SetGraphicsRootDescriptorTable( 2, tex_gpu );
+		cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.material->albedo_desc );
 		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
 		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
 		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -343,8 +340,11 @@ void RenderApp::BuildDescriptorHeaps()
 		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 1 + m_ext_mesh.textures.size();
-		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &m_srv_heap ) ) );
+		srv_heap_desc.NumDescriptors = 1 + UINT( m_ext_mesh.textures.size() );
+
+		ComPtr<ID3D12DescriptorHeap> srv_heap;
+		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
+		m_srv_heap = std::make_unique<DescriptorHeap>( std::move( srv_heap ), mCbvSrvUavDescriptorSize );
 	}
 }
 
@@ -432,12 +432,12 @@ void RenderApp::BuildGeometry()
 
 void RenderApp::LoadAndBuildTextures()
 {
-	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder", 0 );
+	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder" );
 	for ( size_t i = 0; i < m_ext_mesh.textures.size(); ++i )
-		LoadStaticDDSTexture( std::wstring( m_ext_mesh.textures[i].begin(), m_ext_mesh.textures[i].end() ).c_str(), m_ext_mesh.textures[i], i + 1 );
+		LoadStaticDDSTexture( std::wstring( m_ext_mesh.textures[i].begin(), m_ext_mesh.textures[i].end() ).c_str(), m_ext_mesh.textures[i] );
 }
 
-void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string& name, int srv_idx )
+void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string& name )
 {
 	auto& texture = m_textures.emplace( name, StaticTexture() ).first->second;
 
@@ -459,8 +459,9 @@ void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string
 	// base resource is now in COPY_DEST STATE, no barrier required 
 	UpdateSubresources( mCommandList.Get(), texture.texture_gpu.Get(), texture.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
 	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( texture.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
-	CD3DX12_CPU_DESCRIPTOR_HANDLE handle( m_srv_heap->GetCPUDescriptorHandleForHeapStart(), srv_idx, mCbvSrvUavDescriptorSize );
-	CreateShaderResourceView( md3dDevice.Get(), texture.texture_gpu.Get(), handle );
+
+	texture.main_srv = std::make_unique<Descriptor>( m_srv_heap->AllocateDescriptor() );
+	CreateShaderResourceView( md3dDevice.Get(), texture.texture_gpu.Get(), texture.main_srv->HandleCPU() );
 }
 
 void RenderApp::BuildMaterials()
@@ -471,7 +472,7 @@ void RenderApp::BuildMaterials()
 		mat_data.mat_transform = MathHelper::Identity4x4();
 		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
 		mat_data.roughness = 1.0f;
-		placeholder_material.srv_heap_idx = 0;
+		placeholder_material.albedo_desc = m_textures["placeholder"].main_srv->HandleGPU();
 		placeholder_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 
@@ -482,7 +483,7 @@ void RenderApp::BuildMaterials()
 		mat_data.mat_transform = MathHelper::Identity4x4();
 		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
 		mat_data.roughness = 1.0f;
-		material.srv_heap_idx = m_ext_mesh.materials[i].second + 1;
+		material.albedo_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second]].main_srv->HandleGPU();
 		material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 }
@@ -506,8 +507,8 @@ namespace
 
 	void initFromSubmesh ( const StaticMesh::Submesh& submesh, RenderItem& renderitem )
 	{
-		renderitem.index_count = submesh.nindices;
-		renderitem.index_offset = submesh.index_offset;
+		renderitem.index_count = uint32_t( submesh.nindices );
+		renderitem.index_offset = uint32_t( submesh.index_offset );
 		renderitem.vertex_offset = 0;
 		renderitem.world_mat = submesh.transform;
 	};
