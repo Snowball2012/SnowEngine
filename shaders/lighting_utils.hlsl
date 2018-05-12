@@ -20,8 +20,7 @@ cbuffer cbPerObject : register( b0 )
 cbuffer cbPerMaterial : register( b1 )
 {
 	float4x4 transform;
-	float3 fresnel_r0;
-	float roughness;
+	float3 diffuse_fresnel;
 }
 
 cbuffer cbPerPass : register( b2 )
@@ -54,7 +53,14 @@ SamplerState linear_clamp_sampler : register( s3 );
 SamplerState anisotropic_wrap_sampler : register( s4 );
 SamplerState anisotropic_clamp_sampler : register( s5 );
 
-Texture2D albedo_map : register( t0 );
+Texture2D base_color_map : register( t0 );
+Texture2D normal_map : register( t1 );
+Texture2D specular_map : register( t2 );
+
+float sqr( float a )
+{
+	return a * a;
+}
 
 // all outputs are not normalized
 float3 halfvector( float3 to_source, float3 to_camera )
@@ -72,12 +78,29 @@ float3 fresnel_schlick( float3 fresnel_r0, float source_to_normal_angle_cos )
 	return fresnel_r0 + ( float3( 1.0f, 1.0f, 1.0f ) - fresnel_r0 ) * pow( 1.0f - source_to_normal_angle_cos, 5 );
 }
 
-// correct only if lambert term is above 0 and triangle is facing camera
-float3 specular_strength( float3 fresnel_r0, float3 normal, float3 halfvector, float roughness )
+float diffuse_disney( float roughness, float source_to_normal_cos, float normal_to_eye_cos, float source_to_half_cos )
 {
-	float shininess = ( 1.0f - roughness ) * 256.0f;
-	float dot_nh = dot( normal, halfvector );
-	float3 spec_power = fresnel_schlick( fresnel_r0, dot_nh ) * ( shininess + 8.0f ) / 8.0f * pow( dot_nh, shininess );
-	spec_power = spec_power / ( spec_power + 1.0f );
-	return  spec_power;
+	// disney semi-pbr diffuse model
+	float f = sqr( source_to_half_cos ) * roughness * 2.0f - 0.5f;
+
+	return ( 1.0f + f * pow( 1 - source_to_normal_cos, 5 ) )
+		* ( 1.0f + f * pow( 1 - normal_to_eye_cos, 5 ) ) / 3.14f;
+}
+
+// correct only if lambert term is above 0 and triangle is facing camera
+float3 specular_strength( float3 fresnel_r0, float cos_nh, float cos_lh, float3 halfvector, float roughness )
+{
+	// ggx ndf, shlick approximation for fresnel
+	// no self shadowing. todo: add microfacet selfshadowing
+	// alpha remapped to [0.5, 1]
+
+	roughness = sqr( lerp( 0.5, 1, roughness ) );
+	float alpha2 = sqr( roughness );
+	float ndf = alpha2 / ( 3.14 * sqr( ( alpha2 - 1 ) * sqr( cos_nh ) + 1 ) );
+	return fresnel_schlick( fresnel_r0, cos_lh ) * ndf;
+}
+
+float4 dbg_show_normal( float2 uv )
+{
+	return float4( normal_map.Sample( linear_wrap_sampler, uv ).xy, 1.0f, 1.0f );
 }

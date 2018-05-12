@@ -15,10 +15,16 @@ struct Vertex
 
 struct StaticMesh
 {
+	struct SceneMaterial
+	{
+		int base_color_tex_idx;
+		int normal_tex_idx;
+		int specular_tex_idx;
+	};
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 	std::vector<std::string> textures;
-	std::vector<std::pair<std::string, int>> materials;
+	std::vector<std::pair<std::string, SceneMaterial>> materials;
 	struct Submesh
 	{
 		std::string name;
@@ -97,16 +103,16 @@ struct MeshGeometry
 struct MaterialConstants
 {
 	DirectX::XMFLOAT4X4 mat_transform;
-	DirectX::XMFLOAT3 fresnel_r0;
-
-	float roughness;
+	DirectX::XMFLOAT3 diffuse_fresnel;
 };
 
 struct StaticMaterial
 {
 	MaterialConstants mat_constants;
 
-	D3D12_GPU_DESCRIPTOR_HANDLE albedo_desc;
+	D3D12_GPU_DESCRIPTOR_HANDLE base_color_desc;
+	D3D12_GPU_DESCRIPTOR_HANDLE normal_map_desc;
+	D3D12_GPU_DESCRIPTOR_HANDLE specular_desc;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_gpu = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12Resource> cb_uploader = nullptr;

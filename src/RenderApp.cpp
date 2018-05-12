@@ -272,7 +272,7 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	cmd_list->SetDescriptorHeaps( 1, &srv_heap );
 
 	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
-	cmd_list->SetGraphicsRootConstantBufferView( 3, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
+	cmd_list->SetGraphicsRootConstantBufferView( 5, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
 
 	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
 	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
@@ -280,7 +280,9 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 	{
 		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
 		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );		
-		cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.material->albedo_desc );
+		cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.material->base_color_desc );
+		cmd_list->SetGraphicsRootDescriptorTable( 3, render_item.material->normal_map_desc );
+		cmd_list->SetGraphicsRootDescriptorTable( 4, render_item.material->specular_desc );
 		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
 		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
 		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -340,7 +342,7 @@ void RenderApp::BuildDescriptorHeaps()
 		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 1 + UINT( m_ext_mesh.textures.size() );
+		srv_heap_desc.NumDescriptors = 3 + UINT( m_ext_mesh.textures.size() );
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -361,16 +363,43 @@ void RenderApp::BuildConstantBuffers()
 
 void RenderApp::BuildRootSignature()
 {
-	constexpr int nparams = 4;
+	/*
+	Basic root sig
+		0 - cbv per object
+		1 - cbv per material
+		2 - albedo
+		3 - normal
+		4 - specular
+		5 - cbv per pass
+
+	Shader register bindings
+		b0 - cbv per obj
+		b1 - cbv per material
+		b2 - cbv per pass
+
+		t0 - albedo
+		t1 - normal
+		t2 - specular
+
+	To optimize state changes keep material textures together when possible. Descriptor duplication?
+	*/
+	constexpr int nparams = 6;
+
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
 	for ( int i = 0; i < 2; ++i )
 		slot_root_parameter[i].InitAsConstantBufferView( i );
 
-	CD3DX12_DESCRIPTOR_RANGE desc_table( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
-	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table, D3D12_SHADER_VISIBILITY_ALL );
+	CD3DX12_DESCRIPTOR_RANGE desc_table[3];
+	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 ); // albedo
+	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 ); // normal
+	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2 ); // specular
 
-	slot_root_parameter[3].InitAsConstantBufferView( 2 );
+	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_ALL );
+	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_ALL );
+	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_ALL );
+
+	slot_root_parameter[5].InitAsConstantBufferView( 2 );
 
 	const auto& static_samplers = BuildStaticSamplers();
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter, UINT( static_samplers.size() ), static_samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
@@ -396,6 +425,7 @@ void RenderApp::BuildShadersAndInputLayout()
 {
 	m_vs_bytecode = Utils::LoadBinary( L"shaders/vs.cso" );
 	m_ps_bytecode = Utils::LoadBinary( L"shaders/ps.cso" );
+	m_gs_bytecode = Utils::LoadBinary( L"shaders/gs.cso" );
 
 	m_input_layout =
 	{
@@ -432,7 +462,9 @@ void RenderApp::BuildGeometry()
 
 void RenderApp::LoadAndBuildTextures()
 {
-	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder" );
+	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder_albedo" );
+	LoadStaticDDSTexture( L"resources/textures/default_deriv_normal.dds", "placeholder_normal" );
+	LoadStaticDDSTexture( L"resources/textures/default_spec.dds", "placeholder_specular" );
 	for ( size_t i = 0; i < m_ext_mesh.textures.size(); ++i )
 		LoadStaticDDSTexture( std::wstring( m_ext_mesh.textures[i].begin(), m_ext_mesh.textures[i].end() ).c_str(), m_ext_mesh.textures[i] );
 }
@@ -470,9 +502,11 @@ void RenderApp::BuildMaterials()
 		auto& placeholder_material = m_materials.emplace( "placeholder", StaticMaterial() ).first->second;
 		auto& mat_data = placeholder_material.mat_constants;
 		mat_data.mat_transform = MathHelper::Identity4x4();
-		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
-		mat_data.roughness = 1.0f;
-		placeholder_material.albedo_desc = m_textures["placeholder"].main_srv->HandleGPU();
+		mat_data.diffuse_fresnel = XMFLOAT3( 0.03f, 0.03f, 0.03f );
+		placeholder_material.base_color_desc = m_textures["placeholder_albedo"].main_srv->HandleGPU();
+		placeholder_material.normal_map_desc = m_textures["placeholder_normal"].main_srv->HandleGPU();
+		placeholder_material.specular_desc = m_textures["placeholder_specular"].main_srv->HandleGPU();
+
 		placeholder_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 
@@ -481,9 +515,16 @@ void RenderApp::BuildMaterials()
 		auto& material = m_materials.emplace( m_ext_mesh.materials[i].first, StaticMaterial() ).first->second;
 		auto& mat_data = material.mat_constants;
 		mat_data.mat_transform = MathHelper::Identity4x4();
-		mat_data.fresnel_r0 = XMFLOAT3( 0.1f, 0.1f, 0.1f );
-		mat_data.roughness = 1.0f;
-		material.albedo_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second]].main_srv->HandleGPU();
+		mat_data.diffuse_fresnel = XMFLOAT3( 0.03f, 0.03f, 0.03f );
+		material.base_color_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second.base_color_tex_idx]].main_srv->HandleGPU();
+		material.normal_map_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second.normal_tex_idx]].main_srv->HandleGPU();
+
+		int spec_map_idx = m_ext_mesh.materials[i].second.specular_tex_idx;
+		if ( spec_map_idx < 0 )
+			material.specular_desc = m_textures["placeholder_specular"].main_srv->HandleGPU();
+		else
+			material.specular_desc = m_textures[m_ext_mesh.textures[spec_map_idx]].main_srv->HandleGPU();
+
 		material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
 	}
 }
@@ -491,8 +532,8 @@ void RenderApp::BuildMaterials()
 void RenderApp::BuildLights()
 {
 	auto& parallel_light = m_lights.emplace( "sun", Light{ Light::Type::Parallel, {} } ).first->second.data;
-	parallel_light.strength = XMFLOAT3( 1.0f, 1.0f, 1.0f );
-	parallel_light.dir = XMFLOAT3( 0.2f, 0.7f, -0.3f );
+	parallel_light.strength = XMFLOAT3( 5.f, 5.f, 5.f );
+	parallel_light.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
 	XMFloat3Normalize( parallel_light.dir );
 }
 
@@ -612,6 +653,12 @@ void RenderApp::BuildPSO()
 	{
 		reinterpret_cast<BYTE*>( m_ps_bytecode->GetBufferPointer() ),
 		m_ps_bytecode->GetBufferSize()
+	};
+
+	pso_desc.GS =
+	{
+		reinterpret_cast<BYTE*>( m_gs_bytecode->GetBufferPointer() ),
+		m_gs_bytecode->GetBufferSize()
 	};
 
 	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );

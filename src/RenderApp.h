@@ -105,6 +105,7 @@ private:
 	
 	ComPtr<ID3DBlob> m_vs_bytecode = nullptr;
 	ComPtr<ID3DBlob> m_ps_bytecode = nullptr;
+	ComPtr<ID3DBlob> m_gs_bytecode = nullptr;
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
 
@@ -115,11 +116,11 @@ private:
 	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_proj = MathHelper::Identity4x4();
 
-	float m_theta = 1.1f * DirectX::XM_PI;
+	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;
 	float m_radius = 15.0f;
 
-	float m_sun_theta = 0.25f * DirectX::XM_PI;
+	float m_sun_theta = 0.75f * DirectX::XM_PI;
 	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;
 
 	bool m_wireframe_mode = false;

@@ -76,7 +76,7 @@ bool LoadObjFromFile( const std::string& filename, StaticMesh& mesh )
 		path /= material.name;
 		path.remove_leaf();
 		path /= material.normal_texname;
-		mesh.materials.emplace_back( path.string(), int( mesh.textures.size() ) );
+		mesh.materials.emplace_back( path.string(), StaticMesh::SceneMaterial{ int( mesh.textures.size() ), -1 } );
 		mesh.textures.emplace_back( path.string() );
 	}
 	
@@ -178,11 +178,31 @@ namespace
 				if ( !albedo.IsValid() )
 					throw SnowEngineException( "no albedo" );
 
-				auto* texture = albedo.GetSrcObject<FbxFileTexture>();
-				if ( !texture )
+				auto* albedo_texture = albedo.GetSrcObject<FbxFileTexture>();
+				if ( !albedo_texture )
 					throw SnowEngineException( "no texture for albedo" );
 
-				res.materials.emplace_back( material_name, reinterpret_cast<int>( texture->GetUserDataPtr() ) );
+				const FbxProperty normal = material->FindProperty( FbxSurfaceMaterial::sNormalMap );
+				if ( !normal.IsValid() )
+					throw SnowEngineException( "no normal map" );
+
+				auto* normal_texture = normal.GetSrcObject<FbxFileTexture>();
+				if ( !normal_texture )
+					throw SnowEngineException( "no texture for normal map" );
+
+				int spec_idx = -1;
+				const FbxProperty specular = material->FindProperty( FbxSurfaceMaterial::sSpecular );
+				if ( specular.IsValid() )
+				{
+					auto* specular_texture = specular.GetSrcObject<FbxFileTexture>();
+					if ( specular_texture )
+						spec_idx = reinterpret_cast<int>( specular_texture->GetUserDataPtr() );
+				}
+
+				res.materials.emplace_back( material_name,
+											StaticMesh::SceneMaterial{ reinterpret_cast<int>( albedo_texture->GetUserDataPtr() ),
+											                           reinterpret_cast<int>( normal_texture->GetUserDataPtr() ),
+											                           spec_idx } );
 			}
 
 			FbxSceneTraverser traverser;
