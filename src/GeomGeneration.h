@@ -2,7 +2,7 @@
 
 #include <array>
 #include <cetonia/parser.h>
-#include "ObjImporter.h"
+#include "SceneImporter.h"
 
 namespace GeomGeneration
 {

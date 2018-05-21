@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Luna/d3dApp.h>
 #include <Luna/MathHelper.h>
 #include <Luna/UploadBuffer.h>
 
 #include <dxtk12/Keyboard.h>
 
+#include "D3DApp.h"
 #include "FrameResource.h"
 #include "DescriptorHeap.h"
-#include "ObjImporter.h"
+#include "SceneImporter.h"
 
 class RenderApp: public D3DApp
 {
@@ -33,7 +33,7 @@ private:
 	void UpdateLights( PassConstants& pc );
 	void UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb );
 	void UpdateDynamicGeometry( Utils::UploadBuffer<Vertex>& dynamic_vb );
-	void UpdateWaves( const GameTimer& gt );
+
 	// input
 	void ReadEventKeys();
 	void ReadKeyboardState( const GameTimer& gt );
@@ -47,7 +47,7 @@ private:
 
 	virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
 
-	// load model
+	// scene loading
 	void LoadModel( const std::string& filename );
 
 	// build functions
@@ -63,42 +63,32 @@ private:
 	void BuildRenderItems();
 	void BuildPSO();
 	void BuildFrameResources();
+	void CreateTexture( Texture& texture );
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> BuildStaticSamplers() const;
 
 	// external geometry
-	StaticMesh m_ext_mesh;
+	ImportedScene m_imported_scene;
 
+	RenderSceneContext m_scene;
 	// geometry
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
 	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
-	std::unordered_map<std::string, MeshGeometry> m_static_geometry;
 
 	template <DXGI_FORMAT index_format, class ICRange>
 	void LoadDynamicGeometryIndices( const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
 	MeshGeometry m_dynamic_geometry;
 
-	// lighting, materials and textures
-	std::unordered_map<std::string, StaticMaterial> m_materials;
-	std::unordered_map<std::string, Light> m_lights;
-	std::unordered_map<std::string, StaticTexture> m_textures;
-
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
-
-	// waves
-	std::vector<Vertex> m_waves_cpu_vertices;
-	std::vector<uint16_t> m_waves_cpu_indices;
+	std::unique_ptr<DescriptorHeap> m_dsv_heap = nullptr;
 
 	// resources
 	static constexpr int num_frame_resources = 3;
 	std::vector<FrameResource> m_frame_resources;
 	FrameResource* m_cur_frame_resource = nullptr;
 	int m_cur_fr_idx = 0;
-	static constexpr int num_passes = 1;
-
-	// scene (render items)
-	std::vector<RenderItem> m_renderitems;
+	static constexpr int num_passes = 2;
 
 	// pipeline
 	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
@@ -111,10 +101,6 @@ private:
 
 	ComPtr<ID3D12PipelineState> m_pso_main = nullptr;
 	ComPtr<ID3D12PipelineState> m_pso_wireframe = nullptr;
-
-	// camera
-	DirectX::XMFLOAT4X4 m_view = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 m_proj = MathHelper::Identity4x4();
 
 	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;

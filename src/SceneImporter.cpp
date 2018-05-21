@@ -1,88 +1,11 @@
 #include "stdafx.h"
 
-#include "ObjImporter.h"
+#include "SceneImporter.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
 #include <fbxsdk.h>
-
-bool LoadObjFromFile( const std::string& filename, StaticMesh& mesh )
-{
-	std::cout << "Loading " << filename << std::endl;
-
-	boost::filesystem::path dir = filename;
-	dir.remove_filename();
-	dir += boost::filesystem::path::preferred_separator;
-
-	tinyobj::attrib_t attrib;
-	std::vector<tinyobj::shape_t> shapes;
-	std::vector<tinyobj::material_t> materials;
-
-	std::string err;
-	const bool ret = tinyobj::LoadObj( &attrib, &shapes, &materials, &err, filename.c_str(),
-	                                   dir.string().c_str(), true );
-
-	if ( ! ret )
-		return false;
-
-	mesh.submeshes.clear();
-	mesh.vertices.clear();
-	//if ( attrib.vertices.size() != attrib.normals.size() ||
-	//	 attrib.texcoords.size() / 2 != attrib.vertices.size() / 3 )
-	//	return false;
-
-	const size_t nvertices = attrib.vertices.size() / 3;
-	mesh.vertices.reserve( nvertices );
-	for ( size_t i = 0; i < nvertices; ++i )
-	{
-		const float* v = attrib.vertices.data() + i * 3;
-		//const float* n = attrib.normals.data() + i * 3;
-		//const float* uv = attrib.texcoords.data() + i * 2;
-		mesh.vertices.push_back( {
-			DirectX::XMFLOAT3( v )/*,
-			DirectX::XMFLOAT3( n ),
-			DirectX::XMFLOAT2( uv )*/
-		} );
-	}
-
-	size_t indices_total = 0;
-	for ( const auto& shape : shapes )
-	{
-		mesh.submeshes.push_back( { shape.name, shape.mesh.indices.size(), indices_total, -1 } );
-		for ( const auto& mat_idx : shape.mesh.material_ids )
-			if ( mat_idx != -1 )
-			{
-				mesh.submeshes.back().material_idx = mat_idx;
-				break;
-			}
-
-		indices_total += shape.mesh.indices.size();
-	}
-
-	mesh.indices.reserve( indices_total );
-	for ( const auto& shape : shapes )
-		for ( const auto& idx : shape.mesh.indices )
-		{
-			mesh.indices.push_back( idx.vertex_index );
-			mesh.vertices[idx.vertex_index].normal = DirectX::XMFLOAT3( attrib.normals.data() + idx.normal_index * 3 );
-			mesh.vertices[idx.vertex_index].uv = DirectX::XMFLOAT2( attrib.texcoords.data() + idx.texcoord_index * 2 );
-		}
-
-	mesh.materials.reserve( materials.size() );
-	for ( const auto& material : materials )
-	{
-		boost::filesystem::path path( dir );
-		path /= material.name;
-		path.remove_leaf();
-		path /= material.normal_texname;
-		mesh.materials.emplace_back( path.string(), StaticMesh::SceneMaterial{ int( mesh.textures.size() ), -1 } );
-		mesh.textures.emplace_back( path.string() );
-	}
-	
-	return ret;
-}
-
 
 namespace
 {
@@ -136,13 +59,14 @@ namespace
 		}
 	};
 
-	// very simple inefficient solution. Duplicate vertex attributes for each triangle 
+	// very simple inefficient solution. Duplicate vertex attributes for each triangle
+	// complete garbage, please refactor
 	class FbxMeshLoader
 	{
 	public:
-		StaticMesh LoadSceneToMesh( FbxScene& scene )
+		ImportedScene LoadSceneToMesh( FbxScene& scene )
 		{
-			StaticMesh res;
+			ImportedScene res;
 
 			/*FbxAxisSystem axis_system( FbxAxisSystem::EUpVector::eYAxis, FbxAxisSystem::EFrontVector::eParityOdd, FbxAxisSystem::ECoordSystem::eLeftHanded );
 
@@ -200,7 +124,7 @@ namespace
 				}
 
 				res.materials.emplace_back( material_name,
-											StaticMesh::SceneMaterial{ reinterpret_cast<int>( albedo_texture->GetUserDataPtr() ),
+											ImportedScene::SceneMaterial{ reinterpret_cast<int>( albedo_texture->GetUserDataPtr() ),
 											                           reinterpret_cast<int>( normal_texture->GetUserDataPtr() ),
 											                           spec_idx } );
 			}
@@ -325,7 +249,7 @@ namespace
 				if ( m_data.mesh2submeshes.count( mesh ) == 0 )
 					VisitMesh( mesh );
 
-				m_data.num_renderitems += m_data.mesh2submeshes[mesh].size();
+				m_data.num_renderitems += int( m_data.mesh2submeshes[mesh].size() );
 
 				return true;
 			}
@@ -342,8 +266,6 @@ namespace
 				// Count the polygon count of each material
 				FbxLayerElementArrayTemplate<int>* materials = nullptr;
 				FbxGeometryElement::EMappingMode material_mapping_mode = FbxGeometryElement::eNone;
-
-				const int n_submeshes = m_data.submeshes.size();
 
 				auto* mesh_element_material = mesh->GetElementMaterial();
 				if ( mesh_element_material )
@@ -376,8 +298,8 @@ namespace
 		class FbxRenderitemPass: public FbxSceneVisitor
 		{
 		public:
-			FbxRenderitemPass( const PrepassData& prepass_data, StaticMesh& mesh )
-				: m_mesh( mesh ), m_data( prepass_data )
+			FbxRenderitemPass( const PrepassData& prepass_data, ImportedScene& scene )
+				: m_scene( scene ), m_data( prepass_data )
 			{}
 
 			// Inherited via FbxSceneVisitor
@@ -400,7 +322,7 @@ namespace
 				{
 					const auto& submesh = m_data.submeshes.find( std::make_pair( node->GetMesh(), material_idx ) )->second;
 					name += std::to_string( material_idx );
-					m_mesh.submeshes.push_back( { name, size_t( submesh.triangle_count * 3 ), size_t( submesh.index_offset ), material_idx, dxtf } );
+					m_scene.submeshes.push_back( { name, size_t( submesh.triangle_count * 3 ), size_t( submesh.index_offset ), material_idx, dxtf } );
 				}
 
 				return true;
@@ -409,7 +331,7 @@ namespace
 		private:
 
 			const PrepassData& m_data;
-			StaticMesh& m_mesh;
+			ImportedScene& m_scene;
 		};
 
 	};
@@ -536,7 +458,7 @@ namespace
 		int m_ntabs = 0;
 	};
 }
-bool LoadFbxFromFile( const std::string& filename, StaticMesh& mesh )
+bool LoadFbxFromFile( const std::string& filename, ImportedScene& mesh )
 {
 	std::cout << "Loading " << filename << std::endl;
 

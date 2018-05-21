@@ -21,6 +21,8 @@ namespace bc = boost::container;
 
 #include "XMMath.h"
 
+#include <dxgi1_4.h>
+
 #include <wrl.h>
 #include <WindowsX.h>
 template<typename T>
@@ -46,3 +48,7 @@ std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex )
 	stream << ex.m_msg;
 	return stream;
 }
+
+#ifndef NOTIMPL
+#define NOTIMPL throw SnowEngineException( "not implemented yet" );
+#endif

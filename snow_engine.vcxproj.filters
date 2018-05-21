@@ -31,6 +31,9 @@
     <Filter Include="utils">
       <UniqueIdentifier>{a4b32f1b-8dd1-4667-ba27-9076876fda90}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\RenderPasses">
+      <UniqueIdentifier>{12b0dd21-4544-444e-a29a-0460c09b0323}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -44,9 +47,6 @@
     </ClCompile>
     <ClCompile Include="src\FrameResource.cpp">
       <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ObjImporter.cpp">
-      <Filter>serialization</Filter>
     </ClCompile>
     <ClCompile Include="src\GeomGeneration.cpp">
       <Filter>content_generation</Filter>
@@ -63,6 +63,18 @@
     <ClCompile Include="src\DescriptorHeap.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\D3DApp.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GameTimer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\RenderPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SceneImporter.cpp">
+      <Filter>serialization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -70,9 +82,6 @@
     </ClInclude>
     <ClInclude Include="src\stdafx.h">
       <Filter>precompiled_header</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ObjImporter.h">
-      <Filter>serialization</Filter>
     </ClInclude>
     <ClInclude Include="src\RenderData.h">
       <Filter>core</Filter>
@@ -94,6 +103,21 @@
     </ClInclude>
     <ClInclude Include="src\DescriptorHeap.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\D3DApp.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GameTimer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RenderPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ForwardLightingPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SceneImporter.h">
+      <Filter>serialization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

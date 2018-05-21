@@ -30,23 +30,23 @@ bool RenderApp::Initialize()
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
 
 	// create box, load to gpu through upload heap to default heap
-	ThrowIfFailed( mCommandList->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
+	ThrowIfFailed( m_cmd_list->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
 	BuildDescriptorHeaps();
 	LoadAndBuildTextures();
 	BuildGeometry();
 	BuildMaterials();
-	BuildLights();
 	BuildRenderItems();
 	BuildFrameResources();
+	BuildLights();
 	BuildConstantBuffers();
 	BuildRootSignature();
-	BuildShadersAndInputLayout();	
+	BuildShadersAndInputLayout();
 	BuildPSO();
 
-	ThrowIfFailed( mCommandList->Close() );
-	ID3D12CommandList* cmd_lists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+	ThrowIfFailed( m_cmd_list->Close() );
+	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
+	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 	FlushCommandQueue();
 
 	return true;
@@ -58,7 +58,7 @@ void RenderApp::OnResize()
 
 	// Need to recompute projection matrix
 	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100000.0f );
-	XMStoreFloat4x4( &m_proj, proj );
+	XMStoreFloat4x4( &m_scene.proj, proj );
 }
 
 void RenderApp::Update( const GameTimer& gt )
@@ -67,11 +67,8 @@ void RenderApp::Update( const GameTimer& gt )
 
 	ReadKeyboardState( gt );
 
-	//UpdateWaves( gt );
-	//UpdateDynamicGeometry( *m_cur_frame_resource->dynamic_geom_vb );
-
 	// Update object constants if needed
-	for ( auto& renderitem : m_renderitems )
+	for ( auto& renderitem : m_scene.renderitems )
 		UpdateRenderItem( renderitem, *m_cur_frame_resource->object_cb );
 
 	// Update pass constants
@@ -115,15 +112,15 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMStoreFloat4x4( &m_view, view );
+	XMStoreFloat4x4( &m_scene.view, view );
 
-	XMMATRIX proj = XMLoadFloat4x4( &m_proj );
+	XMMATRIX proj = XMLoadFloat4x4( &m_scene.proj );
 	const auto& vp = view * proj;
 
 	PassConstants pc;
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
-	pc.Proj = m_proj;
-	pc.View = m_view;
+	pc.Proj = m_scene.proj;
+	pc.View = m_scene.view;
 	XMStoreFloat3( &pc.EyePosW, pos );
 
 	UpdateLights( pc );
@@ -134,25 +131,25 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 void RenderApp::UpdateLights( PassConstants& pc )
 {
 	// update sun dir
-	auto& sun_light = m_lights["sun"];
+	auto& sun_light = m_scene.lights["sun"];
 	sun_light.data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
 
 	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
-	for ( const auto& light : m_lights )
+	for ( const auto& light : m_scene.lights )
 	{
 		switch ( light.second.type )
 		{
-		case Light::Type::Parallel:
-			parallel_lights.push_back( &light.second.data );
-			break;
-		case Light::Type::Point:
-			point_lights.push_back( &light.second.data );
-			break;
-		case Light::Type::Spotlight:
-			spotlights.push_back( &light.second.data );
-			break;
-		default:
-			throw std::exception( "not implemented" );
+			case Light::Type::Parallel:
+				parallel_lights.push_back( &light.second.data );
+				break;
+			case Light::Type::Point:
+				point_lights.push_back( &light.second.data );
+				break;
+			case Light::Type::Spotlight:
+				spotlights.push_back( &light.second.data );
+				break;
+			default:
+				throw std::exception( "not implemented" );
 		}
 	}
 
@@ -186,22 +183,7 @@ void RenderApp::UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<Ob
 
 void RenderApp::UpdateDynamicGeometry( Utils::UploadBuffer<Vertex>& dynamic_vb )
 {
-	for ( size_t i = 0; i < m_waves_cpu_vertices.size(); ++i )
-		dynamic_vb.CopyData( int( i ), m_waves_cpu_vertices[i] );
-
-	m_dynamic_geometry.VertexBufferGPU = dynamic_vb.Resource();
-}
-
-void RenderApp::UpdateWaves( const GameTimer& gt )
-{
-	const float t = gt.TotalTime();
-
-	for ( auto& vertex : m_waves_cpu_vertices )
-		vertex.pos = XMFLOAT3( vertex.pos.x, 1.f*( sinf( 4.f * vertex.pos.x + 3.f*t ) + cosf( vertex.pos.y + 1.f*t ) + 0.3f*cosf( 4.f * vertex.pos.z + 2.f*t ) ), vertex.pos.z );
-
-	GeomGeneration::CalcAverageNormals( m_waves_cpu_indices,
-										m_waves_cpu_vertices | boost::adaptors::transformed( []( Vertex& vertex )->const XMFLOAT3&{ return vertex.pos; } ),
-										[this]( size_t idx )->XMFLOAT3& { return m_waves_cpu_vertices[idx].normal; } );
+	NOTIMPL;
 }
 
 void RenderApp::UpdateAndWaitForFrameResource()
@@ -224,37 +206,37 @@ void RenderApp::Draw( const GameTimer& gt )
 {
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
-	m_cur_frame_resource->fence = ++mCurrentFence;
-	mCommandQueue->Signal( mFence.Get(), mCurrentFence );
+	m_cur_frame_resource->fence = ++m_current_fence;
+	m_cmd_queue->Signal( mFence.Get(), m_current_fence );
 
 	ThrowIfFailed( m_cur_frame_resource->cmd_list_alloc->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( mCommandList->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), ( m_wireframe_mode ? m_pso_wireframe : m_pso_main ).Get() ) );
+	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), ( m_wireframe_mode ? m_pso_wireframe : m_pso_main ).Get() ) );
 
 	// state transition( for back buffer )
-	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
 
 	// viewport and scissor rect
-	mCommandList->RSSetViewports( 1, &mScreenViewport );
-	mCommandList->RSSetScissorRects( 1, &mScissorRect );
+	m_cmd_list->RSSetViewports( 1, &mScreenViewport );
+	m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
 
 	// clear the back buffer and depth
 	const float bgr_color[4] = { 0.8f, 0.83f, 0.9f };
-	mCommandList->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
-	mCommandList->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+	m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
+	m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
 	// passes
-	Draw_MainPass( mCommandList.Get() );
+	Draw_MainPass( m_cmd_list.Get() );
 
 	// swap transition
-	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
 
 	// done
-	ThrowIfFailed( mCommandList->Close() );
+	ThrowIfFailed( m_cmd_list->Close() );
 
-	ID3D12CommandList* cmdLists[] = { mCommandList.Get() };
-	mCommandQueue->ExecuteCommandLists( _countof( cmdLists ), cmdLists );
+	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
+	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 
 	// swap buffers
 	ThrowIfFailed( mSwapChain->Present( 0, 0 ) );
@@ -276,10 +258,10 @@ void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
 
 	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
 	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
-	for ( const auto& render_item : m_renderitems )
+	for ( const auto& render_item : m_scene.renderitems )
 	{
 		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
-		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );		
+		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
 		cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.material->base_color_desc );
 		cmd_list->SetGraphicsRootDescriptorTable( 3, render_item.material->normal_map_desc );
 		cmd_list->SetGraphicsRootDescriptorTable( 4, render_item.material->specular_desc );
@@ -325,7 +307,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 		float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
 
 		// Update the camera radius based on input.
-		m_radius += (dx - dy) * m_radius;
+		m_radius += ( dx - dy ) * m_radius;
 
 		// Restrict the radius.
 		m_radius = MathHelper::Clamp( m_radius, 3.0f, 100000.0f );
@@ -339,14 +321,24 @@ void RenderApp::BuildDescriptorHeaps()
 {
 	// srv heap
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc {};
+		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc{};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 3 + UINT( m_ext_mesh.textures.size() );
+		srv_heap_desc.NumDescriptors = 3 + UINT( m_imported_scene.textures.size() ) + 1 * num_frame_resources;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
-		ThrowIfFailed( md3dDevice->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
+		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
 		m_srv_heap = std::make_unique<DescriptorHeap>( std::move( srv_heap ), mCbvSrvUavDescriptorSize );
+	}
+	// secondary dsv heap
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc{};
+		dsv_heap_desc.NumDescriptors = 1 * num_frame_resources; // shadow maps
+		dsv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+
+		ComPtr<ID3D12DescriptorHeap> dsv_heap;
+		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &dsv_heap_desc, IID_PPV_ARGS( &dsv_heap ) ) );
+		m_dsv_heap = std::make_unique<DescriptorHeap>( std::move( dsv_heap ), mDsvDescriptorSize );
 	}
 }
 
@@ -355,9 +347,9 @@ void RenderApp::BuildConstantBuffers()
 	for ( int i = 0; i < num_frame_resources; ++i )
 	{
 		// object cb
-		m_frame_resources[i].object_cb = std::make_unique<Utils::UploadBuffer<ObjectConstants>>( md3dDevice.Get(), UINT( m_renderitems.size() ), true );
+		m_frame_resources[i].object_cb = std::make_unique<Utils::UploadBuffer<ObjectConstants>>( m_d3d_device.Get(), UINT( m_scene.renderitems.size() ), true );
 		// pass cb
-		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( md3dDevice.Get(), num_passes, true );
+		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( m_d3d_device.Get(), num_passes, true );
 	}
 }
 
@@ -414,7 +406,7 @@ void RenderApp::BuildRootSignature()
 	}
 	ThrowIfFailed( hr );
 
-	ThrowIfFailed( md3dDevice->CreateRootSignature(
+	ThrowIfFailed( m_d3d_device->CreateRootSignature(
 		0,
 		serialized_root_sig->GetBufferPointer(),
 		serialized_root_sig->GetBufferSize(),
@@ -439,7 +431,7 @@ namespace
 {
 	float hillsHeight( float x, float z )
 	{
-		return 0.3f*( z*sinf( 0.1f*x ) + x*cosf( 0.1f*z ) );
+		return 0.3f*( z*sinf( 0.1f*x ) + x * cosf( 0.1f*z ) );
 	}
 }
 
@@ -447,9 +439,9 @@ void RenderApp::BuildGeometry()
 {
 	// static
 	{
-		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R32_UINT>( "main", m_ext_mesh.vertices, m_ext_mesh.indices, mCommandList.Get() );
+		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R32_UINT>( "main", m_imported_scene.vertices, m_imported_scene.indices, m_cmd_list.Get() );
 
-		for ( const auto& cpu_submesh : m_ext_mesh.submeshes )
+		for ( const auto& cpu_submesh : m_imported_scene.submeshes )
 		{
 			SubmeshGeometry submesh;
 			submesh.IndexCount = UINT( cpu_submesh.nindices );
@@ -465,88 +457,106 @@ void RenderApp::LoadAndBuildTextures()
 	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder_albedo" );
 	LoadStaticDDSTexture( L"resources/textures/default_deriv_normal.dds", "placeholder_normal" );
 	LoadStaticDDSTexture( L"resources/textures/default_spec.dds", "placeholder_specular" );
-	for ( size_t i = 0; i < m_ext_mesh.textures.size(); ++i )
-		LoadStaticDDSTexture( std::wstring( m_ext_mesh.textures[i].begin(), m_ext_mesh.textures[i].end() ).c_str(), m_ext_mesh.textures[i] );
+	for ( size_t i = 0; i < m_imported_scene.textures.size(); ++i )
+		LoadStaticDDSTexture( std::wstring( m_imported_scene.textures[i].begin(), m_imported_scene.textures[i].end() ).c_str(), m_imported_scene.textures[i] );
 }
 
 void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string& name )
 {
-	auto& texture = m_textures.emplace( name, StaticTexture() ).first->second;
+	auto& texture = m_scene.textures.emplace( name, StaticTexture() ).first->second;
 
 	std::unique_ptr<uint8_t[]> dds_data;
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( md3dDevice.Get(), filename, texture.texture_gpu.GetAddressOf(), dds_data, subresources ) );
+	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( m_d3d_device.Get(), filename, texture.texture_gpu.GetAddressOf(), dds_data, subresources ) );
 
 	size_t total_size = GetRequiredIntermediateSize( texture.texture_gpu.Get(), 0, UINT( subresources.size() ) );
 
 	// create upload buffer
-	ThrowIfFailed( md3dDevice->CreateCommittedResource(
+	ThrowIfFailed( m_d3d_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer( total_size ),
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS( texture.texture_uploader.GetAddressOf() ) ) );
+		IID_PPV_ARGS( texture.texture_uploader.GetAddressOf() ) ) ); // TODO: not always committed?
 
 	// base resource is now in COPY_DEST STATE, no barrier required 
-	UpdateSubresources( mCommandList.Get(), texture.texture_gpu.Get(), texture.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
-	mCommandList->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( texture.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
+	UpdateSubresources( m_cmd_list.Get(), texture.texture_gpu.Get(), texture.texture_uploader.Get(), 0, 0, UINT( subresources.size() ), subresources.data() );
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( texture.texture_gpu.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ ) );
 
-	texture.main_srv = std::make_unique<Descriptor>( m_srv_heap->AllocateDescriptor() );
-	CreateShaderResourceView( md3dDevice.Get(), texture.texture_gpu.Get(), texture.main_srv->HandleCPU() );
+	texture.srv = std::make_unique<Descriptor>( m_srv_heap->AllocateDescriptor() );
+	CreateShaderResourceView( m_d3d_device.Get(), texture.texture_gpu.Get(), texture.srv->HandleCPU() );
 }
 
 void RenderApp::BuildMaterials()
 {
 	{
-		auto& placeholder_material = m_materials.emplace( "placeholder", StaticMaterial() ).first->second;
+		auto& placeholder_material = m_scene.materials.emplace( "placeholder", StaticMaterial() ).first->second;
 		auto& mat_data = placeholder_material.mat_constants;
 		mat_data.mat_transform = MathHelper::Identity4x4();
 		mat_data.diffuse_fresnel = XMFLOAT3( 0.03f, 0.03f, 0.03f );
-		placeholder_material.base_color_desc = m_textures["placeholder_albedo"].main_srv->HandleGPU();
-		placeholder_material.normal_map_desc = m_textures["placeholder_normal"].main_srv->HandleGPU();
-		placeholder_material.specular_desc = m_textures["placeholder_specular"].main_srv->HandleGPU();
+		placeholder_material.base_color_desc = m_scene.textures["placeholder_albedo"].srv->HandleGPU();
+		placeholder_material.normal_map_desc = m_scene.textures["placeholder_normal"].srv->HandleGPU();
+		placeholder_material.specular_desc = m_scene.textures["placeholder_specular"].srv->HandleGPU();
 
-		placeholder_material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+		placeholder_material.LoadToGPU( *m_d3d_device.Get(), *m_cmd_list.Get() );
 	}
 
-	for ( int i = 0; i < m_ext_mesh.materials.size(); ++i )
+	for ( int i = 0; i < m_imported_scene.materials.size(); ++i )
 	{
-		auto& material = m_materials.emplace( m_ext_mesh.materials[i].first, StaticMaterial() ).first->second;
+		auto& material = m_scene.materials.emplace( m_imported_scene.materials[i].first, StaticMaterial() ).first->second;
 		auto& mat_data = material.mat_constants;
 		mat_data.mat_transform = MathHelper::Identity4x4();
 		mat_data.diffuse_fresnel = XMFLOAT3( 0.03f, 0.03f, 0.03f );
-		material.base_color_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second.base_color_tex_idx]].main_srv->HandleGPU();
-		material.normal_map_desc = m_textures[m_ext_mesh.textures[m_ext_mesh.materials[i].second.normal_tex_idx]].main_srv->HandleGPU();
+		material.base_color_desc = m_scene.textures[m_imported_scene.textures[m_imported_scene.materials[i].second.base_color_tex_idx]].srv->HandleGPU();
+		material.normal_map_desc = m_scene.textures[m_imported_scene.textures[m_imported_scene.materials[i].second.normal_tex_idx]].srv->HandleGPU();
 
-		int spec_map_idx = m_ext_mesh.materials[i].second.specular_tex_idx;
+		int spec_map_idx = m_imported_scene.materials[i].second.specular_tex_idx;
 		if ( spec_map_idx < 0 )
-			material.specular_desc = m_textures["placeholder_specular"].main_srv->HandleGPU();
+			material.specular_desc = m_scene.textures["placeholder_specular"].srv->HandleGPU();
 		else
-			material.specular_desc = m_textures[m_ext_mesh.textures[spec_map_idx]].main_srv->HandleGPU();
+			material.specular_desc = m_scene.textures[m_imported_scene.textures[spec_map_idx]].srv->HandleGPU();
 
-		material.LoadToGPU( *md3dDevice.Get(), *mCommandList.Get() );
+		material.LoadToGPU( *m_d3d_device.Get(), *m_cmd_list.Get() );
 	}
 }
 
 void RenderApp::BuildLights()
 {
-	auto& parallel_light = m_lights.emplace( "sun", Light{ Light::Type::Parallel, {} } ).first->second.data;
-	parallel_light.strength = XMFLOAT3( 5.f, 5.f, 5.f );
-	parallel_light.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
-	XMFloat3Normalize( parallel_light.dir );
+	auto& parallel_light = m_scene.lights.emplace( "sun", Light{ Light::Type::Parallel } ).first->second;
+	LightConstants& data = parallel_light.data;
+	data.strength = XMFLOAT3( 5.f, 5.f, 5.f );
+	data.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
+	XMFloat3Normalize( data.dir );
+	parallel_light.shadow_map = nullptr;
+	parallel_light.is_dynamic = true;
+
+	for ( auto& frame_res : m_frame_resources )
+	{
+		auto& shadow_map = frame_res.shadow_maps["sun"];
+		CreateTexture( shadow_map );
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+		{
+			dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+			dsv_desc.Format = mDepthStencilFormat;
+			dsv_desc.Texture2D.MipSlice = 0;
+			dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+		}
+		shadow_map.dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
+		m_d3d_device->CreateDepthStencilView( shadow_map.texture_gpu.Get(), &dsv_desc, shadow_map.dsv->HandleCPU() );
+	}
 }
 
 namespace
 {
-	void initFromSubmesh ( const SubmeshGeometry& submesh, RenderItem& renderitem )
+	void initFromSubmesh( const SubmeshGeometry& submesh, RenderItem& renderitem )
 	{
 		renderitem.index_count = submesh.IndexCount;
 		renderitem.index_offset = submesh.StartIndexLocation;
 		renderitem.vertex_offset = submesh.BaseVertexLocation;
 	};
 
-	void initFromSubmesh ( const StaticMesh::Submesh& submesh, RenderItem& renderitem )
+	void initFromSubmesh( const ImportedScene::Submesh& submesh, RenderItem& renderitem )
 	{
 		renderitem.index_count = uint32_t( submesh.nindices );
 		renderitem.index_offset = uint32_t( submesh.index_offset );
@@ -563,24 +573,24 @@ void RenderApp::BuildRenderItems()
 		initFromSubmesh( submesh, renderitem );
 	};
 
-	m_renderitems.reserve( m_ext_mesh.submeshes.size() );
+	m_scene.renderitems.reserve( m_imported_scene.submeshes.size() );
 
 	size_t idx = 0;
-	for ( const auto& submesh : m_ext_mesh.submeshes )
+	for ( const auto& submesh : m_imported_scene.submeshes )
 	{
 		RenderItem item;
 		item.cb_idx = int( idx++ );
-		item.geom = &m_static_geometry["main"];
+		item.geom = &m_scene.static_geometry["main"];
 		const int material_idx = submesh.material_idx;
 		std::string material_name;
 		if ( material_idx < 0 )
 			material_name = "placeholder";
 		else
-			material_name = m_ext_mesh.materials[material_idx].first;
+			material_name = m_imported_scene.materials[material_idx].first;
 
-		item.material = &m_materials[material_name];
+		item.material = &m_scene.materials[material_name];
 		init_from_submesh( submesh, item );
-		m_renderitems.push_back( item );
+		m_scene.renderitems.push_back( item );
 	}
 }
 
@@ -597,7 +607,7 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 	const UINT vb_byte_size = UINT( vertices.size() ) * sizeof( vertex_type );
 	const UINT ib_byte_size = UINT( indices.size() ) * sizeof( index_type );
 
-	auto& new_geom = m_static_geometry.emplace( name, MeshGeometry() ).first->second;
+	auto& new_geom = m_scene.static_geometry.emplace( name, MeshGeometry() ).first->second;
 	new_geom.Name = std::move( name );
 
 	ThrowIfFailed( D3DCreateBlob( vb_byte_size, &new_geom.VertexBufferCPU ) );
@@ -606,8 +616,8 @@ std::unordered_map<std::string, SubmeshGeometry>& RenderApp::LoadStaticGeometry(
 	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
 	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
 
-	new_geom.VertexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
-	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+	new_geom.VertexBufferGPU = Utils::CreateDefaultBuffer( m_d3d_device.Get(), cmd_list, vertices.data(), vb_byte_size, new_geom.VertexBufferUploader );
+	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( m_d3d_device.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
 
 	new_geom.VertexByteStride = sizeof( vertex_type );
 	new_geom.VertexBufferByteSize = vb_byte_size;
@@ -630,7 +640,7 @@ void RenderApp::LoadDynamicGeometryIndices( const ICRange& indices, ID3D12Graphi
 	ThrowIfFailed( D3DCreateBlob( ib_byte_size, &new_geom.IndexBufferCPU ) );
 	CopyMemory( new_geom.IndexBufferCPU->GetBufferPointer(), indices.data(), ib_byte_size );
 
-	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( md3dDevice.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
+	new_geom.IndexBufferGPU = Utils::CreateDefaultBuffer( m_d3d_device.Get(), cmd_list, indices.data(), ib_byte_size, new_geom.IndexBufferUploader );
 
 	new_geom.IndexFormat = index_format;
 	new_geom.IndexBufferByteSize = ib_byte_size;
@@ -674,17 +684,45 @@ void RenderApp::BuildPSO()
 
 	pso_desc.DSVFormat = mDepthStencilFormat;
 
-	ThrowIfFailed( md3dDevice->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_main ) ) );
+	ThrowIfFailed( m_d3d_device->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_main ) ) );
 
 	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed( md3dDevice->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_wireframe ) ) );
+	ThrowIfFailed( m_d3d_device->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_wireframe ) ) );
 }
 
 void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
-		m_frame_resources.emplace_back( md3dDevice.Get(), 1, UINT( m_renderitems.size() ), UINT( m_waves_cpu_vertices.size() ) );
+		m_frame_resources.emplace_back( m_d3d_device.Get(), 1, UINT( m_scene.renderitems.size() ), 0 );
+}
+
+void RenderApp::CreateTexture( Texture& texture )
+{
+	// temp. only shadow maps for now
+	constexpr UINT width = 4096;
+	constexpr UINT height = 4096;
+
+	CD3DX12_RESOURCE_DESC tex_desc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R24G8_TYPELESS, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL );
+	D3D12_CLEAR_VALUE opt_clear;
+	opt_clear.Format = mDepthStencilFormat;
+	opt_clear.DepthStencil.Depth = 1.0f;
+	opt_clear.DepthStencil.Stencil = 0;
+
+	ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+														&tex_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+														&opt_clear, IID_PPV_ARGS( &texture.texture_gpu ) ) );
+
+	texture.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+	{
+		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = 1;
+	}
+	m_d3d_device->CreateShaderResourceView( texture.texture_gpu.Get(), &srv_desc, texture.srv->HandleCPU() );
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> RenderApp::BuildStaticSamplers() const
@@ -762,5 +800,5 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 
 void RenderApp::LoadModel( const std::string& filename )
 {
-	LoadFbxFromFile( filename, m_ext_mesh );
+	LoadFbxFromFile( filename, m_imported_scene );
 }

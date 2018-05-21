@@ -13,29 +13,6 @@ struct Vertex
 	DirectX::XMFLOAT2 uv;
 };
 
-struct StaticMesh
-{
-	struct SceneMaterial
-	{
-		int base_color_tex_idx;
-		int normal_tex_idx;
-		int specular_tex_idx;
-	};
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
-	std::vector<std::string> textures;
-	std::vector<std::pair<std::string, SceneMaterial>> materials;
-	struct Submesh
-	{
-		std::string name;
-		size_t nindices;
-		size_t index_offset;
-		int material_idx;
-		DirectX::XMFLOAT4X4 transform;
-	};
-	std::vector<Submesh> submeshes;
-};
-
 struct SubmeshGeometry
 {
 	UINT IndexCount = 0;
@@ -124,12 +101,26 @@ struct StaticMaterial
 	void LoadToGPU( ID3D12Device& device, ID3D12GraphicsCommandList& cmd_list );
 };
 
-struct StaticTexture
+struct Texture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
+	std::unique_ptr<Descriptor> srv = nullptr;
+};
 
-	std::unique_ptr<Descriptor> main_srv = nullptr;
+struct StaticTexture : public Texture
+{
+	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
+};
+
+// resides only in GPU mem
+struct DynamicTexture : public Texture
+{
+	std::unique_ptr<Descriptor> rtv = nullptr;
+};
+
+struct ShadowMap : public Texture
+{
+	std::unique_ptr<Descriptor> dsv = nullptr;
 };
 
 struct RenderItem
@@ -176,6 +167,9 @@ struct Light
 	} type;
 
 	LightConstants data;
+
+	ShadowMap* shadow_map;
+	bool is_dynamic = false;
 };
 
 constexpr int MAX_LIGHTS = 16;
@@ -201,4 +195,22 @@ struct PassConstants
 	int n_parallel_lights = 0;
 	int n_point_lights = 0;
 	int n_spotlight_lights = 0;
+};
+
+// scene representation for renderer
+struct RenderSceneContext
+{
+	std::unordered_map<std::string, MeshGeometry> static_geometry;
+
+	// lighting, materials and textures
+	std::unordered_map<std::string, StaticMaterial> materials;
+	std::unordered_map<std::string, Light> lights;
+	std::unordered_map<std::string, StaticTexture> textures;
+
+	// scene (render items)
+	std::vector<RenderItem> renderitems;
+
+	// camera
+	DirectX::XMFLOAT4X4 view = Identity4x4;
+	DirectX::XMFLOAT4X4 proj = Identity4x4;
 };
