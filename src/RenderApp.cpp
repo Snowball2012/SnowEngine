@@ -226,6 +226,8 @@ void RenderApp::Draw( const GameTimer& gt )
 	m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
 	m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
+	auto srv_heap = m_srv_heap->GetInterface();
+	m_cmd_list->SetDescriptorHeaps( 1, &srv_heap );
 	// passes
 	Draw_MainPass( m_cmd_list.Get() );
 

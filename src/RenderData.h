@@ -214,3 +214,5 @@ struct RenderSceneContext
 	DirectX::XMFLOAT4X4 view = Identity4x4;
 	DirectX::XMFLOAT4X4 proj = Identity4x4;
 };
+
+using InputLayout = std::vector<D3D12_INPUT_ELEMENT_DESC>;

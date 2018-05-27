@@ -71,6 +71,7 @@ private:
 	ImportedScene m_imported_scene;
 
 	RenderSceneContext m_scene;
+
 	// geometry
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
 	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );

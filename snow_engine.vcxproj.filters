@@ -75,6 +75,9 @@
     <ClCompile Include="src\SceneImporter.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
+    <ClCompile Include="src\ForwardLightingPass.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
