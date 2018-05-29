@@ -76,7 +76,10 @@
       <Filter>serialization</Filter>
     </ClCompile>
     <ClCompile Include="src\ForwardLightingPass.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DepthOnlyPass.cpp">
+      <Filter>core\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -122,6 +125,9 @@
     <ClInclude Include="src\SceneImporter.h">
       <Filter>serialization</Filter>
     </ClInclude>
+    <ClInclude Include="src\DepthOnlyPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -131,6 +137,9 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\gs.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\depth_only_vs.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>

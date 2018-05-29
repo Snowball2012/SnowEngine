@@ -10,12 +10,16 @@
 #include "DescriptorHeap.h"
 #include "SceneImporter.h"
 
+class ForwardLightingPass;
+class DepthOnlyPass;
+
 class RenderApp: public D3DApp
 {
 public:
 	RenderApp( HINSTANCE hinstance, LPSTR cmd_line );
 	RenderApp( const RenderApp& rhs ) = delete;
 	RenderApp& operator=( const RenderApp& rhs ) = delete;
+	~RenderApp();
 
 	// Inherited via D3DApp
 	virtual bool Initialize() override;
@@ -39,7 +43,6 @@ private:
 	void ReadKeyboardState( const GameTimer& gt );
 
 	virtual void Draw( const GameTimer& gt ) override;
-	virtual void Draw_MainPass( ID3D12GraphicsCommandList* cmd_list );
 
 	virtual void OnMouseDown( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseUp( WPARAM btnState, int x, int y ) override;
@@ -51,17 +54,16 @@ private:
 	void LoadModel( const std::string& filename );
 
 	// build functions
+	void BuildPasses();
+
 	void BuildDescriptorHeaps();
 	void BuildConstantBuffers();
-	void BuildRootSignature();
-	void BuildShadersAndInputLayout();
 	void BuildGeometry();
 	void LoadAndBuildTextures();
 	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
 	void BuildMaterials();
 	void BuildLights();
 	void BuildRenderItems();
-	void BuildPSO();
 	void BuildFrameResources();
 	void CreateTexture( Texture& texture );
 
@@ -92,16 +94,17 @@ private:
 	static constexpr int num_passes = 2;
 
 	// pipeline
-	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
-	
-	ComPtr<ID3DBlob> m_vs_bytecode = nullptr;
-	ComPtr<ID3DBlob> m_ps_bytecode = nullptr;
-	ComPtr<ID3DBlob> m_gs_bytecode = nullptr;
+	std::unique_ptr<ForwardLightingPass> m_forward_pass;
+	std::unique_ptr<DepthOnlyPass> m_depth_pass;
 
-	std::vector<D3D12_INPUT_ELEMENT_DESC> m_input_layout;
+	// forward
+	ComPtr<ID3D12RootSignature> m_forward_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_forward_pso_main = nullptr;
+	ComPtr<ID3D12PipelineState> m_forward_pso_wireframe = nullptr;
 
-	ComPtr<ID3D12PipelineState> m_pso_main = nullptr;
-	ComPtr<ID3D12PipelineState> m_pso_wireframe = nullptr;
+	// depth only
+	ComPtr<ID3D12RootSignature> m_do_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_do_pso = nullptr;
 
 	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;

@@ -1,6 +1,6 @@
 #pragma once
 
-class ID3D12GraphicsCommandList;
+#include <d3d12.h>
 
 // encapsulates pso, root signatures, render targets and render algorithm
 class RenderPass

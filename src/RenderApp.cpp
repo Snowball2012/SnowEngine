@@ -4,6 +4,9 @@
 
 #include "GeomGeneration.h"
 
+#include "ForwardLightingPass.h"
+#include "DepthOnlyPass.h"
+
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
 
@@ -18,6 +21,8 @@ RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
 	mClientWidth = 1920;
 	mClientHeight = 1080;
 }
+
+RenderApp::~RenderApp() = default;
 
 bool RenderApp::Initialize()
 {
@@ -40,9 +45,7 @@ bool RenderApp::Initialize()
 	BuildFrameResources();
 	BuildLights();
 	BuildConstantBuffers();
-	BuildRootSignature();
-	BuildShadersAndInputLayout();
-	BuildPSO();
+	BuildPasses();
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
@@ -212,7 +215,7 @@ void RenderApp::Draw( const GameTimer& gt )
 	ThrowIfFailed( m_cur_frame_resource->cmd_list_alloc->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), ( m_wireframe_mode ? m_pso_wireframe : m_pso_main ).Get() ) );
+	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), m_do_pso.Get() ) );
 
 	// state transition( for back buffer )
 	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
@@ -229,7 +232,26 @@ void RenderApp::Draw( const GameTimer& gt )
 	auto srv_heap = m_srv_heap->GetInterface();
 	m_cmd_list->SetDescriptorHeaps( 1, &srv_heap );
 	// passes
-	Draw_MainPass( m_cmd_list.Get() );
+	DepthOnlyPass::Context depth_prepass_ctx
+	{
+		&m_scene,
+		DepthStencilView(),
+		m_cur_frame_resource->pass_cb->Resource(),
+		0,
+		m_cur_frame_resource->object_cb->Resource()
+	};
+	m_depth_pass->Draw( depth_prepass_ctx, *m_cmd_list.Get() );
+
+	ForwardLightingPass::Context forward_ctx
+	{
+		&m_scene,
+		CurrentBackBufferView(),
+		DepthStencilView(),
+		m_cur_frame_resource->pass_cb->Resource(),
+		0,
+		m_cur_frame_resource->object_cb->Resource()
+	};
+	m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
 
 	// swap transition
 	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
@@ -245,33 +267,6 @@ void RenderApp::Draw( const GameTimer& gt )
 	mCurrBackBuffer = ( mCurrBackBuffer + 1 ) % SwapChainBufferCount;
 
 	FlushCommandQueue();
-}
-
-void RenderApp::Draw_MainPass( ID3D12GraphicsCommandList* cmd_list )
-{
-	// set render target
-	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, &DepthStencilView() );
-
-	ID3D12DescriptorHeap* srv_heap = m_srv_heap->GetInterface();
-	cmd_list->SetDescriptorHeaps( 1, &srv_heap );
-
-	cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
-	cmd_list->SetGraphicsRootConstantBufferView( 5, m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() );
-
-	const auto obj_cb_adress = m_cur_frame_resource->object_cb->Resource()->GetGPUVirtualAddress();
-	const auto obj_cb_size = d3dUtil::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
-	for ( const auto& render_item : m_scene.renderitems )
-	{
-		cmd_list->SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
-		cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
-		cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.material->base_color_desc );
-		cmd_list->SetGraphicsRootDescriptorTable( 3, render_item.material->normal_map_desc );
-		cmd_list->SetGraphicsRootDescriptorTable( 4, render_item.material->specular_desc );
-		cmd_list->IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
-		cmd_list->IASetIndexBuffer( &render_item.geom->IndexBufferView() );
-		cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-		cmd_list->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
-	}
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
@@ -319,6 +314,18 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 	m_last_mouse_pos.y = y;
 }
 
+void RenderApp::BuildPasses()
+{
+	ForwardLightingPass::BuildData( BuildStaticSamplers(), mBackBufferFormat, mDepthStencilFormat, *m_d3d_device.Get(),
+									m_forward_pso_main, m_forward_pso_wireframe, m_forward_root_signature );
+	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
+
+
+	DepthOnlyPass::BuildData( mDepthStencilFormat, *m_d3d_device.Get(),
+							  m_do_pso, m_do_root_signature );
+	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
+}
+
 void RenderApp::BuildDescriptorHeaps()
 {
 	// srv heap
@@ -352,88 +359,6 @@ void RenderApp::BuildConstantBuffers()
 		m_frame_resources[i].object_cb = std::make_unique<Utils::UploadBuffer<ObjectConstants>>( m_d3d_device.Get(), UINT( m_scene.renderitems.size() ), true );
 		// pass cb
 		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( m_d3d_device.Get(), num_passes, true );
-	}
-}
-
-void RenderApp::BuildRootSignature()
-{
-	/*
-	Basic root sig
-		0 - cbv per object
-		1 - cbv per material
-		2 - albedo
-		3 - normal
-		4 - specular
-		5 - cbv per pass
-
-	Shader register bindings
-		b0 - cbv per obj
-		b1 - cbv per material
-		b2 - cbv per pass
-
-		t0 - albedo
-		t1 - normal
-		t2 - specular
-
-	To optimize state changes keep material textures together when possible. Descriptor duplication?
-	*/
-	constexpr int nparams = 6;
-
-	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
-
-	for ( int i = 0; i < 2; ++i )
-		slot_root_parameter[i].InitAsConstantBufferView( i );
-
-	CD3DX12_DESCRIPTOR_RANGE desc_table[3];
-	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 ); // albedo
-	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 ); // normal
-	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2 ); // specular
-
-	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_ALL );
-	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_ALL );
-	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_ALL );
-
-	slot_root_parameter[5].InitAsConstantBufferView( 2 );
-
-	const auto& static_samplers = BuildStaticSamplers();
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter, UINT( static_samplers.size() ), static_samplers.data(), D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
-
-	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
-	ComPtr<ID3DBlob> error_blob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1, serialized_root_sig.GetAddressOf(), error_blob.GetAddressOf() );
-
-	if ( error_blob )
-	{
-		OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
-	}
-	ThrowIfFailed( hr );
-
-	ThrowIfFailed( m_d3d_device->CreateRootSignature(
-		0,
-		serialized_root_sig->GetBufferPointer(),
-		serialized_root_sig->GetBufferSize(),
-		IID_PPV_ARGS( &m_root_signature ) ) );
-}
-
-void RenderApp::BuildShadersAndInputLayout()
-{
-	m_vs_bytecode = Utils::LoadBinary( L"shaders/vs.cso" );
-	m_ps_bytecode = Utils::LoadBinary( L"shaders/ps.cso" );
-	m_gs_bytecode = Utils::LoadBinary( L"shaders/gs.cso" );
-
-	m_input_layout =
-	{
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	};
-}
-
-namespace
-{
-	float hillsHeight( float x, float z )
-	{
-		return 0.3f*( z*sinf( 0.1f*x ) + x * cosf( 0.1f*z ) );
 	}
 }
 
@@ -646,51 +571,6 @@ void RenderApp::LoadDynamicGeometryIndices( const ICRange& indices, ID3D12Graphi
 
 	new_geom.IndexFormat = index_format;
 	new_geom.IndexBufferByteSize = ib_byte_size;
-}
-
-void RenderApp::BuildPSO()
-{
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
-	ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
-
-	pso_desc.InputLayout = { m_input_layout.data(), UINT( m_input_layout.size() ) };
-	pso_desc.pRootSignature = m_root_signature.Get();
-	pso_desc.VS =
-	{
-		reinterpret_cast<BYTE*>( m_vs_bytecode->GetBufferPointer() ),
-		m_vs_bytecode->GetBufferSize()
-	};
-
-	pso_desc.PS =
-	{
-		reinterpret_cast<BYTE*>( m_ps_bytecode->GetBufferPointer() ),
-		m_ps_bytecode->GetBufferSize()
-	};
-
-	pso_desc.GS =
-	{
-		reinterpret_cast<BYTE*>( m_gs_bytecode->GetBufferPointer() ),
-		m_gs_bytecode->GetBufferSize()
-	};
-
-	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
-	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
-	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
-	pso_desc.SampleMask = UINT_MAX;
-	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-	pso_desc.NumRenderTargets = 1;
-	pso_desc.RTVFormats[0] = mBackBufferFormat;
-	pso_desc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
-	pso_desc.SampleDesc.Quality = m4xMsaaState ? ( m4xMsaaQuality - 1 ) : 0;
-
-	pso_desc.DSVFormat = mDepthStencilFormat;
-
-	ThrowIfFailed( m_d3d_device->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_main ) ) );
-
-	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed( m_d3d_device->CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_wireframe ) ) );
 }
 
 void RenderApp::BuildFrameResources()

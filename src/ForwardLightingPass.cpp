@@ -3,14 +3,20 @@
 
 #include "RenderUtils.h"
 
-void ForwardLightingPass::Draw( const ForwardLightingContext& context, bool wireframe, ID3D12GraphicsCommandList& cmd_list )
+ForwardLightingPass::ForwardLightingPass( ID3D12PipelineState* pso, ID3D12PipelineState* wireframe_pso, ID3D12RootSignature* rootsig )
+	: m_pso( pso ), m_pso_wireframe( wireframe_pso ), m_root_signature( rootsig ) {}
+
+void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12GraphicsCommandList& cmd_list )
 {
 	cmd_list.SetPipelineState( wireframe ? m_pso_wireframe : m_pso );
 	
-	cmd_list.OMSetRenderTargets( 1, context.back_buffer_rtv, true, context.depth_stencil_view );
+	cmd_list.OMSetRenderTargets( 1, &context.back_buffer_rtv, true, &context.depth_stencil_view );
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
-	cmd_list.SetGraphicsRootConstantBufferView( 5, context.pass_cb->GetGPUVirtualAddress() );
+
+	const auto pass_cb_address = context.pass_cb->GetGPUVirtualAddress();
+	const auto pass_cb_size = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
+	cmd_list.SetGraphicsRootConstantBufferView( 5, pass_cb_address + pass_cb_size * context.pass_cb_idx );
 
 	const auto obj_cb_adress = context.object_cb->GetGPUVirtualAddress();
 	const auto obj_cb_size =  Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
@@ -28,5 +34,12 @@ void ForwardLightingPass::Draw( const ForwardLightingContext& context, bool wire
 	}
 }
 
-
-
+ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
+{
+	return Shaders
+	{
+		Utils::LoadBinary( L"shaders/vs.cso" ),
+		Utils::LoadBinary( L"shaders/gs.cso" ),
+		Utils::LoadBinary( L"shaders/ps.cso" )
+	};
+}
