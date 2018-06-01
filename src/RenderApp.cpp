@@ -68,6 +68,8 @@ void RenderApp::Update( const GameTimer& gt )
 {
 	UpdateAndWaitForFrameResource();
 
+	UpdateShadowMapDescriptors();
+
 	ReadKeyboardState( gt );
 
 	// Update object constants if needed
@@ -128,6 +130,24 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 
 	UpdateLights( pc );
 
+
+	// shadow map pass constants
+	{
+		const auto& cartesian = SphericalToCartesian( 50, m_sun_phi, m_sun_theta );
+
+		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
+		XMVECTOR target = XMVectorZero();
+		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+
+		view = XMMatrixLookAtLH( pos, target, up );
+		proj = XMMatrixOrthographicLH( 50, 50, 0.1, 100 );
+		const auto& viewproj = view * proj;
+		XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
+
+		pass_cb.CopyData( 1, pc );
+	}
+
+	// main pass
 	pass_cb.CopyData( 0, pc );
 }
 
@@ -229,18 +249,30 @@ void RenderApp::Draw( const GameTimer& gt )
 	m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
 	m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
-	auto srv_heap = m_srv_heap->GetInterface();
-	m_cmd_list->SetDescriptorHeaps( 1, &srv_heap );
+	auto additional_dsv_heap = m_dsv_heap->GetInterface();
+	m_cmd_list->SetDescriptorHeaps( 1, &additional_dsv_heap );
+
 	// passes
-	DepthOnlyPass::Context depth_prepass_ctx
+	DepthOnlyPass::Context shadow_map_gen_ctx
 	{
 		&m_scene,
-		DepthStencilView(),
+		m_scene.lights["sun"].shadow_map->dsv->HandleCPU(),
 		m_cur_frame_resource->pass_cb->Resource(),
-		0,
+		1,
 		m_cur_frame_resource->object_cb->Resource()
 	};
-	m_depth_pass->Draw( depth_prepass_ctx, *m_cmd_list.Get() );
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
+																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																		   D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
+
+	m_depth_pass->Draw( shadow_map_gen_ctx, *m_cmd_list.Get() );
+
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
+																		   D3D12_RESOURCE_STATE_DEPTH_WRITE,
+																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
+
+	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface(), mDsvHeap.Get() };
+	m_cmd_list->SetDescriptorHeaps( 2, heaps );
 
 	ForwardLightingPass::Context forward_ctx
 	{
@@ -267,6 +299,12 @@ void RenderApp::Draw( const GameTimer& gt )
 	mCurrBackBuffer = ( mCurrBackBuffer + 1 ) % SwapChainBufferCount;
 
 	FlushCommandQueue();
+}
+
+void RenderApp::UpdateShadowMapDescriptors()
+{
+	for ( auto& shadow_map : m_cur_frame_resource->shadow_maps )
+		m_scene.lights[shadow_map.first].shadow_map = &shadow_map.second;
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )

@@ -414,8 +414,11 @@ bool D3DApp::InitMainWindow()
 	return true;
 }
 
+#include <comdef.h>
+
 bool D3DApp::InitDirect3D()
 {
+	
 #if defined(DEBUG) || defined(_DEBUG) 
 	// Enable the D3D12 debug layer.
 	{
@@ -424,14 +427,24 @@ bool D3DApp::InitDirect3D()
 		debugController->EnableDebugLayer();
 	}
 #endif
-
+	
 	ThrowIfFailed( CreateDXGIFactory1( IID_PPV_ARGS( &mdxgiFactory ) ) );
 
 	// Try to create hardware device.
-	HRESULT hardwareResult = D3D12CreateDevice(
-		nullptr,             // default adapter
-		D3D_FEATURE_LEVEL_11_0,
-		IID_PPV_ARGS( &m_d3d_device ) );
+	HRESULT hardwareResult;
+	try
+	{
+		hardwareResult = D3D12CreateDevice(
+			nullptr,             // default adapter
+			D3D_FEATURE_LEVEL_12_1,
+			IID_PPV_ARGS( &m_d3d_device ) );
+	}
+	catch ( const _com_error& e )
+	{
+		std::string desc = e.Description();
+
+		std::cout << desc;
+	}
 
 	// Fallback to WARP device.
 	if ( FAILED( hardwareResult ) )

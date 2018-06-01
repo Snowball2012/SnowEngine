@@ -30,6 +30,7 @@ private:
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
+	void UpdateShadowMapDescriptors();
 	
 	void UpdateAndWaitForFrameResource();
 	// isolated from FrameResources logic
