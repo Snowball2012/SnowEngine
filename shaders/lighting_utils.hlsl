@@ -128,11 +128,19 @@ float shadow_factor( float3 pos_w, float4x4 shadow_map_mat )
 		float2( -dx, dx ), float2( 0.0f, dx ), float2( dx, dx )
 	};
 
+	//sigma = 1.0f;
+	const float gauss_kernel[9] =
+	{
+		0.077847f,	0.123317f,	0.077847f,
+		0.123317f,	0.195346f,	0.123317f,
+		0.077847f,	0.123317f,	0.077847f,
+	};
+
 	[unroll]
 	for ( int i = 0; i < 9; ++i )
-		percent_lit += shadow_map.SampleCmpLevelZero( shadow_map_sampler, shadow_pos_h.xy + offsets[i], shadow_pos_h.z ).r;
+		percent_lit += shadow_map.SampleCmpLevelZero( shadow_map_sampler, shadow_pos_h.xy + offsets[i], shadow_pos_h.z ).r * gauss_kernel[i];
 
-	return percent_lit / 9.0f;
+	return percent_lit;
 }
 
 float4 dbg_show_normal( float2 uv )

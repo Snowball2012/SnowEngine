@@ -155,7 +155,7 @@ void RenderApp::UpdateLights( PassConstants& pc )
 		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 		XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-		XMMATRIX proj = XMMatrixOrthographicLH( 100, 100, 0.001f, 200 );
+		XMMATRIX proj = XMMatrixOrthographicLH( 50, 50, 10.0f, 200 );
 		const auto& viewproj = view * proj;
 		XMStoreFloat4x4( &sun_light.data.shadow_map_matrix, XMMatrixTranspose( viewproj ) );
 	}
