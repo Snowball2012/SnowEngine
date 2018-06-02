@@ -29,7 +29,6 @@ float3 rendering_equation( float3 to_source, float3 to_camera, float3 normal, fl
 	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
 	float3 fresnel_r0 = lerp( diffuse_fresnel, base_color.rgb, metallic );
 
-
 	return ( lambert_term * light_strength )
 		    * ( diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo 
 				+ specular_strength( fresnel_r0,
@@ -56,12 +55,16 @@ float4 main( PixelIn pin ) : SV_TARGET
 											normal_map.Sample( linear_wrap_sampler, pin.uv ).xy );
 
 	for ( int light_idx = 0; light_idx < n_parallel_lights; ++light_idx )
-		res_color += rendering_equation( lights[light_idx].dir,
-										 normalize( eye_pos_w - pin.pos_w ),
-										 normal,
-										 pin.uv,
-										 lights[light_idx].strength );
+	{
+		float3 light_intensity = rendering_equation( lights[light_idx].dir,
+												 normalize( eye_pos_w - pin.pos_w ),
+												 normal,
+												 pin.uv,
+												 lights[light_idx].strength );
 
+
+		res_color += light_intensity * max( shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat ), 0.2f );
+	}
 
 	//return float4( 0.5 * ( normal + float3( 1.0f, 1.0f, 1.0f ) ), 1.0f ); // normal
 	return float4( res_color, 1.0f );

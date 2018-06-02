@@ -21,7 +21,7 @@ namespace bc = boost::container;
 
 #include "XMMath.h"
 
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 
 #include <wrl.h>
 #include <WindowsX.h>

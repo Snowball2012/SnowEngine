@@ -432,19 +432,11 @@ bool D3DApp::InitDirect3D()
 
 	// Try to create hardware device.
 	HRESULT hardwareResult;
-	try
-	{
-		hardwareResult = D3D12CreateDevice(
-			nullptr,             // default adapter
-			D3D_FEATURE_LEVEL_12_1,
-			IID_PPV_ARGS( &m_d3d_device ) );
-	}
-	catch ( const _com_error& e )
-	{
-		std::string desc = e.Description();
+	hardwareResult = D3D12CreateDevice(
+		nullptr,             // default adapter
+		D3D_FEATURE_LEVEL_11_0,
+		IID_PPV_ARGS( &m_d3d_device ) );
 
-		std::cout << desc;
-	}
 
 	// Fallback to WARP device.
 	if ( FAILED( hardwareResult ) )

@@ -3,6 +3,7 @@
 
 struct Light
 {
+	float4x4 shadow_map_mat;
 	float3 strength;
 	float falloff_start;
 	float3 origin;
@@ -52,10 +53,12 @@ SamplerState linear_wrap_sampler : register( s2 );
 SamplerState linear_clamp_sampler : register( s3 );
 SamplerState anisotropic_wrap_sampler : register( s4 );
 SamplerState anisotropic_clamp_sampler : register( s5 );
+SamplerComparisonState shadow_map_sampler : register( s6 );
 
 Texture2D base_color_map : register( t0 );
 Texture2D normal_map : register( t1 );
 Texture2D specular_map : register( t2 );
+Texture2D shadow_map : register( t3 );
 
 float sqr( float a )
 {
@@ -98,6 +101,38 @@ float3 specular_strength( float3 fresnel_r0, float cos_nh, float cos_lh, float3 
 	float alpha2 = sqr( roughness );
 	float ndf = alpha2 / ( 3.14 * sqr( ( alpha2 - 1 ) * sqr( cos_nh ) + 1 ) );
 	return fresnel_schlick( fresnel_r0, cos_lh ) * ndf;
+}
+
+float shadow_factor( float3 pos_w, float4x4 shadow_map_mat )
+{
+	// 3x3 PCF
+	float4 shadow_pos_h = mul( float4( pos_w, 1.0f ), shadow_map_mat );
+	shadow_pos_h.xyz /= shadow_pos_h.w;
+
+	shadow_pos_h.x += 1.0f;
+	shadow_pos_h.y += 1.0f;
+	shadow_pos_h.y = 2.0f - shadow_pos_h.y;
+
+	shadow_pos_h.xy /= 2.0f;
+
+	uint width, height, nmips;
+	shadow_map.GetDimensions( 0, width, height, nmips );
+
+	float dx = 1.0f / width;
+	float percent_lit = 0.0f;
+
+	const float2 offsets[9] =
+	{
+		float2( -dx, -dx ), float2( 0.0f, -dx ), float2( dx, -dx ),
+		float2( -dx, 0.0f ), float2( 0.0f, 0.0f ), float2( dx, 0.0f ),
+		float2( -dx, dx ), float2( 0.0f, dx ), float2( dx, dx )
+	};
+
+	[unroll]
+	for ( int i = 0; i < 9; ++i )
+		percent_lit += shadow_map.SampleCmpLevelZero( shadow_map_sampler, shadow_pos_h.xy + offsets[i], shadow_pos_h.z ).r;
+
+	return percent_lit / 9.0f;
 }
 
 float4 dbg_show_normal( float2 uv )

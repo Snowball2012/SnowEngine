@@ -68,7 +68,7 @@ private:
 	void BuildFrameResources();
 	void CreateTexture( Texture& texture );
 
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> BuildStaticSamplers() const;
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 
 	// external geometry
 	ImportedScene m_imported_scene;

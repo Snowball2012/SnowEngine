@@ -130,32 +130,35 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 
 	UpdateLights( pc );
 
+	pass_cb.CopyData( 0, pc );
 
 	// shadow map pass constants
 	{
-		const auto& cartesian = SphericalToCartesian( 50, m_sun_phi, m_sun_theta );
-
-		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
-		XMVECTOR target = XMVectorZero();
-		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-
-		view = XMMatrixLookAtLH( pos, target, up );
-		proj = XMMatrixOrthographicLH( 50, 50, 0.1, 100 );
-		const auto& viewproj = view * proj;
-		XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
-
+		pc.ViewProj = m_scene.lights["sun"].data.shadow_map_matrix;
 		pass_cb.CopyData( 1, pc );
 	}
 
 	// main pass
-	pass_cb.CopyData( 0, pc );
 }
 
 void RenderApp::UpdateLights( PassConstants& pc )
 {
 	// update sun dir
 	auto& sun_light = m_scene.lights["sun"];
-	sun_light.data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
+	{
+		sun_light.data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
+
+		const auto& cartesian = SphericalToCartesian( -100, m_sun_phi, m_sun_theta );
+
+		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
+		XMVECTOR target = XMVectorZero();
+		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+
+		XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
+		XMMATRIX proj = XMMatrixOrthographicLH( 100, 100, 0.001f, 200 );
+		const auto& viewproj = view * proj;
+		XMStoreFloat4x4( &sun_light.data.shadow_map_matrix, XMMatrixTranspose( viewproj ) );
+	}
 
 	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
 	for ( const auto& light : m_scene.lights )
@@ -240,17 +243,40 @@ void RenderApp::Draw( const GameTimer& gt )
 	// state transition( for back buffer )
 	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
 
-	// viewport and scissor rect
-	m_cmd_list->RSSetViewports( 1, &mScreenViewport );
-	m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
+	// shadow map viewport and scissor rect
+	D3D12_VIEWPORT sm_viewport;
+	{
+		sm_viewport.TopLeftX = 0;
+		sm_viewport.TopLeftY = 0;
+		sm_viewport.Height = 4096;
+		sm_viewport.Width = 4096;
+		sm_viewport.MinDepth = 0;
+		sm_viewport.MaxDepth = 1;
+	}
+	D3D12_RECT sm_scissor;
+	{
+		sm_scissor.bottom = 4096;
+		sm_scissor.left = 0;
+		sm_scissor.right = 4096;
+		sm_scissor.top = 0;
+	}
+
+	m_cmd_list->RSSetViewports( 1, &sm_viewport );
+	m_cmd_list->RSSetScissorRects( 1, &sm_scissor );
 
 	// clear the back buffer and depth
 	const float bgr_color[4] = { 0.8f, 0.83f, 0.9f };
 	m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
 	m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
-	auto additional_dsv_heap = m_dsv_heap->GetInterface();
-	m_cmd_list->SetDescriptorHeaps( 1, &additional_dsv_heap );
+	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
+																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																		   D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
+
+	m_cmd_list->ClearDepthStencilView( m_scene.lights["sun"].shadow_map->dsv->HandleCPU(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+
+	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
+	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
 	// passes
 	DepthOnlyPass::Context shadow_map_gen_ctx
@@ -261,9 +287,7 @@ void RenderApp::Draw( const GameTimer& gt )
 		1,
 		m_cur_frame_resource->object_cb->Resource()
 	};
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-																		   D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
+	
 
 	m_depth_pass->Draw( shadow_map_gen_ctx, *m_cmd_list.Get() );
 
@@ -271,14 +295,15 @@ void RenderApp::Draw( const GameTimer& gt )
 																		   D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
 
-	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface(), mDsvHeap.Get() };
-	m_cmd_list->SetDescriptorHeaps( 2, heaps );
+	m_cmd_list->RSSetViewports( 1, &mScreenViewport );
+	m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
 
 	ForwardLightingPass::Context forward_ctx
 	{
 		&m_scene,
 		CurrentBackBufferView(),
 		DepthStencilView(),
+		m_scene.lights["sun"].shadow_map->srv->HandleGPU(),
 		m_cur_frame_resource->pass_cb->Resource(),
 		0,
 		m_cur_frame_resource->object_cb->Resource()
@@ -359,7 +384,7 @@ void RenderApp::BuildPasses()
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 
 
-	DepthOnlyPass::BuildData( mDepthStencilFormat, *m_d3d_device.Get(),
+	DepthOnlyPass::BuildData( mDepthStencilFormat, 5000.0f, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
 	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 }
@@ -630,7 +655,7 @@ void RenderApp::CreateTexture( Texture& texture )
 	opt_clear.DepthStencil.Stencil = 0;
 
 	ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-														&tex_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+														&tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 														&opt_clear, IID_PPV_ARGS( &texture.texture_gpu ) ) );
 
 	texture.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
@@ -645,7 +670,7 @@ void RenderApp::CreateTexture( Texture& texture )
 	m_d3d_device->CreateShaderResourceView( texture.texture_gpu.Get(), &srv_desc, texture.srv->HandleCPU() );
 }
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> RenderApp::BuildStaticSamplers() const
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> RenderApp::BuildStaticSamplers() const
 {
 	// Applications usually only need a handful of samplers.  So just define them all up front
 	// and keep them available as part of the root signature.  
@@ -696,10 +721,21 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> RenderApp::BuildStaticSamplers(
 		0.0f,                              // mipLODBias
 		8 );                                // maxAnisotropy
 
+	const CD3DX12_STATIC_SAMPLER_DESC shadow(
+		6,
+		D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+		0.0f,
+		16,
+		D3D12_COMPARISON_FUNC_LESS_EQUAL,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE
+		);
 	return {
 		pointWrap, pointClamp,
 		linearWrap, linearClamp,
-		anisotropicWrap, anisotropicClamp };
+		anisotropicWrap, anisotropicClamp, shadow };
 }
 
 LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )

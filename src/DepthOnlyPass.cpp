@@ -80,7 +80,7 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
 	return rootsig;
 }
 
-void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
+void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, float bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
 {
 	const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
 
@@ -103,7 +103,12 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, ID3D12Device& device, Com
 		};
 
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
-		pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_FRONT;
+		if ( bias > 0 )
+		{
+			pso_desc.RasterizerState.DepthBias = bias;
+			pso_desc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+		}
+		pso_desc.RasterizerState.CullMode = back_culling ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_FRONT;
 		pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
 		pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
 		pso_desc.SampleMask = UINT_MAX;

@@ -1,5 +1,6 @@
 struct Light
 {
+	float4x4 shadow_map_mat;
 	float3 strength;
 	float falloff_start;
 	float3 origin;

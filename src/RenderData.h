@@ -148,6 +148,7 @@ struct ObjectConstants
 
 struct LightConstants
 {
+	DirectX::XMFLOAT4X4 shadow_map_matrix;
 	DirectX::XMFLOAT3 strength;
 	float falloff_start; // point and spotlight
 	DirectX::XMFLOAT3 origin; // point and spotlight
