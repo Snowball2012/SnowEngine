@@ -12,6 +12,8 @@
 
 #include <d3d12sdklayers.h>
 
+#include <future>
+
 using namespace DirectX;
 
 RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
@@ -235,88 +237,100 @@ void RenderApp::Draw( const GameTimer& gt )
 	m_cur_frame_resource->fence = ++m_current_fence;
 	m_cmd_queue->Signal( mFence.Get(), m_current_fence );
 
-	ThrowIfFailed( m_cur_frame_resource->cmd_list_alloc->Reset() );
+	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
+		ThrowIfFailed( allocator->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_alloc.Get(), m_do_pso.Get() ) );
+	ThrowIfFailed( m_sm_cmd_lst->Reset( m_cur_frame_resource->cmd_list_allocs[1].Get(), m_do_pso.Get() ) );
+	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	// state transition( for back buffer )
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
-
-	// shadow map viewport and scissor rect
-	D3D12_VIEWPORT sm_viewport;
+	auto forward_cmd_list_filled = std::async( [&]()
 	{
-		sm_viewport.TopLeftX = 0;
-		sm_viewport.TopLeftY = 0;
-		sm_viewport.Height = 4096;
-		sm_viewport.Width = 4096;
-		sm_viewport.MinDepth = 0;
-		sm_viewport.MaxDepth = 1;
+		m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
+		
+		ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
+		m_cmd_list->SetDescriptorHeaps( 1, heaps );
+
+		// clear the back buffer and depth
+		const float bgr_color[4] = { 0.8f, 0.83f, 0.9f };
+		m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
+		m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+		
+		ForwardLightingPass::Context forward_ctx
+		{
+			&m_scene,
+			CurrentBackBufferView(),
+			DepthStencilView(),
+			m_scene.lights["sun"].shadow_map->srv->HandleGPU(),
+			m_cur_frame_resource->pass_cb->Resource(),
+			0,
+			m_cur_frame_resource->object_cb->Resource()
+		};
+		m_cmd_list->RSSetViewports( 1, &mScreenViewport );
+		m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
+
+
+		m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
+
+		// swap transition
+		m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
+
+		// done
+		ThrowIfFailed( m_cmd_list->Close() );		
+	} );
+
+	{
+		// shadow map viewport and scissor rect
+		D3D12_VIEWPORT sm_viewport;
+		{
+			sm_viewport.TopLeftX = 0;
+			sm_viewport.TopLeftY = 0;
+			sm_viewport.Height = 4096;
+			sm_viewport.Width = 4096;
+			sm_viewport.MinDepth = 0;
+			sm_viewport.MaxDepth = 1;
+		}
+		D3D12_RECT sm_scissor;
+		{
+			sm_scissor.bottom = 4096;
+			sm_scissor.left = 0;
+			sm_scissor.right = 4096;
+			sm_scissor.top = 0;
+		}
+
+		m_sm_cmd_lst->RSSetViewports( 1, &sm_viewport );
+		m_sm_cmd_lst->RSSetScissorRects( 1, &sm_scissor );
+
+		m_sm_cmd_lst->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
+																				 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																				 D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
+
+		m_sm_cmd_lst->ClearDepthStencilView( m_scene.lights["sun"].shadow_map->dsv->HandleCPU(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+
+		// passes
+		DepthOnlyPass::Context shadow_map_gen_ctx
+		{
+			&m_scene,
+			m_scene.lights["sun"].shadow_map->dsv->HandleCPU(),
+			m_cur_frame_resource->pass_cb->Resource(),
+			1,
+			m_cur_frame_resource->object_cb->Resource()
+		};
+
+
+		m_depth_pass->Draw( shadow_map_gen_ctx, *m_sm_cmd_lst.Get() );
+
+		m_sm_cmd_lst->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
+																				 D3D12_RESOURCE_STATE_DEPTH_WRITE,
+																				 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
+
+		ThrowIfFailed( m_sm_cmd_lst->Close() );
 	}
-	D3D12_RECT sm_scissor;
-	{
-		sm_scissor.bottom = 4096;
-		sm_scissor.left = 0;
-		sm_scissor.right = 4096;
-		sm_scissor.top = 0;
-	}
 
-	m_cmd_list->RSSetViewports( 1, &sm_viewport );
-	m_cmd_list->RSSetScissorRects( 1, &sm_scissor );
+	// get forward cmd list
+	forward_cmd_list_filled.wait();	
 
-	// clear the back buffer and depth
-	const float bgr_color[4] = { 0.8f, 0.83f, 0.9f };
-	m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
-	m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
-
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-																		   D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
-
-	m_cmd_list->ClearDepthStencilView( m_scene.lights["sun"].shadow_map->dsv->HandleCPU(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
-
-	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
-	m_cmd_list->SetDescriptorHeaps( 1, heaps );
-
-	// passes
-	DepthOnlyPass::Context shadow_map_gen_ctx
-	{
-		&m_scene,
-		m_scene.lights["sun"].shadow_map->dsv->HandleCPU(),
-		m_cur_frame_resource->pass_cb->Resource(),
-		1,
-		m_cur_frame_resource->object_cb->Resource()
-	};
-	
-
-	m_depth_pass->Draw( shadow_map_gen_ctx, *m_cmd_list.Get() );
-
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																		   D3D12_RESOURCE_STATE_DEPTH_WRITE,
-																		   D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
-
-	m_cmd_list->RSSetViewports( 1, &mScreenViewport );
-	m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
-
-	ForwardLightingPass::Context forward_ctx
-	{
-		&m_scene,
-		CurrentBackBufferView(),
-		DepthStencilView(),
-		m_scene.lights["sun"].shadow_map->srv->HandleGPU(),
-		m_cur_frame_resource->pass_cb->Resource(),
-		0,
-		m_cur_frame_resource->object_cb->Resource()
-	};
-	m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
-
-	// swap transition
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
-
-	// done
-	ThrowIfFailed( m_cmd_list->Close() );
-
-	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
+	ID3D12CommandList* cmd_lists[] = { m_sm_cmd_lst.Get(), m_cmd_list.Get() };
 	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 
 	// swap buffers
@@ -387,6 +401,14 @@ void RenderApp::BuildPasses()
 	DepthOnlyPass::BuildData( mDepthStencilFormat, 5000.0f, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
 	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
+
+	ThrowIfFailed( m_d3d_device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_frame_resources[0].cmd_list_allocs[1].Get(), // Associated command allocator
+		nullptr, // Initial PipelineStateObject
+		IID_PPV_ARGS( m_sm_cmd_lst.GetAddressOf() ) ) );
+	m_sm_cmd_lst->Close();
 }
 
 void RenderApp::BuildDescriptorHeaps()
@@ -639,7 +661,7 @@ void RenderApp::LoadDynamicGeometryIndices( const ICRange& indices, ID3D12Graphi
 void RenderApp::BuildFrameResources()
 {
 	for ( int i = 0; i < num_frame_resources; ++i )
-		m_frame_resources.emplace_back( m_d3d_device.Get(), 1, UINT( m_scene.renderitems.size() ), 0 );
+		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, UINT( m_scene.renderitems.size() ), 0 );
 }
 
 void RenderApp::CreateTexture( Texture& texture )

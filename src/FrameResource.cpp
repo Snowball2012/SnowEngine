@@ -2,9 +2,12 @@
 
 #include "FrameResource.h"
 
-FrameResource::FrameResource( ID3D12Device* device, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt )
+FrameResource::FrameResource( ID3D12Device* device, size_t cmd_allocator_count, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt )
 {
-	ThrowIfFailed( device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( cmd_list_alloc.GetAddressOf() ) ) );
+	cmd_list_allocs.resize( cmd_allocator_count );
+
+	for ( auto& alloc : cmd_list_allocs )
+		ThrowIfFailed( device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( alloc.GetAddressOf() ) ) );
 	if ( passCount > 0 )
 		pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( device, passCount, true );
 	if ( objectCount > 0 )

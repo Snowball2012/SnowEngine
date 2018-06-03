@@ -7,11 +7,11 @@
 
 struct FrameResource
 {
-	FrameResource( ID3D12Device* device, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt );
+	FrameResource( ID3D12Device* device, size_t cmd_allocator_count, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt );
 
 	// We cannot reset the allocator until the GPU is done processing the commands.
 	// So each frame needs their own allocator.
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> cmd_list_alloc;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> cmd_list_allocs;
 
 	// We cannot update a cbuffer until the GPU is done processing the commands
 	// that reference it.  So each frame needs their own cbuffers.

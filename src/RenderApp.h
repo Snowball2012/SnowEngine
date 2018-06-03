@@ -98,6 +98,9 @@ private:
 	std::unique_ptr<ForwardLightingPass> m_forward_pass;
 	std::unique_ptr<DepthOnlyPass> m_depth_pass;
 
+	// cmd lists
+	ComPtr<ID3D12GraphicsCommandList> m_sm_cmd_lst;
+
 	// forward
 	ComPtr<ID3D12RootSignature> m_forward_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_forward_pso_main = nullptr;
