@@ -45,6 +45,8 @@ private:
 
 	virtual void Draw( const GameTimer& gt ) override;
 
+	void WaitForFence( UINT64 fence_val );
+
 	virtual void OnMouseDown( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseUp( WPARAM btnState, int x, int y ) override;
 	virtual void OnMouseMove( WPARAM btnState, int x, int y ) override;
@@ -67,6 +69,8 @@ private:
 	void BuildRenderItems();
 	void BuildFrameResources();
 	void CreateTexture( Texture& texture );
+
+	void DisposeUploaders();
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 

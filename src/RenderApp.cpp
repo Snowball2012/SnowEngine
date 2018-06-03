@@ -54,6 +54,19 @@ bool RenderApp::Initialize()
 	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 	FlushCommandQueue();
 
+	DisposeUploaders();
+	m_imported_scene.indices.clear();
+	m_imported_scene.materials.clear();
+	m_imported_scene.submeshes.clear();
+	m_imported_scene.textures.clear();
+	m_imported_scene.vertices.clear();
+
+	m_imported_scene.indices.shrink_to_fit();
+	m_imported_scene.materials.shrink_to_fit();
+	m_imported_scene.submeshes.shrink_to_fit();
+	m_imported_scene.textures.shrink_to_fit();
+	m_imported_scene.vertices.shrink_to_fit();
+
 	return true;
 }
 
@@ -234,9 +247,6 @@ void RenderApp::Draw( const GameTimer& gt )
 {
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
-	m_cur_frame_resource->fence = ++m_current_fence;
-	m_cmd_queue->Signal( mFence.Get(), m_current_fence );
-
 	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
 		ThrowIfFailed( allocator->Reset() );
 
@@ -337,7 +347,23 @@ void RenderApp::Draw( const GameTimer& gt )
 	ThrowIfFailed( mSwapChain->Present( 0, 0 ) );
 	mCurrBackBuffer = ( mCurrBackBuffer + 1 ) % SwapChainBufferCount;
 
-	FlushCommandQueue();
+	m_cur_frame_resource->fence = ++m_current_fence;
+	ThrowIfFailed( m_cmd_queue->Signal( mFence.Get(), m_current_fence ) );
+}
+
+void RenderApp::WaitForFence( UINT64 fence_val )
+{
+	if ( mFence->GetCompletedValue() < fence_val )
+	{
+		HANDLE eventHandle = CreateEventEx( nullptr, false, false, EVENT_ALL_ACCESS );
+
+		// Fire event when GPU hits current fence.  
+		ThrowIfFailed( mFence->SetEventOnCompletion( fence_val, eventHandle ) );
+
+		// Wait until the GPU hits current fence event is fired.
+		WaitForSingleObject( eventHandle, INFINITE );
+		CloseHandle( eventHandle );
+	}
 }
 
 void RenderApp::UpdateShadowMapDescriptors()
@@ -690,6 +716,17 @@ void RenderApp::CreateTexture( Texture& texture )
 		srv_desc.Texture2D.MipLevels = 1;
 	}
 	m_d3d_device->CreateShaderResourceView( texture.texture_gpu.Get(), &srv_desc, texture.srv->HandleCPU() );
+}
+
+void RenderApp::DisposeUploaders()
+{
+	for ( auto& geom : m_scene.static_geometry )
+		geom.second.DisposeUploaders();
+
+	for ( auto& texture : m_scene.textures )
+		texture.second.texture_uploader = nullptr;
+	for ( auto& material : m_scene.materials )
+		material.second.DisposeUploaders();
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> RenderApp::BuildStaticSamplers() const
