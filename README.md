@@ -7,3 +7,4 @@ Right now supports:
 2) PBR Disney-like BRDF
 3) Normal mapping
 4) FBX loading
+5) Shadow mapping with 3x3 gauss PCF
