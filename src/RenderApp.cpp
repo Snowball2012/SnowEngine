@@ -55,6 +55,7 @@ bool RenderApp::Initialize()
 	FlushCommandQueue();
 
 	DisposeUploaders();
+	DisposeCPUGeom();
 	m_imported_scene.indices.clear();
 	m_imported_scene.materials.clear();
 	m_imported_scene.submeshes.clear();
@@ -82,8 +83,6 @@ void RenderApp::OnResize()
 void RenderApp::Update( const GameTimer& gt )
 {
 	UpdateAndWaitForFrameResource();
-
-	UpdateShadowMapDescriptors();
 
 	ReadKeyboardState( gt );
 
@@ -366,12 +365,6 @@ void RenderApp::WaitForFence( UINT64 fence_val )
 	}
 }
 
-void RenderApp::UpdateShadowMapDescriptors()
-{
-	for ( auto& shadow_map : m_cur_frame_resource->shadow_maps )
-		m_scene.lights[shadow_map.first].shadow_map = &shadow_map.second;
-}
-
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
 {
 	m_last_mouse_pos.x = x;
@@ -424,7 +417,7 @@ void RenderApp::BuildPasses()
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 
 
-	DepthOnlyPass::BuildData( mDepthStencilFormat, 5000.0f, true, *m_d3d_device.Get(),
+	DepthOnlyPass::BuildData( mDepthStencilFormat, 5000, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
 	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
@@ -496,7 +489,17 @@ void RenderApp::LoadAndBuildTextures()
 	LoadStaticDDSTexture( L"resources/textures/default_deriv_normal.dds", "placeholder_normal" );
 	LoadStaticDDSTexture( L"resources/textures/default_spec.dds", "placeholder_specular" );
 	for ( size_t i = 0; i < m_imported_scene.textures.size(); ++i )
+	{
 		LoadStaticDDSTexture( std::wstring( m_imported_scene.textures[i].begin(), m_imported_scene.textures[i].end() ).c_str(), m_imported_scene.textures[i] );
+
+		ThrowIfFailed( m_cmd_list->Close() );
+		ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
+		m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+		FlushCommandQueue();
+		ThrowIfFailed( m_cmd_list->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
+
+		m_scene.textures[m_imported_scene.textures[i]].texture_uploader = nullptr;
+	}
 }
 
 void RenderApp::LoadStaticDDSTexture( const wchar_t* filename, const std::string& name )
@@ -569,20 +572,20 @@ void RenderApp::BuildLights()
 	parallel_light.shadow_map = nullptr;
 	parallel_light.is_dynamic = true;
 
-	for ( auto& frame_res : m_frame_resources )
+
+	auto& shadow_map = m_scene.shadow_maps["sun"];
+	CreateShadowMap( shadow_map );
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
 	{
-		auto& shadow_map = frame_res.shadow_maps["sun"];
-		CreateTexture( shadow_map );
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
-		{
-			dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-			dsv_desc.Format = mDepthStencilFormat;
-			dsv_desc.Texture2D.MipSlice = 0;
-			dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
-		}
-		shadow_map.dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
-		m_d3d_device->CreateDepthStencilView( shadow_map.texture_gpu.Get(), &dsv_desc, shadow_map.dsv->HandleCPU() );
+		dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsv_desc.Format = mDepthStencilFormat;
+		dsv_desc.Texture2D.MipSlice = 0;
+		dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
 	}
+	shadow_map.dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
+	m_d3d_device->CreateDepthStencilView( shadow_map.texture_gpu.Get(), &dsv_desc, shadow_map.dsv->HandleCPU() );
+
+	parallel_light.shadow_map = &shadow_map;
 }
 
 namespace
@@ -690,7 +693,7 @@ void RenderApp::BuildFrameResources()
 		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, UINT( m_scene.renderitems.size() ), 0 );
 }
 
-void RenderApp::CreateTexture( Texture& texture )
+void RenderApp::CreateShadowMap( Texture& texture )
 {
 	// temp. only shadow maps for now
 	constexpr UINT width = 4096;
@@ -727,6 +730,16 @@ void RenderApp::DisposeUploaders()
 		texture.second.texture_uploader = nullptr;
 	for ( auto& material : m_scene.materials )
 		material.second.DisposeUploaders();
+}
+
+void RenderApp::DisposeCPUGeom()
+{
+	for ( auto& geom : m_scene.static_geometry )
+	{
+		geom.second.DisposeUploaders();
+		geom.second.IndexBufferCPU = nullptr;
+		geom.second.VertexBufferCPU = nullptr;
+	}
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> RenderApp::BuildStaticSamplers() const

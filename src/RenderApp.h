@@ -30,7 +30,6 @@ private:
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
-	void UpdateShadowMapDescriptors();
 	
 	void UpdateAndWaitForFrameResource();
 	// isolated from FrameResources logic
@@ -68,9 +67,10 @@ private:
 	void BuildLights();
 	void BuildRenderItems();
 	void BuildFrameResources();
-	void CreateTexture( Texture& texture );
+	void CreateShadowMap( Texture& texture );
 
 	void DisposeUploaders();
+	void DisposeCPUGeom();
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 

@@ -207,6 +207,7 @@ struct RenderSceneContext
 	std::unordered_map<std::string, StaticMaterial> materials;
 	std::unordered_map<std::string, Light> lights;
 	std::unordered_map<std::string, StaticTexture> textures;
+	std::unordered_map<std::string, ShadowMap> shadow_maps;
 
 	// scene (render items)
 	std::vector<RenderItem> renderitems;

@@ -80,7 +80,7 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
 	return rootsig;
 }
 
-void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, float bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
+void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
 {
 	const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
 
