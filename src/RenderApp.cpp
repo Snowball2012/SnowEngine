@@ -117,6 +117,10 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 		m_sun_phi += angle_step;
 	if ( kb_state.Down )
 		m_sun_phi -= angle_step;
+	if ( kb_state.W )
+		m_camera_pos += SphericalToCartesian( -m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
+	if ( kb_state.S )
+		m_camera_pos += SphericalToCartesian( m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
 
 	m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
 	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
@@ -124,13 +128,13 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb )
 {
-	const auto& cartesian = SphericalToCartesian( m_radius, m_phi, m_theta );
+	auto cartesian_target = SphericalToCartesian( -1.0f, m_phi, m_theta );
 
-	XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
-	XMVECTOR target = XMVectorZero();
+	cartesian_target += m_camera_pos;
+	XMVECTOR target = XMLoadFloat3( &cartesian_target );
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
-	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
+	XMMATRIX view = XMMatrixLookAtLH( XMLoadFloat3( &m_camera_pos ), target, up );
 	XMStoreFloat4x4( &m_scene.view, view );
 
 	XMMATRIX proj = XMLoadFloat4x4( &m_scene.proj );
@@ -140,7 +144,7 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
 	pc.Proj = m_scene.proj;
 	pc.View = m_scene.view;
-	XMStoreFloat3( &pc.EyePosW, pos );
+	pc.EyePosW = m_camera_pos;
 
 	UpdateLights( pc );
 
@@ -164,8 +168,8 @@ void RenderApp::UpdateLights( PassConstants& pc )
 
 		const auto& cartesian = SphericalToCartesian( -100, m_sun_phi, m_sun_theta );
 
-		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f );
-		XMVECTOR target = XMVectorZero();
+		XMVECTOR target = XMLoadFloat3( &m_camera_pos );
+		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f ) + target;
 		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 		XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
@@ -400,10 +404,10 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 		float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
 
 		// Update the camera radius based on input.
-		m_radius += ( dx - dy ) * m_radius;
+		m_camera_speed += ( dx - dy ) * m_camera_speed;
 
 		// Restrict the radius.
-		m_radius = MathHelper::Clamp( m_radius, 3.0f, 100000.0f );
+		m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
 	}
 
 	m_last_mouse_pos.x = x;

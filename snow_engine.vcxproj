@@ -160,6 +160,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\BlurPass.cpp" />
     <ClCompile Include="src\D3DApp.cpp" />
     <ClCompile Include="src\DepthOnlyPass.cpp" />
     <ClCompile Include="src\DescriptorHeap.cpp" />
@@ -183,6 +184,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\XMMath.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\BlurPass.h" />
     <ClInclude Include="src\D3DApp.h" />
     <ClInclude Include="src\DepthOnlyPass.h" />
     <ClInclude Include="src\DescriptorHeap.h" />

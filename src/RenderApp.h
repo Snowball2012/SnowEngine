@@ -116,7 +116,8 @@ private:
 
 	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;
-	float m_radius = 15.0f;
+	DirectX::XMFLOAT3 m_camera_pos = DirectX::XMFLOAT3( 15, 15, 15 );
+	float m_camera_speed = 1.0f;
 
 	float m_sun_theta = 0.75f * DirectX::XM_PI;
 	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;

@@ -81,6 +81,9 @@
     <ClCompile Include="src\DepthOnlyPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\BlurPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -126,6 +129,9 @@
       <Filter>serialization</Filter>
     </ClInclude>
     <ClInclude Include="src\DepthOnlyPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\BlurPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
