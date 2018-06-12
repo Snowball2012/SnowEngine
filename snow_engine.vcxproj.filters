@@ -93,7 +93,7 @@
     <ClCompile Include="src\imgui_impl\imgui_impl_win32.cpp">
       <Filter>imgui_impl</Filter>
     </ClCompile>
-    <ClCompile Include="src\imgui\imgui_link.cpp">
+    <ClCompile Include="src\imgui_impl\imgui_link.cpp">
       <Filter>imgui_impl</Filter>
     </ClCompile>
   </ItemGroup>
