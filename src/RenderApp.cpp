@@ -98,7 +98,27 @@ void RenderApp::Update( const GameTimer& gt )
 	ImGui_ImplDX12_NewFrame( m_cmd_list.Get() );
 
 	ImGui::NewFrame();
-	ImGui::Text( "Hello, world!" );
+	{
+		ImGui::Begin( "Scene info", nullptr );
+		ImGui::PushItemWidth( 150 );
+		ImGui::InputFloat3( "Camera position", &m_camera_pos.x, "%.2f" );
+		ImGui::NewLine();
+		ImGui::SliderFloat( "Camera speed", &m_camera_speed, 1.0f, 100.0f, "%.2f" );
+		m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
+		
+		ImGui::NewLine();
+		ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
+		ImGui::NewLine();
+		ImGui::Text( "Sun Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_sun_phi, m_sun_theta );
+		ImGui::End();
+	}
+
+	{
+		ImGui::Begin( "Render settings", nullptr );
+		//ImGui::PushItemWidth( 150 );
+		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
+		ImGui::End();
+	}
 	ImGui::Render();
 
 	ReadKeyboardState( gt );
@@ -876,9 +896,9 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
+			Keyboard::ProcessMessage( msg, wParam, lParam );
 			if ( ! ImGui::GetIO().WantCaptureKeyboard )
 			{
-				Keyboard::ProcessMessage( msg, wParam, lParam );
 				ReadEventKeys();
 			}
 			break;
