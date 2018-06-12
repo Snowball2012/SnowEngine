@@ -40,6 +40,16 @@ bool RenderApp::Initialize()
 	ThrowIfFailed( m_cmd_list->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
 	BuildDescriptorHeaps();
+
+	// init imgui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	auto& imgui_io = ImGui::GetIO();
+	ImGui_ImplWin32_Init( mhMainWnd );
+	m_ui_font_desc = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
+	ImGui_ImplDX12_Init( m_d3d_device.Get(), num_frame_resources, mBackBufferFormat, m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
+	ImGui::StyleColorsDark();
+
 	LoadAndBuildTextures();
 	BuildGeometry();
 	BuildMaterials();
@@ -84,6 +94,13 @@ void RenderApp::Update( const GameTimer& gt )
 {
 	UpdateAndWaitForFrameResource();
 
+	ImGui_ImplWin32_NewFrame();
+	ImGui_ImplDX12_NewFrame( m_cmd_list.Get() );
+
+	ImGui::NewFrame();
+	ImGui::Text( "Hello, world!" );
+	ImGui::Render();
+
 	ReadKeyboardState( gt );
 
 	// Update object constants if needed
@@ -109,19 +126,21 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 	float angle_step = angle_per_second * gt.DeltaTime();
 
-	if ( kb_state.Left )
-		m_sun_theta -= angle_step;
-	if ( kb_state.Right )
-		m_sun_theta += angle_step;
-	if ( kb_state.Up )
-		m_sun_phi += angle_step;
-	if ( kb_state.Down )
-		m_sun_phi -= angle_step;
-	if ( kb_state.W )
-		m_camera_pos += SphericalToCartesian( -m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
-	if ( kb_state.S )
-		m_camera_pos += SphericalToCartesian( m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
-
+	if ( ! ImGui::GetIO().WantCaptureKeyboard )
+	{
+		if ( kb_state.Left )
+			m_sun_theta -= angle_step;
+		if ( kb_state.Right )
+			m_sun_theta += angle_step;
+		if ( kb_state.Up )
+			m_sun_phi += angle_step;
+		if ( kb_state.Down )
+			m_sun_phi -= angle_step;
+		if ( kb_state.W )
+			m_camera_pos += SphericalToCartesian( -m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
+		if ( kb_state.S )
+			m_camera_pos += SphericalToCartesian( m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
+	}
 	m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
 	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
 }
@@ -285,12 +304,14 @@ void RenderApp::Draw( const GameTimer& gt )
 
 		m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
 
+		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
+
 		// swap transition
 		m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
 
 		// done
 		ThrowIfFailed( m_cmd_list->Close() );		
-	} );
+	} );	
 
 	{
 		// shadow map viewport and scissor rect
@@ -371,47 +392,56 @@ void RenderApp::WaitForFence( UINT64 fence_val )
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
 {
-	m_last_mouse_pos.x = x;
-	m_last_mouse_pos.y = y;
+	if ( ! ImGui::GetIO().WantCaptureMouse )
+	{
+		m_last_mouse_pos.x = x;
+		m_last_mouse_pos.y = y;
 
-	SetCapture( mhMainWnd );
+		SetCapture( mhMainWnd );
+	}
 }
 
 void RenderApp::OnMouseUp( WPARAM btn_state, int x, int y )
 {
-	ReleaseCapture();
+	if ( ! ImGui::GetIO().WantCaptureMouse )
+	{
+		ReleaseCapture();
+	}
 }
 
 void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 {
-	if ( ( btnState & MK_LBUTTON ) != 0 )
+	if ( ! ImGui::GetIO().WantCaptureMouse )
 	{
-		// Make each pixel correspond to a quarter of a degree.
-		float dx = XMConvertToRadians( 0.25f*static_cast<float>( x - m_last_mouse_pos.x ) );
-		float dy = XMConvertToRadians( 0.25f*static_cast<float>( y - m_last_mouse_pos.y ) );
+		if ( ( btnState & MK_LBUTTON ) != 0 )
+		{
+			// Make each pixel correspond to a quarter of a degree.
+			float dx = XMConvertToRadians( 0.25f*static_cast<float>( x - m_last_mouse_pos.x ) );
+			float dy = XMConvertToRadians( 0.25f*static_cast<float>( y - m_last_mouse_pos.y ) );
 
-		// Update angles based on input to orbit camera around box.
-		m_theta -= dx;
-		m_phi -= dy;
+			// Update angles based on input to orbit camera around box.
+			m_theta -= dx;
+			m_phi -= dy;
 
-		// Restrict the angle phi.
-		m_phi = MathHelper::Clamp( m_phi, 0.1f, MathHelper::Pi - 0.1f );
+			// Restrict the angle phi.
+			m_phi = MathHelper::Clamp( m_phi, 0.1f, MathHelper::Pi - 0.1f );
+		}
+		else if ( ( btnState & MK_RBUTTON ) != 0 )
+		{
+			// Make each pixel correspond to 0.005 unit in the scene.
+			float dx = 0.005f*static_cast<float>( x - m_last_mouse_pos.x );
+			float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
+
+			// Update the camera radius based on input.
+			m_camera_speed += ( dx - dy ) * m_camera_speed;
+
+			// Restrict the radius.
+			m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
+		}
+
+		m_last_mouse_pos.x = x;
+		m_last_mouse_pos.y = y;
 	}
-	else if ( ( btnState & MK_RBUTTON ) != 0 )
-	{
-		// Make each pixel correspond to 0.005 unit in the scene.
-		float dx = 0.005f*static_cast<float>( x - m_last_mouse_pos.x );
-		float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
-
-		// Update the camera radius based on input.
-		m_camera_speed += ( dx - dy ) * m_camera_speed;
-
-		// Restrict the radius.
-		m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
-	}
-
-	m_last_mouse_pos.x = x;
-	m_last_mouse_pos.y = y;
 }
 
 void RenderApp::BuildPasses()
@@ -441,7 +471,7 @@ void RenderApp::BuildDescriptorHeaps()
 		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc{};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 3 + UINT( m_imported_scene.textures.size() ) + 1 * num_frame_resources;
+		srv_heap_desc.NumDescriptors = 3 + UINT( m_imported_scene.textures.size() ) + 1 * num_frame_resources + 1 /*imgui font*/;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -814,16 +844,43 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> RenderApp::BuildStaticSamplers(
 		anisotropicWrap, anisotropicClamp, shadow };
 }
 
+
+extern LRESULT ImGui_ImplWin32_WndProcHandler( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );
+
 LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 {
+	if ( ImGui_ImplWin32_WndProcHandler( hwnd, msg, wParam, lParam ) )
+		return 1;
+
 	switch ( msg )
 	{
+		case WM_SIZE:
+		{
+			if ( m_d3d_device != nullptr && wParam != SIZE_MINIMIZED )
+			{
+				FlushCommandQueue(); // imgui may fail otherwise
+
+				ImGui_ImplDX12_InvalidateDeviceObjects();
+				if ( LRESULT def_res = D3DApp::MsgProc( hwnd, msg, wParam, lParam ) )
+					return def_res;
+				ImGui_ImplDX12_CreateDeviceObjects();
+				return 0;
+			}
+			else
+			{
+				return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
+			}
+			break;
+		}
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
-			Keyboard::ProcessMessage( msg, wParam, lParam );
-			ReadEventKeys();
+			if ( ! ImGui::GetIO().WantCaptureKeyboard )
+			{
+				Keyboard::ProcessMessage( msg, wParam, lParam );
+				ReadEventKeys();
+			}
 			break;
 	}
 

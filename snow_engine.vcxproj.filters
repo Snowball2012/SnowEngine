@@ -34,6 +34,9 @@
     <Filter Include="core\RenderPasses">
       <UniqueIdentifier>{12b0dd21-4544-444e-a29a-0460c09b0323}</UniqueIdentifier>
     </Filter>
+    <Filter Include="imgui_impl">
+      <UniqueIdentifier>{c028cdfb-5771-4c04-b02d-1f4e392fdffe}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -84,6 +87,15 @@
     <ClCompile Include="src\BlurPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
+      <Filter>imgui_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui_impl\imgui_impl_win32.cpp">
+      <Filter>imgui_impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\imgui\imgui_link.cpp">
+      <Filter>imgui_impl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -133,6 +145,12 @@
     </ClInclude>
     <ClInclude Include="src\BlurPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h">
+      <Filter>imgui_impl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\imgui_impl\imgui_impl_win32.h">
+      <Filter>imgui_impl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

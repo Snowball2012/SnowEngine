@@ -4,6 +4,9 @@
 #include <Luna/UploadBuffer.h>
 
 #include <dxtk12/Keyboard.h>
+#include <imgui/imgui.h>
+#include "imgui_impl/imgui_impl_win32.h"
+#include "imgui_impl/imgui_impl_dx12.h"
 
 #include "D3DApp.h"
 #include "FrameResource.h"
@@ -90,6 +93,9 @@ private:
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
 	std::unique_ptr<DescriptorHeap> m_dsv_heap = nullptr;
+
+	// ui font descriptor
+	std::unique_ptr<Descriptor> m_ui_font_desc = nullptr;
 
 	// resources
 	static constexpr int num_frame_resources = 3;
