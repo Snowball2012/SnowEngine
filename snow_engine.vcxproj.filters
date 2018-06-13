@@ -96,6 +96,9 @@
     <ClCompile Include="src\imgui_impl\imgui_link.cpp">
       <Filter>imgui_impl</Filter>
     </ClCompile>
+    <ClCompile Include="src\TemporalBlendPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -152,6 +155,9 @@
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h">
       <Filter>imgui_impl</Filter>
     </ClInclude>
+    <ClInclude Include="src\TemporalBlendPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -164,6 +170,12 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\depth_only_vs.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\temporal_blend_ps.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\fullscreen_quad_vs.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>

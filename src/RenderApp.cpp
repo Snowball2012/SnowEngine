@@ -6,6 +6,7 @@
 
 #include "ForwardLightingPass.h"
 #include "DepthOnlyPass.h"
+#include "TemporalBlendPass.h"
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
@@ -40,6 +41,7 @@ bool RenderApp::Initialize()
 	ThrowIfFailed( m_cmd_list->Reset( mDirectCmdListAlloc.Get(), nullptr ) );
 
 	BuildDescriptorHeaps();
+	RecreatePrevFrameTexture();
 
 	// init imgui
 	IMGUI_CHECKVERSION();
@@ -84,6 +86,7 @@ bool RenderApp::Initialize()
 void RenderApp::OnResize()
 {
 	D3DApp::OnResize();
+	RecreatePrevFrameTexture();
 
 	// Need to recompute projection matrix
 	XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100000.0f );
@@ -117,6 +120,13 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::Begin( "Render settings", nullptr );
 		//ImGui::PushItemWidth( 150 );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
+		ImGui::NewLine();
+		ImGui::Checkbox( "Jitter projection matrix", &m_jitter_proj );
+		if ( m_jitter_proj )
+			ImGui::SliderFloat( "Jitter value (px)", &m_jitter_val, 0.f, 5.0f, "%.2f" );
+		ImGui::Checkbox( "Blend frames", &m_blend_prev_frame );
+		if ( m_blend_prev_frame )
+			ImGui::SliderFloat( "Previous frame blend %", &m_blend_fraction, 0.f, 0.99f, "%.2f" );
 		ImGui::End();
 	}
 	ImGui::Render();
@@ -177,11 +187,22 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMStoreFloat4x4( &m_scene.view, view );
 
 	XMMATRIX proj = XMLoadFloat4x4( &m_scene.proj );
+	if ( m_jitter_proj )
+	{
+		const float sample_size_x = 2.0f * m_jitter_val / mScreenViewport.Width;
+		const float sample_size_y = 2.0f * m_jitter_val / mScreenViewport.Height;
+
+		const float jitter_x = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
+		const float jitter_y = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
+		proj = proj * XMMatrixTranslation( jitter_x * sample_size_x, jitter_y * sample_size_y, 0 );
+	}
+
 	const auto& vp = view * proj;
 
 	PassConstants pc;
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
 	pc.Proj = m_scene.proj;
+
 	pc.View = m_scene.view;
 	pc.EyePosW = m_camera_pos;
 
@@ -321,8 +342,40 @@ void RenderApp::Draw( const GameTimer& gt )
 		m_cmd_list->RSSetViewports( 1, &mScreenViewport );
 		m_cmd_list->RSSetScissorRects( 1, &mScissorRect );
 
-
 		m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
+
+		// blend with previous
+		if ( m_blend_prev_frame )
+		{
+			TemporalBlendPass::Context txaa_ctx
+			{
+				m_prev_frame_texture.srv->HandleGPU(),
+				CurrentBackBufferView(),
+				m_blend_fraction
+			};
+			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
+
+			CD3DX12_RESOURCE_BARRIER barriers[2] =
+			{
+				CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
+					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+					D3D12_RESOURCE_STATE_COPY_DEST ),
+				CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+					D3D12_RESOURCE_STATE_RENDER_TARGET,
+					D3D12_RESOURCE_STATE_COPY_SOURCE )
+			};
+			m_cmd_list->ResourceBarrier( 2, barriers );
+			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), CurrentBackBuffer() );
+
+			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
+																D3D12_RESOURCE_STATE_COPY_DEST,
+																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+																D3D12_RESOURCE_STATE_COPY_SOURCE,
+																D3D12_RESOURCE_STATE_RENDER_TARGET );
+
+			m_cmd_list->ResourceBarrier( 2, barriers );
+		}
 
 		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
 
@@ -475,6 +528,13 @@ void RenderApp::BuildPasses()
 							  m_do_pso, m_do_root_signature );
 	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
+	{
+		TemporalBlendPass::BuildData( mBackBufferFormat, *m_d3d_device.Get(), m_txaa_pso, m_txaa_root_signature );
+		m_txaa_pass = std::make_unique<TemporalBlendPass>( m_txaa_pso.Get(), m_txaa_root_signature.Get() );
+		RecreatePrevFrameTexture();
+	}
+
+
 	ThrowIfFailed( m_d3d_device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -491,7 +551,10 @@ void RenderApp::BuildDescriptorHeaps()
 		D3D12_DESCRIPTOR_HEAP_DESC srv_heap_desc{};
 		srv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		srv_heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		srv_heap_desc.NumDescriptors = 3 + UINT( m_imported_scene.textures.size() ) + 1 * num_frame_resources + 1 /*imgui font*/;
+		srv_heap_desc.NumDescriptors = 3/*default textures*/ + UINT( m_imported_scene.textures.size() )
+		                               + 1 * num_frame_resources /*shadow maps*/
+		                               + 1 /*imgui font*/
+		                               + 1 /*previous frame*/;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -773,6 +836,38 @@ void RenderApp::CreateShadowMap( Texture& texture )
 		srv_desc.Texture2D.MipLevels = 1;
 	}
 	m_d3d_device->CreateShaderResourceView( texture.texture_gpu.Get(), &srv_desc, texture.srv->HandleCPU() );
+}
+
+void RenderApp::RecreatePrevFrameTexture()
+{
+	if ( m_srv_heap )
+	{
+		m_prev_frame_texture.texture_gpu = nullptr;
+
+		CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
+		D3D12_CLEAR_VALUE opt_clear;
+		opt_clear.Color[0] = 0;
+		opt_clear.Color[1] = 0;
+		opt_clear.Color[2] = 0;
+		opt_clear.Color[3] = 0;
+		opt_clear.Format = mBackBufferFormat;
+		opt_clear.DepthStencil.Depth = 1.0f;
+		opt_clear.DepthStencil.Stencil = 0;
+		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+															  &tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+															  &opt_clear, IID_PPV_ARGS( &m_prev_frame_texture.texture_gpu ) ) );
+
+		m_prev_frame_texture.srv.reset();
+		m_prev_frame_texture.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+		{
+			srv_desc.Format = tex_desc.Format;
+			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+			srv_desc.Texture2D.MipLevels = 1;
+		}
+		m_d3d_device->CreateShaderResourceView( m_prev_frame_texture.texture_gpu.Get(), &srv_desc, m_prev_frame_texture.srv->HandleCPU() );
+	}
 }
 
 void RenderApp::DisposeUploaders()

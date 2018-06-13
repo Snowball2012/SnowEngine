@@ -15,6 +15,7 @@
 
 class ForwardLightingPass;
 class DepthOnlyPass;
+class TemporalBlendPass;
 
 class RenderApp: public D3DApp
 {
@@ -72,6 +73,8 @@ private:
 	void BuildFrameResources();
 	void CreateShadowMap( Texture& texture );
 
+	void RecreatePrevFrameTexture();
+
 	void DisposeUploaders();
 	void DisposeCPUGeom();
 
@@ -107,6 +110,7 @@ private:
 	// pipeline
 	std::unique_ptr<ForwardLightingPass> m_forward_pass;
 	std::unique_ptr<DepthOnlyPass> m_depth_pass;
+	std::unique_ptr<TemporalBlendPass> m_txaa_pass;
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_sm_cmd_lst;
@@ -120,6 +124,11 @@ private:
 	ComPtr<ID3D12RootSignature> m_do_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_do_pso = nullptr;
 
+	// postprocessing
+	ComPtr<ID3D12RootSignature> m_txaa_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_txaa_pso = nullptr;
+	Texture m_prev_frame_texture;
+	
 	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;
 	DirectX::XMFLOAT3 m_camera_pos = DirectX::XMFLOAT3( 13.5f, 4.13f, -2.73f );
@@ -129,6 +138,12 @@ private:
 	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;
 
 	bool m_wireframe_mode = false;
+
+	// temporal AA
+	bool m_jitter_proj = false;
+	float m_jitter_val = 1.0f;
+	bool m_blend_prev_frame = true;
+	float m_blend_fraction = 0.5f;
 
 	// inputs
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
