@@ -194,6 +194,8 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 
 		const float jitter_x = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
 		const float jitter_y = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
+		m_last_jitter[0] = jitter_x;
+		m_last_jitter[1] = jitter_y;
 		proj = proj * XMMatrixTranslation( jitter_x * sample_size_x, jitter_y * sample_size_y, 0 );
 	}
 
@@ -347,23 +349,44 @@ void RenderApp::Draw( const GameTimer& gt )
 		// blend with previous
 		if ( m_blend_prev_frame )
 		{
-			TemporalBlendPass::Context txaa_ctx
+			CD3DX12_RESOURCE_BARRIER barriers[2] =
 			{
-				m_prev_frame_texture.srv->HandleGPU(),
-				CurrentBackBufferView(),
-				m_blend_fraction
+				CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
+				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+				D3D12_RESOURCE_STATE_COPY_DEST ),
+				CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_COPY_SOURCE )
+			};
+			m_cmd_list->ResourceBarrier( 2, barriers );
+			m_cmd_list->CopyResource( m_jittered_frame_texture.texture_gpu.Get(), CurrentBackBuffer() );
+
+			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
+																D3D12_RESOURCE_STATE_COPY_DEST,
+																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+																D3D12_RESOURCE_STATE_COPY_SOURCE,
+																D3D12_RESOURCE_STATE_RENDER_TARGET );
+			m_cmd_list->ResourceBarrier( 2, barriers );
+
+			TemporalBlendPass::Context txaa_ctx;
+			{
+				txaa_ctx.prev_frame_srv = m_prev_frame_texture.srv->HandleGPU();
+				txaa_ctx.cur_frame_srv = m_jittered_frame_texture.srv->HandleGPU();
+				txaa_ctx.cur_frame_rtv = CurrentBackBufferView();
+				txaa_ctx.prev_frame_blend_val = m_blend_fraction;
+				txaa_ctx.unjitter[0] = m_last_jitter[0];
+				txaa_ctx.unjitter[1] = -m_last_jitter[1]; // y texcoord is flipped				
 			};
 			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
 
-			CD3DX12_RESOURCE_BARRIER barriers[2] =
-			{
-				CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
-					D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-					D3D12_RESOURCE_STATE_COPY_DEST ),
-				CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
-					D3D12_RESOURCE_STATE_RENDER_TARGET,
-					D3D12_RESOURCE_STATE_COPY_SOURCE )
-			};
+
+			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
+																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																D3D12_RESOURCE_STATE_COPY_DEST );
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+																D3D12_RESOURCE_STATE_RENDER_TARGET,
+																D3D12_RESOURCE_STATE_COPY_SOURCE );
 			m_cmd_list->ResourceBarrier( 2, barriers );
 			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), CurrentBackBuffer() );
 
@@ -842,31 +865,37 @@ void RenderApp::RecreatePrevFrameTexture()
 {
 	if ( m_srv_heap )
 	{
-		m_prev_frame_texture.texture_gpu = nullptr;
-
-		CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
-		D3D12_CLEAR_VALUE opt_clear;
-		opt_clear.Color[0] = 0;
-		opt_clear.Color[1] = 0;
-		opt_clear.Color[2] = 0;
-		opt_clear.Color[3] = 0;
-		opt_clear.Format = mBackBufferFormat;
-		opt_clear.DepthStencil.Depth = 1.0f;
-		opt_clear.DepthStencil.Stencil = 0;
-		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-															  &tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-															  &opt_clear, IID_PPV_ARGS( &m_prev_frame_texture.texture_gpu ) ) );
-
-		m_prev_frame_texture.srv.reset();
-		m_prev_frame_texture.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
-		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+		auto recreate_tex = [&]( auto& tex )
 		{
-			srv_desc.Format = tex_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = 1;
-		}
-		m_d3d_device->CreateShaderResourceView( m_prev_frame_texture.texture_gpu.Get(), &srv_desc, m_prev_frame_texture.srv->HandleCPU() );
+			tex.texture_gpu = nullptr;
+
+			CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
+			D3D12_CLEAR_VALUE opt_clear;
+			opt_clear.Color[0] = 0;
+			opt_clear.Color[1] = 0;
+			opt_clear.Color[2] = 0;
+			opt_clear.Color[3] = 0;
+			opt_clear.Format = mBackBufferFormat;
+			opt_clear.DepthStencil.Depth = 1.0f;
+			opt_clear.DepthStencil.Stencil = 0;
+			ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+																  &tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																  &opt_clear, IID_PPV_ARGS( &tex.texture_gpu ) ) );
+
+			tex.srv.reset();
+			tex.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
+			D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+			{
+				srv_desc.Format = tex_desc.Format;
+				srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+				srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srv_desc.Texture2D.MipLevels = 1;
+			}
+			m_d3d_device->CreateShaderResourceView( tex.texture_gpu.Get(), &srv_desc, tex.srv->HandleCPU() );
+		};
+
+		recreate_tex( m_prev_frame_texture );
+		recreate_tex( m_jittered_frame_texture );		
 	}
 }
 

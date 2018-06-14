@@ -128,6 +128,7 @@ private:
 	ComPtr<ID3D12RootSignature> m_txaa_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_txaa_pso = nullptr;
 	Texture m_prev_frame_texture;
+	Texture m_jittered_frame_texture;
 	
 	float m_theta = -0.1f * DirectX::XM_PI;
 	float m_phi = 0.8f * DirectX::XM_PIDIV2;
@@ -144,6 +145,7 @@ private:
 	float m_jitter_val = 1.0f;
 	bool m_blend_prev_frame = true;
 	float m_blend_fraction = 0.5f;
+	float m_last_jitter[2] = { 0 };
 
 	// inputs
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;

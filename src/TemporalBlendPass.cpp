@@ -13,8 +13,9 @@ void TemporalBlendPass::Draw( const Context& context, ID3D12GraphicsCommandList&
 	cmd_list.OMSetRenderTargets( 1, &context.cur_frame_rtv, false, nullptr );
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRoot32BitConstant( 0, *reinterpret_cast<const UINT*>( &context.prev_frame_blend_val ), 0 );
+	cmd_list.SetGraphicsRoot32BitConstants( 0, 3, &context.prev_frame_blend_val, 0 );
 	cmd_list.SetGraphicsRootDescriptorTable( 1, context.prev_frame_srv );
+	cmd_list.SetGraphicsRootDescriptorTable( 2, context.cur_frame_srv );
 	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
 	cmd_list.IASetIndexBuffer( nullptr );
 	cmd_list.IASetVertexBuffers( 0, 0, nullptr );
@@ -33,14 +34,16 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
 	t0 - prev frame
 	*/
 
-	constexpr int nparams = 2;
+	constexpr int nparams = 3;
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-	slot_root_parameter[0].InitAsConstants( 1, 0 );
-	CD3DX12_DESCRIPTOR_RANGE desc_table[1];
+	slot_root_parameter[0].InitAsConstants( 3, 0 );
+	CD3DX12_DESCRIPTOR_RANGE desc_table[2];
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
+	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );
 	slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
+	slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 1 );
 
 	CD3DX12_STATIC_SAMPLER_DESC point_wrap(
 		0, // shaderRegister
@@ -101,16 +104,6 @@ void TemporalBlendPass::BuildData( DXGI_FORMAT rtv_format, ID3D12Device& device,
 		pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
 		pso_desc.RasterizerState.DepthClipEnable = false;
 		pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
-		{
-			auto& rt = pso_desc.BlendState.RenderTarget[0];
-			rt.BlendEnable = true;
-			rt.BlendOp = D3D12_BLEND_OP_ADD;
-			rt.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			rt.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-			rt.DestBlendAlpha = D3D12_BLEND_ONE;
-			rt.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			rt.SrcBlendAlpha = D3D12_BLEND_ZERO;
-		}
 		pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
 		pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
 		pso_desc.DepthStencilState.DepthEnable = false;

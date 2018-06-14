@@ -14,8 +14,10 @@ public:
 	struct Context
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE prev_frame_srv;
+		D3D12_GPU_DESCRIPTOR_HANDLE cur_frame_srv;
 		D3D12_CPU_DESCRIPTOR_HANDLE cur_frame_rtv;
 		float prev_frame_blend_val;
+		float unjitter[2];
 	};
 
 	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );
