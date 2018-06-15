@@ -118,15 +118,23 @@ void RenderApp::Update( const GameTimer& gt )
 
 	{
 		ImGui::Begin( "Render settings", nullptr );
-		//ImGui::PushItemWidth( 150 );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
 		ImGui::NewLine();
-		ImGui::Checkbox( "Jitter projection matrix", &m_jitter_proj );
-		if ( m_jitter_proj )
-			ImGui::SliderFloat( "Jitter value (px)", &m_jitter_val, 0.f, 5.0f, "%.2f" );
-		ImGui::Checkbox( "Blend frames", &m_blend_prev_frame );
-		if ( m_blend_prev_frame )
-			ImGui::SliderFloat( "Previous frame blend %", &m_blend_fraction, 0.f, 0.99f, "%.2f" );
+		ImGui::Checkbox( "Enable TXAA", &m_enable_txaa );
+		if ( m_enable_txaa )
+		{
+			ImGui::BeginChild( "TXAA settings" );
+
+			ImGui::PushItemWidth( 150 );
+			ImGui::Checkbox( "Jitter projection matrix", &m_jitter_proj );
+			if ( m_jitter_proj )
+				ImGui::SliderFloat( "Jitter value (px)", &m_jitter_val, 0.f, 5.0f, "%.2f" );
+			ImGui::Checkbox( "Blend frames", &m_blend_prev_frame );
+			if ( m_blend_prev_frame )
+				ImGui::SliderFloat( "Previous frame blend %", &m_blend_fraction, 0.f, 0.99f, "%.2f" );
+
+			ImGui::EndChild();
+		}
 		ImGui::End();
 	}
 	ImGui::Render();
@@ -186,18 +194,27 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMMATRIX view = XMMatrixLookAtLH( XMLoadFloat3( &m_camera_pos ), target, up );
 	XMStoreFloat4x4( &m_scene.view, view );
 
-	XMMATRIX proj = XMLoadFloat4x4( &m_scene.proj );
-	if ( m_jitter_proj )
+	XMFLOAT4X4 proj_jittered = m_scene.proj;
+	if ( m_enable_txaa && m_jitter_proj )
 	{
 		const float sample_size_x = 2.0f * m_jitter_val / mScreenViewport.Width;
 		const float sample_size_y = 2.0f * m_jitter_val / mScreenViewport.Height;
 
-		const float jitter_x = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
-		const float jitter_y = ( float( abs( rand() ) % 10 ) - 4.5f ) * 0.1f;
+		int sample = m_cur_frame_idx % 8;
+		const float jitter_x = m_halton_23[sample][0] - 0.5f;
+		const float jitter_y = m_halton_23[sample][1] - 0.5f;
 		m_last_jitter[0] = jitter_x;
 		m_last_jitter[1] = jitter_y;
-		proj = proj * XMMatrixTranslation( jitter_x * sample_size_x, jitter_y * sample_size_y, 0 );
+		proj_jittered( 2, 0 ) += jitter_x * sample_size_x;
+		proj_jittered( 2, 1 ) += jitter_y * sample_size_y;
 	}
+	else
+	{
+		m_last_jitter[0] = 0;
+		m_last_jitter[1] = 0;
+	}
+	XMMATRIX proj = XMLoadFloat4x4( &proj_jittered );
+	
 
 	const auto& vp = view * proj;
 
@@ -347,7 +364,7 @@ void RenderApp::Draw( const GameTimer& gt )
 		m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
 
 		// blend with previous
-		if ( m_blend_prev_frame )
+		if ( m_enable_txaa && m_blend_prev_frame )
 		{
 			CD3DX12_RESOURCE_BARRIER barriers[2] =
 			{
@@ -469,6 +486,8 @@ void RenderApp::Draw( const GameTimer& gt )
 
 	m_cur_frame_resource->fence = ++m_current_fence;
 	ThrowIfFailed( m_cmd_queue->Signal( mFence.Get(), m_current_fence ) );
+
+	m_cur_frame_idx++;
 }
 
 void RenderApp::WaitForFence( UINT64 fence_val )
