@@ -13,7 +13,7 @@ void TemporalBlendPass::Draw( const Context& context, ID3D12GraphicsCommandList&
 	cmd_list.OMSetRenderTargets( 1, &context.cur_frame_rtv, false, nullptr );
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRoot32BitConstants( 0, 4, &context.prev_frame_blend_val, 0 );
+	cmd_list.SetGraphicsRoot32BitConstants( 0, 4, &context.gpu_data, 0 );
 	cmd_list.SetGraphicsRootDescriptorTable( 1, context.prev_frame_srv );
 	cmd_list.SetGraphicsRootDescriptorTable( 2, context.cur_frame_srv );
 	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );

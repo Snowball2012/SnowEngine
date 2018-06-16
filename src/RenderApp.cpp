@@ -100,6 +100,8 @@ void RenderApp::Update( const GameTimer& gt )
 	ImGui_ImplWin32_NewFrame();
 	ImGui_ImplDX12_NewFrame( m_cmd_list.Get() );
 
+	m_taa.SetFrame( m_cur_frame_idx );
+
 	ImGui::NewFrame();
 	{
 		ImGui::Begin( "Scene info", nullptr );
@@ -120,20 +122,20 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
 		ImGui::NewLine();
-		ImGui::Checkbox( "Enable TXAA", &m_enable_txaa );
-		if ( m_enable_txaa )
+		ImGui::Checkbox( "Enable TAA", &m_taa_enabled );
+		if ( m_taa_enabled )
 		{
 			ImGui::BeginChild( "TXAA settings" );
 
 			ImGui::PushItemWidth( 150 );
-			ImGui::Checkbox( "Jitter projection matrix", &m_jitter_proj );
-			if ( m_jitter_proj )
-				ImGui::SliderFloat( "Jitter value (px)", &m_jitter_val, 0.f, 5.0f, "%.2f" );
-			ImGui::Checkbox( "Blend frames", &m_blend_prev_frame );
-			if ( m_blend_prev_frame )
+			ImGui::Checkbox( "Jitter projection matrix", &m_taa.SetJitter() );
+			if ( m_taa.IsJitterEnabled() )
+				ImGui::SliderFloat( "Jitter value (px)", &m_taa.SetJitterVal(), 0.f, 5.0f, "%.2f" );
+			ImGui::Checkbox( "Blend frames", &m_taa.SetBlend() );
+			if ( m_taa.IsBlendEnabled() )
 			{
-				ImGui::SliderFloat( "Previous frame blend %", &m_blend_fraction, 0.f, 0.99f, "%.2f" );
-				ImGui::SliderFloat( "Color window expansion %", &m_color_window_size, 0.f, 1.f, "%.2f" );
+				ImGui::SliderFloat( "Previous frame blend %", &m_taa.SetBlendFeedback(), 0.f, 0.99f, "%.2f" );
+				ImGui::SliderFloat( "Color window expansion %", &m_taa.SetColorWindowExpansion(), 0.f, 1.f, "%.2f" );
 			}
 
 			ImGui::EndChild();
@@ -198,26 +200,9 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMStoreFloat4x4( &m_scene.view, view );
 
 	XMFLOAT4X4 proj_jittered = m_scene.proj;
-	if ( m_enable_txaa && m_jitter_proj )
-	{
-		const float sample_size_x = 2.0f * m_jitter_val / mScreenViewport.Width;
-		const float sample_size_y = 2.0f * m_jitter_val / mScreenViewport.Height;
-
-		int sample = m_cur_frame_idx % 8;
-		const float jitter_x = m_halton_23[sample][0] - 0.5f;
-		const float jitter_y = m_halton_23[sample][1] - 0.5f;
-		m_last_jitter[0] = jitter_x;
-		m_last_jitter[1] = jitter_y;
-		proj_jittered( 2, 0 ) += jitter_x * sample_size_x;
-		proj_jittered( 2, 1 ) += jitter_y * sample_size_y;
-	}
-	else
-	{
-		m_last_jitter[0] = 0;
-		m_last_jitter[1] = 0;
-	}
+	if ( m_taa_enabled && m_taa.IsJitterEnabled() )
+		proj_jittered = m_taa.JitterProjection( proj_jittered, mScreenViewport.Width, mScreenViewport.Height );
 	XMMATRIX proj = XMLoadFloat4x4( &proj_jittered );
-	
 
 	const auto& vp = view * proj;
 
@@ -367,7 +352,7 @@ void RenderApp::Draw( const GameTimer& gt )
 		m_forward_pass->Draw( forward_ctx, m_wireframe_mode, *m_cmd_list.Get() );
 
 		// blend with previous
-		if ( m_enable_txaa && m_blend_prev_frame )
+		if ( m_taa_enabled && m_taa.IsBlendEnabled() )
 		{
 			CD3DX12_RESOURCE_BARRIER barriers[2] =
 			{
@@ -394,10 +379,7 @@ void RenderApp::Draw( const GameTimer& gt )
 				txaa_ctx.prev_frame_srv = m_prev_frame_texture.srv->HandleGPU();
 				txaa_ctx.cur_frame_srv = m_jittered_frame_texture.srv->HandleGPU();
 				txaa_ctx.cur_frame_rtv = CurrentBackBufferView();
-				txaa_ctx.prev_frame_blend_val = m_blend_fraction;
-				txaa_ctx.unjitter[0] = m_last_jitter[0];
-				txaa_ctx.unjitter[1] = -m_last_jitter[1]; // y texcoord is flipped		
-				txaa_ctx.color_window_size = m_color_window_size;
+				m_taa.FillShaderData( txaa_ctx.gpu_data );
 			};
 			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
 

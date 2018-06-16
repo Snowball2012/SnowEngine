@@ -13,9 +13,10 @@
 #include "DescriptorHeap.h"
 #include "SceneImporter.h"
 
+#include "TemporalAA.h"
+
 class ForwardLightingPass;
 class DepthOnlyPass;
-class TemporalBlendPass;
 
 class RenderApp: public D3DApp
 {
@@ -141,24 +142,8 @@ private:
 	bool m_wireframe_mode = false;
 
 	// temporal AA
-	bool m_enable_txaa = true;
-	bool m_jitter_proj = true;
-	float m_jitter_val = 1.0f;
-	float m_color_window_size = 0.2f;
-	bool m_blend_prev_frame = true;
-	float m_blend_fraction = 0.9f;
-	float m_last_jitter[2] = { 0 };
-	constexpr static float m_halton_23[8][2] = 
-	{
-		{ 1.f/2.f, 1.f /3.f },
-		{ 1.f /4.f, 2.f /3.f },
-		{ 3.f /4.f, 1.f /9.f },
-		{ 1.f /8.f, 4.f /9.f },
-		{ 5.f /8.f, 7.f /9.f },
-		{ 3.f /8.f, 2.f /9.f },
-		{ 7.f /8.f, 5.f /9.f },
-		{ 1.f /16.f, 8.f /9.f }
-	};
+	bool m_taa_enabled = true;
+	TemporalAA m_taa;
 	uint64_t m_cur_frame_idx = 0;
 
 	// inputs

@@ -37,6 +37,9 @@
     <Filter Include="imgui_impl">
       <UniqueIdentifier>{c028cdfb-5771-4c04-b02d-1f4e392fdffe}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\Effects">
+      <UniqueIdentifier>{8865e865-d47e-424f-8885-2361ce994993}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -99,6 +102,9 @@
     <ClCompile Include="src\TemporalBlendPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\TemporalAA.cpp">
+      <Filter>core\Effects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -157,6 +163,9 @@
     </ClInclude>
     <ClInclude Include="src\TemporalBlendPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TemporalAA.h">
+      <Filter>core\Effects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

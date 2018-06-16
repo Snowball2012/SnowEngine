@@ -11,14 +11,19 @@ class TemporalBlendPass
 public:
 	TemporalBlendPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
 
+	struct ShaderData
+	{
+		float prev_frame_blend_val;
+		float unjitter[2];
+		float color_window_size;
+	};
+
 	struct Context
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE prev_frame_srv;
 		D3D12_GPU_DESCRIPTOR_HANDLE cur_frame_srv;
 		D3D12_CPU_DESCRIPTOR_HANDLE cur_frame_rtv;
-		float prev_frame_blend_val;
-		float unjitter[2];
-		float color_window_size;
+		ShaderData gpu_data;
 	};
 
 	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );
