@@ -144,6 +144,7 @@ private:
 	bool m_enable_txaa = true;
 	bool m_jitter_proj = true;
 	float m_jitter_val = 1.0f;
+	float m_color_window_size = 0.2f;
 	bool m_blend_prev_frame = true;
 	float m_blend_fraction = 0.9f;
 	float m_last_jitter[2] = { 0 };

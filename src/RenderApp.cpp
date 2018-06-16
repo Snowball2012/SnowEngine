@@ -131,7 +131,10 @@ void RenderApp::Update( const GameTimer& gt )
 				ImGui::SliderFloat( "Jitter value (px)", &m_jitter_val, 0.f, 5.0f, "%.2f" );
 			ImGui::Checkbox( "Blend frames", &m_blend_prev_frame );
 			if ( m_blend_prev_frame )
+			{
 				ImGui::SliderFloat( "Previous frame blend %", &m_blend_fraction, 0.f, 0.99f, "%.2f" );
+				ImGui::SliderFloat( "Color window expansion %", &m_color_window_size, 0.f, 1.f, "%.2f" );
+			}
 
 			ImGui::EndChild();
 		}
@@ -393,7 +396,8 @@ void RenderApp::Draw( const GameTimer& gt )
 				txaa_ctx.cur_frame_rtv = CurrentBackBufferView();
 				txaa_ctx.prev_frame_blend_val = m_blend_fraction;
 				txaa_ctx.unjitter[0] = m_last_jitter[0];
-				txaa_ctx.unjitter[1] = -m_last_jitter[1]; // y texcoord is flipped				
+				txaa_ctx.unjitter[1] = -m_last_jitter[1]; // y texcoord is flipped		
+				txaa_ctx.color_window_size = m_color_window_size;
 			};
 			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
 

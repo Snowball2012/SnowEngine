@@ -13,7 +13,7 @@ void TemporalBlendPass::Draw( const Context& context, ID3D12GraphicsCommandList&
 	cmd_list.OMSetRenderTargets( 1, &context.cur_frame_rtv, false, nullptr );
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRoot32BitConstants( 0, 3, &context.prev_frame_blend_val, 0 );
+	cmd_list.SetGraphicsRoot32BitConstants( 0, 4, &context.prev_frame_blend_val, 0 );
 	cmd_list.SetGraphicsRootDescriptorTable( 1, context.prev_frame_srv );
 	cmd_list.SetGraphicsRootDescriptorTable( 2, context.cur_frame_srv );
 	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
@@ -26,8 +26,9 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
 {
 	/*
 	Temporal blending pass root sig
-	0 - blend factor ( constant )
+	0 - constants( blend factor, unjitter vector, color_window_size )
 	1 - previous frame texture
+	2 - current jittered frame texture
 
 	Shader register bindings
 	b0 - blend factor
@@ -38,7 +39,7 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-	slot_root_parameter[0].InitAsConstants( 3, 0 );
+	slot_root_parameter[0].InitAsConstants( 4, 0 );
 	CD3DX12_DESCRIPTOR_RANGE desc_table[2];
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
 	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );

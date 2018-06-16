@@ -3,6 +3,7 @@ cbuffer BlendSettings : register( b0 )
 	float blend_val;
 	float jitter_x;
 	float jitter_y;
+	float color_window_size;
 }
 
 SamplerState point_wrap_sampler : register( s0 );
@@ -38,6 +39,11 @@ float4 main( float4 coord : SV_POSITION ) : SV_TARGET
 		min_color = min( color, min_color );
 		max_color = max( color, max_color );
 	}
+
+	float3 color_window = ( max_color - min_color ).xyz * color_window_size;
+	max_color.xyz += color_window;
+	min_color.xyz -= color_window;
+
 	hist_color = clamp( hist_color, min_color, max_color );
 
 
