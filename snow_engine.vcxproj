@@ -181,6 +181,10 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Renderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="src\SceneImporter.cpp" />
     <ClCompile Include="src\RenderApp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -209,6 +213,10 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\GeomGeneration.hpp" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
+    <ClInclude Include="src\Renderer.h">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="src\SceneImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
     <ClInclude Include="src\RenderData.h" />

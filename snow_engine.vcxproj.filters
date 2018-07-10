@@ -105,6 +105,9 @@
     <ClCompile Include="src\TemporalAA.cpp">
       <Filter>core\Effects</Filter>
     </ClCompile>
+    <ClCompile Include="src\Renderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -166,6 +169,9 @@
     </ClInclude>
     <ClInclude Include="src\TemporalAA.h">
       <Filter>core\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
