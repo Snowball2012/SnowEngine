@@ -8,7 +8,7 @@ class ForwardLightingPass;
 class DepthOnlyPass;
 class TemporalBlendPass;
 
-// throws SnowEngineExceptions for non-recoverable faults
+// throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class Renderer
 {
 public:
@@ -18,6 +18,7 @@ public:
 		ComPtr<ID3D12CommandAllocator> direct_cmd_alloc;
 		ComPtr<ID3D12CommandQueue> graphics_cmd_queue;
 		DXGI_FORMAT back_buffer_format;
+		DXGI_FORMAT depth_stencil_format;
 		size_t cbv_srv_uav_size;
 		size_t dsv_size;
 		HWND main_hwnd;
@@ -29,7 +30,9 @@ public:
 	void Init( const ImportedScene& ext_scene );
 
 	using fnDrawGUI = std::function<bool( void )>;
-	void Draw( const fnDrawGUI& draw_gui );
+	
+	// returns draw_gui retval
+	bool Draw( const fnDrawGUI& draw_gui );
 
 private:
 	// data
@@ -37,6 +40,7 @@ private:
 	ComPtr<ID3D12Device> m_d3d_device = nullptr;
 	HWND m_main_hwnd = nullptr;
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_UNKNOWN;
+	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_UNKNOWN;
 	ComPtr<ID3D12CommandQueue> m_cmd_queue = nullptr;
 
 	RenderSceneContext m_scene;
@@ -90,9 +94,28 @@ private:
 	void RecreatePrevFrameTexture();
 	void InitGUI();
 	void LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture );
-	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
 
+	void BuildGeometry( const ImportedScene& ext_scene );
+	void BuildMaterials( const ImportedScene& ext_scene );
+	void BuildRenderItems( const ImportedScene& ext_scene );
+	void BuildFrameResources( );
+	void BuildLights();
+	void BuildConstantBuffers();
+	void BuildPasses();
+
+	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
+	void CreateShadowMap( Texture& texture );
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
+
+	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
+	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
+
+	void DisposeUploaders();
+	void DisposeCPUGeom();
+	
 	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer();
+	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
+	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 };
