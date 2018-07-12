@@ -4,63 +4,89 @@
 #include "SceneImporter.h"
 #include "FrameResource.h"
 
+#include "TemporalAA.h"
+
 class ForwardLightingPass;
 class DepthOnlyPass;
-class TemporalBlendPass;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class Renderer
 {
 public:
-	struct Context
-	{
-		ComPtr<ID3D12GraphicsCommandList> direct_cmd_list;
-		ComPtr<ID3D12CommandAllocator> direct_cmd_alloc;
-		ComPtr<ID3D12CommandQueue> graphics_cmd_queue;
-		DXGI_FORMAT back_buffer_format;
-		DXGI_FORMAT depth_stencil_format;
-		size_t cbv_srv_uav_size;
-		size_t dsv_size;
-		HWND main_hwnd;
-	};
-	Renderer( ComPtr<ID3D12Device> device, const Context& ctx )
-		: m_d3d_device( std::move( device ) )
+	
+	Renderer( ComPtr<ID3D12Device> device, HWND main_hwnd )
+		: m_d3d_device( std::move( device ) ), m_main_hwnd( main_hwnd )
 	{}
 
+	void InitD3D( );
 	void Init( const ImportedScene& ext_scene );
 
 	using fnDrawGUI = std::function<bool( void )>;
 	
 	// returns draw_gui retval
-	bool Draw( const fnDrawGUI& draw_gui );
+	struct Context
+	{
+		bool wireframe_mode;
+		bool taa_enabled;
+	};
+	bool Draw( const fnDrawGUI& draw_gui, const Context& ctx );
+	void Resize( size_t new_width, size_t new_height );
+
+	// getters/setters
+	D3D12_VIEWPORT& ScreenViewport() { return m_screen_viewport; }
+	const D3D12_VIEWPORT& ScreenViewport() const { return m_screen_viewport; }
+	D3D12_RECT& ScissorRect() { return m_scissor_rect; }
+	const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
+	TemporalAA& TemporalAntiAliasing() { return m_taa; }
 
 private:
 	// data
 
-	ComPtr<ID3D12Device> m_d3d_device = nullptr;
+	// windows stuff
 	HWND m_main_hwnd = nullptr;
-	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_UNKNOWN;
-	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_UNKNOWN;
+	size_t m_client_width = 800;
+	size_t m_client_height = 600;
+
+	// d3d stuff
+	ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
+	ComPtr<ID3D12Device> m_d3d_device = nullptr;
+	ComPtr<ID3D12Fence> m_fence = nullptr;
+	UINT64 m_current_fence = 0;
+
+	ComPtr<IDXGISwapChain> m_swap_chain = nullptr;
+	static constexpr int SwapChainBufferCount = 2;
+	int m_curr_back_buff = 0;
+	ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount];
+	boost::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
+	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
+	boost::optional<Descriptor> m_back_buffer_dsv;
+
+	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	ComPtr<ID3D12CommandQueue> m_cmd_queue = nullptr;
+	D3D12_VIEWPORT m_screen_viewport;
+	D3D12_RECT m_scissor_rect;
 
 	RenderSceneContext m_scene;
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
 	std::unique_ptr<DescriptorHeap> m_dsv_heap = nullptr;
+	std::unique_ptr<DescriptorHeap> m_rtv_heap = nullptr;
 
 	size_t m_cbv_srv_uav_size = 0;
 	size_t m_dsv_size = 0;
+	size_t m_rtv_size = 0;
 
 	// ui font descriptor
 	std::unique_ptr<Descriptor> m_ui_font_desc = nullptr;
 
 	// resources
-	static constexpr int num_frame_resources = 3;
+	static constexpr int FrameResourceCount = 3;
 	std::vector<FrameResource> m_frame_resources;
 	FrameResource* m_cur_frame_resource = nullptr;
 	int m_cur_fr_idx = 0;
-	static constexpr int num_passes = 2;
+	static constexpr int PassCount = 2;
 
 	// pipeline
 	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
@@ -89,8 +115,14 @@ private:
 	Texture m_prev_frame_texture;
 	Texture m_jittered_frame_texture;
 
+	TemporalAA m_taa;
+
 	// methods
-	void BuildDescriptorHeaps( const ImportedScene& ext_scene );
+	void CreateBaseCommandObjects();
+	void CreateSwapChain();
+
+	void BuildRtvAndDsvDescriptorHeaps();
+	void BuildSrvDescriptorHeap( const ImportedScene& ext_scene );
 	void RecreatePrevFrameTexture();
 	void InitGUI();
 	void LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture );
@@ -113,6 +145,7 @@ private:
 	void DisposeUploaders();
 	void DisposeCPUGeom();
 	
+	void EndFrame(); // call at the end of the frame to wait for next available frame resource
 	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer();

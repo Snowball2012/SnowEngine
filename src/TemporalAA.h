@@ -21,7 +21,6 @@ public:
 	bool& SetBlend() { return m_blend_prev_frame; }
 	float& SetBlendFeedback() { return m_blend_feedback; }
 	float& SetColorWindowExpansion() { return m_color_window_size; }
-	
 
 private:
 	bool m_jitter_proj = true;
