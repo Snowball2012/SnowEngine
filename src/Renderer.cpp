@@ -22,6 +22,10 @@
 
 using namespace DirectX;
 
+Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
+	: m_main_hwnd( main_hwnd ), m_client_width( screen_width ), m_client_height( screen_height )
+{}
+
 void Renderer::InitD3D()
 {
 #if defined(DEBUG) || defined(_DEBUG) 
@@ -62,10 +66,6 @@ void Renderer::InitD3D()
 	m_dsv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
 	m_cbv_srv_uav_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 
-#ifdef _DEBUG
-	LogAdapters();
-#endif
-
 	CreateBaseCommandObjects();
 	CreateSwapChain();
 
@@ -100,7 +100,7 @@ void Renderer::Init( const ImportedScene& ext_scene )
 	DisposeCPUGeom();
 }
 
-bool Renderer::Draw( const fnDrawGUI& draw_gui, const Context& ctx )
+void Renderer::Draw( const Context& ctx )
 {
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
@@ -256,14 +256,21 @@ bool Renderer::Draw( const fnDrawGUI& draw_gui, const Context& ctx )
 	EndFrame();
 }
 
+void Renderer::NewGUIFrame()
+{
+	ImGui_ImplWin32_NewFrame();
+	ImGui_ImplDX12_NewFrame( m_cmd_list.Get() );
+}
+
 void Renderer::Resize( size_t new_width, size_t new_height )
 {
-	assert( m_d3d_device );
 	assert( m_swap_chain );
 	assert( m_direct_cmd_allocator );
 
 	// Flush before changing any resources.
 	FlushCommandQueue();
+
+	ImGui_ImplDX12_InvalidateDeviceObjects();
 
 	m_client_width = new_width;
 	m_client_height = new_height;
@@ -332,7 +339,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 
 	// Transition the resource from its initial state to be used as a depth buffer.
 	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(),
-																		   D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
+																			D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
 
 	// Execute the resize commands.
 	ThrowIfFailed( m_cmd_list->Close() );
@@ -351,6 +358,11 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	m_screen_viewport.MaxDepth = 1.0f;
 
 	m_scissor_rect = { 0, 0, LONG( m_client_width ), LONG( m_client_height ) };
+
+	if ( m_srv_heap )
+		RecreatePrevFrameTexture();
+
+	ImGui_ImplDX12_CreateDeviceObjects();
 }
 
 void Renderer::CreateBaseCommandObjects()
@@ -409,7 +421,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 {
 	// rtv
 	{
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc;
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
 		rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 

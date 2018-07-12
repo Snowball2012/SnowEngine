@@ -14,14 +14,10 @@ class Renderer
 {
 public:
 	
-	Renderer( ComPtr<ID3D12Device> device, HWND main_hwnd )
-		: m_d3d_device( std::move( device ) ), m_main_hwnd( main_hwnd )
-	{}
+	Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height );
 
 	void InitD3D( );
 	void Init( const ImportedScene& ext_scene );
-
-	using fnDrawGUI = std::function<bool( void )>;
 	
 	// returns draw_gui retval
 	struct Context
@@ -29,7 +25,8 @@ public:
 		bool wireframe_mode;
 		bool taa_enabled;
 	};
-	bool Draw( const fnDrawGUI& draw_gui, const Context& ctx );
+	void Draw( const Context& ctx );
+	void NewGUIFrame();
 	void Resize( size_t new_width, size_t new_height );
 
 	// getters/setters
@@ -38,6 +35,10 @@ public:
 	D3D12_RECT& ScissorRect() { return m_scissor_rect; }
 	const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
 	TemporalAA& TemporalAntiAliasing() { return m_taa; }
+
+	// for update. Todo: something smarter
+	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
+	RenderSceneContext& GetScene() { return m_scene; }
 
 private:
 	// data
