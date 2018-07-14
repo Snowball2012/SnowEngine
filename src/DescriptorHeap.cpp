@@ -49,7 +49,7 @@ Descriptor::Descriptor( DescriptorHeap* heap, int offset )
 
 Descriptor::~Descriptor()
 {
-	if ( m_heap && m_offset > 0 )
+	if ( m_heap && m_offset >= 0 )
 		m_heap->ReleaseDescriptor( m_offset );
 }
 

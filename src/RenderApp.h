@@ -7,6 +7,7 @@
 #include <imgui/imgui.h>
 #include "imgui_impl/imgui_impl_win32.h"
 #include "imgui_impl/imgui_impl_dx12.h"
+#include <DirectXMath.h>
 
 #include "D3DApp.h"
 #include "FrameResource.h"
@@ -38,6 +39,7 @@ private:
 	void UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb );
 	void UpdateLights( PassConstants& pc );
 	void UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb );
+	DirectX::XMMATRIX CalcProjectionMatrix() const;
 
 	// input
 	void ReadEventKeys();

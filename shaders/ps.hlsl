@@ -63,7 +63,7 @@ float4 main( PixelIn pin ) : SV_TARGET
 												 lights[light_idx].strength );
 
 
-		res_color += light_intensity * max( shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat ), 0.2f );
+		res_color += light_intensity * max( shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat ), 0.1f );
 	}
 
 	//return float4( 0.5 * ( normal + float3( 1.0f, 1.0f, 1.0f ) ), 1.0f ); // normal

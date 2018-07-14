@@ -11,6 +11,7 @@
 #include "ForwardLightingPass.h"
 #include "DepthOnlyPass.h"
 #include "TemporalBlendPass.h"
+#include "ToneMappingPass.h"
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
@@ -113,20 +114,26 @@ void Renderer::Draw( const Context& ctx )
 
 	auto forward_cmd_list_filled = std::async( [&]()
 	{
-		m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET ) );
+		CD3DX12_RESOURCE_BARRIER rtv_barriers[2];
+		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+		rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
+
+		m_cmd_list->ResourceBarrier( 2, rtv_barriers );
 
 		ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
 		m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
+		auto backbuffer_rtv = m_fp_backbuffer.rtv->HandleCPU();
+
 		// clear the back buffer and depth
-		const float bgr_color[4] = { 0.8f, 0.83f, 0.9f };
-		m_cmd_list->ClearRenderTargetView( CurrentBackBufferView(), bgr_color, 0, nullptr );
+		const float bgr_color[4] = { 0, 0, 0 };
+		m_cmd_list->ClearRenderTargetView( backbuffer_rtv, bgr_color, 0, nullptr );
 		m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
 		ForwardLightingPass::Context forward_ctx
 		{
 			&m_scene,
-			CurrentBackBufferView(),
+			backbuffer_rtv,
 			DepthStencilView(),
 			m_scene.lights["sun"].shadow_map->srv->HandleGPU(),
 			m_cur_frame_resource->pass_cb->Resource(),
@@ -146,17 +153,17 @@ void Renderer::Draw( const Context& ctx )
 				CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
 				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 				D3D12_RESOURCE_STATE_COPY_DEST ),
-				CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+				CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET,
 				D3D12_RESOURCE_STATE_COPY_SOURCE )
 			};
 			m_cmd_list->ResourceBarrier( 2, barriers );
-			m_cmd_list->CopyResource( m_jittered_frame_texture.texture_gpu.Get(), CurrentBackBuffer() );
+			m_cmd_list->CopyResource( m_jittered_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
 
 			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_DEST,
 																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_SOURCE,
 																D3D12_RESOURCE_STATE_RENDER_TARGET );
 			m_cmd_list->ResourceBarrier( 2, barriers );
@@ -165,7 +172,7 @@ void Renderer::Draw( const Context& ctx )
 			{
 				txaa_ctx.prev_frame_srv = m_prev_frame_texture.srv->HandleGPU();
 				txaa_ctx.cur_frame_srv = m_jittered_frame_texture.srv->HandleGPU();
-				txaa_ctx.cur_frame_rtv = CurrentBackBufferView();
+				txaa_ctx.cur_frame_rtv = backbuffer_rtv;
 				m_taa.FillShaderData( txaa_ctx.gpu_data );
 			};
 			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
@@ -174,21 +181,36 @@ void Renderer::Draw( const Context& ctx )
 			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
 																D3D12_RESOURCE_STATE_COPY_DEST );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_RENDER_TARGET,
 																D3D12_RESOURCE_STATE_COPY_SOURCE );
 			m_cmd_list->ResourceBarrier( 2, barriers );
-			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), CurrentBackBuffer() );
+			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
 
 			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_DEST,
 																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(),
+			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_SOURCE,
 																D3D12_RESOURCE_STATE_RENDER_TARGET );
 
 			m_cmd_list->ResourceBarrier( 2, barriers );
 		}
+
+		// tonemap
+		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
+																D3D12_RESOURCE_STATE_RENDER_TARGET,
+																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+		m_cmd_list->ResourceBarrier( 1, rtv_barriers );
+		ToneMappingPass::Context tonemap_ctx;
+		{
+			tonemap_ctx.frame_rtv = CurrentBackBufferView();
+			tonemap_ctx.frame_srv = m_fp_backbuffer.srv->HandleGPU();
+			tonemap_ctx.gpu_data.blend_luminance = m_tonemap_settings.blend_luminance;
+			tonemap_ctx.gpu_data.lower_luminance_bound = m_tonemap_settings.min_luminance;
+			tonemap_ctx.gpu_data.upper_luminance_bound = m_tonemap_settings.max_luminance;
+		}
+		m_tonemap_pass->Draw( tonemap_ctx, *m_cmd_list.Get() );
 
 		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
 
@@ -295,6 +317,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	{
 		ThrowIfFailed( m_swap_chain->GetBuffer( UINT( i ), IID_PPV_ARGS( &m_swap_chain_buffer[i] ) ) );
 
+		m_back_buffer_rtv[i] = boost::none;
 		m_back_buffer_rtv[i].emplace( std::move( m_rtv_heap->AllocateDescriptor() ) );
 		m_d3d_device->CreateRenderTargetView( m_swap_chain_buffer[i].Get(), nullptr, m_back_buffer_rtv[i]->HandleCPU() );
 	}
@@ -334,6 +357,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	dsvDesc.Format = m_depth_stencil_format;
 	dsvDesc.Texture2D.MipSlice = 0;
 
+	m_back_buffer_dsv.reset();
 	m_back_buffer_dsv.emplace( std::move( m_dsv_heap->AllocateDescriptor() ) );
 	m_d3d_device->CreateDepthStencilView( m_depth_stencil_buffer.Get(), &dsvDesc, m_back_buffer_dsv->HandleCPU() );
 
@@ -422,7 +446,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 	// rtv
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-		rtvHeapDesc.NumDescriptors = SwapChainBufferCount;
+		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 1/*floating point radiance*/;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
 		ComPtr<ID3D12DescriptorHeap> rtv_heap;
@@ -452,7 +476,8 @@ void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )
 		srv_heap_desc.NumDescriptors = 3/*default textures*/ + UINT( ext_scene.textures.size() )
 			+ 1 * FrameResourceCount /*shadow maps*/
 			+ 1 /*imgui font*/
-			+ 1 /*previous frame*/;
+			+ 1 /*previous frame*/
+			+ 1 /*fp backbuffer*/;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -469,12 +494,13 @@ void Renderer::RecreatePrevFrameTexture()
 		tex.texture_gpu = nullptr;
 
 		CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
+		tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		D3D12_CLEAR_VALUE opt_clear;
 		opt_clear.Color[0] = 0;
 		opt_clear.Color[1] = 0;
 		opt_clear.Color[2] = 0;
 		opt_clear.Color[3] = 0;
-		opt_clear.Format = m_back_buffer_format;
+		opt_clear.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		opt_clear.DepthStencil.Depth = 1.0f;
 		opt_clear.DepthStencil.Stencil = 0;
 		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
@@ -495,6 +521,10 @@ void Renderer::RecreatePrevFrameTexture()
 
 	recreate_tex( m_prev_frame_texture );
 	recreate_tex( m_jittered_frame_texture );
+	recreate_tex( m_fp_backbuffer );
+	m_fp_backbuffer.rtv.reset();
+	m_fp_backbuffer.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
+	m_d3d_device->CreateRenderTargetView( m_fp_backbuffer.texture_gpu.Get(), nullptr, m_fp_backbuffer.rtv->HandleCPU() );
 }
 
 void Renderer::InitGUI()
@@ -658,13 +688,15 @@ void Renderer::BuildFrameResources( )
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
 		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, UINT( m_scene.renderitems.size() ), 0 );
+	m_cur_fr_idx = 0;
+	m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
 }
 
 void Renderer::BuildLights()
 {
 	auto& parallel_light = m_scene.lights.emplace( "sun", Light{ Light::Type::Parallel } ).first->second;
 	LightConstants& data = parallel_light.data;
-	data.strength = XMFLOAT3( 5.f, 5.f, 5.f );
+	data.strength = XMFLOAT3( 101.5f, 101.5f, 101.5f );
 	data.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
 	XMFloat3Normalize( data.dir );
 	parallel_light.shadow_map = nullptr;
@@ -699,7 +731,7 @@ void Renderer::BuildConstantBuffers()
 
 void Renderer::BuildPasses()
 {
-	ForwardLightingPass::BuildData( BuildStaticSamplers(), m_back_buffer_format, m_depth_stencil_format, *m_d3d_device.Get(),
+	ForwardLightingPass::BuildData( BuildStaticSamplers(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get(),
 									m_forward_pso_main, m_forward_pso_wireframe, m_forward_root_signature );
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 
@@ -709,8 +741,12 @@ void Renderer::BuildPasses()
 	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
 	{
-		TemporalBlendPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_txaa_pso, m_txaa_root_signature );
+		TemporalBlendPass::BuildData( DXGI_FORMAT_R16G16B16A16_FLOAT, *m_d3d_device.Get(), m_txaa_pso, m_txaa_root_signature );
 		m_txaa_pass = std::make_unique<TemporalBlendPass>( m_txaa_pso.Get(), m_txaa_root_signature.Get() );
+
+		ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
+		m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
+
 		RecreatePrevFrameTexture();
 	}
 

@@ -40,6 +40,9 @@
     <Filter Include="core\Effects">
       <UniqueIdentifier>{8865e865-d47e-424f-8885-2361ce994993}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\postprocess">
+      <UniqueIdentifier>{a54c8838-c78e-4721-b789-8c3c30ddc5cc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -108,6 +111,9 @@
     <ClCompile Include="src\Renderer.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\ToneMappingPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -173,6 +179,9 @@
     <ClInclude Include="src\Renderer.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="src\ToneMappingPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -188,10 +197,13 @@
       <Filter>shaders</Filter>
     </FxCompile>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">
-      <Filter>shaders</Filter>
+      <Filter>shaders\postprocess</Filter>
     </FxCompile>
     <FxCompile Include="shaders\fullscreen_quad_vs.hlsl">
-      <Filter>shaders</Filter>
+      <Filter>shaders\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\tonemap.hlsl">
+      <Filter>shaders\postprocess</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

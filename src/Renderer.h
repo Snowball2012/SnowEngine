@@ -5,6 +5,7 @@
 #include "FrameResource.h"
 
 #include "TemporalAA.h"
+#include "ToneMappingPass.h"
 
 class ForwardLightingPass;
 class DepthOnlyPass;
@@ -35,6 +36,13 @@ public:
 	D3D12_RECT& ScissorRect() { return m_scissor_rect; }
 	const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
 	TemporalAA& TemporalAntiAliasing() { return m_taa; }
+
+	struct TonemapSettings
+	{
+		float max_luminance = 10000;
+		float min_luminance = 0;
+		bool blend_luminance = false;
+	} m_tonemap_settings;
 
 	// for update. Todo: something smarter
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
@@ -93,6 +101,7 @@ private:
 	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_depth_pass = nullptr;
 	std::unique_ptr<TemporalBlendPass> m_txaa_pass = nullptr;
+	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;
@@ -115,6 +124,9 @@ private:
 	ComPtr<ID3D12PipelineState> m_txaa_pso = nullptr;
 	Texture m_prev_frame_texture;
 	Texture m_jittered_frame_texture;
+	DynamicTexture m_fp_backbuffer;
+	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
 
 	TemporalAA m_taa;
 

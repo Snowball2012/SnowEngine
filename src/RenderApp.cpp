@@ -1,3 +1,4 @@
+#include "RenderApp.h"
 #include "stdafx.h"
 
 #include "RenderApp.h"
@@ -40,6 +41,9 @@ bool RenderApp::Initialize()
 
 	m_renderer->Init( m_imported_scene );
 
+	XMMATRIX proj = CalcProjectionMatrix();
+	XMStoreFloat4x4( &m_renderer->GetScene().proj, proj );
+
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
 	
 	m_imported_scene.indices.clear();
@@ -64,8 +68,7 @@ void RenderApp::OnResize()
 		m_renderer->Resize( mClientWidth, mClientHeight );
 
 		// Need to recompute projection matrix
-		XMMATRIX proj = XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100000.0f );
-
+		XMMATRIX proj = CalcProjectionMatrix();
 		XMStoreFloat4x4( &m_renderer->GetScene().proj, proj );
 	}
 }
@@ -115,6 +118,17 @@ void RenderApp::Update( const GameTimer& gt )
 
 			ImGui::EndChild();
 		}
+
+		{
+			ImGui::BeginChild( "Tonemap settings" );
+
+			ImGui::PushItemWidth( 150 );
+			ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 100000.0f, "%.2f" );
+			ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 100000.0f, "%.2f" );
+			ImGui::Checkbox( "Blur ref luminance 3x3", &m_renderer->m_tonemap_settings.blend_luminance );
+			ImGui::EndChild();
+		}
+
 		ImGui::End();
 	}
 	ImGui::Render();
@@ -366,4 +380,9 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 void RenderApp::LoadModel( const std::string& filename )
 {
 	LoadFbxFromFile( filename, m_imported_scene );
+}
+
+XMMATRIX RenderApp::CalcProjectionMatrix() const
+{
+	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 1000.0f );
 }
