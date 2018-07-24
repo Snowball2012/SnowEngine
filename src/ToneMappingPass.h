@@ -13,7 +13,7 @@ public:
 
 	struct ShaderData
 	{
-		float upper_luminance_bound = 1.e4f;
+		float upper_luminance_bound = 2.e4f;
 		float lower_luminance_bound = 1.e-2f;
 		bool blend_luminance = false;
 	};

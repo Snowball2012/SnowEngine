@@ -93,6 +93,10 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
 		ImGui::NewLine();
 		ImGui::Text( "Sun Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_sun_phi, m_sun_theta );
+		ImGui::NewLine();
+		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0,0,"%.3f" );
+		ImGui::NewLine();
+		ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
 		ImGui::End();
 	}
 
@@ -219,6 +223,28 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	// main pass
 }
 
+namespace
+{
+	// wt/m^2
+	DirectX::XMFLOAT3 getLightIrradiance( float illuminance_lux, DirectX::XMFLOAT3 color, float gamma )
+	{
+		// convert to linear rgb
+		color.x = std::pow( color.x, gamma );
+		color.y = std::pow( color.y, gamma );
+		color.z = std::pow( color.z, gamma );
+
+
+		if ( color.x == 0 && color.y == 0 && color.z == 0 )
+			return color; // avoid division by zero
+
+		// 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b) == illuminance_lux
+		// therefore  x * 683.0f * (0.2973f * color.r + 1.0f * color.g + 0.1010f * color.b)  == illuminance_lux, radiance = linear_color * x;
+		float x = illuminance_lux / ( 683.0f * ( 0.2973f * color.x + 1.0f * color.y + 0.1010f * color.z ) );
+
+		return color * x;
+	}
+}
+
 void RenderApp::UpdateLights( PassConstants& pc )
 {
 	auto& scene = m_renderer->GetScene();
@@ -238,6 +264,7 @@ void RenderApp::UpdateLights( PassConstants& pc )
 		XMMATRIX proj = XMMatrixOrthographicLH( 50, 50, 10.0f, 200 );
 		const auto& viewproj = view * proj;
 		XMStoreFloat4x4( &sun_light.data.shadow_map_matrix, XMMatrixTranspose( viewproj ) );
+		sun_light.data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
 	}
 
 	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;

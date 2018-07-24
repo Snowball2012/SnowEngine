@@ -68,6 +68,8 @@ private:
 
 	float m_sun_theta = 0.75f * DirectX::XM_PI;
 	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;
+	float m_sun_illuminance = 110.0e3f; // lux
+	DirectX::XMFLOAT3 m_sun_color_corrected = DirectX::XMFLOAT3( 1.0f, 232.0f /255.0f, 213.0f /255.0f ); // gamma == 2.2
 
 	bool m_wireframe_mode = false;
 

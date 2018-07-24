@@ -115,7 +115,7 @@ void Renderer::Draw( const Context& ctx )
 	auto forward_cmd_list_filled = std::async( [&]()
 	{
 		CD3DX12_RESOURCE_BARRIER rtv_barriers[2];
-		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
 		rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 
 		m_cmd_list->ResourceBarrier( 2, rtv_barriers );
@@ -126,7 +126,7 @@ void Renderer::Draw( const Context& ctx )
 		auto backbuffer_rtv = m_fp_backbuffer.rtv->HandleCPU();
 
 		// clear the back buffer and depth
-		const float bgr_color[4] = { 0, 0, 0 };
+		const float bgr_color[4] = { 0, 0, 0, 0 };
 		m_cmd_list->ClearRenderTargetView( backbuffer_rtv, bgr_color, 0, nullptr );
 		m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
@@ -150,14 +150,11 @@ void Renderer::Draw( const Context& ctx )
 		{
 			CD3DX12_RESOURCE_BARRIER barriers[2] =
 			{
-				CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-				D3D12_RESOURCE_STATE_COPY_DEST ),
 				CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 				D3D12_RESOURCE_STATE_RENDER_TARGET,
 				D3D12_RESOURCE_STATE_COPY_SOURCE )
 			};
-			m_cmd_list->ResourceBarrier( 2, barriers );
+			m_cmd_list->ResourceBarrier( 1, barriers );
 			m_cmd_list->CopyResource( m_jittered_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
 
 			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
@@ -178,18 +175,16 @@ void Renderer::Draw( const Context& ctx )
 			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
 
 
-			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-																D3D12_RESOURCE_STATE_COPY_DEST );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
+			
+			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_RENDER_TARGET,
 																D3D12_RESOURCE_STATE_COPY_SOURCE );
-			m_cmd_list->ResourceBarrier( 2, barriers );
+			m_cmd_list->ResourceBarrier( 1, barriers );
 			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
 
 			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_DEST,
-																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
+																D3D12_RESOURCE_STATE_COMMON );
 			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
 																D3D12_RESOURCE_STATE_COPY_SOURCE,
 																D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -244,7 +239,7 @@ void Renderer::Draw( const Context& ctx )
 		m_sm_cmd_lst->RSSetScissorRects( 1, &sm_scissor );
 
 		m_sm_cmd_lst->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																				 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																				 D3D12_RESOURCE_STATE_COMMON,
 																				 D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
 
 		m_sm_cmd_lst->ClearDepthStencilView( m_scene.lights["sun"].shadow_map->dsv->HandleCPU(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
@@ -504,7 +499,7 @@ void Renderer::RecreatePrevFrameTexture()
 		opt_clear.DepthStencil.Depth = 1.0f;
 		opt_clear.DepthStencil.Stencil = 0;
 		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-																&tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+																&tex_desc, D3D12_RESOURCE_STATE_COMMON,
 																&opt_clear, IID_PPV_ARGS( &tex.texture_gpu ) ) );
 
 		tex.srv.reset();
@@ -696,7 +691,9 @@ void Renderer::BuildLights()
 {
 	auto& parallel_light = m_scene.lights.emplace( "sun", Light{ Light::Type::Parallel } ).first->second;
 	LightConstants& data = parallel_light.data;
-	data.strength = XMFLOAT3( 101.5f, 101.5f, 101.5f );
+
+	// 304.5 wt/m^2
+	data.strength = XMFLOAT3( 130.5f, 90.5f, 50.5f );
 	data.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
 	XMFloat3Normalize( data.dir );
 	parallel_light.shadow_map = nullptr;
@@ -772,7 +769,7 @@ void Renderer::CreateShadowMap( Texture& texture )
 	opt_clear.DepthStencil.Stencil = 0;
 
 	ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-														  &tex_desc, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+														  &tex_desc, D3D12_RESOURCE_STATE_COMMON,
 														  &opt_clear, IID_PPV_ARGS( &texture.texture_gpu ) ) );
 
 	texture.srv = std::make_unique<Descriptor>( std::move( m_srv_heap->AllocateDescriptor() ) );
