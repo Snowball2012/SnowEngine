@@ -43,6 +43,9 @@
     <Filter Include="shaders\postprocess">
       <UniqueIdentifier>{a54c8838-c78e-4721-b789-8c3c30ddc5cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\Pipeline">
+      <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -181,6 +184,9 @@
     </ClInclude>
     <ClInclude Include="src\ToneMappingPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PipelineResource.h">
+      <Filter>core\Pipeline</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
