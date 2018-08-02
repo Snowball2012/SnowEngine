@@ -46,6 +46,9 @@
     <Filter Include="core\Pipeline">
       <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\Pipeline\testing">
+      <UniqueIdentifier>{913a2464-78a6-44fa-a5fb-f00e4570bf96}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -117,6 +120,12 @@
     <ClCompile Include="src\ToneMappingPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\PipelineCompileTimeTests.cpp">
+      <Filter>core\Pipeline\testing</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\CompileTimeTests.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -187,6 +196,12 @@
     </ClInclude>
     <ClInclude Include="src\PipelineResource.h">
       <Filter>core\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pipeline.h">
+      <Filter>core\Pipeline</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\UniqueTuple.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

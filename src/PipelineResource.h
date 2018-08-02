@@ -3,6 +3,8 @@
 #include <tuple>
 #include <iostream>
 
+#include "stdafx.h"
+
 namespace PipelineExperiments
 {
 
@@ -93,14 +95,9 @@ namespace PipelineExperiments
 		BaseRenderNode* m_node = nullptr;
 	};
 
-	int test() {
-		Pipeline<SpecializedNode> pipeline( 3 );
+	
 
-		pipeline.RebuildPipeline();
-
-		pipeline.SetRes( VerySpecialResource{ 1 } );
-
-		pipeline.RunPipeline();
-	}
-
+	
 }
+
+
