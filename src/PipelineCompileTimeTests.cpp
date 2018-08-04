@@ -5,42 +5,177 @@
 #include "PipelineResource.h"
 namespace Testing
 {
-	template<typename Pipeline>
-	struct NodeA
+	// resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
+	struct ShadowCasters
+	{};
+
+	struct ShadowProducers
+	{};
+
+	struct ShadowMaps
+	{};
+
+	struct ShadowMapStorage
+	{};
+
+	struct HDRColorStorage
+	{};
+
+	struct HDRColorOut
+	{};
+
+	struct TonemapSettings
+	{};
+
+	struct BackbufferStorage
+	{};
+
+	struct TonemappedBackbuffer
+	{};
+
+	struct DepthStorage
+	{};
+
+	struct FinalSceneDepth
+	{};
+
+	struct ScreenConstants
+	{};
+
+	struct SceneContext
+	{};
+
+	struct PreviousFrameStorage
+	{};
+
+	struct PreviousFrame
+	{};
+
+	struct NewPreviousFrame
+	{};
+
+	struct FinalBackbuffer
+	{};;
+
+	template<class Pipeline>
+	class ForwardPassNode : public BaseRenderNode
 	{
-		int a;
+	public:
+		using InputResources = std::tuple
+		<
+			ShadowMaps,
+			HDRColorStorage,
+			DepthStorage,
+			ScreenConstants,
+			SceneContext
+		>;
+
+		using OutputResources = std::tuple
+		<
+			HDRColorOut,
+			FinalSceneDepth
+		>;
+
+		virtual void Run() override { std::cout << "Forward Pass"; }
 	};
 
-	template<typename Pipeline>
-	struct NodeB
+	template<class Pipeline>
+	class ShadowPassNode : public BaseRenderNode
 	{
-		int b;
+	public:
+		using InputResources = std::tuple
+			<
+			ShadowCasters,
+			ShadowProducers,
+			ShadowMapStorage
+			>;
+
+		using OutputResources = std::tuple
+			<
+			ShadowMaps
+			>;
+
+		virtual void Run() override { std::cout << "Shadow Pass"; }
 	};
 
-	template<typename Pipeline>
-	struct NodeC
+	template<class Pipeline>
+	class ToneMapPassNode : public BaseRenderNode
 	{
-		NodeC( int a, int b, int c )
-		{}
+	public:
+		using InputResources = std::tuple
+			<
+			HDRColorOut,
+			FinalSceneDepth,
+			PreviousFrame,
+			PreviousFrameStorage,
+			TonemapSettings,
+			BackbufferStorage
+			>;
 
-		int c;
+		using OutputResources = std::tuple
+			<
+			NewPreviousFrame,
+			TonemappedBackbuffer
+			>;
+
+		virtual void Run() override { std::cout << "Tonemap Pass"; }
 	};
+
+	template<class Pipeline>
+	class UIPassNode : public BaseRenderNode
+	{
+	public:
+		using InputResources = std::tuple
+			<
+			TonemappedBackbuffer
+			>;
+
+		using OutputResources = std::tuple
+			<
+			FinalBackbuffer
+			>;
+
+		virtual void Run() override { std::cout << "UI Pass"; }
+	};
+
 
 	void create_pipeline()
 	{
-		Pipeline<NodeA, NodeB, NodeC> pipeline;
+		Pipeline<ForwardPassNode, ShadowPassNode, ToneMapPassNode, UIPassNode> pipeline;
 
-		pipeline.ConstructNode<NodeA>();
-		pipeline.ConstructNode<NodeC>( 1, 2, 3 );
-		pipeline.Enable<NodeA>();
-		pipeline.Disable<NodeA>();
-		pipeline.Enable<NodeB>();
+		// pipeline setup
+		pipeline.ConstructNode<ForwardPassNode>();
+		pipeline.ConstructNode<ShadowPassNode>();
+		pipeline.ConstructNode<ToneMapPassNode>();
+		pipeline.ConstructNode<UIPassNode>();
+		pipeline.Enable<ForwardPassNode>();
+		pipeline.Enable<ShadowPassNode>();
+		pipeline.Enable<ToneMapPassNode>();
+		pipeline.Enable<UIPassNode>();
+
 		if ( pipeline.IsRebuildNeeded() )
 			pipeline.RebuildPipeline();
 
-		auto node_c = pipeline.GetNode<NodeC>();
-		if ( node_c )
-			node_c->c = 3;
+		// resource binding
+		pipeline.SetRes( HDRColorStorage() );
+		pipeline.SetRes( ScreenConstants() );
+		pipeline.SetRes( DepthStorage() );
+		pipeline.SetRes( SceneContext() );
+		pipeline.SetRes( ShadowCasters() );
+		pipeline.SetRes( ShadowMapStorage() );
+		pipeline.SetRes( ShadowProducers() );
+		pipeline.SetRes( PreviousFrameStorage() );
+		pipeline.SetRes( TonemapSettings() );
+		pipeline.SetRes( BackbufferStorage() );
+
+		// run pipeline
+		pipeline.Run();
+
+		// retrieve results
+		NewPreviousFrame npf;
+		pipeline.GetRes( npf );
+		FinalBackbuffer res_backbuffer;
+		pipeline.GetRes( res_backbuffer );
 	}
 
 }

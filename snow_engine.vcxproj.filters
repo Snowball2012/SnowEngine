@@ -203,6 +203,9 @@
     <ClInclude Include="src\utils\UniqueTuple.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pipeline.hpp">
+      <Filter>core\Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">

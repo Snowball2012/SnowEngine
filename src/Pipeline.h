@@ -2,6 +2,12 @@
 
 #include "utils/UniqueTuple.h"
 
+class BaseRenderNode
+{
+public:
+	virtual void Run() = 0;
+};
+
 template<template <typename> class ... Node>
 class Pipeline
 {
@@ -39,24 +45,28 @@ public:
 	}
 
 	template<template <typename> class N>
-	N<Pipeline>* GetNode()
+	N<Pipeline>* GetNode();
+
+	template<typename Res>
+	void GetRes( Res& res )
 	{
-		return std::get<NStorage<N<Pipeline>>>( m_node_storage ).node.get_ptr();
+		res = std::get<Res>( m_resources );
+	}
+
+	template<typename Res>
+	void SetRes( const Res& res )
+	{
+		std::get<Res>( m_resources ) = res;
 	}
 
 
-	void RebuildPipeline()
-	{
-		NOTIMPL;
-
-		m_need_to_rebuild_pipeline = false;
-	}
+	void RebuildPipeline();
+	void Run();
 
 	bool IsRebuildNeeded() const
 	{
 		return m_need_to_rebuild_pipeline;
 	}
-
 
 private:
 
@@ -70,4 +80,16 @@ private:
 	std::tuple<NStorage<Node<Pipeline>>...> m_node_storage;
 
 	bool m_need_to_rebuild_pipeline = true;
+
+	template<typename Node>
+	using NodeResources = UniqueTuple<decltype( std::tuple_cat( std::declval<typename Node::InputResources>(),
+																std::declval<typename Node::OutputResources>() ) )>;
+
+	using PipelineResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Pipeline>>>()... ) )>;
+
+	PipelineResources m_resources;
 };
+
+
+#include "Pipeline.hpp"
+

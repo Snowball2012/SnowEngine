@@ -48,8 +48,3 @@ namespace details
 
 template <typename T>
 using UniqueTuple = typename details::unique_tuple_helper<std::tuple<>, T>::type;
-
-namespace details
-{
-	
-}
