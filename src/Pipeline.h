@@ -24,7 +24,7 @@ public:
 	{
 		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
 
-		if ( ! node_storage.node.is_initialized() )
+		if ( ! node_storage.node.has_value() )
 			throw SnowEngineException( "node is not constructed yet" );
 		node_storage.enabled = true;
 
@@ -36,7 +36,7 @@ public:
 	{
 		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
 
-		if ( ! node_storage.node.is_initialized() )
+		if ( ! node_storage.node.has_value() )
 			throw SnowEngineException( "node is not constructed yet" );
 
 		node_storage.enabled = false;
@@ -73,7 +73,7 @@ private:
 	template<typename N>
 	struct NStorage
 	{
-		boost::optional<N> node = boost::none;
+		std::optional<N> node = std::nullopt;
 		bool enabled = false;
 	};
 

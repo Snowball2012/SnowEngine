@@ -474,7 +474,7 @@ bool LoadFbxFromFile( const std::string& filename, ImportedScene& mesh )
 		return false;
 	}
 
-	FbxScene* scene = FbxScene::Create( fbx_mgr, boost::filesystem::path( filename ).leaf().string().c_str() );
+	FbxScene* scene = FbxScene::Create( fbx_mgr, std::filesystem::path( filename ).filename().generic_string().c_str() );
 
 	importer->Import( scene );
 	importer->Destroy();

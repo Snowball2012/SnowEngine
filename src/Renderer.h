@@ -66,9 +66,9 @@ private:
 	static constexpr int SwapChainBufferCount = 2;
 	int m_curr_back_buff = 0;
 	ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount];
-	boost::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
+	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
 	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
-	boost::optional<Descriptor> m_back_buffer_dsv;
+	std::optional<Descriptor> m_back_buffer_dsv;
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;

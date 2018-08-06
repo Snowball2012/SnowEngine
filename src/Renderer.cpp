@@ -21,6 +21,8 @@
 
 #include <future>
 
+#include "Pipeline.h"
+
 using namespace DirectX;
 
 Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
@@ -29,6 +31,8 @@ Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
 
 void Renderer::InitD3D()
 {
+	//Testing::create_pipeline();
+
 #if defined(DEBUG) || defined(_DEBUG) 
 	// Enable the D3D12 debug layer.
 	{
@@ -312,7 +316,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	{
 		ThrowIfFailed( m_swap_chain->GetBuffer( UINT( i ), IID_PPV_ARGS( &m_swap_chain_buffer[i] ) ) );
 
-		m_back_buffer_rtv[i] = boost::none;
+		m_back_buffer_rtv[i] = std::nullopt;
 		m_back_buffer_rtv[i].emplace( std::move( m_rtv_heap->AllocateDescriptor() ) );
 		m_d3d_device->CreateRenderTargetView( m_swap_chain_buffer[i].Get(), nullptr, m_back_buffer_rtv[i]->HandleCPU() );
 	}
@@ -956,10 +960,10 @@ ID3D12Resource* Renderer::CurrentBackBuffer()
 
 D3D12_CPU_DESCRIPTOR_HANDLE Renderer::CurrentBackBufferView() const
 {
-	return m_back_buffer_rtv[m_curr_back_buff].get().HandleCPU();
+	return m_back_buffer_rtv[m_curr_back_buff].value().HandleCPU();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE Renderer::DepthStencilView() const
 {
-	return m_back_buffer_dsv.get().HandleCPU();
+	return m_back_buffer_dsv.value().HandleCPU();
 }

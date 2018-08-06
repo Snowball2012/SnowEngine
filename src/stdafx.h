@@ -4,15 +4,15 @@
 #include <iostream>
 #include <numeric>
 #include <string>
+#include <filesystem>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
-#include <boost/filesystem.hpp>
-#include <boost/optional.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/join.hpp>
-#include <boost/range/adaptors.hpp>
+#include <boost/functional/hash.hpp>
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/clamp.hpp>
 #include <boost/container/static_vector.hpp>
