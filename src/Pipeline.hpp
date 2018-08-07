@@ -7,40 +7,26 @@
 
 namespace
 {
-	struct TypeIdWithName
-	{
-		size_t id;
-		std::string_view name; // name is stored purely for debug purposes
-	};
-
-	struct RuntimeNodeInfo
-	{
-		size_t node_id;
-		std::string_view node_name; // debug info
-		BaseRenderNode* node_ptr;
-		std::vector<TypeIdWithName> input_ids;
-		std::vector<TypeIdWithName> output_ids;
-	};
-
 	template<typename T>
 	struct typeid_filler;
 
 	template<>
 	struct typeid_filler<std::tuple<>>
 	{
-		static void fill_typeids( std::vector<TypeIdWithName>& vec ) {}
+		template<class T>
+		static void fill_typeids( std::vector<T>& vec ) {}
 	};
 
 	template<typename First, typename ...Args>
 	struct typeid_filler<std::tuple<First, Args...>>
 	{
-		static void fill_typeids( std::vector<TypeIdWithName>& vec )
+		template<class T>
+		static void fill_typeids( std::vector<T>& vec )
 		{
 			vec.push_back( { typeid( First ).hash_code(), typeid( First ).name() } );
 			typeid_filler<std::tuple<Args...>>::fill_typeids( vec );
 		}
 	};
-	
 }
 
 template<template <typename> class ... Node>
@@ -48,9 +34,66 @@ void Pipeline<Node...>::RebuildPipeline()
 {
 	/*
 		general scheme:
-			make typeid -> input, output, rendernode_ptr
+			1. make typeid -> input, output, rendernode_ptr
+			2. find input resources and fill layers one by one
+
+		not optimal performance-wise, but it doesn't matter, pipeline rebuild occurs very rarely and typical frame graph is rather small
 	*/
 
+	auto active_node_info = CollectActiveNodes();
+	for ( auto& [node_id, info] : active_node_info )
+	{
+		boost::sort( info.input_ids );
+		boost::sort( info.output_ids );
+	}
+
+	auto available_resources = FindInputResources( active_node_info );
+
+	m_node_layers.clear();
+	for ( bool layer_created = true; layer_created; )
+	{
+		layer_created = false;
+		std::vector<BaseRenderNode*> new_layer;
+		std::set<TypeIdWithName> layer_output_resources;
+		for ( auto node_iter = active_node_info.begin(); node_iter != active_node_info.end(); )
+		{
+			const auto& node_info = node_iter->second;
+			if ( boost::range::includes( available_resources, node_info.input_ids ) )
+			{
+				new_layer.push_back( node_info.node_ptr );
+				layer_output_resources.insert( node_info.output_ids.begin(), node_info.output_ids.end() );
+				node_iter = active_node_info.erase( node_iter );
+			}
+			else
+			{
+				node_iter++;
+			}
+		}
+
+		if ( ! new_layer.empty() )
+		{
+			m_node_layers.push_back( std::move( new_layer ) );
+			available_resources.merge( layer_output_resources );
+			layer_created = true;
+		}
+	}
+
+	if ( ! active_node_info.empty() )
+		throw SnowEngineException( "pipeline can't be created, resource dependency cycle has been found" );
+
+	NOTIMPL;
+	m_need_to_rebuild_pipeline = false;
+}
+
+template<template <typename> class ...Node>
+void Pipeline<Node...>::Run()
+{
+	NOTIMPL;
+}
+
+template<template <typename> class ...Node>
+std::map<size_t, typename Pipeline<Node...>::RuntimeNodeInfo> Pipeline<Node...>::CollectActiveNodes()
+{
 	std::map<size_t, RuntimeNodeInfo> active_node_info;
 
 	auto fill_info = [&active_node_info]( auto&& ...nodes )
@@ -78,14 +121,22 @@ void Pipeline<Node...>::RebuildPipeline()
 
 	std::apply( fill_info, m_node_storage );
 
-	NOTIMPL;
-	m_need_to_rebuild_pipeline = false;
+	return std::move( active_node_info );
 }
 
 template<template <typename> class ...Node>
-inline void Pipeline<Node...>::Run()
+std::set<typename Pipeline<Node...>::TypeIdWithName> Pipeline<Node...>::FindInputResources( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
 {
-	NOTIMPL;
+	std::set<TypeIdWithName> input_resources;
+	for ( const auto&[node_id, info] : active_nodes )
+		for ( const auto& input_res : info.input_ids )
+			input_resources.insert( input_res );
+
+	for ( const auto&[node_id, info] : active_nodes )
+		for ( const auto& output_res : info.output_ids )
+			input_resources.erase( output_res );
+
+	return std::move( input_resources );
 }
 
 template<template <typename> class ...Node>

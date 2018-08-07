@@ -2,6 +2,12 @@
 
 #include "utils/UniqueTuple.h"
 
+#include <map>
+#include <set>
+
+// generic cpu-gpu rendering pipeline
+// TODO: 2 different pipelines ( cpu and gpu ) for cpu resources and gpu resources instead of fused one
+
 class BaseRenderNode
 {
 public:
@@ -70,6 +76,7 @@ public:
 
 private:
 
+	// data
 	template<typename N>
 	struct NStorage
 	{
@@ -87,7 +94,31 @@ private:
 
 	using PipelineResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Pipeline>>>()... ) )>;
 
+	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime pipeline
+
 	PipelineResources m_resources;
+
+	// impl details
+	struct TypeIdWithName
+	{
+		size_t id;
+		std::string_view name; // name is stored purely for debug purposes
+
+		bool operator==( const TypeIdWithName& other ) const { return this->id == other.id; }
+		bool operator<( const TypeIdWithName& other ) const { return this->id < other.id; }
+	};
+
+	struct RuntimeNodeInfo
+	{
+		size_t node_id;
+		std::string_view node_name; // debug info
+		BaseRenderNode* node_ptr;
+		std::vector<TypeIdWithName> input_ids;
+		std::vector<TypeIdWithName> output_ids;
+	};
+
+	std::map<size_t, RuntimeNodeInfo> CollectActiveNodes();
+	std::set<TypeIdWithName> FindInputResources( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
 };
 
 

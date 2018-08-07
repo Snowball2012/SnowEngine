@@ -31,7 +31,7 @@ Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
 
 void Renderer::InitD3D()
 {
-	//Testing::create_pipeline();
+	Testing::create_pipeline();
 
 #if defined(DEBUG) || defined(_DEBUG) 
 	// Enable the D3D12 debug layer.
