@@ -81,7 +81,6 @@ void Pipeline<Node...>::RebuildPipeline()
 	if ( ! active_node_info.empty() )
 		throw SnowEngineException( "pipeline can't be created, resource dependency cycle has been found" );
 
-	NOTIMPL;
 	m_need_to_rebuild_pipeline = false;
 }
 
