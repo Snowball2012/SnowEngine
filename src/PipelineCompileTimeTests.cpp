@@ -3,6 +3,7 @@
 #include "Pipeline.h"
 
 #include "PipelineResource.h"
+
 namespace Testing
 {
 	// resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
@@ -76,7 +77,7 @@ namespace Testing
 			FinalSceneDepth
 		>;
 
-		virtual void Run() override { std::cout << "Forward Pass"; }
+		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
 	};
 
 	template<class Pipeline>
@@ -95,7 +96,7 @@ namespace Testing
 			ShadowMaps
 			>;
 
-		virtual void Run() override { std::cout << "Shadow Pass"; }
+		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Shadow Pass"; }
 	};
 
 	template<class Pipeline>
@@ -118,7 +119,7 @@ namespace Testing
 			TonemappedBackbuffer
 			>;
 
-		virtual void Run() override { std::cout << "Tonemap Pass"; }
+		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Tonemap Pass"; }
 	};
 
 	template<class Pipeline>
@@ -135,7 +136,7 @@ namespace Testing
 			FinalBackbuffer
 			>;
 
-		virtual void Run() override { std::cout << "UI Pass"; }
+		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "UI Pass"; }
 	};
 
 
@@ -177,5 +178,4 @@ namespace Testing
 		FinalBackbuffer res_backbuffer;
 		pipeline.GetRes( res_backbuffer );
 	}
-
 }

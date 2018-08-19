@@ -206,6 +206,9 @@
     <ClInclude Include="src\Pipeline.hpp">
       <Filter>core\Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="src\PipelineNodes.h">
+      <Filter>core\Pipeline</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">

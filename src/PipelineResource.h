@@ -1,103 +1,91 @@
 #pragma once
 
-#include <tuple>
-#include <iostream>
-
 #include "stdafx.h"
 
-namespace PipelineExperiments
+#include <tuple>
+
+#include "RenderData.h"
+
+// resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
+struct ShadowCasters
+{
+	std::vector<RenderItem>* casters = nullptr;
+};
+
+struct ShadowProducers
+{
+	std::vector<Light>* lights = nullptr;
+	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>* pass_cbs = nullptr;
+};
+
+struct ShadowMaps
 {
 
-	class VerySpecialResource
-	{
-	public:
-		int a;
-	};
+	std::vector<Light>* light_with_sm = nullptr;
+};
 
-	class BaseRenderNode
-	{
-	public:
-		virtual void FillInput() = 0;
-		virtual void Run() = 0;
-	};
+struct ShadowMapStorage
+{
+	std::vector<Light>* sm_storage = nullptr;
+};
 
-	template<typename PipelineInstance>
-	class SpecializedNode : BaseRenderNode
-	{
-	public:
-		SpecializedNode( int node_specific_data )
-			: m_node_specific_data( node_specific_data )
-		{
-		}
+struct ObjectConstantBuffer
+{
+	ID3D12Resource* buffer = nullptr;
+};
 
-		virtual void FillInput() override
-		{
-			m_pipeline->GetRes( std::get<VerySpecialResource>( m_input_data ) );
-		}
+struct ForwardPassCB
+{
+	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
+};
 
-		virtual void Run() override
-		{
-			std::cout << std::get<VerySpecialResource>( m_input_data ).a << ' ' << m_node_specific_data << std::endl;
-		}
+struct HDRColorStorage
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
 
-	private:
-		friend PipelineInstance;
-		PipelineInstance* m_pipeline;
+struct HDRColorOut
+{};
 
-		std::tuple<VerySpecialResource> m_input_data;
+struct TonemapSettings
+{};
 
-		const int m_node_specific_data;
-	};
+struct BackbufferStorage
+{};
 
-	template<template <typename> class Node>
-	class Pipeline
-	{
-	public:
-		template<typename ... NodeArgs>
-		Pipeline( NodeArgs&& ...args )
-			: m_node_storage( std::forward<NodeArgs>( args )... )
-		{
-		}
+struct TonemappedBackbuffer
+{};
 
-		template<typename Res>
-		void GetRes( Res& res )
-		{
-			res = std::get<Res>( m_resources );
-		}
+struct DepthStorage
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+};
 
-		template<typename Res>
-		void SetRes( const Res& res )
-		{
-			std::get<Res>( m_resources ) = res;
-		}
+struct FinalSceneDepth
+{};
 
-		void RunPipeline()
-		{
-			RunNode( m_node );
-		}
+struct ScreenConstants
+{
+};
 
-		void RebuildPipeline()
-		{
-			m_node = &m_node_storage;
-		}
+struct SceneContext
+{
+	RenderSceneContext* scene;
+};
 
+struct FrameResources
+{
 
-	private:
-		void RunNode( BaseRenderNode* node )
-		{
-			node->FillInput();
-			node->Run();
-		}
+};
 
-		decltype( Node<Pipeline>::m_input_data ) m_resources;
+struct PreviousFrameStorage
+{};
 
-		Node<Pipeline> m_node_storage;
-		BaseRenderNode* m_node = nullptr;
-	};
+struct PreviousFrame
+{};
 
-	
+struct NewPreviousFrame
+{};
 
-	
-}
-
-
+struct FinalBackbuffer
+{};

@@ -13,10 +13,9 @@ public:
 
 	struct Context
 	{
-		RenderSceneContext* scene;
+		std::vector<RenderItem>* renderitems;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
-		ID3D12Resource* pass_cb;
-		int pass_cb_idx;
+		D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
 		ID3D12Resource* object_cb;
 	};
 

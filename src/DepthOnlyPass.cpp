@@ -18,13 +18,11 @@ void DepthOnlyPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	const auto pass_cb_address = context.pass_cb->GetGPUVirtualAddress();
-	const auto pass_cb_size = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
-	cmd_list.SetGraphicsRootConstantBufferView( 1, pass_cb_address + pass_cb_size * context.pass_cb_idx );
+	cmd_list.SetGraphicsRootConstantBufferView( 1, context.pass_cbv );
 
 	const auto obj_cb_address = context.object_cb->GetGPUVirtualAddress();
 	const auto obj_cb_size = Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
-	for ( const auto& render_item : context.scene->renderitems )
+	for ( const auto& render_item : *context.renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, obj_cb_address + render_item.cb_idx * obj_cb_size );
 

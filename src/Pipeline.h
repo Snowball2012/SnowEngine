@@ -11,7 +11,7 @@
 class BaseRenderNode
 {
 public:
-	virtual void Run() = 0;
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) = 0;
 };
 
 template<template <typename> class ... Node>

@@ -87,7 +87,12 @@ void Pipeline<Node...>::RebuildPipeline()
 template<template <typename> class ...Node>
 void Pipeline<Node...>::Run()
 {
-	NOTIMPL;
+	if ( m_need_to_rebuild_pipeline )
+		throw SnowEngineException( "pipeline rebuild is needed" );
+
+	for ( auto& layer : m_node_layers )
+		for ( auto& node : layer )
+			node->Run();
 }
 
 template<template <typename> class ...Node>

@@ -223,6 +223,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
     <ClInclude Include="src\Pipeline.h" />
     <ClInclude Include="src\Pipeline.hpp" />
+    <ClInclude Include="src\PipelineNodes.h" />
     <ClInclude Include="src\PipelineResource.h" />
     <ClInclude Include="src\Renderer.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
