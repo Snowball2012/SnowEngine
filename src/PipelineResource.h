@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include "RenderData.h"
+#include "ToneMappingPass.h"
 
 // resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
 struct ShadowCasters
@@ -14,19 +15,18 @@ struct ShadowCasters
 
 struct ShadowProducers
 {
-	std::vector<Light>* lights = nullptr;
+	std::vector<Light*>* lights = nullptr;
 	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>* pass_cbs = nullptr;
 };
 
 struct ShadowMaps
 {
-
-	std::vector<Light>* light_with_sm = nullptr;
+	std::vector<Light*>* light_with_sm = nullptr;
 };
 
 struct ShadowMapStorage
 {
-	std::vector<Light>* sm_storage = nullptr;
+	std::vector<Light*>* sm_storage = nullptr;
 };
 
 struct ObjectConstantBuffer
@@ -41,20 +41,32 @@ struct ForwardPassCB
 
 struct HDRColorStorage
 {
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 };
 
 struct HDRColorOut
-{};
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
 
-struct TonemapSettings
-{};
+struct TonemapNodeSettings
+{
+	ToneMappingPass::ShaderData data;
+};
 
 struct BackbufferStorage
-{};
+{
+	ID3D12Resource* resource;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
 
 struct TonemappedBackbuffer
-{};
+{
+	ID3D12Resource* resource;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
 
 struct DepthStorage
 {
@@ -62,10 +74,14 @@ struct DepthStorage
 };
 
 struct FinalSceneDepth
-{};
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+};
 
 struct ScreenConstants
 {
+	D3D12_VIEWPORT viewport;
+	D3D12_RECT scissor_rect;
 };
 
 struct SceneContext
@@ -88,4 +104,6 @@ struct NewPreviousFrame
 {};
 
 struct FinalBackbuffer
-{};
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};

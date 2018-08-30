@@ -7,6 +7,9 @@
 #include "TemporalAA.h"
 #include "ToneMappingPass.h"
 
+#include "Pipeline.h"
+#include "PipelineNodes.h"
+
 class ForwardLightingPass;
 class DepthOnlyPass;
 
@@ -102,6 +105,9 @@ private:
 	std::unique_ptr<DepthOnlyPass> m_depth_pass = nullptr;
 	std::unique_ptr<TemporalBlendPass> m_txaa_pass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
+
+	using PipelineInstance = Pipeline<ShadowPassNode, ForwardPassNode, ToneMapPassNode, UIPassNode>;
+	PipelineInstance m_pipeline;
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;

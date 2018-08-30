@@ -77,6 +77,9 @@ namespace Testing
 			FinalSceneDepth
 		>;
 
+		ForwardPassNode( Pipeline* pipeline )
+		{}
+
 		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
 	};
 
@@ -95,6 +98,9 @@ namespace Testing
 			<
 			ShadowMaps
 			>;
+
+		ShadowPassNode( Pipeline* pipeline )
+		{}
 
 		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Shadow Pass"; }
 	};
@@ -119,6 +125,9 @@ namespace Testing
 			TonemappedBackbuffer
 			>;
 
+		ToneMapPassNode( Pipeline* pipeline )
+		{}
+
 		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Tonemap Pass"; }
 	};
 
@@ -136,11 +145,14 @@ namespace Testing
 			FinalBackbuffer
 			>;
 
+		UIPassNode( Pipeline* pipeline )
+		{}
+
 		virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "UI Pass"; }
 	};
 
 
-	void create_pipeline()
+	void create_pipeline( ID3D12GraphicsCommandList& cmd_lst )
 	{
 		Pipeline<ForwardPassNode, ShadowPassNode, ToneMapPassNode, UIPassNode> pipeline;
 
@@ -170,7 +182,7 @@ namespace Testing
 		pipeline.SetRes( BackbufferStorage() );
 
 		// run pipeline
-		pipeline.Run();
+		pipeline.Run( cmd_lst );
 
 		// retrieve results
 		NewPreviousFrame npf;

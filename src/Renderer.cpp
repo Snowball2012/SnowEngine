@@ -21,8 +21,6 @@
 
 #include <future>
 
-#include "Pipeline.h"
-
 using namespace DirectX;
 
 Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
@@ -105,174 +103,99 @@ void Renderer::Init( const ImportedScene& ext_scene )
 
 void Renderer::Draw( const Context& ctx )
 {
+	if ( m_pipeline.IsRebuildNeeded() )
+		m_pipeline.RebuildPipeline();
+
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
 	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
 		ThrowIfFailed( allocator->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_sm_cmd_lst->Reset( m_cur_frame_resource->cmd_list_allocs[1].Get(), m_do_pso.Get() ) );
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	auto forward_cmd_list_filled = std::async( [&]()
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[4];
+	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	
+
+	m_cmd_list->ResourceBarrier( 4, rtv_barriers );
+	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
+	m_cmd_list->SetDescriptorHeaps( 1, heaps );
+
+
+	std::vector<Light*> lights_with_shadow;
+	std::vector<D3D12_GPU_VIRTUAL_ADDRESS> sm_pass_cbs;
 	{
-		CD3DX12_RESOURCE_BARRIER rtv_barriers[2];
-		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
-		rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
+		ShadowCasters casters;
+		casters.casters = &m_scene.renderitems;
+		m_pipeline.SetRes( casters );
 
-		m_cmd_list->ResourceBarrier( 2, rtv_barriers );
+		ShadowProducers producers;
+		lights_with_shadow.push_back( &m_scene.lights["sun"] );
+		producers.lights = &lights_with_shadow;
+		sm_pass_cbs.push_back( m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() + Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) ) );
+		producers.pass_cbs = &sm_pass_cbs;
+		m_pipeline.SetRes( producers );
 
-		ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
-		m_cmd_list->SetDescriptorHeaps( 1, heaps );
+		ShadowMapStorage smstorage;
+		smstorage.sm_storage = &lights_with_shadow;
+		m_pipeline.SetRes( smstorage );
 
-		auto backbuffer_rtv = m_fp_backbuffer.rtv->HandleCPU();
+		ObjectConstantBuffer object_cb{ m_cur_frame_resource->object_cb->Resource() };
+		m_pipeline.SetRes( object_cb );
 
-		// clear the back buffer and depth
-		const float bgr_color[4] = { 0, 0, 0, 0 };
-		m_cmd_list->ClearRenderTargetView( backbuffer_rtv, bgr_color, 0, nullptr );
-		m_cmd_list->ClearDepthStencilView( DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+		ForwardPassCB pass_cb{ m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() };
+		m_pipeline.SetRes( pass_cb );
 
-		ForwardLightingPass::Context forward_ctx
-		{
-			&m_scene,
-			backbuffer_rtv,
-			DepthStencilView(),
-			m_scene.lights["sun"].shadow_map->srv->HandleGPU(),
-			m_cur_frame_resource->pass_cb->Resource(),
-			0,
-			m_cur_frame_resource->object_cb->Resource()
-		};
-		m_cmd_list->RSSetViewports( 1, &m_screen_viewport );
-		m_cmd_list->RSSetScissorRects( 1, &m_scissor_rect );
+		HDRColorStorage hdr_buffer;
+		hdr_buffer.resource = m_fp_backbuffer.texture_gpu.Get();
+		hdr_buffer.rtv = m_fp_backbuffer.rtv->HandleCPU();
+		hdr_buffer.srv = m_fp_backbuffer.srv->HandleGPU();
+		m_pipeline.SetRes( hdr_buffer );
 
-		m_forward_pass->Draw( forward_ctx, ctx.wireframe_mode, *m_cmd_list.Get() );
+		DepthStorage depth_buffer;
+		depth_buffer.dsv = DepthStencilView();
+		m_pipeline.SetRes( depth_buffer );
 
-		// blend with previous
-		if ( ctx.taa_enabled && m_taa.IsBlendEnabled() )
-		{
-			CD3DX12_RESOURCE_BARRIER barriers[2] =
-			{
-				CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
-				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				D3D12_RESOURCE_STATE_COPY_SOURCE )
-			};
-			m_cmd_list->ResourceBarrier( 1, barriers );
-			m_cmd_list->CopyResource( m_jittered_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
+		ScreenConstants screen;
+		screen.viewport = m_screen_viewport;
+		screen.scissor_rect = m_scissor_rect;
+		m_pipeline.SetRes( screen );
 
-			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_jittered_frame_texture.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_COPY_DEST,
-																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_COPY_SOURCE,
-																D3D12_RESOURCE_STATE_RENDER_TARGET );
-			m_cmd_list->ResourceBarrier( 2, barriers );
+		SceneContext scene_ctx;
+		scene_ctx.scene = &m_scene;
+		m_pipeline.SetRes( scene_ctx );
 
-			TemporalBlendPass::Context txaa_ctx;
-			{
-				txaa_ctx.prev_frame_srv = m_prev_frame_texture.srv->HandleGPU();
-				txaa_ctx.cur_frame_srv = m_jittered_frame_texture.srv->HandleGPU();
-				txaa_ctx.cur_frame_rtv = backbuffer_rtv;
-				m_taa.FillShaderData( txaa_ctx.gpu_data );
-			};
-			m_txaa_pass->Draw( txaa_ctx, *m_cmd_list.Get() );
+		TonemapNodeSettings tm_settings;
+		tm_settings.data.blend_luminance = m_tonemap_settings.blend_luminance;
+		tm_settings.data.lower_luminance_bound = m_tonemap_settings.min_luminance;
+		tm_settings.data.upper_luminance_bound = m_tonemap_settings.max_luminance;
+		m_pipeline.SetRes( tm_settings );
 
 
-			
-			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_RENDER_TARGET,
-																D3D12_RESOURCE_STATE_COPY_SOURCE );
-			m_cmd_list->ResourceBarrier( 1, barriers );
-			m_cmd_list->CopyResource( m_prev_frame_texture.texture_gpu.Get(), m_fp_backbuffer.texture_gpu.Get() );
-
-			barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_prev_frame_texture.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_COPY_DEST,
-																D3D12_RESOURCE_STATE_COMMON );
-			barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_COPY_SOURCE,
-																D3D12_RESOURCE_STATE_RENDER_TARGET );
-
-			m_cmd_list->ResourceBarrier( 2, barriers );
-		}
-
-		// tonemap
-		rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(),
-																D3D12_RESOURCE_STATE_RENDER_TARGET,
-																D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-		m_cmd_list->ResourceBarrier( 1, rtv_barriers );
-		ToneMappingPass::Context tonemap_ctx;
-		{
-			tonemap_ctx.frame_rtv = CurrentBackBufferView();
-			tonemap_ctx.frame_srv = m_fp_backbuffer.srv->HandleGPU();
-			tonemap_ctx.gpu_data.blend_luminance = m_tonemap_settings.blend_luminance;
-			tonemap_ctx.gpu_data.lower_luminance_bound = m_tonemap_settings.min_luminance;
-			tonemap_ctx.gpu_data.upper_luminance_bound = m_tonemap_settings.max_luminance;
-		}
-		m_tonemap_pass->Draw( tonemap_ctx, *m_cmd_list.Get() );
-
-		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
-
-		// swap transition
-		m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT ) );
-
-		// done
-		ThrowIfFailed( m_cmd_list->Close() );
-	} );
-
-	{
-		// shadow map viewport and scissor rect
-		D3D12_VIEWPORT sm_viewport;
-		{
-			sm_viewport.TopLeftX = 0;
-			sm_viewport.TopLeftY = 0;
-			sm_viewport.Height = 4096;
-			sm_viewport.Width = 4096;
-			sm_viewport.MinDepth = 0;
-			sm_viewport.MaxDepth = 1;
-		}
-		D3D12_RECT sm_scissor;
-		{
-			sm_scissor.bottom = 4096;
-			sm_scissor.left = 0;
-			sm_scissor.right = 4096;
-			sm_scissor.top = 0;
-		}
-
-		m_sm_cmd_lst->RSSetViewports( 1, &sm_viewport );
-		m_sm_cmd_lst->RSSetScissorRects( 1, &sm_scissor );
-
-		m_sm_cmd_lst->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																				 D3D12_RESOURCE_STATE_COMMON,
-																				 D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
-
-		m_sm_cmd_lst->ClearDepthStencilView( m_scene.lights["sun"].shadow_map->dsv->HandleCPU(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
-
-		// passes
-		DepthOnlyPass::Context shadow_map_gen_ctx
-		{
-			&m_scene,
-			m_scene.lights["sun"].shadow_map->dsv->HandleCPU(),
-			m_cur_frame_resource->pass_cb->Resource(),
-			1,
-			m_cur_frame_resource->object_cb->Resource()
-		};
-
-
-		m_depth_pass->Draw( shadow_map_gen_ctx, *m_sm_cmd_lst.Get() );
-
-		m_sm_cmd_lst->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(),
-																				 D3D12_RESOURCE_STATE_DEPTH_WRITE,
-																				 D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
-
-		ThrowIfFailed( m_sm_cmd_lst->Close() );
+		BackbufferStorage backbuffer;
+		backbuffer.resource = CurrentBackBuffer();
+		backbuffer.rtv = CurrentBackBufferView();
+		m_pipeline.SetRes( backbuffer );
 	}
 
-	// get forward cmd list
-	forward_cmd_list_filled.wait();
+	m_pipeline.Run( *m_cmd_list.Get() );
 
-	ID3D12CommandList* cmd_lists[] = { m_sm_cmd_lst.Get(), m_cmd_list.Get() };
+	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
+	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
+
+	m_cmd_list->ResourceBarrier( 3, rtv_barriers );
+
+	ThrowIfFailed( m_cmd_list->Close() );
+
+	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
 	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 
-	EndFrame();
+	EndFrame();	
 }
 
 void Renderer::NewGUIFrame()
@@ -749,6 +672,17 @@ void Renderer::BuildPasses()
 		RecreatePrevFrameTexture();
 	}
 
+	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
+	m_pipeline.ConstructNode<ShadowPassNode>( m_depth_pass.get() );
+	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
+	m_pipeline.ConstructNode<UIPassNode>();
+	m_pipeline.Enable<ForwardPassNode>();
+	m_pipeline.Enable<ShadowPassNode>();
+	m_pipeline.Enable<ToneMapPassNode>();
+	m_pipeline.Enable<UIPassNode>();
+
+	if ( m_pipeline.IsRebuildNeeded() )
+		m_pipeline.RebuildPipeline();
 
 	ThrowIfFailed( m_d3d_device->CreateCommandList(
 		0,

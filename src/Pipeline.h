@@ -8,6 +8,8 @@
 // generic cpu-gpu rendering pipeline
 // TODO: 2 different pipelines ( cpu and gpu ) for cpu resources and gpu resources instead of fused one
 
+struct ID3D12GraphicsCommandList;
+
 class BaseRenderNode
 {
 public:
@@ -22,7 +24,7 @@ public:
 	void ConstructNode( Args&& ... args )
 	{
 		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
-		node_storage.node.emplace( std::forward<Args>( args )... );
+		node_storage.node.emplace( this, std::forward<Args>( args )... );
 	}
 
 	template<template <typename> class N>
@@ -67,7 +69,7 @@ public:
 
 
 	void RebuildPipeline();
-	void Run();
+	void Run( ID3D12GraphicsCommandList& cmd_list );
 
 	bool IsRebuildNeeded() const
 	{

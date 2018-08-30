@@ -13,8 +13,7 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
-		ID3D12Resource* pass_cb;
-		int pass_cb_idx;
+		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 		ID3D12Resource* object_cb;
 	};
 

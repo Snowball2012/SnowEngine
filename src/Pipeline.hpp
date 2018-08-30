@@ -85,14 +85,14 @@ void Pipeline<Node...>::RebuildPipeline()
 }
 
 template<template <typename> class ...Node>
-void Pipeline<Node...>::Run()
+void Pipeline<Node...>::Run( ID3D12GraphicsCommandList& cmd_list )
 {
 	if ( m_need_to_rebuild_pipeline )
 		throw SnowEngineException( "pipeline rebuild is needed" );
 
 	for ( auto& layer : m_node_layers )
 		for ( auto& node : layer )
-			node->Run();
+			node->Run( cmd_list );
 }
 
 template<template <typename> class ...Node>

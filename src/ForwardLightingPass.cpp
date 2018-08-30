@@ -14,9 +14,7 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	const auto pass_cb_address = context.pass_cb->GetGPUVirtualAddress();
-	const auto pass_cb_size = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
-	cmd_list.SetGraphicsRootConstantBufferView( 6, pass_cb_address + pass_cb_size * context.pass_cb_idx );
+	cmd_list.SetGraphicsRootConstantBufferView( 6, context.pass_cb );
 
 	cmd_list.SetGraphicsRootDescriptorTable( 5, context.shadow_map_srv );
 
