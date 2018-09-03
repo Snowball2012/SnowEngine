@@ -1,4 +1,23 @@
-#include "lighting_utils.hlsl"
+#include "lib/lighting.hlsli"
+
+#define PER_MATERIAL_CB_BINDING b1
+#include "bindings/material_cb.hlsli"
+
+#define PER_PASS_CB_BINDING b2
+#include "bindings/pass_cb.hlsli"
+
+SamplerState point_wrap_sampler : register(s0);
+SamplerState point_clamp_sampler : register(s1);
+SamplerState linear_wrap_sampler : register(s2);
+SamplerState linear_clamp_sampler : register(s3);
+SamplerState anisotropic_wrap_sampler : register(s4);
+SamplerState anisotropic_clamp_sampler : register(s5);
+SamplerComparisonState shadow_map_sampler : register(s6);
+
+Texture2D base_color_map : register(t0);
+Texture2D normal_map : register(t1);
+Texture2D specular_map : register(t2);
+Texture2D shadow_map : register(t3);
 
 struct PixelIn
 {
@@ -80,7 +99,7 @@ float4 main( PixelIn pin ) : SV_TARGET
 												 pin.uv );
 
         res_color += lights[light_idx].strength
-                     * (light_radiance * shadow_factor(pin.pos_w, lights[light_idx].shadow_map_mat)
+                     * (light_radiance * shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler )
                             + base_color * pow(0.06f, 2.2f) * local_ambient_shadowing); // second component is bouncing light approximation, remove after GI support
     }
 

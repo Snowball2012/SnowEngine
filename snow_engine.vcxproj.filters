@@ -49,6 +49,12 @@
     <Filter Include="core\Pipeline\testing">
       <UniqueIdentifier>{913a2464-78a6-44fa-a5fb-f00e4570bf96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\lib">
+      <UniqueIdentifier>{2e11566b-ae71-43bc-b79d-7a0ec78386ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\bindings">
+      <UniqueIdentifier>{0c969b3d-215d-40a1-bd0d-e94201d97fe2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -232,10 +238,22 @@
     <FxCompile Include="shaders\tonemap.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\depth_prepass_ps.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\lighting_utils.hlsl">
-      <Filter>shaders</Filter>
+    <None Include="shaders\lib\lighting.hlsli">
+      <Filter>shaders\lib</Filter>
+    </None>
+    <None Include="shaders\bindings\object_cb.hlsli">
+      <Filter>shaders\bindings</Filter>
+    </None>
+    <None Include="shaders\bindings\material_cb.hlsli">
+      <Filter>shaders\bindings</Filter>
+    </None>
+    <None Include="shaders\bindings\pass_cb.hlsli">
+      <Filter>shaders\bindings</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -7,6 +7,12 @@
 #include "ToneMappingPass.h"
 
 template<class Pipeline>
+class DepthPrepass : public BaseRenderNode
+{
+
+};
+
+template<class Pipeline>
 class ForwardPassNode : public BaseRenderNode
 {
 public:

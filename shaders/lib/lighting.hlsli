@@ -1,3 +1,5 @@
+#ifndef LIGHTING_HLSLI
+#define LIGHTING_HLSLI
 
 #define MAX_LIGHTS 16
 
@@ -12,53 +14,6 @@ struct Light
 	float spot_power;
 };
 
-cbuffer cbPerObject : register( b0 )
-{
-	float4x4 model_mat;
-	float4x4 model_inv_transpose_mat;
-}
-
-cbuffer cbPerMaterial : register( b1 )
-{
-	float4x4 transform;
-	float3 diffuse_fresnel;
-}
-
-cbuffer cbPerPass : register( b2 )
-{
-	float4x4 view_mat;
-	float4x4 view_inv_mat;
-	float4x4 proj_mat;
-	float4x4 proj_inv_mat;
-	float4x4 view_proj_mat;
-	float4x4 view_proj_inv_mat;
-	float3 eye_pos_w;
-	float cb_per_object_pad_1;
-	float2 render_target_size;
-	float2 render_target_size_inv;
-	float near_z;
-	float far_z;
-	float total_time;
-	float delta_time;
-
-	Light lights[MAX_LIGHTS];
-	int n_parallel_lights = 0;
-	int n_point_lights = 0;
-	int n_spotlight_lights = 0;
-}
-
-SamplerState point_wrap_sampler : register( s0 );
-SamplerState point_clamp_sampler : register( s1 );
-SamplerState linear_wrap_sampler : register( s2 );
-SamplerState linear_clamp_sampler : register( s3 );
-SamplerState anisotropic_wrap_sampler : register( s4 );
-SamplerState anisotropic_clamp_sampler : register( s5 );
-SamplerComparisonState shadow_map_sampler : register( s6 );
-
-Texture2D base_color_map : register( t0 );
-Texture2D normal_map : register( t1 );
-Texture2D specular_map : register( t2 );
-Texture2D shadow_map : register( t3 );
 
 float sqr( float a )
 {
@@ -103,7 +58,7 @@ float3 specular_strength( float3 fresnel_r0, float cos_nh, float cos_lh, float3 
 	return fresnel_schlick( fresnel_r0, cos_lh ) * ndf;
 }
 
-float shadow_factor( float3 pos_w, float4x4 shadow_map_mat )
+float shadow_factor( float3 pos_w, float4x4 shadow_map_mat, Texture2D shadow_map, SamplerComparisonState shadow_map_sampler )
 {
 	// 3x3 PCF
 	float4 shadow_pos_h = mul( float4( pos_w, 1.0f ), shadow_map_mat );
@@ -143,7 +98,4 @@ float shadow_factor( float3 pos_w, float4x4 shadow_map_mat )
 	return percent_lit;
 }
 
-float4 dbg_show_normal( float2 uv )
-{
-	return float4( normal_map.Sample( linear_wrap_sampler, uv ).xy, 1.0f, 1.0f );
-}
+#endif // LIGHTING_HLSLI

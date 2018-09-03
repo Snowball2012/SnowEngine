@@ -1,4 +1,10 @@
-#include "lighting_utils.hlsl"
+#include "lib/lighting.hlsli"
+
+#define PER_OBJECT_CB_BINDING b0
+#include "bindings/object_cb.hlsli"
+
+#define PER_PASS_CB_BINDING b2
+#include "bindings/pass_cb.hlsli"
 
 struct VertexIn
 {

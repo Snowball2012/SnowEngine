@@ -1,55 +1,29 @@
-struct Light
-{
-	float4x4 shadow_map_mat;
-	float3 strength;
-	float falloff_start;
-	float3 origin;
-	float falloff_end;
-	float3 dir;
-	float spot_power;
-};
+#include "lib/lighting.hlsli"
 
-cbuffer cbPerObject : register( b0 )
-{
-	float4x4 model_mat;
-	float4x4 model_inv_transpose_mat;
-}
+#define PER_OBJECT_CB_BINDING b0
+#include "bindings/object_cb.hlsli"
 
-#define MAX_LIGHTS 16
-
-cbuffer cbPerPass : register( b1 )
-{
-	float4x4 view_mat;
-	float4x4 view_inv_mat;
-	float4x4 proj_mat;
-	float4x4 proj_inv_mat;
-	float4x4 view_proj_mat;
-	float4x4 view_proj_inv_mat;
-	float3 eye_pos_w;
-	float cb_per_object_pad_1;
-	float2 render_target_size;
-	float2 render_target_size_inv;
-	float near_z;
-	float far_z;
-	float total_time;
-	float delta_time;
-
-	Light lights[MAX_LIGHTS];
-	int n_parallel_lights = 0;
-	int n_point_lights = 0;
-	int n_spotlight_lights = 0;
-}
+#define PER_PASS_CB_BINDING b1
+#include "bindings/pass_cb.hlsli"
 
 struct VertexIn
 {
-	float3 pos : POSITION;
-	float3 normal : NORMAL;
-	float2 uv : TEXCOORD;
+    float3 pos : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
-float4 main( VertexIn vin ) : SV_POSITION
+struct VertexOut
 {
-	float4x4 mvp_mat = mul( model_mat, view_proj_mat );
+    float4 pos : SV_POSITION;
+    float2 uv : TEXCOORD;
+};
 
-	return mul( float4( vin.pos, 1.0f ), mvp_mat );
+VertexOut main(VertexIn vin)
+{
+    float4x4 mvp_mat = mul(model_mat, view_proj_mat);
+    VertexOut vout;
+    vout.pos = mul(float4(vin.pos, 1.0f), mvp_mat);    
+    vout.uv = vin.uv;
+    return vout;
 }
