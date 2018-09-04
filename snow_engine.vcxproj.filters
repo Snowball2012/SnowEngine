@@ -55,6 +55,9 @@
     <Filter Include="shaders\bindings">
       <UniqueIdentifier>{0c969b3d-215d-40a1-bd0d-e94201d97fe2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\depth-only">
+      <UniqueIdentifier>{901cc896-3b17-47bd-a513-05917b8f9890}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -226,9 +229,6 @@
     <FxCompile Include="shaders\gs.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\depth_only_vs.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
@@ -238,8 +238,11 @@
     <FxCompile Include="shaders\tonemap.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\depth_only_vs.hlsl">
+      <Filter>shaders\depth-only</Filter>
+    </FxCompile>
     <FxCompile Include="shaders\depth_prepass_ps.hlsl">
-      <Filter>shaders</Filter>
+      <Filter>shaders\depth-only</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

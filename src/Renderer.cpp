@@ -660,7 +660,7 @@ void Renderer::BuildPasses()
 
 	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
-	m_depth_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
+	m_shadow_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
 	{
 		TemporalBlendPass::BuildData( DXGI_FORMAT_R16G16B16A16_FLOAT, *m_d3d_device.Get(), m_txaa_pso, m_txaa_root_signature );
@@ -672,10 +672,17 @@ void Renderer::BuildPasses()
 		RecreatePrevFrameTexture();
 	}
 
+	DepthOnlyPass::BuildData( m_depth_stencil_format, 0, true, *m_d3d_device.Get(),
+							  m_z_prepass_pso, m_do_root_signature );
+	m_depth_prepass = std::make_unique<DepthOnlyPass>( m_z_prepass_pso.Get(), m_do_root_signature.Get() );
+
+
+	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
 	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
-	m_pipeline.ConstructNode<ShadowPassNode>( m_depth_pass.get() );
+	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
+	m_pipeline.Enable<DepthPrepassNode>();
 	m_pipeline.Enable<ForwardPassNode>();
 	m_pipeline.Enable<ShadowPassNode>();
 	m_pipeline.Enable<ToneMapPassNode>();

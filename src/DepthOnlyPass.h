@@ -25,7 +25,9 @@ public:
 
 	static void BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig );
 
-	static ComPtr<ID3DBlob> LoadAndCompileVertexShader();
+	using Shaders = std::pair<ComPtr<ID3DBlob>, ComPtr<ID3DBlob>>;
+
+	static Shaders LoadAndCompileShaders();
 
 	// uses input layout from ForwardLightingPass
 

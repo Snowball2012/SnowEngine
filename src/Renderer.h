@@ -102,11 +102,12 @@ private:
 
 	// pipeline
 	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
-	std::unique_ptr<DepthOnlyPass> m_depth_pass = nullptr;
+	std::unique_ptr<DepthOnlyPass> m_shadow_pass = nullptr;
+	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
 	std::unique_ptr<TemporalBlendPass> m_txaa_pass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 
-	using PipelineInstance = Pipeline<ShadowPassNode, ForwardPassNode, ToneMapPassNode, UIPassNode>;
+	using PipelineInstance = Pipeline<DepthPrepassNode, ShadowPassNode, ForwardPassNode, ToneMapPassNode, UIPassNode>;
 	PipelineInstance m_pipeline;
 
 	// cmd lists
@@ -124,6 +125,7 @@ private:
 	// depth only
 	ComPtr<ID3D12RootSignature> m_do_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_do_pso = nullptr;
+	ComPtr<ID3D12PipelineState> m_z_prepass_pso = nullptr;
 
 	// postprocessing
 	ComPtr<ID3D12RootSignature> m_txaa_root_signature = nullptr;

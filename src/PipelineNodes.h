@@ -7,9 +7,61 @@
 #include "ToneMappingPass.h"
 
 template<class Pipeline>
-class DepthPrepass : public BaseRenderNode
+class DepthPrepassNode : public BaseRenderNode
 {
+public:
+	using InputResources = std::tuple
+		<
+		DepthStorage,
+		ScreenConstants,
+		SceneContext,
+		ObjectConstantBuffer,
+		ForwardPassCB
+		>;
+	using OutputResources = std::tuple
+		<
+		FinalSceneDepth
+		>;
 
+	DepthPrepassNode( Pipeline* pipeline, DepthOnlyPass* pass )
+		: m_pass( pass ), m_pipeline( pipeline )
+	{}
+
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	{
+		DepthStorage dsv;
+		m_pipeline->GetRes( dsv );
+		ScreenConstants view;
+		m_pipeline->GetRes( view );
+		SceneContext scene;
+		m_pipeline->GetRes( scene );
+		ObjectConstantBuffer object_cb;
+		m_pipeline->GetRes( object_cb );
+		ForwardPassCB pass_cb;
+		m_pipeline->GetRes( pass_cb );
+
+		DepthOnlyPass::Context ctx;
+		{
+			ctx.depth_stencil_view = dsv.dsv;
+			ctx.object_cb = object_cb.buffer;
+			ctx.pass_cbv = pass_cb.pass_cb;
+			ctx.renderitems = &scene.scene->renderitems;
+		}
+
+		cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+
+		cmd_list.RSSetViewports( 1, &view.viewport );
+		cmd_list.RSSetScissorRects( 1, &view.scissor_rect );
+
+		m_pass->Draw( ctx, cmd_list );
+
+		FinalSceneDepth out_depth{ dsv.dsv };
+		m_pipeline->SetRes( out_depth );
+	}
+
+private:
+	DepthOnlyPass* m_pass = nullptr;
+	Pipeline* m_pipeline = nullptr;
 };
 
 template<class Pipeline>
@@ -20,7 +72,7 @@ public:
 		<
 		ShadowMaps,
 		HDRColorStorage,
-		DepthStorage,
+		FinalSceneDepth,
 		ScreenConstants,
 		SceneContext,
 		ObjectConstantBuffer,
@@ -29,8 +81,7 @@ public:
 
 	using OutputResources = std::tuple
 		<
-		HDRColorOut,
-		FinalSceneDepth
+		HDRColorOut
 		>;
 
 	ForwardPassNode( Pipeline* pipeline, ForwardLightingPass* pass )
@@ -43,7 +94,7 @@ public:
 		m_pipeline->GetRes( shadow_maps );
 		HDRColorStorage hdr_color_buffer;
 		m_pipeline->GetRes( hdr_color_buffer );
-		DepthStorage dsv;
+		FinalSceneDepth dsv;
 		m_pipeline->GetRes( dsv );
 		ScreenConstants view;
 		m_pipeline->GetRes( view );
@@ -72,7 +123,6 @@ public:
 
 		const float bgr_color[4] = { 0, 0, 0, 0 };
 		cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
-		cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
 
 		cmd_list.RSSetViewports( 1, &view.viewport );
 		cmd_list.RSSetScissorRects( 1, &view.scissor_rect );
@@ -88,10 +138,8 @@ public:
 		
 		cmd_list.ResourceBarrier( 1, barriers );
 
-		FinalSceneDepth out_depth{ dsv.dsv };
 		HDRColorOut out_color{ hdr_color_buffer.srv };
 
-		m_pipeline->SetRes( out_depth );
 		m_pipeline->SetRes( out_color );
 	}
 

@@ -18,13 +18,14 @@ void DepthOnlyPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRootConstantBufferView( 1, context.pass_cbv );
+	cmd_list.SetGraphicsRootConstantBufferView( 2, context.pass_cbv );
 
 	const auto obj_cb_address = context.object_cb->GetGPUVirtualAddress();
 	const auto obj_cb_size = Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : *context.renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, obj_cb_address + render_item.cb_idx * obj_cb_size );
+		cmd_list.SetGraphicsRootDescriptorTable( 1, render_item.material->base_color_desc );
 
 		cmd_list.IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
 		cmd_list.IASetIndexBuffer( &render_item.geom->IndexBufferView() );
@@ -38,22 +39,39 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
 	/*
 		Depth pass root sig
 		 0 - cbv per object
-		 1 - cbv per pass
+		 1 - base color map
+		 2 - cbv per pass
 
 		 Shader register bindings
 		 b0 - cbv per obj
 		 b1 - cbv per pass
+
+		 t0 - base color
+		 s0 - sampler
 	*/
 
-	constexpr int nparams = 2;
+	constexpr int nparams = 3;
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
 	for ( int i = 0; i < 2; ++i )
-		slot_root_parameter[i].InitAsConstantBufferView( i );
+		slot_root_parameter[i * 2].InitAsConstantBufferView( i );
+
+	CD3DX12_DESCRIPTOR_RANGE desc_table;
+	desc_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
+	slot_root_parameter[1].InitAsDescriptorTable( 1, &desc_table );
+
+	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
+		0, // shaderRegister
+		D3D12_FILTER_ANISOTROPIC, // filter
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
+		0.0f,                             // mipLODBias
+		8 );                               // maxAnisotropy
 
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
-											   0, nullptr,
+											   1, &anisotropicWrap,
 											   D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
@@ -82,7 +100,7 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culli
 {
 	const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
 
-	const auto shader = LoadAndCompileVertexShader();
+	const auto shaders = LoadAndCompileShaders();
 	if ( ! rootsig )
 		rootsig = BuildRootSignature( device );
 
@@ -96,8 +114,14 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culli
 
 		pso_desc.VS =
 		{
-			reinterpret_cast<BYTE*>( shader->GetBufferPointer() ),
-			shader->GetBufferSize()
+			reinterpret_cast<BYTE*>( shaders.first->GetBufferPointer() ),
+			shaders.first->GetBufferSize()
+		};
+
+		pso_desc.PS =
+		{
+			reinterpret_cast<BYTE*>( shaders.second->GetBufferPointer() ),
+			shaders.second->GetBufferSize()
 		};
 
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
@@ -122,7 +146,7 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culli
 	}
 }
 
-ComPtr<ID3DBlob> DepthOnlyPass::LoadAndCompileVertexShader()
+DepthOnlyPass::Shaders DepthOnlyPass::LoadAndCompileShaders()
 {
-	return Utils::LoadBinary( L"shaders/depth_only_vs.cso" );
+	return { Utils::LoadBinary( L"shaders/depth_only_vs.cso" ), Utils::LoadBinary( L"shaders/depth_prepass_ps.cso" ) };
 }
