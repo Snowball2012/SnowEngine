@@ -29,6 +29,13 @@ struct PixelIn
 	float2 uv : TEXCOORD;
 };
 
+struct PixelOut
+{
+    float4 color : SV_TARGET0;
+    float4 ambient_color : SV_TARGET1;
+    float2 screen_space_normal : SV_TARGET2;
+};
+
 float3 rendering_equation( float3 to_source, float3 to_camera, float3 normal, float2 uv )
 {
 	float lambert_term = max( dot( to_source, normal ), 0 );
@@ -72,7 +79,7 @@ float PercievedBrightness(float3 color)
     return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
 }
 
-float4 main( PixelIn pin ) : SV_TARGET
+PixelOut main(PixelIn pin)
 {
 	float3 res_color = float3( 0.0f, 0.0f, 0.0f );
 
@@ -99,12 +106,16 @@ float4 main( PixelIn pin ) : SV_TARGET
 												 pin.uv );
 
         res_color += lights[light_idx].strength
-                     * (light_radiance * shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler )
-                            + base_color * pow(0.06f, 2.2f) * local_ambient_shadowing); // second component is bouncing light approximation, remove after GI support
+                     * light_radiance * shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler );
     }
 
     // ambient for sky, remove after skybox gen
-    res_color += PercievedBrightness(lights[0].strength) * base_color * float3(pow(0.06f, 2.2f), pow(0.07f, 2.2f), pow(0.09f, 2.2f)) * local_ambient_shadowing;
 
-	return float4( res_color, 1.0f );
+    PixelOut res;
+    res.color = float4(res_color, 1.0f);
+    res.ambient_color = float4(PercievedBrightness(lights[0].strength) * base_color * float3(pow(0.06f, 2.2f), pow(0.07f, 2.2f), pow(0.09f, 2.2f)) * local_ambient_shadowing, 1.0f);
+    res.screen_space_normal = normalize(
+                                  mul( float4(pin.normal, 0.0f), view_mat ).xyz
+                              ).xy;
+	return res;
 }

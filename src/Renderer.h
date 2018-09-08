@@ -133,6 +133,8 @@ private:
 	Texture m_prev_frame_texture;
 	Texture m_jittered_frame_texture;
 	DynamicTexture m_fp_backbuffer;
+	DynamicTexture m_ambient_lighting;
+	DynamicTexture m_normals;
 	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
 

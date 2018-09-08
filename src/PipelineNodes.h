@@ -72,6 +72,8 @@ public:
 		<
 		ShadowMaps,
 		HDRColorStorage,
+		SSAmbientLightingStorage,
+		SSNormalStorage,
 		FinalSceneDepth,
 		ScreenConstants,
 		SceneContext,
@@ -81,14 +83,16 @@ public:
 
 	using OutputResources = std::tuple
 		<
-		HDRColorOut
+		HDRColorOut,
+		SSAmbientLighting,
+		SSNormals
 		>;
 
 	ForwardPassNode( Pipeline* pipeline, ForwardLightingPass* pass )
 		: m_pass( pass ), m_pipeline( pipeline )
 	{}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override 
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
 		ShadowMaps shadow_maps;
 		m_pipeline->GetRes( shadow_maps );
@@ -104,13 +108,21 @@ public:
 		m_pipeline->GetRes( object_cb );
 		ForwardPassCB pass_cb;
 		m_pipeline->GetRes( pass_cb );
+		SSAmbientLightingStorage ambient_buffer;
+		m_pipeline->GetRes( ambient_buffer );
+		SSNormalStorage normal_buffer;
+		m_pipeline->GetRes( normal_buffer );
 
 		if ( ! ( scene.scene
 				 && shadow_maps.light_with_sm
 				 && hdr_color_buffer.rtv.ptr
 				 && shadow_maps.light_with_sm->size() == 1
 				 && object_cb.buffer
-				 && dsv.dsv.ptr ) )
+				 && dsv.dsv.ptr
+				 && ambient_buffer.rtv.ptr
+				 && ambient_buffer.srv.ptr
+				 && normal_buffer.rtv.ptr
+				 && normal_buffer.srv.ptr ) )
 			throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
 
 		ForwardLightingPass::Context ctx;
@@ -120,9 +132,13 @@ public:
 		ctx.scene = scene.scene;
 		ctx.shadow_map_srv = ( *shadow_maps.light_with_sm )[0]->shadow_map->srv->HandleGPU();
 		ctx.pass_cb = pass_cb.pass_cb;
+		ctx.ambient_rtv = ambient_buffer.rtv;
+		ctx.normals_rtv = normal_buffer.rtv;
 
 		const float bgr_color[4] = { 0, 0, 0, 0 };
 		cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
+		cmd_list.ClearRenderTargetView( ctx.ambient_rtv, bgr_color, 0, nullptr );
+		cmd_list.ClearRenderTargetView( ctx.normals_rtv, bgr_color, 0, nullptr );
 
 		cmd_list.RSSetViewports( 1, &view.viewport );
 		cmd_list.RSSetScissorRects( 1, &view.scissor_rect );
@@ -133,18 +149,72 @@ public:
 		{
 			CD3DX12_RESOURCE_BARRIER::Transition( hdr_color_buffer.resource,
 												D3D12_RESOURCE_STATE_RENDER_TARGET,
+												D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
+			CD3DX12_RESOURCE_BARRIER::Transition( ambient_buffer.resource,
+												D3D12_RESOURCE_STATE_RENDER_TARGET,
+												D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
+			CD3DX12_RESOURCE_BARRIER::Transition( normal_buffer.resource,
+												D3D12_RESOURCE_STATE_RENDER_TARGET,
 												D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 		};
-		
+
 		cmd_list.ResourceBarrier( 1, barriers );
 
 		HDRColorOut out_color{ hdr_color_buffer.srv };
+		SSAmbientLighting out_ambient{ ambient_buffer.srv };
+		SSNormals out_normals{ normal_buffer.srv };
 
 		m_pipeline->SetRes( out_color );
 	}
 
 private:
 	ForwardLightingPass* m_pass = nullptr;
+	Pipeline* m_pipeline = nullptr;
+};
+
+
+template<class Pipeline>
+class HBAOGeneratorNode : public BaseRenderNode
+{
+public:
+	using InputResources = std::tuple
+		<
+		SSNormals,
+		FinalSceneDepth,
+		SSAOStorage
+		>;
+
+	using OutputResources = std::tuple
+		<
+		SSAOTexture_Noisy
+		>;
+
+	HBAOGeneratorNode( Pipeline* pipeline, ToneMappingPass* tonemap_pass )
+		: m_pass( tonemap_pass ), m_pipeline( pipeline )
+	{}
+
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	{
+		HDRColorOut hdr_buffer;
+		m_pipeline->GetRes( hdr_buffer );
+		TonemapNodeSettings settings;
+		m_pipeline->GetRes( settings );
+		BackbufferStorage ldr_buffer;
+		m_pipeline->GetRes( ldr_buffer );
+
+		ToneMappingPass::Context ctx;
+		ctx.gpu_data = settings.data;
+		ctx.frame_rtv = ldr_buffer.rtv;
+		ctx.frame_srv = hdr_buffer.srv;
+
+		m_pass->Draw( ctx, cmd_list );
+
+		TonemappedBackbuffer out{ ldr_buffer.resource, ldr_buffer.rtv };
+		m_pipeline->SetRes( out );
+	}
+
+private:
+	ToneMappingPass * m_pass = nullptr;
 	Pipeline* m_pipeline = nullptr;
 };
 

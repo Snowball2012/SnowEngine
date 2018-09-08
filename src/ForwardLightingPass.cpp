@@ -10,7 +10,14 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 {
 	cmd_list.SetPipelineState( wireframe ? m_pso_wireframe : m_pso );
 	
-	cmd_list.OMSetRenderTargets( 1, &context.back_buffer_rtv, true, &context.depth_stencil_view );
+	D3D12_CPU_DESCRIPTOR_HANDLE render_targets[3] =
+	{
+		context.back_buffer_rtv,
+		context.ambient_rtv,
+		context.normals_rtv
+	};
+
+	cmd_list.OMSetRenderTargets( 3, render_targets, true, &context.depth_stencil_view );
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 

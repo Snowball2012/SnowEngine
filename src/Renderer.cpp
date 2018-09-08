@@ -114,17 +114,17 @@ void Renderer::Draw( const Context& ctx )
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[4];
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[6];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
-
-	m_cmd_list->ResourceBarrier( 4, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 6, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
-
 
 	std::vector<Light*> lights_with_shadow;
 	std::vector<D3D12_GPU_VIRTUAL_ADDRESS> sm_pass_cbs;
@@ -155,6 +155,18 @@ void Renderer::Draw( const Context& ctx )
 		hdr_buffer.rtv = m_fp_backbuffer.rtv->HandleCPU();
 		hdr_buffer.srv = m_fp_backbuffer.srv->HandleGPU();
 		m_pipeline.SetRes( hdr_buffer );
+
+		SSAmbientLightingStorage ambient_buffer;
+		ambient_buffer.resource = m_ambient_lighting.texture_gpu.Get();
+		ambient_buffer.rtv = m_ambient_lighting.rtv->HandleCPU();
+		ambient_buffer.srv = m_ambient_lighting.srv->HandleGPU();
+		m_pipeline.SetRes( ambient_buffer );
+
+		SSNormalStorage normal_buffer;
+		normal_buffer.resource = m_normals.texture_gpu.Get();
+		normal_buffer.rtv = m_normals.rtv->HandleCPU();
+		normal_buffer.srv = m_normals.srv->HandleGPU();
+		m_pipeline.SetRes( normal_buffer );
 
 		DepthStorage depth_buffer;
 		depth_buffer.dsv = DepthStencilView();
@@ -366,7 +378,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 	// rtv
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 1/*floating point radiance*/;
+		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 3/*floating point direct radiance, ambient radiance, normals*/;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
 		ComPtr<ID3D12DescriptorHeap> rtv_heap;
@@ -397,7 +409,7 @@ void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )
 			+ 1 * FrameResourceCount /*shadow maps*/
 			+ 1 /*imgui font*/
 			+ 1 /*previous frame*/
-			+ 1 /*fp backbuffer*/;
+			+ 3 /*fp backbuffer, ambient radiance, normals*/;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -409,18 +421,18 @@ void Renderer::RecreatePrevFrameTexture()
 {
 	assert( m_srv_heap );
 
-	auto recreate_tex = [&]( auto& tex )
+	auto recreate_tex = [&]( auto& tex, DXGI_FORMAT texture_format )
 	{
 		tex.texture_gpu = nullptr;
 
 		CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
-		tex_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		tex_desc.Format = texture_format;
 		D3D12_CLEAR_VALUE opt_clear;
 		opt_clear.Color[0] = 0;
 		opt_clear.Color[1] = 0;
 		opt_clear.Color[2] = 0;
 		opt_clear.Color[3] = 0;
-		opt_clear.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		opt_clear.Format = texture_format;
 		opt_clear.DepthStencil.Depth = 1.0f;
 		opt_clear.DepthStencil.Stencil = 0;
 		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
@@ -439,12 +451,23 @@ void Renderer::RecreatePrevFrameTexture()
 		m_d3d_device->CreateShaderResourceView( tex.texture_gpu.Get(), &srv_desc, tex.srv->HandleCPU() );
 	};
 
-	recreate_tex( m_prev_frame_texture );
-	recreate_tex( m_jittered_frame_texture );
-	recreate_tex( m_fp_backbuffer );
+	recreate_tex( m_prev_frame_texture, DXGI_FORMAT_R16G16B16A16_FLOAT );
+	recreate_tex( m_jittered_frame_texture, DXGI_FORMAT_R16G16B16A16_FLOAT );
+
+	recreate_tex( m_fp_backbuffer, DXGI_FORMAT_R16G16B16A16_FLOAT );
 	m_fp_backbuffer.rtv.reset();
 	m_fp_backbuffer.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
 	m_d3d_device->CreateRenderTargetView( m_fp_backbuffer.texture_gpu.Get(), nullptr, m_fp_backbuffer.rtv->HandleCPU() );
+
+	recreate_tex( m_ambient_lighting, DXGI_FORMAT_R16G16B16A16_FLOAT );
+	m_ambient_lighting.rtv.reset();
+	m_ambient_lighting.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
+	m_d3d_device->CreateRenderTargetView( m_ambient_lighting.texture_gpu.Get(), nullptr, m_ambient_lighting.rtv->HandleCPU() );
+
+	recreate_tex( m_normals, DXGI_FORMAT_R16G16_FLOAT );
+	m_normals.rtv.reset();
+	m_normals.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
+	m_d3d_device->CreateRenderTargetView( m_normals.texture_gpu.Get(), nullptr, m_normals.rtv->HandleCPU() );
 }
 
 void Renderer::InitGUI()
@@ -653,7 +676,7 @@ void Renderer::BuildConstantBuffers()
 
 void Renderer::BuildPasses()
 {
-	ForwardLightingPass::BuildData( BuildStaticSamplers(), DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get(),
+	ForwardLightingPass::BuildData( BuildStaticSamplers(), DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get(),
 									m_forward_pso_main, m_forward_pso_wireframe, m_forward_root_signature );
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 

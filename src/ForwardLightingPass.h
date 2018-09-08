@@ -12,6 +12,8 @@ public:
 		RenderSceneContext* scene;
 		D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
+		D3D12_CPU_DESCRIPTOR_HANDLE ambient_rtv;
+		D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 		ID3D12Resource* object_cb;
@@ -26,7 +28,7 @@ public:
 
 	template<class StaticSamplerRange>
 	static void BuildData( const StaticSamplerRange& static_samplers,
-						   DXGI_FORMAT rendertarget_format, DXGI_FORMAT depth_stencil_format,
+						   DXGI_FORMAT rendertarget_format, DXGI_FORMAT ambient_rtv_format, DXGI_FORMAT normal_format, DXGI_FORMAT depth_stencil_format,
 						   ID3D12Device& device,
 						   ComPtr<ID3D12PipelineState>& main_pso,
 						   ComPtr<ID3D12PipelineState>& wireframe_pso,
@@ -124,7 +126,7 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 
 template<class StaticSamplerRange>
 inline void ForwardLightingPass::BuildData( const StaticSamplerRange& static_samplers,
-											DXGI_FORMAT rendertarget_format, DXGI_FORMAT depth_stencil_format,
+											DXGI_FORMAT direct_rtv_format, DXGI_FORMAT ambient_rtv_format, DXGI_FORMAT normal_format, DXGI_FORMAT depth_stencil_format,
 											ID3D12Device& device,
 											ComPtr<ID3D12PipelineState>& main_pso,
 											ComPtr<ID3D12PipelineState>& wireframe_pso,
@@ -167,8 +169,10 @@ inline void ForwardLightingPass::BuildData( const StaticSamplerRange& static_sam
 	pso_desc.SampleMask = UINT_MAX;
 	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-	pso_desc.NumRenderTargets = 1;
-	pso_desc.RTVFormats[0] = rendertarget_format;
+	pso_desc.NumRenderTargets = 3;
+	pso_desc.RTVFormats[0] = direct_rtv_format;
+	pso_desc.RTVFormats[1] = ambient_rtv_format;
+	pso_desc.RTVFormats[2] = normal_format;
 	pso_desc.SampleDesc.Count = 1;
 	pso_desc.SampleDesc.Quality = 0;
 

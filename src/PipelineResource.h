@@ -51,6 +51,42 @@ struct HDRColorOut
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
+struct SSAmbientLightingStorage
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
+struct SSAmbientLighting
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
+struct SSNormalStorage
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
+struct SSNormals
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
+struct SSAOStorage
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
+struct SSAOTexture_Noisy
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
 struct TonemapNodeSettings
 {
 	ToneMappingPass::ShaderData data;
@@ -76,6 +112,7 @@ struct DepthStorage
 struct FinalSceneDepth
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct ScreenConstants
