@@ -6,25 +6,17 @@
 template<typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
 
-class ToneMappingPass
+class HBAOPass
 {
 public:
-	ToneMappingPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
-
-	struct ShaderData
-	{
-		float upper_luminance_bound = 2.e4f;
-		float lower_luminance_bound = 1.e-2f;
-		bool blend_luminance = false;
-	};
+	HBAOPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
 
 	struct Context
 	{
-		D3D12_GPU_DESCRIPTOR_HANDLE frame_srv;
-		D3D12_GPU_DESCRIPTOR_HANDLE ambient_srv;
-		D3D12_GPU_DESCRIPTOR_HANDLE ssao_srv;
-		D3D12_CPU_DESCRIPTOR_HANDLE frame_rtv;
-		ShaderData gpu_data;
+		D3D12_GPU_DESCRIPTOR_HANDLE depth_srv;
+		D3D12_GPU_DESCRIPTOR_HANDLE normals_srv;
+		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
+		D3D12_CPU_DESCRIPTOR_HANDLE ssao_rtv;
 	};
 
 	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );

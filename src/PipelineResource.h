@@ -107,6 +107,7 @@ struct TonemappedBackbuffer
 struct DepthStorage
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct FinalSceneDepth

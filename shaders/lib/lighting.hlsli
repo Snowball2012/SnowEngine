@@ -1,6 +1,8 @@
 #ifndef LIGHTING_HLSLI
 #define LIGHTING_HLSLI
 
+#include "math_utils.hlsli"
+
 #define MAX_LIGHTS 16
 
 struct Light
@@ -15,10 +17,6 @@ struct Light
 };
 
 
-float sqr( float a )
-{
-	return a * a;
-}
 
 // all outputs are not normalized
 float3 halfvector( float3 to_source, float3 to_camera )

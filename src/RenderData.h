@@ -183,19 +183,28 @@ struct PassConstants
 	DirectX::XMFLOAT4X4 InvProj = Identity4x4;
 	DirectX::XMFLOAT4X4 ViewProj = Identity4x4;
 	DirectX::XMFLOAT4X4 InvViewProj = Identity4x4;
+
 	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
 	float cbPerObjectPad1 = 0.0f;
+
 	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
 	DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
+
 	float NearZ = 0.0f;
 	float FarZ = 0.0f;
+	float FovY;
+	float AspectRatio;
+
 	float TotalTime = 0.0f;
 	float DeltaTime = 0.0f;
+	DirectX::XMFLOAT2 _padding;
 
 	LightConstants lights[MAX_LIGHTS];
 	int n_parallel_lights = 0;
 	int n_point_lights = 0;
 	int n_spotlight_lights = 0;
+
+	int use_linear_depth = 0;
 };
 
 // scene representation for renderer

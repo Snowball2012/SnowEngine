@@ -5,6 +5,7 @@
 #include "DepthOnlyPass.h"
 #include "ForwardLightingPass.h"
 #include "ToneMappingPass.h"
+#include "HBAOPass.h"
 
 template<class Pipeline>
 class DepthPrepassNode : public BaseRenderNode
@@ -55,7 +56,7 @@ public:
 
 		m_pass->Draw( ctx, cmd_list );
 
-		FinalSceneDepth out_depth{ dsv.dsv };
+		FinalSceneDepth out_depth{ dsv.dsv, dsv.srv };
 		m_pipeline->SetRes( out_depth );
 	}
 
@@ -158,13 +159,15 @@ public:
 												D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 		};
 
-		cmd_list.ResourceBarrier( 1, barriers );
+		cmd_list.ResourceBarrier( 3, barriers );
 
 		HDRColorOut out_color{ hdr_color_buffer.srv };
 		SSAmbientLighting out_ambient{ ambient_buffer.srv };
 		SSNormals out_normals{ normal_buffer.srv };
 
 		m_pipeline->SetRes( out_color );
+		m_pipeline->SetRes( out_ambient );
+		m_pipeline->SetRes( out_normals );
 	}
 
 private:
@@ -181,7 +184,9 @@ public:
 		<
 		SSNormals,
 		FinalSceneDepth,
-		SSAOStorage
+		SSAOStorage,
+		ScreenConstants,
+		ForwardPassCB
 		>;
 
 	using OutputResources = std::tuple
@@ -189,35 +194,51 @@ public:
 		SSAOTexture_Noisy
 		>;
 
-	HBAOGeneratorNode( Pipeline* pipeline, ToneMappingPass* tonemap_pass )
-		: m_pass( tonemap_pass ), m_pipeline( pipeline )
+	HBAOGeneratorNode( Pipeline* pipeline, HBAOPass* hbao_pass )
+		: m_pass( hbao_pass ), m_pipeline( pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		HDRColorOut hdr_buffer;
-		m_pipeline->GetRes( hdr_buffer );
-		TonemapNodeSettings settings;
-		m_pipeline->GetRes( settings );
-		BackbufferStorage ldr_buffer;
-		m_pipeline->GetRes( ldr_buffer );
+		SSNormals normals;
+		FinalSceneDepth projected_depth;
+		SSAOStorage storage;
+		ScreenConstants screen_constants;
+		ForwardPassCB pass_cb;
+		m_pipeline->GetRes( normals );
+		m_pipeline->GetRes( projected_depth );
+		m_pipeline->GetRes( storage );
+		m_pipeline->GetRes( screen_constants );
+		m_pipeline->GetRes( pass_cb );
 
-		ToneMappingPass::Context ctx;
-		ctx.gpu_data = settings.data;
-		ctx.frame_rtv = ldr_buffer.rtv;
-		ctx.frame_srv = hdr_buffer.srv;
+		HBAOPass::Context ctx;
+		ctx.depth_srv = projected_depth.srv;
+		ctx.normals_srv = normals.srv;
+		ctx.pass_cb = pass_cb.pass_cb;
+		ctx.ssao_rtv = storage.rtv;
+
+		cmd_list.RSSetViewports( 1, &screen_constants.viewport );
+		cmd_list.RSSetScissorRects( 1, &screen_constants.scissor_rect );
 
 		m_pass->Draw( ctx, cmd_list );
 
-		TonemappedBackbuffer out{ ldr_buffer.resource, ldr_buffer.rtv };
+		CD3DX12_RESOURCE_BARRIER barriers[] =
+		{
+			CD3DX12_RESOURCE_BARRIER::Transition( storage.resource,
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
+		};
+
+		cmd_list.ResourceBarrier( 1, barriers );
+
+		SSAOTexture_Noisy out{ storage.srv };
 		m_pipeline->SetRes( out );
 	}
 
 private:
-	ToneMappingPass * m_pass = nullptr;
+	HBAOPass* m_pass = nullptr;
 	Pipeline* m_pipeline = nullptr;
 };
-
 
 template<class Pipeline>
 class ShadowPassNode : public BaseRenderNode
@@ -328,6 +349,8 @@ public:
 		<
 		HDRColorOut,
 		TonemapNodeSettings,
+		SSAOTexture_Noisy,
+		SSAmbientLighting,
 		BackbufferStorage
 		>;
 
@@ -344,6 +367,10 @@ public:
 	{
 		HDRColorOut hdr_buffer;
 		m_pipeline->GetRes( hdr_buffer );
+		SSAmbientLighting ambient;
+		m_pipeline->GetRes( ambient );
+		SSAOTexture_Noisy ssao;
+		m_pipeline->GetRes( ssao );
 		TonemapNodeSettings settings;
 		m_pipeline->GetRes( settings );
 		BackbufferStorage ldr_buffer;
@@ -353,6 +380,8 @@ public:
 		ctx.gpu_data = settings.data;
 		ctx.frame_rtv = ldr_buffer.rtv;
 		ctx.frame_srv = hdr_buffer.srv;
+		ctx.ambient_srv = ambient.srv;
+		ctx.ssao_srv = ssao.srv;
 
 		m_pass->Draw( ctx, cmd_list );
 

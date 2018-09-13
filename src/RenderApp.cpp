@@ -193,7 +193,7 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 	XMMATRIX view = XMMatrixLookAtLH( XMLoadFloat3( &m_camera_pos ), target, up );
-	XMStoreFloat4x4( &scene.view, view );
+	XMStoreFloat4x4( &scene.view, XMMatrixTranspose( view ) );
 
 
 	XMFLOAT4X4 proj_jittered = scene.proj;
@@ -206,9 +206,17 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	PassConstants pc;
 	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
 	pc.Proj = scene.proj;
+	auto det = XMMatrixDeterminant( XMLoadFloat4x4( &scene.proj ) );
+	XMStoreFloat4x4( &pc.InvProj, XMMatrixTranspose( XMMatrixInverse( &det, XMLoadFloat4x4( &scene.proj ) ) ) );
 
 	pc.View = scene.view;
 	pc.EyePosW = m_camera_pos;
+
+	pc.FarZ = 100.0f;
+	pc.FovY = MathHelper::Pi / 4;
+	pc.AspectRatio = AspectRatio();
+
+	pc.use_linear_depth = 1;
 
 	UpdateLights( pc );
 
@@ -217,6 +225,8 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	// shadow map pass constants
 	{
 		pc.ViewProj = scene.lights["sun"].data.shadow_map_matrix;
+		pc.use_linear_depth = 0;
+		pc.FarZ = 1000.0f;
 		pass_cb.CopyData( 1, pc );
 	}
 
@@ -411,5 +421,5 @@ void RenderApp::LoadModel( const std::string& filename )
 
 XMMATRIX RenderApp::CalcProjectionMatrix() const
 {
-	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 1000.0f );
+	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100.0f );
 }

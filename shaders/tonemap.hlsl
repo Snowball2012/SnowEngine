@@ -7,6 +7,9 @@ cbuffer TonemapSettigns : register(b0)
 
 Texture2D frame : register(t0);
 
+Texture2D ambient : register(t1);
+Texture2D ssao : register(t2);
+
 float PhotopicLuminance(float3 radiance)
 {
     // rgb radiance in watt/(sr*m^2)
@@ -32,6 +35,8 @@ float4 main(float4 coord : SV_POSITION) : SV_TARGET
 {
     int2 coord2d = int2(coord.x, coord.y);
     float4 cur_radiance = frame.Load(int3(coord2d, 0));
+    float4 ambient_radiance = ambient.Load(int3(coord2d, 0)) * pow( ssao.Load(int3(coord2d, 0)).r, 2.2f );
+    cur_radiance += ambient_radiance;
     
     float cur_luminance = PhotopicLuminance(cur_radiance.rgb);
 

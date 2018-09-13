@@ -114,15 +114,16 @@ void Renderer::Draw( const Context& ctx )
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[6];
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[7];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao.texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
-	m_cmd_list->ResourceBarrier( 6, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 7, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
@@ -170,6 +171,7 @@ void Renderer::Draw( const Context& ctx )
 
 		DepthStorage depth_buffer;
 		depth_buffer.dsv = DepthStencilView();
+		depth_buffer.srv = m_depth_buffer_srv->HandleGPU();
 		m_pipeline.SetRes( depth_buffer );
 
 		ScreenConstants screen;
@@ -180,6 +182,12 @@ void Renderer::Draw( const Context& ctx )
 		SceneContext scene_ctx;
 		scene_ctx.scene = &m_scene;
 		m_pipeline.SetRes( scene_ctx );
+
+		SSAOStorage ssao_texture;
+		ssao_texture.resource = m_ssao.texture_gpu.Get();
+		ssao_texture.rtv = m_ssao.rtv->HandleCPU();
+		ssao_texture.srv = m_ssao.srv->HandleGPU();
+		m_pipeline.SetRes( ssao_texture );
 
 		TonemapNodeSettings tm_settings;
 		tm_settings.data.blend_luminance = m_tonemap_settings.blend_luminance;
@@ -378,7 +386,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 	// rtv
 	{
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 3/*floating point direct radiance, ambient radiance, normals*/;
+		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 4/*floating point direct radiance, ambient radiance, normals, ssao*/;
 		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 
 		ComPtr<ID3D12DescriptorHeap> rtv_heap;
@@ -409,7 +417,7 @@ void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )
 			+ 1 * FrameResourceCount /*shadow maps*/
 			+ 1 /*imgui font*/
 			+ 1 /*previous frame*/
-			+ 3 /*fp backbuffer, ambient radiance, normals*/;
+			+ 4 /*fp backbuffer, ambient radiance, normals, ssao*/;
 
 		ComPtr<ID3D12DescriptorHeap> srv_heap;
 		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
@@ -468,6 +476,22 @@ void Renderer::RecreatePrevFrameTexture()
 	m_normals.rtv.reset();
 	m_normals.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
 	m_d3d_device->CreateRenderTargetView( m_normals.texture_gpu.Get(), nullptr, m_normals.rtv->HandleCPU() );
+
+	recreate_tex( m_ssao, DXGI_FORMAT_R16_FLOAT );
+	m_ssao.rtv.reset();
+	m_ssao.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
+	m_d3d_device->CreateRenderTargetView( m_ssao.texture_gpu.Get(), nullptr, m_ssao.rtv->HandleCPU() );
+
+	m_depth_buffer_srv = std::nullopt; 
+	m_depth_buffer_srv.emplace( std::move( m_srv_heap->AllocateDescriptor() ) );
+	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+	{
+		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Texture2D.MipLevels = 1;
+	}
+	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, m_depth_buffer_srv->HandleCPU() );
 }
 
 void Renderer::InitGUI()
@@ -699,9 +723,12 @@ void Renderer::BuildPasses()
 							  m_z_prepass_pso, m_do_root_signature );
 	m_depth_prepass = std::make_unique<DepthOnlyPass>( m_z_prepass_pso.Get(), m_do_root_signature.Get() );
 
+	HBAOPass::BuildData( m_ssao.texture_gpu->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
+	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
 
 	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
 	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
+	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
 	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
@@ -710,6 +737,7 @@ void Renderer::BuildPasses()
 	m_pipeline.Enable<ShadowPassNode>();
 	m_pipeline.Enable<ToneMapPassNode>();
 	m_pipeline.Enable<UIPassNode>();
+	m_pipeline.Enable<HBAOGeneratorNode>();
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

@@ -46,7 +46,7 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
 	slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
 	slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 1 );
 
-	CD3DX12_STATIC_SAMPLER_DESC point_wrap(
+	CD3DX12_STATIC_SAMPLER_DESC linear_wrap(
 		0, // shaderRegister
 		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
 		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
@@ -54,7 +54,7 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
 		D3D12_TEXTURE_ADDRESS_MODE_WRAP ); // addressW
 
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
-											   1, &point_wrap );
+											   1, &linear_wrap );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;

@@ -135,6 +135,9 @@
     <ClCompile Include="src\utils\CompileTimeTests.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\HBAOPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -218,6 +221,9 @@
     <ClInclude Include="src\PipelineNodes.h">
       <Filter>core\Pipeline</Filter>
     </ClInclude>
+    <ClInclude Include="src\HBAOPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -244,6 +250,9 @@
     <FxCompile Include="shaders\depth_prepass_ps.hlsl">
       <Filter>shaders\depth-only</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\postprocess\hbao_generation.hlsl">
+      <Filter>shaders\postprocess</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\lib\lighting.hlsli">
@@ -257,6 +266,9 @@
     </None>
     <None Include="shaders\bindings\pass_cb.hlsli">
       <Filter>shaders\bindings</Filter>
+    </None>
+    <None Include="shaders\lib\math_utils.hlsli">
+      <Filter>shaders\lib</Filter>
     </None>
   </ItemGroup>
 </Project>

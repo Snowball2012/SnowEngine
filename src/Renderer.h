@@ -6,6 +6,7 @@
 
 #include "TemporalAA.h"
 #include "ToneMappingPass.h"
+#include "HBAOPass.h"
 
 #include "Pipeline.h"
 #include "PipelineNodes.h"
@@ -72,6 +73,7 @@ private:
 	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
 	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
 	std::optional<Descriptor> m_back_buffer_dsv;
+	std::optional<Descriptor> m_depth_buffer_srv;
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -106,8 +108,9 @@ private:
 	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
 	std::unique_ptr<TemporalBlendPass> m_txaa_pass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
+	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
 
-	using PipelineInstance = Pipeline<DepthPrepassNode, ShadowPassNode, ForwardPassNode, ToneMapPassNode, UIPassNode>;
+	using PipelineInstance = Pipeline<DepthPrepassNode, ShadowPassNode, ForwardPassNode, HBAOGeneratorNode, ToneMapPassNode, UIPassNode>;
 	PipelineInstance m_pipeline;
 
 	// cmd lists
@@ -135,8 +138,11 @@ private:
 	DynamicTexture m_fp_backbuffer;
 	DynamicTexture m_ambient_lighting;
 	DynamicTexture m_normals;
+	DynamicTexture m_ssao;
 	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
+	ComPtr<ID3D12RootSignature> m_hbao_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_hbao_pso = nullptr;
 
 	TemporalAA m_taa;
 
