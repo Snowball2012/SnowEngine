@@ -186,7 +186,8 @@ public:
 		FinalSceneDepth,
 		SSAOStorage,
 		ScreenConstants,
-		ForwardPassCB
+		ForwardPassCB,
+		HBAOSettings
 		>;
 
 	using OutputResources = std::tuple
@@ -205,17 +206,20 @@ public:
 		SSAOStorage storage;
 		ScreenConstants screen_constants;
 		ForwardPassCB pass_cb;
+		HBAOSettings settings;
 		m_pipeline->GetRes( normals );
 		m_pipeline->GetRes( projected_depth );
 		m_pipeline->GetRes( storage );
 		m_pipeline->GetRes( screen_constants );
 		m_pipeline->GetRes( pass_cb );
+		m_pipeline->GetRes( settings );
 
 		HBAOPass::Context ctx;
 		ctx.depth_srv = projected_depth.srv;
 		ctx.normals_srv = normals.srv;
 		ctx.pass_cb = pass_cb.pass_cb;
 		ctx.ssao_rtv = storage.rtv;
+		ctx.settings = settings.data;
 
 		cmd_list.RSSetViewports( 1, &screen_constants.viewport );
 		cmd_list.RSSetScissorRects( 1, &screen_constants.scissor_rect );

@@ -195,6 +195,9 @@ void Renderer::Draw( const Context& ctx )
 		tm_settings.data.upper_luminance_bound = m_tonemap_settings.max_luminance;
 		m_pipeline.SetRes( tm_settings );
 
+		HBAOSettings hbao_settings;
+		hbao_settings.data = m_hbao_settings;
+		m_pipeline.SetRes( hbao_settings );
 
 		BackbufferStorage backbuffer;
 		backbuffer.resource = CurrentBackBuffer();

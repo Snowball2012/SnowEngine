@@ -3,6 +3,18 @@
 
 #include "../lib/math_utils.hlsli"
 
+struct HBAOSettings
+{
+    float max_r;
+    float angle_bias;
+    int nsamples_per_direction;
+};
+
+cbuffer cbSettings : register( b1 )
+{
+    HBAOSettings settings;
+};
+
 SamplerState linear_wrap_sampler : register( s0 );
 SamplerState point_wrap_sampler : register( s1 );
 
@@ -39,7 +51,8 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     float3 view_normal = float3( normal_map.Sample( point_wrap_sampler, target_texcoord ).xy, 0 );
     view_normal.z = -sqrt( 1.0f - sqr( view_normal.x ) - sqr( view_normal.y ) );
 
-    float2 offsets[8] = { float2( -1.0f, 0.0f ),
+    const int ndirs = 8;
+    float2 offsets[ndirs] = { float2( -1.0f, 0.0f ),
                           float2( 0.0f, 1.0f ),
                           float2( 1.0f, 0.0f ),
                           float2( 0.0f, -1.0f ), 
@@ -48,15 +61,18 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
                           float2( 0.7f, -0.7f ),
                           float2( -0.7f, -0.7f ) };
 
-    int nsamples = 5;
-    float max_r = 0.2f;
+    const float pi_div_2 = 3.1415f / 2.0f;
+    const float angle_bias = settings.angle_bias;
+    
+    const int nsamples = settings.nsamples_per_direction;
+    const float max_r = settings.max_r;
 
     float occlusion = 0.0f;
 
     [unroll]
-    for ( int dir = 0; dir < 8; ++dir )
+    for ( int dir = 0; dir < ndirs; ++dir )
     {
-        float max_horizon = 3.14f/12.0f;
+        float max_horizon = angle_bias;
         for ( int isample = 1; isample <= nsamples; isample++ )
         {
             float2 offset_in_ws = offsets[dir] * ( float( isample ) * max_r / float( nsamples ) );
@@ -65,10 +81,10 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
                 max_horizon = max( max_horizon, CalcHorizonAngle( diff, view_normal ) );
         }
 
-        occlusion += max( max_horizon - 3.14f/12.0f, 0.0f ) / ( 3.14f / 2 - 3.14f/12.0f );
+        occlusion += max( max_horizon - angle_bias, 0 ) / ( pi_div_2 - angle_bias );
     }
 
-    occlusion /= 8.0f;
+    occlusion /= ndirs;
 
     return 1.0f - occlusion;
 }

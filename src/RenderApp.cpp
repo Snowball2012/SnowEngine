@@ -133,6 +133,16 @@ void RenderApp::Update( const GameTimer& gt )
 			ImGui::EndChild();
 		}
 
+		{
+			ImGui::Begin( "HBAO settings" );
+			ImGui::SliderFloat( "Max radius", &m_renderer->m_hbao_settings.max_r, 0.f, 5.f, "%.2f" );
+			float angle_bias_in_deg = m_renderer->m_hbao_settings.angle_bias * 180.0f / DirectX::XM_PI;
+			ImGui::SliderFloat( "Angle bias in degrees", &angle_bias_in_deg, 0.f, 90.0f, "%.2f" );
+			m_renderer->m_hbao_settings.angle_bias = angle_bias_in_deg / 180.0f * DirectX::XM_PI;
+			ImGui::SliderInt( "Number of samples per direction", &m_renderer->m_hbao_settings.nsamples_per_direction, 0, 20 );
+			ImGui::End();
+		}
+
 		ImGui::End();
 	}
 	ImGui::Render();

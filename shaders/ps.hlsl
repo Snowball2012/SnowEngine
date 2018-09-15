@@ -90,7 +90,7 @@ PixelOut main(PixelIn pin)
 											normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
                                             tangent_normal_z );
 
-    float local_ambient_shadowing = 2.0f*((0.5f - acos(tangent_normal_z) * 3.1415f) * 2.0f * 0.2f + 0.8f);
+    float local_ambient_shadowing = 1.0f*((0.5f - acos(tangent_normal_z) * 3.1415f) * 2.0f * 0.2f + 0.8f);
 
     float3 base_color = base_color_map.Sample(anisotropic_wrap_sampler, pin.uv).rgb;
 
@@ -110,10 +110,11 @@ PixelOut main(PixelIn pin)
     }
 
     // ambient for sky, remove after skybox gen
+    const float ambient_power = 6.0f;
 
     PixelOut res;
     res.color = float4(res_color, 1.0f);
-    res.ambient_color = float4(PercievedBrightness(lights[0].strength) * base_color * float3(pow(0.12f, 2.2f), pow(0.14f, 2.2f), pow(0.18f, 2.2f)) * local_ambient_shadowing, 1.0f);
+    res.ambient_color = ambient_power * float4(PercievedBrightness(lights[0].strength) * base_color * float3(pow(0.12f, 2.2f), pow(0.14f, 2.2f), pow(0.18f, 2.2f)) * local_ambient_shadowing, 1.0f);
     res.screen_space_normal = normalize(
                                   mul( float4(pin.normal, 0.0f), view_mat ).xyz
                               ).xy;

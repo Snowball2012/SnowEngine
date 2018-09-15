@@ -6,6 +6,7 @@
 
 #include "RenderData.h"
 #include "ToneMappingPass.h"
+#include "HBAOPass.h"
 
 // resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
 struct ShadowCasters
@@ -90,6 +91,11 @@ struct SSAOTexture_Noisy
 struct TonemapNodeSettings
 {
 	ToneMappingPass::ShaderData data;
+};
+
+struct HBAOSettings
+{
+	HBAOPass::Settings data;
 };
 
 struct BackbufferStorage

@@ -48,6 +48,8 @@ public:
 		bool blend_luminance = false;
 	} m_tonemap_settings;
 
+	HBAOPass::Settings m_hbao_settings;
+
 	// for update. Todo: something smarter
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
 	RenderSceneContext& GetScene() { return m_scene; }

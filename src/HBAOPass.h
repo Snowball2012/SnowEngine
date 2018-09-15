@@ -11,8 +11,16 @@ class HBAOPass
 public:
 	HBAOPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
 
+	struct Settings
+	{
+		float max_r = 0.25f;
+		float angle_bias = DirectX::XM_PIDIV2 / 10.0f;
+		int nsamples_per_direction = 5;
+	};
+
 	struct Context
 	{
+		Settings settings;
 		D3D12_GPU_DESCRIPTOR_HANDLE depth_srv;
 		D3D12_GPU_DESCRIPTOR_HANDLE normals_srv;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
