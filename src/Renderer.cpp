@@ -386,27 +386,8 @@ void Renderer::CreateSwapChain()
 
 void Renderer::BuildRtvAndDsvDescriptorHeaps()
 {
-	// rtv
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc{};
-		rtvHeapDesc.NumDescriptors = SwapChainBufferCount + 4/*floating point direct radiance, ambient radiance, normals, ssao*/;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-
-		ComPtr<ID3D12DescriptorHeap> rtv_heap;
-		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap(
-			&rtvHeapDesc, IID_PPV_ARGS( rtv_heap.GetAddressOf() ) ) );
-		m_rtv_heap = std::make_unique<DescriptorHeap>( std::move( rtv_heap ), m_rtv_size );
-	}
-	// dsv
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC dsv_heap_desc{};
-		dsv_heap_desc.NumDescriptors = 1 /*back buffer*/ + 1 * FrameResourceCount; // shadow maps
-		dsv_heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-
-		ComPtr<ID3D12DescriptorHeap> dsv_heap;
-		ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &dsv_heap_desc, IID_PPV_ARGS( &dsv_heap ) ) );
-		m_dsv_heap = std::make_unique<DescriptorHeap>( std::move( dsv_heap ), m_dsv_size );
-	}
+	m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device );
+	m_dsv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_d3d_device );
 }
 
 void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )

@@ -36,20 +36,12 @@ struct PixelOut
     float2 screen_space_normal : SV_TARGET2;
 };
 
-float3 rendering_equation( float3 to_source, float3 to_camera, float3 normal, float2 uv )
+float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera, float3 normal, float2 uv )
 {
 	float lambert_term = max( dot( to_source, normal ), 0 );
 	float normal_to_eye_cos = max( dot( to_camera, normal ), 0 );
 	float3 h = normalize( halfvector( to_source, to_camera ) );
 	float source_to_half_cos = max( dot( to_source, h ), 0 );
-
-	float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, uv );
-    base_color.r = pow(base_color.r, 2.2f);
-    base_color.g = pow(base_color.g, 2.2f);
-    base_color.b = pow(base_color.b, 2.2f);
-
-	// alpha test
-	clip( base_color.a - 0.01 );
 
 	float3 specular = specular_map.Sample( anisotropic_wrap_sampler, uv ).rgb; // r - occlusion, g - roughness, b - metallic
 	float roughness = specular.g;
@@ -81,6 +73,31 @@ float PercievedBrightness(float3 color)
 
 PixelOut main(PixelIn pin)
 {
+    float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
+
+	// alpha test
+	clip( base_color.a - 0.01 );
+
+#ifdef VISUALIZE_LOD
+    float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
+    if ( lod > 1.0f )
+    {
+        base_color.r = pow(base_color.r, 2.2f);
+        base_color.g = pow(base_color.g, 2.2f);
+        base_color.b = pow(base_color.b, 2.2f);
+    }
+    else
+    {
+        base_color.r = pow(lod, 2.2f);
+        base_color.g = pow(lod, 2.2f);
+        base_color.b = pow(lod, 2.2f);
+    }
+#else
+    base_color.r = pow(base_color.r, 2.2f);
+    base_color.g = pow(base_color.g, 2.2f);
+    base_color.b = pow(base_color.b, 2.2f);
+#endif
+
 	float3 res_color = float3( 0.0f, 0.0f, 0.0f );
 
     float tangent_normal_z;
@@ -92,15 +109,9 @@ PixelOut main(PixelIn pin)
 
     float local_ambient_shadowing = 1.0f*((0.5f - acos(tangent_normal_z) * 3.1415f) * 2.0f * 0.2f + 0.8f);
 
-    float3 base_color = base_color_map.Sample(anisotropic_wrap_sampler, pin.uv).rgb;
-
-    base_color.r = pow(base_color.r, 2.2f);
-    base_color.g = pow(base_color.g, 2.2f);
-    base_color.b = pow(base_color.b, 2.2f);
-
 	for ( int light_idx = 0; light_idx < n_parallel_lights; ++light_idx )
 	{
-		float3 light_radiance = rendering_equation( lights[light_idx].dir,
+		float3 light_radiance = rendering_equation( base_color, lights[light_idx].dir,
 												 normalize( eye_pos_w - pin.pos_w ),
 												 normal,
 												 pin.uv );

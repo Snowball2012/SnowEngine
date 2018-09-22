@@ -17,7 +17,7 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 		context.normals_rtv
 	};
 
-	cmd_list.OMSetRenderTargets( 3, render_targets, true, &context.depth_stencil_view );
+	cmd_list.OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 

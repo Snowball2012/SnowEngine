@@ -58,6 +58,9 @@
     <Filter Include="shaders\depth-only">
       <UniqueIdentifier>{901cc896-3b17-47bd-a513-05917b8f9890}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\ResourceSystem">
+      <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -82,9 +85,6 @@
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\RenderUtils.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DescriptorHeap.cpp">
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\D3DApp.cpp">
@@ -138,6 +138,12 @@
     <ClCompile Include="src\HBAOPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\DescriptorHeap.cpp">
+      <Filter>core\ResourceSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="src\StagingDescriptorHeap.cpp">
+      <Filter>core\ResourceSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -162,9 +168,6 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\RenderUtils.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DescriptorHeap.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\D3DApp.h">
@@ -223,6 +226,12 @@
     </ClInclude>
     <ClInclude Include="src\HBAOPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StagingDescriptorHeap.h">
+      <Filter>core\ResourceSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DescriptorHeap.h">
+      <Filter>core\ResourceSystem</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

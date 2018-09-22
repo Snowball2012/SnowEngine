@@ -74,7 +74,7 @@ private:
 	bool m_wireframe_mode = false;
 
 	// temporal AA
-	bool m_taa_enabled = true;
+	bool m_taa_enabled = false;
 	uint64_t m_cur_frame_idx = 0;
 
 	// inputs

@@ -4,6 +4,8 @@
 #include "SceneImporter.h"
 #include "FrameResource.h"
 
+#include "StagingDescriptorHeap.h"
+
 #include "TemporalAA.h"
 #include "ToneMappingPass.h"
 #include "HBAOPass.h"
@@ -87,8 +89,8 @@ private:
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
-	std::unique_ptr<DescriptorHeap> m_dsv_heap = nullptr;
-	std::unique_ptr<DescriptorHeap> m_rtv_heap = nullptr;
+	std::unique_ptr<StagingDescriptorHeap> m_dsv_heap = nullptr;
+	std::unique_ptr<StagingDescriptorHeap> m_rtv_heap = nullptr;
 
 	size_t m_cbv_srv_uav_size = 0;
 	size_t m_dsv_size = 0;

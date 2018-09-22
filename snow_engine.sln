@@ -5,8 +5,6 @@ VisualStudioVersion = 15.0.26730.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snow_engine", "snow_engine.vcxproj", "{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cetonia", "..\..\cetonia\cetonia\cetonia.vcxproj", "{B375BC36-BCC3-431F-9B3E-FA17F0E836EA}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -17,8 +15,6 @@ Global
 		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}.Debug|x64.Build.0 = Debug|x64
 		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}.Release|x64.ActiveCfg = Release|x64
 		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}.Release|x64.Build.0 = Release|x64
-		{B375BC36-BCC3-431F-9B3E-FA17F0E836EA}.Debug|x64.ActiveCfg = Debug|x64
-		{B375BC36-BCC3-431F-9B3E-FA17F0E836EA}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

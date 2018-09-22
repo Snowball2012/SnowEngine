@@ -28,6 +28,8 @@ namespace bc = boost::container;
 template<typename T>
 using ComPtr = Microsoft::WRL::ComPtr<T>;
 
+#include "RenderUtils.h"
+
 class SnowEngineException
 {
 public:
