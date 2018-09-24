@@ -144,6 +144,9 @@
     <ClCompile Include="src\StagingDescriptorHeap.cpp">
       <Filter>core\ResourceSystem</Filter>
     </ClCompile>
+    <ClCompile Include="src\ResourceManager.cpp">
+      <Filter>core\ResourceSystem</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -231,6 +234,9 @@
       <Filter>core\ResourceSystem</Filter>
     </ClInclude>
     <ClInclude Include="src\DescriptorHeap.h">
+      <Filter>core\ResourceSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ResourceManager.h">
       <Filter>core\ResourceSystem</Filter>
     </ClInclude>
   </ItemGroup>
