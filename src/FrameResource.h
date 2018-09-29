@@ -5,6 +5,8 @@
 #include "RenderData.h"
 #include "SceneImporter.h"
 
+#include "GPUTaskQueue.h"
+
 struct FrameResource
 {
 	FrameResource( ID3D12Device* device, size_t cmd_allocator_count, UINT passCount, UINT objectCount, UINT dynamic_vertices_cnt );
@@ -21,5 +23,5 @@ struct FrameResource
 
 	// Fence value to mark commands up to this fence point.  This lets us
 	// check if these frame resources are still in use by the GPU.
-	UINT64 fence = 0;
+	GPUTaskQueue::Timestamp available_timestamp = 0;
 };

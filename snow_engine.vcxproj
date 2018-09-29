@@ -170,6 +170,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\FrameResource.cpp" />
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
+    <ClCompile Include="src\GPUTaskQueue.cpp" />
     <ClCompile Include="src\HBAOPass.cpp" />
     <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -222,6 +223,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
     <ClInclude Include="src\GeomGeneration.hpp" />
+    <ClInclude Include="src\GPUTaskQueue.h" />
     <ClInclude Include="src\HBAOPass.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />

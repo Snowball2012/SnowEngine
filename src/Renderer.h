@@ -10,6 +10,8 @@
 #include "ToneMappingPass.h"
 #include "HBAOPass.h"
 
+#include "GPUTaskQueue.h"
+
 #include "Pipeline.h"
 #include "PipelineNodes.h"
 
@@ -67,8 +69,8 @@ private:
 	// d3d stuff
 	ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
 	ComPtr<ID3D12Device> m_d3d_device = nullptr;
-	ComPtr<ID3D12Fence> m_fence = nullptr;
-	UINT64 m_current_fence = 0;
+
+	std::unique_ptr<GPUTaskQueue> m_graphics_queue = nullptr;
 
 	ComPtr<IDXGISwapChain> m_swap_chain = nullptr;
 	static constexpr int SwapChainBufferCount = 2;
@@ -81,7 +83,6 @@ private:
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-	ComPtr<ID3D12CommandQueue> m_cmd_queue = nullptr;
 	D3D12_VIEWPORT m_screen_viewport;
 	D3D12_RECT m_scissor_rect;
 
@@ -179,7 +180,6 @@ private:
 	void DisposeCPUGeom();
 	
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
-	void FlushCommandQueue();
 
 	ID3D12Resource* CurrentBackBuffer();
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;

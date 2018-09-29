@@ -147,6 +147,9 @@
     <ClCompile Include="src\ResourceManager.cpp">
       <Filter>core\ResourceSystem</Filter>
     </ClCompile>
+    <ClCompile Include="src\GPUTaskQueue.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -238,6 +241,9 @@
     </ClInclude>
     <ClInclude Include="src\ResourceManager.h">
       <Filter>core\ResourceSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GPUTaskQueue.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

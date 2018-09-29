@@ -60,8 +60,7 @@ void Renderer::InitD3D()
 			IID_PPV_ARGS( &m_d3d_device ) ) );
 	}
 
-	ThrowIfFailed( m_d3d_device->CreateFence( 0, D3D12_FENCE_FLAG_NONE,
-											  IID_PPV_ARGS( &m_fence ) ) );
+	m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT );
 
 	m_rtv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
 	m_dsv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
@@ -89,13 +88,14 @@ void Renderer::Init( const ImportedScene& ext_scene )
 	BuildRenderItems( ext_scene );
 	BuildFrameResources( );
 	BuildLights();
+
 	BuildConstantBuffers();
 	BuildPasses();
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
-	FlushCommandQueue();
+	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+	m_graphics_queue->Flush();
 
 	DisposeUploaders();
 	DisposeCPUGeom();
@@ -216,7 +216,7 @@ void Renderer::Draw( const Context& ctx )
 	ThrowIfFailed( m_cmd_list->Close() );
 
 	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-	m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 
 	EndFrame();	
 }
@@ -233,7 +233,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	assert( m_direct_cmd_allocator );
 
 	// Flush before changing any resources.
-	FlushCommandQueue();
+	m_graphics_queue->Flush();
 
 	ImGui_ImplDX12_InvalidateDeviceObjects();
 
@@ -311,10 +311,10 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	// Execute the resize commands.
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* cmdsLists[] = { m_cmd_list.Get() };
-	m_cmd_queue->ExecuteCommandLists( _countof( cmdsLists ), cmdsLists );
+	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmdsLists ), cmdsLists );
 
 	// Wait until resize is complete.
-	FlushCommandQueue();
+	m_graphics_queue->Flush();
 
 	// Update the viewport transform to cover the client area.
 	m_screen_viewport.TopLeftX = 0;
@@ -334,11 +334,6 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 
 void Renderer::CreateBaseCommandObjects()
 {
-	D3D12_COMMAND_QUEUE_DESC queue_desc = {};
-	queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	ThrowIfFailed( m_d3d_device->CreateCommandQueue( &queue_desc, IID_PPV_ARGS( &m_cmd_queue ) ) );
-
 	ThrowIfFailed( m_d3d_device->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		IID_PPV_ARGS( m_direct_cmd_allocator.GetAddressOf() ) ) );
@@ -379,7 +374,7 @@ void Renderer::CreateSwapChain()
 
 	// Note: Swap chain uses queue to perform flush.
 	ThrowIfFailed( m_dxgi_factory->CreateSwapChain(
-		m_cmd_queue.Get(),
+		m_graphics_queue->GetCmdQueue(),
 		&sd,
 		m_swap_chain.GetAddressOf() ) );
 }
@@ -502,8 +497,8 @@ void Renderer::LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_
 		{
 			ThrowIfFailed( m_cmd_list->Close() );
 			ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-			m_cmd_queue->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
-			FlushCommandQueue();
+			m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+			m_graphics_queue->Flush();
 			ThrowIfFailed( m_cmd_list->Reset( m_direct_cmd_allocator.Get(), nullptr ) );
 
 			m_scene.textures[ext_scene.textures[i]].texture_uploader = nullptr;
@@ -889,42 +884,15 @@ void Renderer::EndFrame()
 	ThrowIfFailed( m_swap_chain->Present( 0, 0 ) );
 	m_curr_back_buff = ( m_curr_back_buff + 1 ) % SwapChainBufferCount;
 
-	m_cur_frame_resource->fence = ++m_current_fence;
-	ThrowIfFailed( m_cmd_queue->Signal( m_fence.Get(), m_current_fence ) );
-
+	m_cur_frame_resource->available_timestamp = m_graphics_queue->CreateTimestamp();
 
 	// CPU timeline
 	m_cur_fr_idx = ( m_cur_fr_idx + 1 ) % FrameResourceCount;
 	m_cur_frame_resource = m_frame_resources.data() + m_cur_fr_idx;
 
 	// wait for gpu to complete (i - 2)th frame;
-	if ( m_cur_frame_resource->fence != 0 && m_fence->GetCompletedValue() < m_cur_frame_resource->fence )
-	{
-		HANDLE event_handle = CreateEventEx( nullptr, nullptr, false, EVENT_ALL_ACCESS );
-		ThrowIfFailed( m_fence->SetEventOnCompletion( m_cur_frame_resource->fence, event_handle ) );
-		WaitForSingleObject( event_handle, INFINITE );
-		CloseHandle( event_handle );
-	}
-}
-
-void Renderer::FlushCommandQueue()
-{
-	// GPU timeline
-	m_current_fence++;
-	ThrowIfFailed( m_cmd_queue->Signal( m_fence.Get(), m_current_fence ) );
-
-	// CPU timeline
-	if ( m_fence->GetCompletedValue() < m_current_fence )
-	{
-		HANDLE eventHandle = CreateEventEx( nullptr, false, false, EVENT_ALL_ACCESS );
-
-		// Fire event when GPU hits current fence.  
-		ThrowIfFailed( m_fence->SetEventOnCompletion( m_current_fence, eventHandle ) );
-
-		// Wait until the GPU hits current fence event is fired.
-		WaitForSingleObject( eventHandle, INFINITE );
-		CloseHandle( eventHandle );
-	}
+	if ( m_cur_frame_resource->available_timestamp != 0 )
+		m_graphics_queue->WaitForTimestamp( m_cur_frame_resource->available_timestamp );
 }
 
 ID3D12Resource* Renderer::CurrentBackBuffer()
