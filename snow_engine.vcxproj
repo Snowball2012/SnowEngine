@@ -107,7 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,7 +145,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\d3d12book_luna_src\include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PreprocessorDefinitions>FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>

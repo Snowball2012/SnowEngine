@@ -8,7 +8,7 @@ BOOST_AUTO_TEST_CASE( creation )
 {
 	packed_freelist<int> lst;
 
-	using id = freelist_id;
+	using id = decltype( lst )::id;
 
 	id elem_id = lst.insert( 3 );
 	id elem2_id = lst.insert( 2 );
@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE( lookup_and_modification )
 {
 	packed_freelist<int> lst;
 
-	using id = freelist_id;
+	using id = decltype( lst )::id;
 
 	id id3 = lst.insert( 3 );
 	id id2 = lst.insert( 2 );
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE( clear )
 {
 	packed_freelist<int> lst;
 
-	using id = freelist_id;
+	using id = decltype( lst )::id;
 
 	id id3 = lst.insert( 3 );
 	id id2 = lst.insert( 2 );
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE( emplace )
 {
 	packed_freelist<std::pair<std::string, int>> lst;
 
-	using id = freelist_id;
+	using id = decltype( lst )::id;
 
 	id id3 = lst.emplace( "test", 3 );
 	id id2 = lst.emplace( "test again", 2 );

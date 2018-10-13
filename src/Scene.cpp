@@ -15,24 +15,34 @@ void StaticMesh::Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BU
 // Scene
 
 // template helpers
-template<> struct Scene::ID2Obj<Scene::TransformID>
+template<> struct Scene::ID2Obj<TransformID>
 {
 	using type = ObjectTransform;
 };
 
-template<> struct Scene::ID2Obj<Scene::StaticMeshID>
+template<> struct Scene::ID2Obj<StaticMeshID>
 {
 	using type = StaticMesh;
 };
 
-template<> Scene::freelist_from_id<Scene::TransformID>& Scene::GetStorage<Scene::TransformID>() noexcept
+template<> struct Scene::ID2Obj<StaticSubmeshID>
+{
+	using type = StaticSubmesh;
+};
+
+template<> Scene::freelist_from_id<TransformID>& Scene::GetStorage<TransformID>() noexcept
 {
 	return m_obj_tfs;
 }
 
-template<> Scene::freelist_from_id<Scene::StaticMeshID>& Scene::GetStorage<Scene::StaticMeshID>() noexcept
+template<> Scene::freelist_from_id<StaticMeshID>& Scene::GetStorage<StaticMeshID>() noexcept
 {
-	return m_obj_tfs;
+	return m_static_meshes;
+}
+
+template<> Scene::freelist_from_id<StaticSubmeshID>& Scene::GetStorage<StaticSubmeshID>() noexcept
+{
+	return m_static_submeshes;
 }
 
 // generic methods
@@ -49,11 +59,12 @@ bool Scene::Remove( IDType obj_id ) noexcept
 	GetStorage<IDType>().erase( obj_id );
 	return true;
 }
-template bool Scene::Remove<Scene::TransformID>( Scene::TransformID ) noexcept;
-template bool Scene::Remove<Scene::StaticMeshID>( Scene::StaticMeshID ) noexcept;
+template bool Scene::Remove<TransformID>( TransformID ) noexcept;
+template bool Scene::Remove<StaticMeshID>( StaticMeshID ) noexcept;
+template bool Scene::Remove<StaticSubmeshID>( StaticSubmeshID ) noexcept;
 
 
-Scene::TransformID Scene::AddTransform( bool is_dynamic )
+TransformID Scene::AddTransform( bool is_dynamic )
 {
 	NOTIMPL;
 }
@@ -63,7 +74,7 @@ ObjectTransform* Scene::TryModifyTransform( TransformID id ) noexcept
 	return m_obj_tfs.try_get( id );
 }
 
-Scene::StaticMeshID Scene::AddStaticMesh()
+StaticMeshID Scene::AddStaticMesh()
 {
 	NOTIMPL;
 }
@@ -71,4 +82,14 @@ Scene::StaticMeshID Scene::AddStaticMesh()
 StaticMesh* Scene::TryModifyStaticMesh( StaticMeshID id ) noexcept
 {
 	return m_static_meshes.try_get( id );
+}
+
+StaticSubmeshID Scene::AddStaticSubmesh()
+{
+	NOTIMPL;
+}
+
+StaticSubmesh* Scene::TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept
+{
+	return m_static_submeshes.try_get( id );
 }

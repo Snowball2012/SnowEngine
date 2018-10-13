@@ -12,36 +12,37 @@
 // base_container must be random access, std::vector-like container
 // max 2^32 elems simultaneously in freelist
 
-struct alignas( 8 ) freelist_id
-{
-	uint32_t idx;
-	uint32_t inner_id;
-};
 
 template<typename T, template <typename ...> typename base_container = std::vector>
 class packed_freelist
 {
 public:
-	bool has( freelist_id elem_id ) const noexcept;
+	struct alignas( 8 ) id
+	{
+		uint32_t idx;
+		uint32_t inner_id;
+	};
 
-	freelist_id insert( T elem ) noexcept;
+	bool has( id elem_id ) const noexcept;
+
+	id insert( T elem ) noexcept;
 	template<typename ... Args>
-	freelist_id emplace( Args&& ... args ) noexcept;
+	id emplace( Args&& ... args ) noexcept;
 
 	// returns nullptr if elem does not exist
-	T* try_get( freelist_id elem_id ) noexcept;
-	const T* try_get( freelist_id elem_id ) const noexcept;
+	T* try_get( id elem_id ) noexcept;
+	const T* try_get( id elem_id ) const noexcept;
 
 	// ub if element with elem_id has been deleted
-	T& get( freelist_id elem_id ) noexcept;
-	const T& get( freelist_id elem_id ) const noexcept;
+	T& get( id elem_id ) noexcept;
+	const T& get( id elem_id ) const noexcept;
 
 	// ub if element with elem_id has been deleted
-	T& operator[]( freelist_id elem_id ) noexcept;
-	const T& operator[]( freelist_id elem_id ) const noexcept;
+	T& operator[]( id elem_id ) noexcept;
+	const T& operator[]( id elem_id ) const noexcept;
 
 	// does nothing if element does not exist
-	void erase( freelist_id elem_id ) noexcept;
+	void erase( id elem_id ) noexcept;
 	void clear() noexcept;
 
 	// semanticaly the same as clear(), but also destroys slot counters for the nodes, so it will invalidate all previously given ids
@@ -81,11 +82,13 @@ private:
 		freelist_elem() = default;
 	};
 
-	freelist_id insert_elem_to_freelist( uint32_t packed_idx ) noexcept;
+	static constexpr uint32_t FREE_END = std::numeric_limits<uint32_t>::max();
+
+	id insert_elem_to_freelist( uint32_t packed_idx ) noexcept;
 
 	base_container<T> m_packed_data;
 	base_container<freelist_elem> m_freelist;
-	int64_t m_free_head = -1;
+	uint32_t m_free_head = FREE_END;
 };
 
 #include "packed_freelist.hpp"

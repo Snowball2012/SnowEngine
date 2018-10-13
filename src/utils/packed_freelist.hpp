@@ -6,16 +6,16 @@
 
 
 template<typename T, template <typename...> typename base_container>
-bool packed_freelist<T, base_container>::has( freelist_id id ) const noexcept
+bool packed_freelist<T, base_container>::has( id elem_id ) const noexcept
 {
-	assert( id.idx < m_freelist.size() );
+	assert( elem_id.idx < m_freelist.size() );
 
-	return m_freelist[id.idx].slot_cnt == id.inner_id;
+	return m_freelist[elem_id.idx].slot_cnt == elem_id.inner_id;
 }
 
 
 template<typename T, template <typename...> typename base_container>
-freelist_id packed_freelist<T, base_container>::insert( T elem ) noexcept
+typename packed_freelist<T, base_container>::id packed_freelist<T, base_container>::insert( T elem ) noexcept
 {
 	uint32_t packed_idx = uint32_t( m_packed_data.size() );
 	m_packed_data.push_back( std::move( elem ) );
@@ -26,7 +26,7 @@ freelist_id packed_freelist<T, base_container>::insert( T elem ) noexcept
 
 template<typename T, template <typename...> typename base_container>
 template<typename ... Args>
-freelist_id packed_freelist<T, base_container>::emplace( Args&& ... args ) noexcept
+typename packed_freelist<T, base_container>::id packed_freelist<T, base_container>::emplace( Args&& ... args ) noexcept
 {
 	uint32_t packed_idx = uint32_t( m_packed_data.size() );
 	m_packed_data.emplace_back( std::forward<Args>( args )... );
@@ -36,10 +36,10 @@ freelist_id packed_freelist<T, base_container>::emplace( Args&& ... args ) noexc
 
 
 template<typename T, template <typename...> typename base_container>
-freelist_id packed_freelist<T, base_container>::insert_elem_to_freelist( uint32_t packed_idx ) noexcept
+typename packed_freelist<T, base_container>::id packed_freelist<T, base_container>::insert_elem_to_freelist( uint32_t packed_idx ) noexcept
 {
-	freelist_id new_id;
-	if ( m_free_head < 0 )
+	id new_id;
+	if ( m_free_head == FREE_END )
 	{
 		new_id.idx = uint32_t( m_freelist.size() );
 		new_id.inner_id = 0;
@@ -50,9 +50,7 @@ freelist_id packed_freelist<T, base_container>::insert_elem_to_freelist( uint32_
 		freelist_elem& new_elem = m_freelist[m_free_head];
 		new_id.idx = uint32_t( m_free_head );
 		new_id.inner_id = new_elem.slot_cnt;
-		if ( m_free_head == new_elem.next_free ) // end of the list
-			m_free_head = -1;
-		else
+		if ( m_free_head != FREE_END ) // end of the list
 			m_free_head = new_elem.next_free;
 		new_elem.packed_idx = packed_idx;
 	}
@@ -62,7 +60,7 @@ freelist_id packed_freelist<T, base_container>::insert_elem_to_freelist( uint32_
 
 
 template<typename T, template <typename...> typename base_container>
-T* packed_freelist<T, base_container>::try_get( freelist_id elem_id ) noexcept
+T* packed_freelist<T, base_container>::try_get( id elem_id ) noexcept
 {
 	if ( has( elem_id ) )
 		return &m_packed_data[m_freelist[elem_id.idx].packed_idx];
@@ -71,7 +69,7 @@ T* packed_freelist<T, base_container>::try_get( freelist_id elem_id ) noexcept
 
 
 template<typename T, template <typename...> typename base_container>
-const T* packed_freelist<T, base_container>::try_get( freelist_id elem_id ) const noexcept
+const T* packed_freelist<T, base_container>::try_get( id elem_id ) const noexcept
 {
 	if ( has( elem_id ) )
 		return &m_packed_data[m_freelist[elem_id.idx].packed_idx];
@@ -80,7 +78,7 @@ const T* packed_freelist<T, base_container>::try_get( freelist_id elem_id ) cons
 
 
 template<typename T, template <typename...> typename base_container>
-T& packed_freelist<T, base_container>::get( freelist_id elem_id ) noexcept
+T& packed_freelist<T, base_container>::get( id elem_id ) noexcept
 {
 	assert( has( elem_id ) );
 	return m_packed_data[m_freelist[elem_id.idx].packed_idx];
@@ -88,7 +86,7 @@ T& packed_freelist<T, base_container>::get( freelist_id elem_id ) noexcept
 
 
 template<typename T, template <typename...> typename base_container>
-const T& packed_freelist<T, base_container>::get( freelist_id elem_id ) const noexcept
+const T& packed_freelist<T, base_container>::get( id elem_id ) const noexcept
 {
 	assert( has( elem_id ) );
 	return m_packed_data[m_freelist[elem_id.idx].packed_idx];
@@ -96,26 +94,26 @@ const T& packed_freelist<T, base_container>::get( freelist_id elem_id ) const no
 
 
 template<typename T, template <typename...> typename base_container>
-const T& packed_freelist<T, base_container>::operator[]( freelist_id elem_id ) const noexcept
+const T& packed_freelist<T, base_container>::operator[]( id elem_id ) const noexcept
 {
 	return get( elem_id );
 }
 
 
 template<typename T, template <typename...> typename base_container>
-T& packed_freelist<T, base_container>::operator[]( freelist_id elem_id ) noexcept
+T& packed_freelist<T, base_container>::operator[]( id elem_id ) noexcept
 {
 	return get( elem_id );
 }
 
 
 template<typename T, template <typename...> typename base_container>
-void packed_freelist<T, base_container>::erase( freelist_id id ) noexcept
+void packed_freelist<T, base_container>::erase( id elem_id ) noexcept
 {
-	if ( ! has( id ) )
+	if ( ! has( elem_id ) )
 		return;
 
-	auto& freelist_elem = m_freelist[id.idx];
+	auto& freelist_elem = m_freelist[elem_id.idx];
 	freelist_elem.slot_cnt++;
 
 	using std::swap; // include to adl
@@ -123,7 +121,7 @@ void packed_freelist<T, base_container>::erase( freelist_id id ) noexcept
 	m_packed_data.pop_back();
 
 	freelist_elem.next_free = uint32_t( m_free_head );
-	m_free_head = id.idx;
+	m_free_head = elem_id.idx;
 }
 
 
@@ -131,9 +129,9 @@ template<typename T, template <typename...> typename base_container>
 void packed_freelist<T, base_container>::clear( ) noexcept
 {
 	m_packed_data.clear();
-	m_freelist.back().next_free = uint32_t( m_freelist.size() ) - 1;
+	m_freelist.back().next_free = FREE_END;
 	m_freelist.back().slot_cnt++;
-	m_free_head = m_freelist.empty() ? -1 : 0;
+	m_free_head = m_freelist.empty() ? FREE_END : 0;
 	for ( uint32_t i = 0, end = uint32_t( m_freelist.size() ) - 1; i < end; ++i )
 	{
 		m_freelist[i].next_free = i + 1;
@@ -147,7 +145,7 @@ void packed_freelist<T, base_container>::destroy() noexcept
 {
 	m_packed_data.clear();
 	m_freelist.clear();
-	m_free_head = -1;
+	m_free_head = FREE_END;
 }
 
 
