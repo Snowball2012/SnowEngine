@@ -191,6 +191,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="src\ResourceManager.cpp" />
+    <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneImporter.cpp" />
     <ClCompile Include="src\RenderApp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
@@ -236,6 +237,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="src\ResourceManager.h" />
+    <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\SceneImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
     <ClInclude Include="src\RenderData.h" />

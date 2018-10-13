@@ -146,6 +146,9 @@
     <ClCompile Include="src\GPUTaskQueue.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Scene.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -246,6 +249,9 @@
     </ClInclude>
     <ClInclude Include="src\utils\packed_freelist.hpp">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Scene.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
