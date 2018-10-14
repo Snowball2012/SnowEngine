@@ -90,5 +90,33 @@ BOOST_AUTO_TEST_CASE( emplace )
 	BOOST_TEST( lst[id2].first == "test again" );
 }
 
+BOOST_AUTO_TEST_CASE( spans )
+{
+	packed_freelist<int> lst;
+
+	using id = decltype( lst )::id;
+
+	id id3 = lst.emplace( 3 );
+	id id2 = lst.emplace( 2 );
+
+	for ( const auto& elem : lst.get_elems() )
+		BOOST_TEST( ( elem == 3 || elem == 2 ) );
+
+	for ( auto& elem : lst.get_elems() )
+		elem = 1;
+
+	for ( const auto& elem : lst.get_elems() )
+		BOOST_TEST( elem == 1 );
+
+	BOOST_TEST( lst.get_elems().size() == 2 );
+
+	auto elems = lst.get_elems();
+	elems[1] = 3;
+
+	const auto span_copy = elems;
+
+	BOOST_TEST( span_copy[1] == 3 );
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()

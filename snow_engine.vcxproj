@@ -243,6 +243,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\RenderData.h" />
     <ClInclude Include="src\RenderPass.h" />
     <ClInclude Include="src\RenderUtils.h" />
+    <ClInclude Include="src\SceneItems.h" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\TemporalAA.h" />

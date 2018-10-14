@@ -253,6 +253,9 @@
     <ClInclude Include="src\Scene.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="src\SceneItems.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
