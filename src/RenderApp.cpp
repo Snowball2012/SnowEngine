@@ -431,5 +431,5 @@ void RenderApp::LoadModel( const std::string& filename )
 
 XMMATRIX RenderApp::CalcProjectionMatrix() const
 {
-	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 1.0f, 100.0f );
+	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 0.001f, 100.0f );
 }

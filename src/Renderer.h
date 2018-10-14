@@ -24,6 +24,7 @@ class Renderer
 public:
 	
 	Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height );
+	~Renderer();
 
 	void InitD3D( );
 	void Init( const ImportedScene& ext_scene );

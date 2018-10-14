@@ -27,6 +27,37 @@ Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
 	: m_main_hwnd( main_hwnd ), m_client_width( screen_width ), m_client_height( screen_height )
 {}
 
+Renderer::~Renderer()
+{
+	for ( auto& desc : m_back_buffer_rtv )
+		desc.reset();
+	m_back_buffer_dsv.reset();
+	m_depth_buffer_srv.reset();
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+	m_ui_font_desc.reset();
+	m_fp_backbuffer.rtv.reset();
+	m_fp_backbuffer.srv.reset();
+	m_ambient_lighting.rtv.reset();
+	m_ambient_lighting.srv.reset();
+	m_normals.rtv.reset();
+	m_normals.srv.reset();
+	m_ssao.rtv.reset();
+	m_ssao.srv.reset();
+	m_prev_frame_texture.srv.reset();
+	m_jittered_frame_texture.srv.reset();
+
+	for ( auto& texture : m_scene.textures )
+		texture.second.srv.reset();
+
+	for ( auto& shadow_map : m_scene.shadow_maps )
+	{
+		shadow_map.second.dsv.reset();
+		shadow_map.second.srv.reset();
+	}
+}
+
 void Renderer::InitD3D()
 {
 #if defined(DEBUG) || defined(_DEBUG) 
