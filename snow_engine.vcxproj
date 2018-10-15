@@ -120,6 +120,9 @@
 copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(ProjectDir)$(IntermediateOutputPath)*.obj</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -160,6 +163,9 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
 copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(ProjectDir)$(IntermediateOutputPath)*.obj</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\BlurPass.cpp" />

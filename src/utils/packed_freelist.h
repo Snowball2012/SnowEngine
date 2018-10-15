@@ -52,6 +52,7 @@ public:
 	{
 		uint32_t idx;
 		uint32_t inner_id;
+		bool operator==( const id& rhs ) const noexcept { return this->idx == rhs.idx && this->inner_id == rhs.inner_id; }
 	};
 
 	bool has( id elem_id ) const noexcept;

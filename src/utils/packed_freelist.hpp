@@ -224,12 +224,12 @@ typename packed_freelist<T, base_container>::const_iterator packed_freelist<T, b
 template<typename T, template <typename...> typename base_container>
 span<T> packed_freelist<T, base_container>::get_elems() noexcept
 {
-	return make_span( &*begin(), &*end() );
+	return make_span( m_packed_data.data(), m_packed_data.data() + m_packed_data.size() );
 }
 
 
 template<typename T, template <typename...> typename base_container>
 span<const T> packed_freelist<T, base_container>::get_elems() const noexcept
 {
-	return make_span( &*cbegin(), &*cend() );
+	return make_span( m_packed_data.data(), m_packed_data.data() + m_packed_data.size() );
 }
