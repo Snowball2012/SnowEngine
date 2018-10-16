@@ -41,6 +41,7 @@ public:
 	void NewGUIFrame();
 	void Resize( size_t new_width, size_t new_height );
 
+
 	// getters/setters
 	D3D12_VIEWPORT& ScreenViewport() { return m_screen_viewport; }
 	const D3D12_VIEWPORT& ScreenViewport() const { return m_screen_viewport; }
@@ -60,6 +61,8 @@ public:
 	// for update. Todo: something smarter
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
 	RenderSceneContext& GetScene() { return m_scene; }
+
+	SceneClientView& GetSceneView();
 
 private:
 	// data
@@ -97,6 +100,7 @@ private:
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_dsv_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_rtv_heap = nullptr;
+	std::unique_ptr<StagingDescriptorHeap> m_staging_srv_heap = nullptr;
 
 	size_t m_cbv_srv_uav_size = 0;
 	size_t m_dsv_size = 0;

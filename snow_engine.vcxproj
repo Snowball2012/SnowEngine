@@ -208,6 +208,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\RenderUtils.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\StagingDescriptorHeap.cpp" />
+    <ClCompile Include="src\StaticMeshManager.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -254,6 +255,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneManager.hpp" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
+    <ClInclude Include="src\StaticMeshManager.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\TemporalAA.h" />
     <ClInclude Include="src\TemporalBlendPass.h" />

@@ -123,7 +123,7 @@ class Texture : public RefCounter
 {
 public:
 	// main data
-	D3D12_CPU_DESCRIPTOR_HANDLE & ModifyStagingSRV() noexcept { m_is_dirty = false; return m_staging_srv; }
+	D3D12_CPU_DESCRIPTOR_HANDLE& ModifyStagingSRV() noexcept { m_is_dirty = false; return m_staging_srv; }
 	D3D12_CPU_DESCRIPTOR_HANDLE StagingSRV() const noexcept { return m_staging_srv; }
 
 	// properties
@@ -131,6 +131,10 @@ public:
 
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
+
+	bool IsLoaded() const noexcept { return m_is_loaded; }
+	void Load( D3D12_CPU_DESCRIPTOR_HANDLE descriptor ) noexcept { ModifyStagingSRV() = descriptor; m_is_loaded = true; }
+
 private:
 	friend class Scene;
 	Texture() {}
@@ -138,6 +142,7 @@ private:
 	D3D12_CPU_DESCRIPTOR_HANDLE m_staging_srv;
 	DirectX::XMFLOAT2 m_max_ndc_per_uv; // for mip streaming
 	bool m_is_dirty = false;
+	bool m_is_loaded = false;
 };
 using TextureID = packed_freelist<Texture>::id;
 
@@ -163,6 +168,11 @@ public:
 	const Data& GetData() const noexcept { return m_data; }
 	Data& Modify() noexcept { m_is_dirty = true; return m_data; }
 
+	// properties
+	// descriptor table with 3 entries. valid only if all textures above are loaded
+	D3D12_GPU_DESCRIPTOR_HANDLE& DescriptorTable() noexcept { return m_desc_table; }
+	const D3D12_GPU_DESCRIPTOR_HANDLE& DescriptorTable() const noexcept { return m_desc_table; }
+
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
 
@@ -174,6 +184,8 @@ private:
 	TextureIds m_textures;
 
 	Data m_data;
+
+	D3D12_GPU_DESCRIPTOR_HANDLE m_desc_table;
 
 	bool m_is_dirty = false;
 };

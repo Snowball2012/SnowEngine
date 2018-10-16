@@ -2,9 +2,15 @@
 
 #include "SceneManager.h"
 
+#include "StaticMeshManager.h"
 
-SceneManager::SceneManager()
-	: m_scene_view( &m_scene )
+StaticMeshID SceneClientView::LoadStaticMesh( std::string name, const span<const Vertex>& vertices, const span<const uint32_t>& indices )
+{
+	NOTIMPL;
+}
+
+SceneManager::SceneManager( StaticMeshManager* smm )
+	: m_scene_view( &m_scene, smm )
 {
 }
 
@@ -17,6 +23,7 @@ SceneClientView& SceneManager::GetScene() noexcept
 {
 	return m_scene_view;
 }
+
 
 void SceneManager::UpdatePipelineBindings()
 {

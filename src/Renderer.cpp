@@ -414,6 +414,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 {
 	m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device );
 	m_dsv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_d3d_device );
+	m_staging_srv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_d3d_device );
 }
 
 void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )

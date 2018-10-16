@@ -152,6 +152,9 @@
     <ClCompile Include="src\SceneManager.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\StaticMeshManager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -263,6 +266,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\SceneManager.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StaticMeshManager.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
