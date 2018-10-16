@@ -15,6 +15,7 @@ private:
 	Scene* m_scene;
 };
 
+// Manages scene lifetime, binds the scene to a render pipeline
 class SceneManager
 {
 public:
