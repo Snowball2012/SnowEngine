@@ -292,13 +292,13 @@ void RenderApp::UpdateLights( PassConstants& pc )
 	{
 		switch ( light.second.type )
 		{
-			case Light::Type::Parallel:
+			case GPULight::Type::Parallel:
 				parallel_lights.push_back( &light.second.data );
 				break;
-			case Light::Type::Point:
+			case GPULight::Type::Point:
 				point_lights.push_back( &light.second.data );
 				break;
-			case Light::Type::Spotlight:
+			case GPULight::Type::Spotlight:
 				spotlights.push_back( &light.second.data );
 				break;
 			default:

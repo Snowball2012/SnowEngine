@@ -15,6 +15,8 @@
 #include "Pipeline.h"
 #include "PipelineNodes.h"
 
+#include "SceneManager.h"
+
 class ForwardLightingPass;
 class DepthOnlyPass;
 
@@ -89,6 +91,8 @@ private:
 
 	RenderSceneContext m_scene;
 
+	SceneManager m_scene_manager;
+
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_dsv_heap = nullptr;
@@ -139,8 +143,8 @@ private:
 	// postprocessing
 	ComPtr<ID3D12RootSignature> m_txaa_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_txaa_pso = nullptr;
-	Texture m_prev_frame_texture;
-	Texture m_jittered_frame_texture;
+	GPUTexture m_prev_frame_texture;
+	GPUTexture m_jittered_frame_texture;
 	DynamicTexture m_fp_backbuffer;
 	DynamicTexture m_ambient_lighting;
 	DynamicTexture m_normals;
@@ -171,7 +175,7 @@ private:
 	void BuildPasses();
 
 	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
-	void CreateShadowMap( Texture& texture );
+	void CreateShadowMap( GPUTexture& texture );
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 
 	template <DXGI_FORMAT index_format, class VCRange, class ICRange>

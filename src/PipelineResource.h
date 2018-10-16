@@ -16,18 +16,18 @@ struct ShadowCasters
 
 struct ShadowProducers
 {
-	std::vector<Light*>* lights = nullptr;
+	std::vector<GPULight*>* lights = nullptr;
 	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>* pass_cbs = nullptr;
 };
 
 struct ShadowMaps
 {
-	std::vector<Light*>* light_with_sm = nullptr;
+	std::vector<GPULight*>* light_with_sm = nullptr;
 };
 
 struct ShadowMapStorage
 {
-	std::vector<Light*>* sm_storage = nullptr;
+	std::vector<GPULight*>* sm_storage = nullptr;
 };
 
 struct ObjectConstantBuffer

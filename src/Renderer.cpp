@@ -158,7 +158,7 @@ void Renderer::Draw( const Context& ctx )
 	ID3D12DescriptorHeap* heaps[] = { m_srv_heap->GetInterface() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
-	std::vector<Light*> lights_with_shadow;
+	std::vector<GPULight*> lights_with_shadow;
 	std::vector<D3D12_GPU_VIRTUAL_ADDRESS> sm_pass_cbs;
 	{
 		ShadowCasters casters;
@@ -671,7 +671,7 @@ void Renderer::BuildFrameResources( )
 
 void Renderer::BuildLights()
 {
-	auto& parallel_light = m_scene.lights.emplace( "sun", Light{ Light::Type::Parallel } ).first->second;
+	auto& parallel_light = m_scene.lights.emplace( "sun", GPULight{ GPULight::Type::Parallel } ).first->second;
 	LightConstants& data = parallel_light.data;
 
 	// 304.5 wt/m^2
@@ -761,7 +761,7 @@ void Renderer::BuildPasses()
 	m_sm_cmd_lst->Close();
 }
 
-void Renderer::CreateShadowMap( Texture& texture )
+void Renderer::CreateShadowMap( GPUTexture& texture )
 {
 	constexpr UINT width = 4096;
 	constexpr UINT height = 4096;

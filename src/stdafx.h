@@ -8,6 +8,7 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <memory>
 
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>

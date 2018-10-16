@@ -149,6 +149,9 @@
     <ClCompile Include="src\Scene.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneManager.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -254,6 +257,12 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\SceneItems.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SceneManager.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SceneManager.hpp">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

@@ -101,24 +101,24 @@ struct StaticMaterial
 	void LoadToGPU( ID3D12Device& device, ID3D12GraphicsCommandList& cmd_list );
 };
 
-struct Texture
+struct GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
 	std::unique_ptr<Descriptor> srv = nullptr;
 };
 
-struct StaticTexture : public Texture
+struct StaticTexture : public GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
 };
 
 // resides only in GPU mem
-struct DynamicTexture : public Texture
+struct DynamicTexture : public GPUTexture
 {
 	std::unique_ptr<Descriptor> rtv = nullptr;
 };
 
-struct ShadowMap : public Texture
+struct ShadowMap : public GPUTexture
 {
 	std::unique_ptr<Descriptor> dsv = nullptr;
 };
@@ -157,7 +157,7 @@ struct LightConstants
 	float spot_power; // spotlight only
 };
 
-struct Light
+struct GPULight
 {
 	enum class Type
 	{
@@ -214,7 +214,7 @@ struct RenderSceneContext
 
 	// lighting, materials and textures
 	std::unordered_map<std::string, StaticMaterial> materials;
-	std::unordered_map<std::string, Light> lights;
+	std::unordered_map<std::string, GPULight> lights;
 	std::unordered_map<std::string, StaticTexture> textures;
 	std::unordered_map<std::string, ShadowMap> shadow_maps;
 
