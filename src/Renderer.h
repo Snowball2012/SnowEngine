@@ -77,6 +77,8 @@ private:
 	ComPtr<ID3D12Device> m_d3d_device = nullptr;
 
 	std::unique_ptr<GPUTaskQueue> m_graphics_queue = nullptr;
+	std::unique_ptr<GPUTaskQueue> m_copy_queue = nullptr;
+	std::unique_ptr<GPUTaskQueue> m_compute_queue = nullptr;
 
 	ComPtr<IDXGISwapChain> m_swap_chain = nullptr;
 	static constexpr int SwapChainBufferCount = 2;
@@ -94,7 +96,7 @@ private:
 
 	RenderSceneContext m_scene;
 
-	SceneManager m_scene_manager;
+	std::unique_ptr<SceneManager> m_scene_manager;
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
@@ -161,6 +163,7 @@ private:
 	TemporalAA m_taa;
 
 	// methods
+	void CreateDevice();
 	void CreateBaseCommandObjects();
 	void CreateSwapChain();
 

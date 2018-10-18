@@ -1,6 +1,5 @@
 #pragma once
 
-#include "SceneManager.h"
 #include "GPUTaskQueue.h"
 
 #include <wrl.h>

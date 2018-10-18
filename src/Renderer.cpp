@@ -60,38 +60,11 @@ Renderer::~Renderer()
 
 void Renderer::InitD3D()
 {
-#if defined(DEBUG) || defined(_DEBUG) 
-	// Enable the D3D12 debug layer.
-	{
-		ComPtr<ID3D12Debug> debugController;
-		ThrowIfFailed( D3D12GetDebugInterface( IID_PPV_ARGS( &debugController ) ) );
-		debugController->EnableDebugLayer();
-	}
-#endif
-
-	ThrowIfFailed( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
-
-	// Try to create hardware device.
-	HRESULT hardware_result;
-	hardware_result = D3D12CreateDevice(
-		nullptr,             // default adapter
-		D3D_FEATURE_LEVEL_11_0,
-		IID_PPV_ARGS( &m_d3d_device ) );
-
-
-	// Fallback to WARP device.
-	if ( FAILED( hardware_result ) )
-	{
-		ComPtr<IDXGIAdapter> pWarpAdapter;
-		ThrowIfFailed( m_dxgi_factory->EnumWarpAdapter( IID_PPV_ARGS( &pWarpAdapter ) ) );
-
-		ThrowIfFailed( D3D12CreateDevice(
-			pWarpAdapter.Get(),
-			D3D_FEATURE_LEVEL_11_0,
-			IID_PPV_ARGS( &m_d3d_device ) ) );
-	}
+	CreateDevice();
 
 	m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT );
+	m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY );
+	m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE );
 
 	m_rtv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
 	m_dsv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
@@ -99,6 +72,8 @@ void Renderer::InitD3D()
 
 	CreateBaseCommandObjects();
 	CreateSwapChain();
+
+	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, FrameResourceCount, m_copy_queue.get() );
 
 	BuildRtvAndDsvDescriptorHeaps();
 	Resize( m_client_width, m_client_height );
@@ -361,6 +336,41 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 		RecreatePrevFrameTexture();
 
 	ImGui_ImplDX12_CreateDeviceObjects();
+}
+
+void Renderer::CreateDevice()
+{
+
+#if defined(DEBUG) || defined(_DEBUG) 
+	// Enable the D3D12 debug layer.
+	{
+		ComPtr<ID3D12Debug> debugController;
+		ThrowIfFailed( D3D12GetDebugInterface( IID_PPV_ARGS( &debugController ) ) );
+		debugController->EnableDebugLayer();
+	}
+#endif
+
+	ThrowIfFailed( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
+
+	// Try to create hardware device.
+	HRESULT hardware_result;
+	hardware_result = D3D12CreateDevice(
+		nullptr,             // default adapter
+		D3D_FEATURE_LEVEL_11_0,
+		IID_PPV_ARGS( &m_d3d_device ) );
+
+
+	// Fallback to WARP device.
+	if ( FAILED( hardware_result ) )
+	{
+		ComPtr<IDXGIAdapter> pWarpAdapter;
+		ThrowIfFailed( m_dxgi_factory->EnumWarpAdapter( IID_PPV_ARGS( &pWarpAdapter ) ) );
+
+		ThrowIfFailed( D3D12CreateDevice(
+			pWarpAdapter.Get(),
+			D3D_FEATURE_LEVEL_11_0,
+			IID_PPV_ARGS( &m_d3d_device ) ) );
+	}
 }
 
 void Renderer::CreateBaseCommandObjects()
