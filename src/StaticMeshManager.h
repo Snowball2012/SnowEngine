@@ -29,7 +29,8 @@ private:
 	{
 		StaticMeshID id;
 		std::string name;
-		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
+		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_vb;
+		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_ib;
 		D3D12_VERTEX_BUFFER_VIEW vbv;
 		D3D12_INDEX_BUFFER_VIEW ibv;
 		D3D_PRIMITIVE_TOPOLOGY topology;
@@ -39,7 +40,8 @@ private:
 	{
 		std::vector<StaticMeshData> meshes_to_upload;
 		std::vector<StaticMeshData> meshes_to_remove;
-		std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> uploaders;
+		std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12Resource>,
+		                      Microsoft::WRL::ComPtr<ID3D12Resource>>> uploaders;
 	};
 
 

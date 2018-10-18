@@ -112,6 +112,8 @@ void Renderer::Draw( const Context& ctx )
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
 
+	m_scene_manager->UpdatePipelineBindings();
+
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
 	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
@@ -580,6 +582,11 @@ void Renderer::BuildGeometry( const ImportedScene& ext_scene )
 	// static
 	{
 		auto& submeshes = LoadStaticGeometry<DXGI_FORMAT_R32_UINT>( "main", ext_scene.vertices, ext_scene.indices, m_cmd_list.Get() );
+
+		m_scene_manager->GetScene().LoadStaticMesh(
+			"main",
+			make_span( ext_scene.vertices.data(), ext_scene.vertices.data() + ext_scene.vertices.size() ),
+			make_span( ext_scene.indices.data(), ext_scene.indices.data() + ext_scene.indices.size() ) );
 
 		for ( const auto& cpu_submesh : ext_scene.submeshes )
 		{

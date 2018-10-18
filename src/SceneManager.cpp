@@ -12,7 +12,7 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, const span<const
 }
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
-	: m_static_mesh_mgr( std::move( device ), &m_scene )
+	: m_static_mesh_mgr( device, &m_scene )
 	, m_scene_view( &m_scene, &m_static_mesh_mgr )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
@@ -58,6 +58,7 @@ void SceneManager::UpdatePipelineBindings()
 	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].Get(), nullptr );
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 
+	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };
 	m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 	
