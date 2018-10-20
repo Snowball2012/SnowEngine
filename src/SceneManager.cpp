@@ -11,9 +11,17 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, const span<const
 	return mesh_id;
 }
 
+TextureID SceneClientView::LoadStreamedTexture( std::string path )
+{
+	TextureID tex_id = m_scene->AddTexture();
+	m_tex_streamer->LoadStreamedTexture( tex_id, std::move( path ) );
+	return tex_id;
+}
+
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
-	, m_scene_view( &m_scene, &m_static_mesh_mgr )
+	, m_tex_streamer( device, &m_scene )
+	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
 {
@@ -57,10 +65,13 @@ void SceneManager::UpdatePipelineBindings()
 
 	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].Get(), nullptr );
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
+	m_tex_streamer.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };
 	m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 	
-	m_static_mesh_mgr.PostTimestamp( cur_op, m_copy_queue->CreateTimestamp() );
+	auto timestamp = m_copy_queue->CreateTimestamp();
+	m_static_mesh_mgr.PostTimestamp( cur_op, timestamp );
+	m_tex_streamer.PostTimestamp( cur_op, timestamp );
 }

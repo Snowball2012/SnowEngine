@@ -39,15 +39,18 @@ public:
 	// properties
 	D3D12_GPU_VIRTUAL_ADDRESS& GPUView() noexcept { return m_gpu; }
 	const D3D12_GPU_VIRTUAL_ADDRESS& GPUView() const noexcept { return m_gpu; }
+	span<uint8_t>& MappedRegion() noexcept { return m_mapped_region; }
 
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
 private:
 	friend class Scene;
-	ObjectTransform() {}
+	ObjectTransform() : m_mapped_region( nullptr, nullptr ) {}
 
 	DirectX::XMFLOAT4X4 m_obj2world;
 	D3D12_GPU_VIRTUAL_ADDRESS m_gpu;
+	span<uint8_t> m_mapped_region;
+
 	bool m_is_dirty = false;
 };
 using TransformID = packed_freelist<ObjectTransform>::id;

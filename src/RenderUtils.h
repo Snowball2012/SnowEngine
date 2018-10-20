@@ -97,6 +97,7 @@ namespace Utils
 		bool mIsConstantBuffer = false;
 	};
 
+
 	// temp
 	class DxException
 	{

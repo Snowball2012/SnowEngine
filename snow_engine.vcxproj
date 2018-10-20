@@ -215,6 +215,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     </ClCompile>
     <ClCompile Include="src\TemporalAA.cpp" />
     <ClCompile Include="src\TemporalBlendPass.cpp" />
+    <ClCompile Include="src\TextureStreamer.cpp" />
     <ClCompile Include="src\ToneMappingPass.cpp" />
     <ClCompile Include="src\utils\CompileTimeTests.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -259,6 +260,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\TemporalAA.h" />
     <ClInclude Include="src\TemporalBlendPass.h" />
+    <ClInclude Include="src\TextureStreamer.h" />
     <ClInclude Include="src\ToneMappingPass.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />
     <ClInclude Include="src\utils\packed_freelist.hpp" />

@@ -6,6 +6,7 @@
 using SceneCopyOp = uint64_t;
 
 #include "StaticMeshManager.h"
+#include "TextureStreamer.h"
 
 class SceneManager;
 class StaticMeshManager;
@@ -15,15 +16,20 @@ class GPUTaskQueue;
 class SceneClientView
 {
 public:
-	SceneClientView( Scene* scene, StaticMeshManager* smm ) : m_scene( scene ), m_static_mesh_manager( smm ) {}
+	SceneClientView( Scene* scene, StaticMeshManager* smm, TextureStreamer* tex_streamer )
+		: m_scene( scene )
+		, m_static_mesh_manager( smm )
+		, m_tex_streamer( tex_streamer ) {}
 
 	const Scene& GetROScene() const noexcept { return *m_scene; }
 
 	StaticMeshID LoadStaticMesh( std::string name, const span<const Vertex>& vertices, const span<const uint32_t>& indices );
+	TextureID LoadStreamedTexture( std::string path );
 
 private:
 	Scene* m_scene;
 	StaticMeshManager* m_static_mesh_manager;
+	TextureStreamer* m_tex_streamer;
 };
 
 
@@ -45,6 +51,7 @@ private:
 
 	Scene m_scene;
 	StaticMeshManager m_static_mesh_mgr;
+	TextureStreamer m_tex_streamer;
 	SceneClientView m_scene_view;
 	GPUTaskQueue* m_copy_queue;
 

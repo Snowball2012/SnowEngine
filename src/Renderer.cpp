@@ -530,11 +530,16 @@ void Renderer::InitGUI()
 
 void Renderer::LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture )
 {
+	TextureID ph_albedo_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/WoodCrate01.dds" );
+	TextureID ph_normal_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
+	TextureID ph_specular_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
 	LoadStaticDDSTexture( L"resources/textures/WoodCrate01.dds", "placeholder_albedo" );
 	LoadStaticDDSTexture( L"resources/textures/default_deriv_normal.dds", "placeholder_normal" );
 	LoadStaticDDSTexture( L"resources/textures/default_spec.dds", "placeholder_specular" );
 	for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
 	{
+		m_scene_manager->GetScene().LoadStreamedTexture( ext_scene.textures[i] );
+
 		LoadStaticDDSTexture( std::wstring( ext_scene.textures[i].begin(), ext_scene.textures[i].end() ).c_str(), ext_scene.textures[i] );
 
 		if ( flush_per_texture )
