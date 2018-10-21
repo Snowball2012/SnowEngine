@@ -158,6 +158,9 @@
     <ClCompile Include="src\TextureStreamer.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\DynamicSceneBuffers.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -275,6 +278,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\TextureStreamer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DynamicSceneBuffers.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

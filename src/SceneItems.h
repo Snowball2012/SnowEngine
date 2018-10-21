@@ -39,17 +39,14 @@ public:
 	// properties
 	D3D12_GPU_VIRTUAL_ADDRESS& GPUView() noexcept { return m_gpu; }
 	const D3D12_GPU_VIRTUAL_ADDRESS& GPUView() const noexcept { return m_gpu; }
-	span<uint8_t>& MappedRegion() noexcept { return m_mapped_region; }
-
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
 private:
 	friend class Scene;
-	ObjectTransform() : m_mapped_region( nullptr, nullptr ) {}
+	ObjectTransform() {}
 
 	DirectX::XMFLOAT4X4 m_obj2world;
 	D3D12_GPU_VIRTUAL_ADDRESS m_gpu;
-	span<uint8_t> m_mapped_region;
 
 	bool m_is_dirty = false;
 };
@@ -176,6 +173,10 @@ public:
 	D3D12_GPU_DESCRIPTOR_HANDLE& DescriptorTable() noexcept { return m_desc_table; }
 	const D3D12_GPU_DESCRIPTOR_HANDLE& DescriptorTable() const noexcept { return m_desc_table; }
 
+	// material cb
+	D3D12_GPU_VIRTUAL_ADDRESS& GPUConstantBuffer() noexcept { return m_material_cb; }
+	const D3D12_GPU_VIRTUAL_ADDRESS& GPUConstantBuffer() const noexcept { return m_material_cb; }
+
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
 
@@ -189,6 +190,7 @@ private:
 	Data m_data;
 
 	D3D12_GPU_DESCRIPTOR_HANDLE m_desc_table;
+	D3D12_GPU_VIRTUAL_ADDRESS m_material_cb;
 
 	bool m_is_dirty = false;
 };

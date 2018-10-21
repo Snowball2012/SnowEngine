@@ -49,7 +49,6 @@ private:
 		std::vector<UploadData> uploaders;
 	};
 
-
 	struct ActiveTransaction
 	{
 		UploadTransaction transaction;
