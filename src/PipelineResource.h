@@ -30,11 +30,6 @@ struct ShadowMapStorage
 	std::vector<GPULight*>* sm_storage = nullptr;
 };
 
-struct ObjectConstantBuffer
-{
-	ID3D12Resource* buffer = nullptr;
-};
-
 struct ForwardPassCB
 {
 	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;

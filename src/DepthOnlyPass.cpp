@@ -20,11 +20,9 @@ void DepthOnlyPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd
 
 	cmd_list.SetGraphicsRootConstantBufferView( 2, context.pass_cbv );
 
-	const auto obj_cb_address = context.object_cb->GetGPUVirtualAddress();
-	const auto obj_cb_size = Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : *context.renderitems )
 	{
-		cmd_list.SetGraphicsRootConstantBufferView( 0, obj_cb_address + render_item.cb_idx * obj_cb_size );
+		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
 		cmd_list.SetGraphicsRootDescriptorTable( 1, render_item.material->base_color_desc );
 
 		cmd_list.IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );

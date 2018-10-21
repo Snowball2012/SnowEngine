@@ -16,7 +16,6 @@ public:
 		DepthStorage,
 		ScreenConstants,
 		SceneContext,
-		ObjectConstantBuffer,
 		ForwardPassCB
 		>;
 	using OutputResources = std::tuple
@@ -36,15 +35,12 @@ public:
 		m_pipeline->GetRes( view );
 		SceneContext scene;
 		m_pipeline->GetRes( scene );
-		ObjectConstantBuffer object_cb;
-		m_pipeline->GetRes( object_cb );
 		ForwardPassCB pass_cb;
 		m_pipeline->GetRes( pass_cb );
 
 		DepthOnlyPass::Context ctx;
 		{
 			ctx.depth_stencil_view = dsv.dsv;
-			ctx.object_cb = object_cb.buffer;
 			ctx.pass_cbv = pass_cb.pass_cb;
 			ctx.renderitems = &scene.scene->renderitems;
 		}
@@ -78,7 +74,6 @@ public:
 		FinalSceneDepth,
 		ScreenConstants,
 		SceneContext,
-		ObjectConstantBuffer,
 		ForwardPassCB
 		>;
 
@@ -105,8 +100,6 @@ public:
 		m_pipeline->GetRes( view );
 		SceneContext scene;
 		m_pipeline->GetRes( scene );
-		ObjectConstantBuffer object_cb;
-		m_pipeline->GetRes( object_cb );
 		ForwardPassCB pass_cb;
 		m_pipeline->GetRes( pass_cb );
 		SSAmbientLightingStorage ambient_buffer;
@@ -118,7 +111,6 @@ public:
 				 && shadow_maps.light_with_sm
 				 && hdr_color_buffer.rtv.ptr
 				 && shadow_maps.light_with_sm->size() == 1
-				 && object_cb.buffer
 				 && dsv.dsv.ptr
 				 && ambient_buffer.rtv.ptr
 				 && ambient_buffer.srv.ptr
@@ -129,7 +121,6 @@ public:
 		ForwardLightingPass::Context ctx;
 		ctx.back_buffer_rtv = hdr_color_buffer.rtv;
 		ctx.depth_stencil_view = dsv.dsv;
-		ctx.object_cb = object_cb.buffer;
 		ctx.scene = scene.scene;
 		ctx.shadow_map_srv = ( *shadow_maps.light_with_sm )[0]->shadow_map->srv->HandleGPU();
 		ctx.pass_cb = pass_cb.pass_cb;
@@ -252,8 +243,7 @@ public:
 		<
 		ShadowCasters,
 		ShadowProducers,
-		ShadowMapStorage,
-		ObjectConstantBuffer
+		ShadowMapStorage
 		>;
 
 	using OutputResources = std::tuple
@@ -270,18 +260,15 @@ public:
 		ShadowCasters casters;
 		ShadowProducers lights_with_shadow;
 		ShadowMapStorage shadow_maps_to_fill;
-		ObjectConstantBuffer object_cb;
 
 		m_pipeline->GetRes( casters );
 		m_pipeline->GetRes( lights_with_shadow );
 		m_pipeline->GetRes( shadow_maps_to_fill );
-		m_pipeline->GetRes( object_cb );
 
 		if ( ! ( casters.casters
 				 && lights_with_shadow.lights
 				 && lights_with_shadow.pass_cbs
-				 && shadow_maps_to_fill.sm_storage
-				 && object_cb.buffer ) )
+				 && shadow_maps_to_fill.sm_storage ) )
 			throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
 
 		const size_t nproducers = lights_with_shadow.lights->size();
@@ -319,7 +306,6 @@ public:
 				ctx.depth_stencil_view = shadow_map->shadow_map->dsv->HandleCPU();
 				ctx.pass_cbv = (*lights_with_shadow.pass_cbs)[light_idx];
 				ctx.renderitems = casters.casters;
-				ctx.object_cb = object_cb.buffer;
 			}
 			cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 			m_pass->Draw( ctx, cmd_list );

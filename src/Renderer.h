@@ -62,7 +62,7 @@ public:
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
 	RenderSceneContext& GetScene() { return m_scene; }
 
-	SceneClientView& GetSceneView();
+	SceneClientView& GetSceneView() { return m_scene_manager->GetScene(); }
 
 private:
 	// data

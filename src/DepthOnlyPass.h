@@ -16,7 +16,6 @@ public:
 		std::vector<RenderItem>* renderitems;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
-		ID3D12Resource* object_cb;
 	};
 
 	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );

@@ -114,6 +114,9 @@ void Renderer::Draw( const Context& ctx )
 
 	m_scene_manager->UpdatePipelineBindings();
 
+	for ( auto& renderitem : m_scene.renderitems )
+		renderitem.tf_addr = GetSceneView().GetROScene().AllTransforms()[renderitem.tf_id].GPUView();
+
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
 	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
@@ -152,9 +155,6 @@ void Renderer::Draw( const Context& ctx )
 		ShadowMapStorage smstorage;
 		smstorage.sm_storage = &lights_with_shadow;
 		m_pipeline.SetRes( smstorage );
-
-		ObjectConstantBuffer object_cb{ m_cur_frame_resource->object_cb->Resource() };
-		m_pipeline.SetRes( object_cb );
 
 		ForwardPassCB pass_cb{ m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() };
 		m_pipeline.SetRes( pass_cb );
@@ -639,37 +639,22 @@ void Renderer::BuildMaterials( const ImportedScene& ext_scene )
 
 namespace
 {
-	void initFromSubmesh( const SubmeshGeometry& submesh, RenderItem& renderitem )
-	{
-		renderitem.index_count = submesh.IndexCount;
-		renderitem.index_offset = submesh.StartIndexLocation;
-		renderitem.vertex_offset = submesh.BaseVertexLocation;
-	};
-
-	void initFromSubmesh( const ImportedScene::Submesh& submesh, RenderItem& renderitem )
+	void initFromSubmesh( const ImportedScene::Submesh& submesh, SceneClientView& scene, RenderItem& renderitem )
 	{
 		renderitem.index_count = uint32_t( submesh.nindices );
 		renderitem.index_offset = uint32_t( submesh.index_offset );
 		renderitem.vertex_offset = 0;
-		renderitem.world_mat = submesh.transform;
+		renderitem.tf_id = scene.AddTransform( submesh.transform );
 	};
 }
 
 void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 {
-	auto init_from_submesh = []( const auto& submesh, RenderItem& renderitem )
-	{
-		renderitem.n_frames_dirty = FrameResourceCount;
-		initFromSubmesh( submesh, renderitem );
-	};
-
 	m_scene.renderitems.reserve( ext_scene.submeshes.size() );
 
-	size_t idx = 0;
 	for ( const auto& submesh : ext_scene.submeshes )
 	{
 		RenderItem item;
-		item.cb_idx = int( idx++ );
 		item.geom = &m_scene.static_geometry["main"];
 		const int material_idx = submesh.material_idx;
 		std::string material_name;
@@ -679,7 +664,7 @@ void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 			material_name = ext_scene.materials[material_idx].first;
 
 		item.material = &m_scene.materials[material_name];
-		init_from_submesh( submesh, item );
+		initFromSubmesh( submesh, m_scene_manager->GetScene(), item );
 		m_scene.renderitems.push_back( item );
 	}
 }
@@ -687,7 +672,7 @@ void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 void Renderer::BuildFrameResources( )
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
-		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, UINT( m_scene.renderitems.size() ), 0 );
+		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, 0 );
 	m_cur_fr_idx = 0;
 	m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
 }
@@ -724,8 +709,6 @@ void Renderer::BuildConstantBuffers()
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
 	{
-		// object cb
-		m_frame_resources[i].object_cb = std::make_unique<Utils::UploadBuffer<ObjectConstants>>( m_d3d_device.Get(), UINT( m_scene.renderitems.size() ), true );
 		// pass cb
 		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( m_d3d_device.Get(), PassCount, true );
 	}

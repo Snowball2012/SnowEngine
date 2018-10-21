@@ -6,15 +6,16 @@
 class DynamicSceneBuffers
 {
 public:
+
 	DynamicSceneBuffers( Microsoft::WRL::ComPtr<ID3D12Device> device, Scene* scene, size_t num_bufferized_frames ) noexcept;
 
 	void Update();
 
 	void AddTransform( TransformID id );
 	void AddMaterial( MaterialID id );
+
 private:
 	
-
 	struct BufferData
 	{
 		size_t offset;
@@ -47,15 +48,15 @@ private:
 	void RebuildBuffer( BufferInstance& buffer );
 	void UpdateBufferContents( BufferInstance& buffer );
 
+	// fnUse_Item is a functor with void( Item_Data&, Item& ) signature
+	template<typename fnUseTransform, typename fnUseMaterial>
+	void UpdateAllItems( const BufferInstance& buffer, const fnUseTransform& fn_tf, const fnUseMaterial& fn_mat );
+
 	ObjectConstants CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept;
 	MaterialConstants CreateMaterialGPUData( const MaterialPBR& cpu_data ) const noexcept;
 
 	template<typename Data>
 	void CopyToBuffer( BufferInstance& buffer, const BufferData& dst, const Data& src ) const noexcept;
-
-	// fnUse_Item is a functor with void( Item_Data&, Item& ) signature
-	template<typename fnUseTransform, typename fnUseMaterial>
-	void UpdateAllItems( const BufferInstance& buffer, const fnUseTransform& fn_tf, const fnUseMaterial& fn_mat );
 
 	std::vector<TransformData> m_transforms;
 	std::vector<MaterialData> m_materials;

@@ -6,6 +6,8 @@
 
 #include "DescriptorHeap.h"
 
+#include "Scene.h"
+
 struct Vertex
 {
 	DirectX::XMFLOAT3 pos;
@@ -133,11 +135,8 @@ struct RenderItem
 	
 	StaticMaterial* material = nullptr;
 
-	// uniforms
-	int cb_idx = -1;
-	DirectX::XMFLOAT4X4 world_mat = Identity4x4;
-
-	int n_frames_dirty = 0;
+	TransformID tf_id;
+	D3D12_GPU_VIRTUAL_ADDRESS tf_addr;
 };
 
 struct ObjectConstants

@@ -149,10 +149,6 @@ void RenderApp::Update( const GameTimer& gt )
 
 	ReadKeyboardState( gt );
 
-	// Update object constants if needed
-	for ( auto& renderitem : m_renderer->GetScene().renderitems )
-		UpdateRenderItem( renderitem, *m_renderer->GetCurFrameResources().object_cb );
-
 	// Update pass constants
 	UpdatePassConstants( gt, *m_renderer->GetCurFrameResources().pass_cb );
 }
@@ -321,19 +317,6 @@ void RenderApp::UpdateLights( PassConstants& pc )
 		pc.lights[light_offset++] = *light;
 	}
 }
-
-void RenderApp::UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb )
-{
-	if ( renderitem.n_frames_dirty > 0 )
-	{
-		ObjectConstants obj_constants;
-		XMStoreFloat4x4( &obj_constants.model, XMMatrixTranspose( XMLoadFloat4x4( &renderitem.world_mat ) ) );
-		XMStoreFloat4x4( &obj_constants.model_inv_transpose, XMMatrixTranspose( InverseTranspose( XMLoadFloat4x4( &renderitem.world_mat ) ) ) );
-		obj_cb.CopyData( renderitem.cb_idx, obj_constants );
-		renderitem.n_frames_dirty--;
-	}
-}
-
 
 void RenderApp::Draw( const GameTimer& gt )
 {

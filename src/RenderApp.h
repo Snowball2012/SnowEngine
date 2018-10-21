@@ -38,7 +38,6 @@ private:
 	
 	void UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb );
 	void UpdateLights( PassConstants& pc );
-	void UpdateRenderItem( RenderItem& renderitem, Utils::UploadBuffer<ObjectConstants>& obj_cb );
 	DirectX::XMMATRIX CalcProjectionMatrix() const;
 
 	// input

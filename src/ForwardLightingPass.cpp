@@ -25,11 +25,9 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 
 	cmd_list.SetGraphicsRootDescriptorTable( 5, context.shadow_map_srv );
 
-	const auto obj_cb_adress = context.object_cb->GetGPUVirtualAddress();
-	const auto obj_cb_size =  Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
 	for ( const auto& render_item : context.scene->renderitems )
 	{
-		cmd_list.SetGraphicsRootConstantBufferView( 0, obj_cb_adress + render_item.cb_idx * obj_cb_size );
+		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
 		cmd_list.SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
 		cmd_list.SetGraphicsRootDescriptorTable( 2, render_item.material->base_color_desc );
 		cmd_list.SetGraphicsRootDescriptorTable( 3, render_item.material->normal_map_desc );

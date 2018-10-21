@@ -16,7 +16,6 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
-		ID3D12Resource* object_cb;
 	};
 
 	// all descriptor heaps must be set prematurely
