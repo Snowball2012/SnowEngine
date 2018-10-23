@@ -30,7 +30,7 @@ void DynamicSceneBuffers::Update()
 }
 
 
-void DynamicSceneBuffers::AddTransform( TransformID id )
+void DynamicSceneBuffers::AddTransform( TransformID id ) noexcept
 {
 	InvalidateAllBuffers();
 	m_transforms.push_back( TransformData{ id, BufferData{} } );
@@ -38,7 +38,7 @@ void DynamicSceneBuffers::AddTransform( TransformID id )
 }
 
 
-void DynamicSceneBuffers::AddMaterial( MaterialID id )
+void DynamicSceneBuffers::AddMaterial( MaterialID id ) noexcept
 {
 	InvalidateAllBuffers();
 	m_materials.push_back( MaterialData{ id, BufferData{} } );

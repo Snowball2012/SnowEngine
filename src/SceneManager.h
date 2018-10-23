@@ -8,6 +8,7 @@ using SceneCopyOp = uint64_t;
 #include "StaticMeshManager.h"
 #include "TextureStreamer.h"
 #include "DynamicSceneBuffers.h"
+#include "DescriptorTableBakery.h"
 
 class SceneManager;
 class GPUTaskQueue;

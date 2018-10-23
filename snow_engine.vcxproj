@@ -172,6 +172,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\D3DApp.cpp" />
     <ClCompile Include="src\DepthOnlyPass.cpp" />
     <ClCompile Include="src\DescriptorHeap.cpp" />
+    <ClCompile Include="src\DescriptorTableBakery.cpp" />
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
     <ClCompile Include="src\FrameResource.cpp" />
@@ -229,6 +230,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\D3DApp.h" />
     <ClInclude Include="src\DepthOnlyPass.h" />
     <ClInclude Include="src\DescriptorHeap.h" />
+    <ClInclude Include="src\DescriptorTableBakery.h" />
     <ClInclude Include="src\DynamicSceneBuffers.h" />
     <ClInclude Include="src\ForwardLightingPass.h" />
     <ClInclude Include="src\FrameResource.h" />

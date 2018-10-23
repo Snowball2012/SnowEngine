@@ -161,6 +161,9 @@
     <ClCompile Include="src\DynamicSceneBuffers.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\DescriptorTableBakery.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -281,6 +284,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\DynamicSceneBuffers.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DescriptorTableBakery.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

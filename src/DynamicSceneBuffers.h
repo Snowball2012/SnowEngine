@@ -11,8 +11,8 @@ public:
 
 	void Update();
 
-	void AddTransform( TransformID id );
-	void AddMaterial( MaterialID id );
+	void AddTransform( TransformID id ) noexcept;
+	void AddMaterial( MaterialID id ) noexcept;
 
 private:
 	
