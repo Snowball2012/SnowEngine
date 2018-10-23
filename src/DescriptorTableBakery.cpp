@@ -112,9 +112,9 @@ std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorTableBakery::ModifyTable( T
 }
 
 
-void DescriptorTableBakery::Rebuild( StagingHeap& heap, size_t new_capacity )
+void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capacity )
 {
-	D3D12_DESCRIPTOR_HEAP_DESC new_heap_desc = m_staging_heap.heap->GetDesc();
+	D3D12_DESCRIPTOR_HEAP_DESC new_heap_desc = staging_heap.heap->GetDesc();
 
 	assert( new_capacity > new_heap_desc.NumDescriptors );
 	new_heap_desc.NumDescriptors = new_capacity;
@@ -130,7 +130,7 @@ void DescriptorTableBakery::Rebuild( StagingHeap& heap, size_t new_capacity )
 
 	for ( DescriptorTableData& table_data : m_tables )
 	{
-		src_ranges_start.push_back( CD3DX12_CPU_DESCRIPTOR_HANDLE( m_staging_heap.heap->GetCPUDescriptorHandleForHeapStart(), table_data.offset_in_descriptors ) );
+		src_ranges_start.push_back( CD3DX12_CPU_DESCRIPTOR_HANDLE( staging_heap.heap->GetCPUDescriptorHandleForHeapStart(), table_data.offset_in_descriptors ) );
 		src_ranges_size.push_back( UINT( table_data.ndescriptors ) );
 
 		table_data.offset_in_descriptors = size_t( new_end );
@@ -141,8 +141,8 @@ void DescriptorTableBakery::Rebuild( StagingHeap& heap, size_t new_capacity )
 							   UINT( src_ranges_start.size() ), src_ranges_start.data(), src_ranges_size.data(),
 							   new_heap_desc.Type );
 
-	m_staging_heap.heap = new_heap;
-	m_staging_heap.heap_end = size_t( new_end );
+	staging_heap.heap = new_heap;
+	staging_heap.heap_end = size_t( new_end );
 }
 
 
@@ -156,6 +156,3 @@ const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DescriptorTableBakery::Curre
 {
 	return m_gpu_heaps[m_cur_gpu_heap_idx];
 }
-
-
-
