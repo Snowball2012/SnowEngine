@@ -9,6 +9,7 @@ using SceneCopyOp = uint64_t;
 #include "TextureStreamer.h"
 #include "DynamicSceneBuffers.h"
 #include "DescriptorTableBakery.h"
+#include "MaterialTableBaker.h"
 
 class SceneManager;
 class GPUTaskQueue;
@@ -17,11 +18,16 @@ class GPUTaskQueue;
 class SceneClientView
 {
 public:
-	SceneClientView( Scene* scene, StaticMeshManager* smm, TextureStreamer* tex_streamer, DynamicSceneBuffers* dynamic_buffers )
+	SceneClientView( Scene* scene,
+					 StaticMeshManager* smm,
+					 TextureStreamer* tex_streamer,
+					 DynamicSceneBuffers* dynamic_buffers,
+					 MaterialTableBaker* material_table_baker )
 		: m_scene( scene )
 		, m_static_mesh_manager( smm )
 		, m_tex_streamer( tex_streamer )
-		, m_dynamic_buffers( dynamic_buffers ){}
+		, m_dynamic_buffers( dynamic_buffers )
+		, m_material_table_baker( material_table_baker ){}
 
 	const Scene& GetROScene() const noexcept { return *m_scene; }
 
@@ -35,6 +41,7 @@ private:
 	StaticMeshManager* m_static_mesh_manager;
 	TextureStreamer* m_tex_streamer;
 	DynamicSceneBuffers* m_dynamic_buffers;
+	MaterialTableBaker* m_material_table_baker;
 };
 
 
@@ -65,6 +72,7 @@ private:
 	TextureStreamer m_tex_streamer;
 	SceneClientView m_scene_view;
 	DynamicSceneBuffers m_dynamic_buffers;
+	MaterialTableBaker m_material_table_baker;
 	GPUTaskQueue* m_copy_queue;
 
 	SceneCopyOp m_operation_counter = 0;

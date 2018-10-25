@@ -36,6 +36,9 @@ MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures
 	material_data.transform = uv_transform;
 
 	m_dynamic_buffers->AddMaterial( mat_id );
+
+	m_material_table_baker->RegisterMaterial( mat_id );
+
 	return mat_id;
 }
 
@@ -43,10 +46,11 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t 
 	: m_static_mesh_mgr( device, &m_scene )
 	, m_tex_streamer( device, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
-	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers )
+	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
+	, m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
 {
 	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
 	{
@@ -98,6 +102,7 @@ void SceneManager::UpdatePipelineBindings()
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	m_tex_streamer.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	m_dynamic_buffers.Update();
+	m_material_table_baker.UpdateStagingDescriptors();
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };
@@ -108,9 +113,7 @@ void SceneManager::UpdatePipelineBindings()
 	m_tex_streamer.PostTimestamp( cur_op, timestamp );
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
-	{
-		// Update material tables
-	}
+		m_material_table_baker.UpdateGPUDescriptors();
 
 	CleanModifiedItemsStatus();
 }

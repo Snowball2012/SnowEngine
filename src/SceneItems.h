@@ -123,7 +123,7 @@ class Texture : public RefCounter
 {
 public:
 	// main data
-	D3D12_CPU_DESCRIPTOR_HANDLE& ModifyStagingSRV() noexcept { m_is_dirty = false; return m_staging_srv; }
+	D3D12_CPU_DESCRIPTOR_HANDLE& ModifyStagingSRV() noexcept { m_is_dirty = true; return m_staging_srv; }
 	D3D12_CPU_DESCRIPTOR_HANDLE StagingSRV() const noexcept { return m_staging_srv; }
 
 	// properties

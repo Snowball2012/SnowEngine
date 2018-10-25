@@ -41,6 +41,8 @@ public:
 	// returned pointer may be invalidated after subsequent AllocateTable call. Returns nullptr if there is no table does not exist
 	std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> ModifyTable( TableID id ) noexcept;
 
+	size_t GetDescriptorIncrementSize() const noexcept { return m_desc_size; };
+
 private:
 
 	struct StagingHeap
