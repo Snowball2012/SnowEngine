@@ -19,16 +19,18 @@ public:
 	DescriptorTableBakery( Microsoft::WRL::ComPtr<ID3D12Device> device, D3D12_DESCRIPTOR_HEAP_TYPE type,
 						   size_t n_bufferized_frames, size_t num_descriptors_baseline = 100 );
 
-	// Fills gpu_handles for every descriptor table
-	void BakeGPUTables();
+	// Fills gpu_handles for every descriptor table, returns true if tables have been changed
+	bool BakeGPUTables();
 	const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& CurrentGPUHeap() const noexcept;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& CurrentGPUHeap() noexcept;
 
 	// Can potentially call ID3D12Device::CopyDescriptors() and defragment the whole table, Reserve() before adding multiple tables when possible
 	TableID AllocateTable( size_t ndescriptors );
 	void Reserve( size_t ndescriptors );
+	size_t GetStagingHeapSize() const noexcept;
 	void EraseTable( TableID id ) noexcept;
 
-	// gpu_handle is valid only for this frame
+	// gpu_handle is valid only for one frame
 	struct TableInfo
 	{
 		D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle;
@@ -48,8 +50,6 @@ private:
 	};
 
 	void Rebuild( StagingHeap& heap, size_t new_capacity );
-
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& CurrentGPUHeap() noexcept;
 
 	packed_freelist<DescriptorTableData> m_tables;
 

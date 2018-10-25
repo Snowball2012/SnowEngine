@@ -46,6 +46,7 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t 
 	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
+	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
 {
 	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
 	{
@@ -77,6 +78,16 @@ SceneClientView& SceneManager::GetScene() noexcept
 }
 
 
+const DescriptorTableBakery& SceneManager::GetDescriptorTables() const noexcept
+{
+	return m_gpu_descriptor_tables;
+}
+
+DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
+{
+	return m_gpu_descriptor_tables;
+}
+
 void SceneManager::UpdatePipelineBindings()
 {
 	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();
@@ -95,6 +106,11 @@ void SceneManager::UpdatePipelineBindings()
 	auto timestamp = m_copy_queue->CreateTimestamp();
 	m_static_mesh_mgr.PostTimestamp( cur_op, timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, timestamp );
+
+	if ( m_gpu_descriptor_tables.BakeGPUTables() )
+	{
+		// Update material tables
+	}
 
 	CleanModifiedItemsStatus();
 }

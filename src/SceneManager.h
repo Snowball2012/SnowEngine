@@ -47,6 +47,9 @@ public:
 	const SceneClientView& GetScene() const noexcept;
 	SceneClientView& GetScene() noexcept;
 
+	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
+	DescriptorTableBakery& GetDescriptorTables() noexcept;
+
 	void UpdatePipelineBindings();
 
 	template<typename PipelineT>
@@ -57,6 +60,7 @@ private:
 	void CleanModifiedItemsStatus();
 
 	Scene m_scene;
+	DescriptorTableBakery m_gpu_descriptor_tables;
 	StaticMeshManager m_static_mesh_mgr;
 	TextureStreamer m_tex_streamer;
 	SceneClientView m_scene_view;

@@ -16,7 +16,7 @@ DescriptorTableBakery::DescriptorTableBakery( Microsoft::WRL::ComPtr<ID3D12Devic
 	D3D12_DESCRIPTOR_HEAP_DESC desc{};
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	desc.Type = type;
-	desc.NumDescriptors = num_descriptors_baseline;
+	desc.NumDescriptors = UINT( num_descriptors_baseline );
 	ThrowIfFailed( m_device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( m_staging_heap.heap.GetAddressOf() ) ) );
 
 	desc.Flags |= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
@@ -26,7 +26,7 @@ DescriptorTableBakery::DescriptorTableBakery( Microsoft::WRL::ComPtr<ID3D12Devic
 }
 
 
-void DescriptorTableBakery::BakeGPUTables()
+bool DescriptorTableBakery::BakeGPUTables()
 {
 	if ( m_gpu_tables_need_update )
 	{
@@ -47,7 +47,9 @@ void DescriptorTableBakery::BakeGPUTables()
 										 cur_gpu_heap->GetDesc().Type );
 
 		m_gpu_tables_need_update = false;
+		return true;
 	}
+	return false;
 }
 
 
@@ -77,7 +79,13 @@ void DescriptorTableBakery::Reserve( size_t ndescriptors )
 }
 
 
-void DescriptorTableBakery::EraseTable( TableID id )
+size_t DescriptorTableBakery::GetStagingHeapSize() const noexcept
+{
+	return m_staging_heap.heap_end;
+}
+
+
+void DescriptorTableBakery::EraseTable( TableID id ) noexcept
 {
 	m_tables.erase( id );
 }
@@ -89,7 +97,7 @@ std::optional<DescriptorTableBakery::TableInfo> DescriptorTableBakery::GetTable(
 	{
 		TableInfo retval;
 		retval.ndescriptors = table->ndescriptors;
-		retval.gpu_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE( CurrentGPUHeap()->GetGPUDescriptorHandleForHeapStart(), m_desc_size * table->offset_in_descriptors );
+		retval.gpu_handle = CD3DX12_GPU_DESCRIPTOR_HANDLE( CurrentGPUHeap()->GetGPUDescriptorHandleForHeapStart(), INT( m_desc_size * table->offset_in_descriptors ) );
 		return std::make_optional( retval );
 	}
 	return std::nullopt;
@@ -105,7 +113,7 @@ std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorTableBakery::ModifyTable( T
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted( *retval,
 													  CurrentGPUHeap()->GetCPUDescriptorHandleForHeapStart(),
-													  m_desc_size * table->offset_in_descriptors );
+													  INT( m_desc_size * table->offset_in_descriptors ) );
 		return retval;
 	}
 	return std::nullopt;
@@ -117,7 +125,7 @@ void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capac
 	D3D12_DESCRIPTOR_HEAP_DESC new_heap_desc = staging_heap.heap->GetDesc();
 
 	assert( new_capacity > new_heap_desc.NumDescriptors );
-	new_heap_desc.NumDescriptors = new_capacity;
+	new_heap_desc.NumDescriptors = UINT( new_capacity );
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> new_heap;
 	ThrowIfFailed( m_device->CreateDescriptorHeap( &new_heap_desc, IID_PPV_ARGS( new_heap.GetAddressOf() ) ) );
@@ -130,11 +138,11 @@ void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capac
 
 	for ( DescriptorTableData& table_data : m_tables )
 	{
-		src_ranges_start.push_back( CD3DX12_CPU_DESCRIPTOR_HANDLE( staging_heap.heap->GetCPUDescriptorHandleForHeapStart(), table_data.offset_in_descriptors ) );
+		src_ranges_start.push_back( CD3DX12_CPU_DESCRIPTOR_HANDLE( staging_heap.heap->GetCPUDescriptorHandleForHeapStart(), INT( table_data.offset_in_descriptors * m_desc_size ) ) );
 		src_ranges_size.push_back( UINT( table_data.ndescriptors ) );
 
 		table_data.offset_in_descriptors = size_t( new_end );
-		new_end += table_data.ndescriptors;
+		new_end += UINT( table_data.ndescriptors );
 	}
 	
 	m_device->CopyDescriptors( 1, &new_heap->GetCPUDescriptorHandleForHeapStart(), &new_end,

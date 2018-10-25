@@ -164,6 +164,9 @@
     <ClCompile Include="src\DescriptorTableBakery.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\MaterialTableBaker.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -287,6 +290,9 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\DescriptorTableBakery.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MaterialTableBaker.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
