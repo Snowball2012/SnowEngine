@@ -59,7 +59,7 @@ void MaterialTableBaker::UpdateGPUDescriptors()
 
 void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, TableID material_table_id, bool is_first_load )
 {
-	auto update_texture = [&]( TextureID tex_id, INT offset )
+	auto update_texture = [&]( TextureID tex_id, INT offset ) -> void
 	{
 		assert( m_scene->AllTextures().has( tex_id ) );
 

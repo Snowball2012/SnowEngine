@@ -128,21 +128,12 @@ struct SceneContext
 	RenderSceneContext* scene;
 };
 
-struct FrameResources
-{
-
-};
-
-struct PreviousFrameStorage
-{};
-
-struct PreviousFrame
-{};
-
-struct NewPreviousFrame
-{};
-
 struct FinalBackbuffer
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
+struct ImGuiFontHeap
+{
+	ID3D12DescriptorHeap* heap = nullptr;
 };

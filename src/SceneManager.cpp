@@ -108,15 +108,22 @@ void SceneManager::UpdatePipelineBindings()
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };
 	m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 	
-	auto timestamp = m_copy_queue->CreateTimestamp();
-	m_static_mesh_mgr.PostTimestamp( cur_op, timestamp );
-	m_tex_streamer.PostTimestamp( cur_op, timestamp );
+	m_last_copy_timestamp = m_copy_queue->CreateTimestamp();
+	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
+	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
 		m_material_table_baker.UpdateGPUDescriptors();
 
 	CleanModifiedItemsStatus();
 }
+
+
+void SceneManager::FlushAllOperations()
+{
+	m_copy_queue->WaitForTimestamp( m_last_copy_timestamp );
+}
+
 
 void SceneManager::CleanModifiedItemsStatus()
 {

@@ -59,11 +59,9 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 		Basic root sig
 		0 - cbv per object
 		1 - cbv per material
-		2 - albedo
-		3 - normal
-		4 - specular
-		5 - shadow
-		6 - cbv per pass
+		2 - material textures descriptor table
+		3 - shadow
+		4 - cbv per pass
 
 		Shader register bindings
 		b0 - cbv per obj
@@ -77,25 +75,21 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 
 		To optimize state changes keep material textures together when possible. Descriptor duplication?
 	*/
-	constexpr int nparams = 7;
+	constexpr int nparams = 5;
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
 	for ( int i = 0; i < 2; ++i )
 		slot_root_parameter[i].InitAsConstantBufferView( i );
 
-	CD3DX12_DESCRIPTOR_RANGE desc_table[4];
-	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 ); // albedo
-	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 ); // normal
-	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2 ); // specular
-	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // specular
+	CD3DX12_DESCRIPTOR_RANGE desc_table[2];
+	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0 ); // albedo, normal, specular
+	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
 
 	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_ALL );
 	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_ALL );
-	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_ALL );
-	slot_root_parameter[5].InitAsDescriptorTable( 1, &desc_table[3], D3D12_SHADER_VISIBILITY_ALL );
 
-	slot_root_parameter[6].InitAsConstantBufferView( 2 );
+	slot_root_parameter[4].InitAsConstantBufferView( 2 );
 
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
 											   UINT( static_samplers.size() ), static_samplers.data(),

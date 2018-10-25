@@ -110,9 +110,10 @@ std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> DescriptorTableBakery::ModifyTable( T
 	{
 		m_gpu_tables_need_update = true;
 		auto retval = std::optional<D3D12_CPU_DESCRIPTOR_HANDLE>();
+		retval.emplace();
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted( *retval,
-													  CurrentGPUHeap()->GetCPUDescriptorHandleForHeapStart(),
+													  m_staging_heap.heap->GetCPUDescriptorHandleForHeapStart(),
 													  INT( m_desc_size * table->offset_in_descriptors ) );
 		return retval;
 	}
@@ -144,8 +145,10 @@ void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capac
 		table_data.offset_in_descriptors = size_t( new_end );
 		new_end += UINT( table_data.ndescriptors );
 	}
+
+	UINT num_descriptors_in_old_heap = new_end;
 	
-	m_device->CopyDescriptors( 1, &new_heap->GetCPUDescriptorHandleForHeapStart(), &new_end,
+	m_device->CopyDescriptors( 1, &new_heap->GetCPUDescriptorHandleForHeapStart(), &num_descriptors_in_old_heap,
 							   UINT( src_ranges_start.size() ), src_ranges_start.data(), src_ranges_size.data(),
 							   new_heap_desc.Type );
 

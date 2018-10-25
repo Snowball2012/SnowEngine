@@ -122,7 +122,7 @@ public:
 		ctx.back_buffer_rtv = hdr_color_buffer.rtv;
 		ctx.depth_stencil_view = dsv.dsv;
 		ctx.scene = scene.scene;
-		ctx.shadow_map_srv = ( *shadow_maps.light_with_sm )[0]->shadow_map->srv->HandleGPU();
+		ctx.shadow_map_srv = ( *shadow_maps.light_with_sm )[0]->shadow_map->frame_srv;
 		ctx.pass_cb = pass_cb.pass_cb;
 		ctx.ambient_rtv = ambient_buffer.rtv;
 		ctx.normals_rtv = normal_buffer.rtv;
@@ -391,7 +391,8 @@ class UIPassNode : public BaseRenderNode
 public:
 	using InputResources = std::tuple
 		<
-		TonemappedBackbuffer
+		TonemappedBackbuffer,
+		ImGuiFontHeap
 		>;
 
 	using OutputResources = std::tuple
@@ -408,6 +409,11 @@ public:
 		TonemappedBackbuffer backbuffer;
 		m_pipeline->GetRes( backbuffer );
 
+		ImGuiFontHeap heap;
+		m_pipeline->GetRes( heap );
+
+		ImGui_ImplDX12_NewFrame( &cmd_list );
+		cmd_list.SetDescriptorHeaps( 1, &heap.heap );
 		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
 
 		FinalBackbuffer out{ backbuffer.rtv };

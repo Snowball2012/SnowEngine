@@ -59,8 +59,8 @@ public:
 	D3D12_VERTEX_BUFFER_VIEW & VertexBufferView() noexcept { return m_vbv; }
 	const D3D12_VERTEX_BUFFER_VIEW& VertexBufferView() const noexcept { return m_vbv; }
 
-	D3D12_VERTEX_BUFFER_VIEW& IndexBufferView() noexcept { return m_vbv; }
-	const D3D12_VERTEX_BUFFER_VIEW& IndexBufferView() const noexcept { return m_vbv; }
+	D3D12_INDEX_BUFFER_VIEW& IndexBufferView() noexcept { return m_ibv; }
+	const D3D12_INDEX_BUFFER_VIEW& IndexBufferView() const noexcept { return m_ibv; }
 
 	D3D_PRIMITIVE_TOPOLOGY Topology() const noexcept { return m_topology; }
 

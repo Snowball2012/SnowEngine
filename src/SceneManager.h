@@ -62,6 +62,8 @@ public:
 	template<typename PipelineT>
 	void BindToPipeline( PipelineT* pipeline );
 
+	void FlushAllOperations();
+
 private:
 
 	void CleanModifiedItemsStatus();
@@ -76,6 +78,7 @@ private:
 	GPUTaskQueue* m_copy_queue;
 
 	SceneCopyOp m_operation_counter = 0;
+	GPUTaskQueue::Timestamp m_last_copy_timestamp = 0;
 
 	const size_t m_nframes_to_buffer;
 

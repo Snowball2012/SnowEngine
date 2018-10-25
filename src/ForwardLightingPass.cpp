@@ -21,19 +21,17 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRootConstantBufferView( 6, context.pass_cb );
+	cmd_list.SetGraphicsRootConstantBufferView( 4, context.pass_cb );
 
-	cmd_list.SetGraphicsRootDescriptorTable( 5, context.shadow_map_srv );
+	cmd_list.SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
 
 	for ( const auto& render_item : context.scene->renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
-		cmd_list.SetGraphicsRootConstantBufferView( 1, render_item.material->cb_gpu->GetGPUVirtualAddress() );
-		cmd_list.SetGraphicsRootDescriptorTable( 2, render_item.material->base_color_desc );
-		cmd_list.SetGraphicsRootDescriptorTable( 3, render_item.material->normal_map_desc );
-		cmd_list.SetGraphicsRootDescriptorTable( 4, render_item.material->specular_desc );
-		cmd_list.IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
-		cmd_list.IASetIndexBuffer( &render_item.geom->IndexBufferView() );
+		cmd_list.SetGraphicsRootConstantBufferView( 1, render_item.mat_cb );
+		cmd_list.SetGraphicsRootDescriptorTable( 2, render_item.mat_table );
+		cmd_list.IASetVertexBuffers( 0, 1, &render_item.vbv );
+		cmd_list.IASetIndexBuffer( &render_item.ibv );
 		cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		cmd_list.DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}

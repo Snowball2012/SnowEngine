@@ -6,6 +6,8 @@
 
 #include "DescriptorHeap.h"
 
+#include "DescriptorTableBakery.h"
+
 #include "Scene.h"
 
 struct Vertex
@@ -106,7 +108,7 @@ struct StaticMaterial
 struct GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
-	std::unique_ptr<Descriptor> srv = nullptr;
+	DescriptorTableBakery::TableID srv;
 };
 
 struct StaticTexture : public GPUTexture
@@ -123,17 +125,22 @@ struct DynamicTexture : public GPUTexture
 struct ShadowMap : public GPUTexture
 {
 	std::unique_ptr<Descriptor> dsv = nullptr;
+	D3D12_GPU_DESCRIPTOR_HANDLE frame_srv;
 };
 
 struct RenderItem
 {
 	// geom
-	MeshGeometry* geom = nullptr;
+	StaticMeshID geom;
+	D3D12_VERTEX_BUFFER_VIEW vbv;
+	D3D12_INDEX_BUFFER_VIEW ibv;
 	uint32_t index_count = 0;
 	uint32_t index_offset = 0;
 	uint32_t vertex_offset = 0;
 	
-	StaticMaterial* material = nullptr;
+	MaterialID material;
+	D3D12_GPU_VIRTUAL_ADDRESS mat_cb;
+	D3D12_GPU_DESCRIPTOR_HANDLE mat_table;
 
 	TransformID tf_id;
 	D3D12_GPU_VIRTUAL_ADDRESS tf_addr;
@@ -209,12 +216,12 @@ struct PassConstants
 // scene representation for renderer
 struct RenderSceneContext
 {
-	std::unordered_map<std::string, MeshGeometry> static_geometry;
+	std::unordered_map<std::string, SubmeshGeometry> static_geometry;
 
 	// lighting, materials and textures
-	std::unordered_map<std::string, StaticMaterial> materials;
+	std::unordered_map<std::string, MaterialID> materials;
 	std::unordered_map<std::string, GPULight> lights;
-	std::unordered_map<std::string, StaticTexture> textures;
+	std::unordered_map<std::string, TextureID> textures;
 	std::unordered_map<std::string, ShadowMap> shadow_maps;
 
 	// scene (render items)

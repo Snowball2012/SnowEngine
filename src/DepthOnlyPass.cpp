@@ -23,10 +23,10 @@ void DepthOnlyPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd
 	for ( const auto& render_item : *context.renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
-		cmd_list.SetGraphicsRootDescriptorTable( 1, render_item.material->base_color_desc );
+		cmd_list.SetGraphicsRootDescriptorTable( 1, render_item.mat_table );
 
-		cmd_list.IASetVertexBuffers( 0, 1, &render_item.geom->VertexBufferView() );
-		cmd_list.IASetIndexBuffer( &render_item.geom->IndexBufferView() );
+		cmd_list.IASetVertexBuffers( 0, 1, &render_item.vbv );
+		cmd_list.IASetIndexBuffer( &render_item.ibv );
 		cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		cmd_list.DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}

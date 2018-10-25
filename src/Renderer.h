@@ -65,6 +65,8 @@ public:
 	SceneClientView& GetSceneView() { return m_scene_manager->GetScene(); }
 
 private:
+	using DescriptorTableID = DescriptorTableBakery::TableID;
+
 	// data
 
 	// windows stuff
@@ -87,7 +89,7 @@ private:
 	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
 	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
 	std::optional<Descriptor> m_back_buffer_dsv;
-	std::optional<Descriptor> m_depth_buffer_srv;
+	DescriptorTableID m_depth_buffer_srv;
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -95,14 +97,15 @@ private:
 	D3D12_RECT m_scissor_rect;
 
 	RenderSceneContext m_scene;
+	StaticMeshID m_geom_id;
+	MaterialID m_placeholder_material;
 
 	std::unique_ptr<SceneManager> m_scene_manager;
 
 	// descriptor heaps
-	std::unique_ptr<DescriptorHeap> m_srv_heap = nullptr;
+	std::unique_ptr<DescriptorHeap> m_srv_ui_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_dsv_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_rtv_heap = nullptr;
-	std::unique_ptr<StagingDescriptorHeap> m_staging_srv_heap = nullptr;
 
 	size_t m_cbv_srv_uav_size = 0;
 	size_t m_dsv_size = 0;
@@ -166,10 +169,11 @@ private:
 	void CreateDevice();
 	void CreateBaseCommandObjects();
 	void CreateSwapChain();
+	void RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_height );
+	void RecreatePrevFrameTexture( bool create_tables );
 
 	void BuildRtvAndDsvDescriptorHeaps();
 	void BuildSrvDescriptorHeap( const ImportedScene& ext_scene );
-	void RecreatePrevFrameTexture();
 	void InitGUI();
 	void LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture );
 
@@ -181,19 +185,16 @@ private:
 	void BuildConstantBuffers();
 	void BuildPasses();
 
-	void LoadStaticDDSTexture( const wchar_t* filename, const std::string& name );
 	void CreateShadowMap( GPUTexture& texture );
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
-
-	template <DXGI_FORMAT index_format, class VCRange, class ICRange>
-	std::unordered_map<std::string, SubmeshGeometry>& LoadStaticGeometry( std::string name, const VCRange& vertices, const ICRange& indices, ID3D12GraphicsCommandList* cmd_list );
-
-	void DisposeUploaders();
-	void DisposeCPUGeom();
 	
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
 	ID3D12Resource* CurrentBackBuffer();
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
 	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
+	const DescriptorTableBakery& DescriptorTables() const { return m_scene_manager->GetDescriptorTables(); }
+	DescriptorTableBakery& DescriptorTables() { return m_scene_manager->GetDescriptorTables(); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return DescriptorTables().GetTable( id )->gpu_handle; }
+
 };
