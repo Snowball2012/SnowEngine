@@ -10,13 +10,6 @@
 
 #include "Scene.h"
 
-struct Vertex
-{
-	DirectX::XMFLOAT3 pos;
-	DirectX::XMFLOAT3 normal;
-	DirectX::XMFLOAT2 uv;
-};
-
 struct SubmeshGeometry
 {
 	UINT IndexCount = 0;
@@ -26,94 +19,16 @@ struct SubmeshGeometry
 	DirectX::BoundingBox Bounds;
 };
 
-struct MeshGeometry
-{
-	// Give it a name so we can look it up by name.
-	std::string Name;
-
-	// System memory copies.  Use Blobs because the vertex/index format can be generic.
-	// It is up to the client to cast appropriately.  
-	Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferCPU = nullptr;
-	Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferCPU = nullptr;
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferGPU = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferGPU = nullptr;
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploader = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploader = nullptr;
-
-	// Data about the buffers.
-	UINT VertexByteStride = 0;
-	UINT VertexBufferByteSize = 0;
-	DXGI_FORMAT IndexFormat = DXGI_FORMAT_R16_UINT;
-	UINT IndexBufferByteSize = 0;
-
-	// A MeshGeometry may store multiple geometries in one vertex/index buffer.
-	// Use this container to define the Submesh geometries so we can draw
-	// the Submeshes individually.
-	std::unordered_map<std::string, SubmeshGeometry> DrawArgs;
-
-	D3D12_VERTEX_BUFFER_VIEW VertexBufferView()const
-	{
-		D3D12_VERTEX_BUFFER_VIEW vbv;
-		vbv.BufferLocation = VertexBufferGPU->GetGPUVirtualAddress();
-		vbv.StrideInBytes = VertexByteStride;
-		vbv.SizeInBytes = VertexBufferByteSize;
-
-		return vbv;
-	}
-
-	D3D12_INDEX_BUFFER_VIEW IndexBufferView()const
-	{
-		D3D12_INDEX_BUFFER_VIEW ibv;
-		ibv.BufferLocation = IndexBufferGPU->GetGPUVirtualAddress();
-		ibv.Format = IndexFormat;
-		ibv.SizeInBytes = IndexBufferByteSize;
-
-		return ibv;
-	}
-
-	// We can free this memory after we finish upload to the GPU.
-	void DisposeUploaders()
-	{
-		VertexBufferUploader = nullptr;
-		IndexBufferUploader = nullptr;
-	}
-};
-
 struct MaterialConstants
 {
 	DirectX::XMFLOAT4X4 mat_transform;
 	DirectX::XMFLOAT3 diffuse_fresnel;
 };
 
-struct StaticMaterial
-{
-	MaterialConstants mat_constants;
-
-	D3D12_GPU_DESCRIPTOR_HANDLE base_color_desc;
-	D3D12_GPU_DESCRIPTOR_HANDLE normal_map_desc;
-	D3D12_GPU_DESCRIPTOR_HANDLE specular_desc;
-
-	Microsoft::WRL::ComPtr<ID3D12Resource> cb_gpu = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> cb_uploader = nullptr;
-
-	void DisposeUploaders()
-	{
-		cb_uploader = nullptr;
-	}
-	void LoadToGPU( ID3D12Device& device, ID3D12GraphicsCommandList& cmd_list );
-};
-
 struct GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
 	DescriptorTableBakery::TableID srv;
-};
-
-struct StaticTexture : public GPUTexture
-{
-	Microsoft::WRL::ComPtr<ID3D12Resource> texture_uploader = nullptr;
 };
 
 // resides only in GPU mem
@@ -216,7 +131,7 @@ struct PassConstants
 // scene representation for renderer
 struct RenderSceneContext
 {
-	std::unordered_map<std::string, SubmeshGeometry> static_geometry;
+	std::unordered_map<std::string, StaticSubmeshID> static_geometry;
 
 	// lighting, materials and textures
 	std::unordered_map<std::string, MaterialID> materials;

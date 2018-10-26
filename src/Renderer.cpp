@@ -558,16 +558,17 @@ void Renderer::BuildGeometry( const ImportedScene& ext_scene )
 	{
 		m_geom_id = GetSceneView().LoadStaticMesh(
 			"main",
-			make_span( ext_scene.vertices.data(), ext_scene.vertices.data() + ext_scene.vertices.size() ),
-			make_span( ext_scene.indices.data(), ext_scene.indices.data() + ext_scene.indices.size() ) );
+			ext_scene.vertices,
+			ext_scene.indices );
 
 		for ( const auto& cpu_submesh : ext_scene.submeshes )
 		{
-			SubmeshGeometry submesh;
-			submesh.IndexCount = UINT( cpu_submesh.nindices );
-			submesh.StartIndexLocation = UINT( cpu_submesh.index_offset );
-			submesh.BaseVertexLocation = 0;
-			m_scene.static_geometry[cpu_submesh.name] = submesh;
+			StaticSubmeshID submesh_id = GetSceneView().AddSubmesh( m_geom_id,
+																	StaticSubmesh::Data{ uint32_t( cpu_submesh.nindices ),
+																	                     uint32_t( cpu_submesh.index_offset ),
+																	                     0 } );
+
+			m_scene.static_geometry[cpu_submesh.name] = submesh_id;
 		}
 	}
 }
@@ -597,12 +598,11 @@ void Renderer::BuildMaterials( const ImportedScene& ext_scene )
 
 namespace
 {
-	void initFromSubmesh( const ImportedScene::Submesh& submesh, SceneClientView& scene, RenderItem& renderitem )
+	void initFromSubmesh( const StaticSubmesh& submesh, SceneClientView& scene, RenderItem& renderitem )
 	{
-		renderitem.index_count = uint32_t( submesh.nindices );
-		renderitem.index_offset = uint32_t( submesh.index_offset );
-		renderitem.vertex_offset = 0;
-		renderitem.tf_id = scene.AddTransform( submesh.transform );
+		renderitem.index_count = submesh.DrawArgs().idx_cnt;
+		renderitem.index_offset = submesh.DrawArgs().start_index_loc;
+		renderitem.vertex_offset = submesh.DrawArgs().base_vertex_loc;
 	};
 }
 
@@ -623,7 +623,10 @@ void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 			material_name = ext_scene.materials[material_idx].first;
 
 		item.material = m_scene.materials[material_name];
-		initFromSubmesh( submesh, m_scene_manager->GetScene(), item );
+
+		item.tf_id = m_scene_manager->GetScene().AddTransform( submesh.transform );
+		const StaticSubmesh& submesh_data = m_scene_manager->GetScene().GetROScene().AllStaticSubmeshes()[m_scene.static_geometry[submesh.name]];
+		initFromSubmesh( submesh_data, m_scene_manager->GetScene(), item );
 		m_scene.renderitems.push_back( item );
 	}
 }

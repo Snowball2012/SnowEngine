@@ -8,6 +8,13 @@
 
 class Scene;
 
+struct Vertex
+{
+	DirectX::XMFLOAT3 pos;
+	DirectX::XMFLOAT3 normal;
+	DirectX::XMFLOAT2 uv;
+};
+
 class RefCounter
 {
 public:
@@ -56,11 +63,16 @@ using TransformID = packed_freelist<ObjectTransform>::id;
 class StaticMesh : public RefCounter
 {
 public:
-	D3D12_VERTEX_BUFFER_VIEW & VertexBufferView() noexcept { return m_vbv; }
+	D3D12_VERTEX_BUFFER_VIEW& VertexBufferView() noexcept { return m_vbv; }
 	const D3D12_VERTEX_BUFFER_VIEW& VertexBufferView() const noexcept { return m_vbv; }
 
 	D3D12_INDEX_BUFFER_VIEW& IndexBufferView() noexcept { return m_ibv; }
 	const D3D12_INDEX_BUFFER_VIEW& IndexBufferView() const noexcept { return m_ibv; }
+
+	const auto& Vertices() const noexcept { return m_vertices; }
+	auto& Vertices() noexcept { return m_vertices; }
+	const auto& Indices() const noexcept { return m_indices; }
+	auto& Indices() noexcept { return m_indices; }
 
 	D3D_PRIMITIVE_TOPOLOGY Topology() const noexcept { return m_topology; }
 
@@ -69,7 +81,10 @@ public:
 
 private:
 	friend class Scene;
-	StaticMesh() {}
+	StaticMesh( ) {}
+
+	std::vector<Vertex> m_vertices;
+	std::vector<uint32_t> m_indices;
 
 	D3D12_VERTEX_BUFFER_VIEW m_vbv;
 	D3D12_INDEX_BUFFER_VIEW m_ibv;

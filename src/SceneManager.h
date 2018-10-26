@@ -11,10 +11,11 @@ using SceneCopyOp = uint64_t;
 #include "DescriptorTableBakery.h"
 #include "MaterialTableBaker.h"
 
+#include <DirectXMath.h>
 class SceneManager;
 class GPUTaskQueue;
 
-// update, remove and add methods for scene
+// update, remove and add methods for engine client
 class SceneClientView
 {
 public:
@@ -31,10 +32,11 @@ public:
 
 	const Scene& GetROScene() const noexcept { return *m_scene; }
 
-	StaticMeshID LoadStaticMesh( std::string name, const span<const Vertex>& vertices, const span<const uint32_t>& indices );
+	StaticMeshID LoadStaticMesh( std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices );
 	TextureID LoadStreamedTexture( std::string path );
 	TransformID AddTransform( DirectX::XMFLOAT4X4 obj2world = Identity4x4 );
 	MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, DirectX::XMFLOAT3 diffuse_fresnel, DirectX::XMFLOAT4X4 uv_transform = Identity4x4 );
+	StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
 
 private:
 	Scene* m_scene;
@@ -67,6 +69,9 @@ public:
 private:
 
 	void CleanModifiedItemsStatus();
+
+	void ProcessSubmeshes();
+	void CalcSubmeshBoundingBox( StaticSubmesh& submesh );
 
 	Scene m_scene;
 	DescriptorTableBakery m_gpu_descriptor_tables;

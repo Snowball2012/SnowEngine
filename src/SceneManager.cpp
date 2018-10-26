@@ -4,10 +4,16 @@
 
 #include "StaticMeshManager.h"
 
-StaticMeshID SceneClientView::LoadStaticMesh( std::string name, const span<const Vertex>& vertices, const span<const uint32_t>& indices )
+#include <DirectXMath.h>
+
+StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices )
 {
 	StaticMeshID mesh_id = m_scene->AddStaticMesh();
-	m_static_mesh_manager->LoadStaticMesh( mesh_id, std::move( name ), vertices, indices );
+	m_static_mesh_manager->LoadStaticMesh( mesh_id, std::move( name ),
+										   make_span( vertices.data(), vertices.data() + vertices.size() ),
+										   make_span( indices.data(), indices.data() + indices.size() ) );
+	m_scene->TryModifyStaticMesh( mesh_id )->Vertices() = std::move( vertices );
+	m_scene->TryModifyStaticMesh( mesh_id )->Indices() = std::move( indices );
 	return mesh_id;
 }
 
@@ -41,6 +47,14 @@ MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures
 
 	return mat_id;
 }
+
+StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data )
+{
+	StaticSubmeshID id = m_scene->AddStaticSubmesh( mesh_id );
+	m_scene->TryModifyStaticSubmesh( id )->Modify() = data;
+	return id;
+}
+
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
@@ -80,7 +94,6 @@ SceneClientView& SceneManager::GetScene() noexcept
 {
 	return m_scene_view;
 }
-
 
 const DescriptorTableBakery& SceneManager::GetDescriptorTables() const noexcept
 {
@@ -138,4 +151,40 @@ void SceneManager::CleanModifiedItemsStatus()
 
 	for ( auto& submesh : m_scene.StaticSubmeshSpan() )
 		submesh.Clean();
+}
+
+
+void SceneManager::ProcessSubmeshes()
+{
+	for ( auto& submesh : m_scene.StaticSubmeshSpan() )
+	{
+		if ( submesh.IsDirty() )
+		{
+			CalcSubmeshBoundingBox( submesh );
+		}
+	}
+}
+
+void SceneManager::CalcSubmeshBoundingBox( StaticSubmesh& submesh )
+{
+	assert( m_scene.AllStaticMeshes().has( submesh.GetMesh() ) );
+
+	const StaticMesh& mesh = m_scene.AllStaticMeshes()[submesh.GetMesh()];
+	assert( ( ! mesh.Vertices().empty() && ! mesh.Indices().empty() && submesh.DrawArgs().idx_cnt > 1 ) );
+
+	auto get_vertex = [&]( size_t index_in_submesh ) -> DirectX::XMVECTOR
+	{
+		return XMLoadFloat3( &mesh.Vertices()[submesh.DrawArgs().base_vertex_loc + mesh.Indices()[submesh.DrawArgs().start_index_loc + index_in_submesh]].pos );
+	};
+	DirectX::XMVECTOR lo = get_vertex(0);
+	DirectX::XMVECTOR hi = lo;
+
+	for ( size_t i = 1; i < submesh.DrawArgs().idx_cnt; ++i )
+	{
+		DirectX::XMVECTOR v = get_vertex( i );
+		lo = DirectX::XMVectorMin( v, lo );
+		hi = DirectX::XMVectorMax( v, hi );
+	}
+
+	DirectX::BoundingBox::CreateFromPoints( submesh.Box(), hi, lo );
 }

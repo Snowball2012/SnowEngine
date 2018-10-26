@@ -20,6 +20,8 @@ public:
 	span( T* begin, T* end ) noexcept : m_begin( begin ), m_end( end ) { }
 	span( const span<T>& other_span ) noexcept = default;
 
+	operator span<const T>() noexcept { return span<const T>( m_begin, m_end ); }
+
 	template<typename U = T>
 	std::enable_if_t<!std::is_const_v<U>, U*> begin() noexcept { return m_begin; }
 	template<typename U = T>
