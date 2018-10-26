@@ -60,6 +60,8 @@ void Renderer::InitD3D()
 	CreateBaseCommandObjects();
 	CreateSwapChain();
 
+	InitImgui();
+
 	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, FrameResourceCount, m_copy_queue.get() );
 
 	BuildRtvAndDsvDescriptorHeaps();
@@ -71,9 +73,7 @@ void Renderer::Init( const ImportedScene& ext_scene )
 {
 	ThrowIfFailed( m_cmd_list->Reset( m_direct_cmd_allocator.Get(), nullptr ) );
 
-	BuildSrvDescriptorHeap( ext_scene );
 	RecreatePrevFrameTexture( false );
-	InitGUI();
 
 	LoadAndBuildTextures( ext_scene, true );
 	BuildGeometry( ext_scene );
@@ -438,7 +438,7 @@ void Renderer::BuildRtvAndDsvDescriptorHeaps()
 	m_dsv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_d3d_device );
 }
 
-void Renderer::BuildSrvDescriptorHeap( const ImportedScene& ext_scene )
+void Renderer::BuildUIDescriptorHeap( )
 {
 	// srv heap
 	{
@@ -521,12 +521,13 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, *DescriptorTables().ModifyTable( m_depth_buffer_srv ) );
 }
 
-void Renderer::InitGUI()
+void Renderer::InitImgui()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	auto& imgui_io = ImGui::GetIO();
 	ImGui_ImplWin32_Init( m_main_hwnd );
+	BuildUIDescriptorHeap();
 	m_ui_font_desc = std::make_unique<Descriptor>( std::move( m_srv_ui_heap->AllocateDescriptor() ) );
 	ImGui_ImplDX12_Init( m_d3d_device.Get(), FrameResourceCount, m_back_buffer_format, m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
 	ImGui::StyleColorsDark();

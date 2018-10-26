@@ -173,8 +173,8 @@ private:
 	void RecreatePrevFrameTexture( bool create_tables );
 
 	void BuildRtvAndDsvDescriptorHeaps();
-	void BuildSrvDescriptorHeap( const ImportedScene& ext_scene );
-	void InitGUI();
+	void BuildUIDescriptorHeap( );
+	void InitImgui();
 	void LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture );
 
 	void BuildGeometry( const ImportedScene& ext_scene );
