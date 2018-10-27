@@ -49,6 +49,7 @@ struct RenderItem
 	StaticMeshID geom;
 	D3D12_VERTEX_BUFFER_VIEW vbv;
 	D3D12_INDEX_BUFFER_VIEW ibv;
+	StaticSubmeshID submesh;
 	uint32_t index_count = 0;
 	uint32_t index_offset = 0;
 	uint32_t vertex_offset = 0;

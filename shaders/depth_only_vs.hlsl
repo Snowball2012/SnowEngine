@@ -25,7 +25,5 @@ VertexOut main(VertexIn vin)
     VertexOut vout;
     vout.pos = mul(float4(vin.pos, 1.0f), mvp_mat);    
     vout.uv = vin.uv;
-    if ( use_linear_depth > 0 )
-        vout.pos.z *= vout.pos.w / far_z; // linearize depth
     return vout;
 }

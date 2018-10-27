@@ -18,12 +18,12 @@ cbuffer cbSettings : register( b1 )
 SamplerState linear_wrap_sampler : register( s0 );
 SamplerState point_wrap_sampler : register( s1 );
 
-Texture2D linear_depth_map : register( t0 );
+Texture2D hyperbolic_depth_map : register( t0 );
 Texture2D normal_map : register( t1 );
 
-float GetEyeDepth( float normalized_depth )
+float GetEyeDepth( float hyperbolic_z )
 {
-    return normalized_depth * far_z;
+    return ( ( near_z / ( near_z - far_z ) ) * far_z ) / ( hyperbolic_z - ( far_z / ( far_z - near_z ) ) );
 }
 
 float3 CalcSampleOffsetCoord( float2 offset_multiplied_by_ws_radius, float2 origin_texcoord, float origin_depth )
@@ -31,7 +31,7 @@ float3 CalcSampleOffsetCoord( float2 offset_multiplied_by_ws_radius, float2 orig
     float2 uv_offset = offset_multiplied_by_ws_radius / ( origin_depth * fov_y );
     uv_offset *= float2( 1.0f / aspect_ratio, -1.0f );
 
-    float sample_depth = GetEyeDepth( linear_depth_map.Sample( linear_wrap_sampler, origin_texcoord + uv_offset ).r );
+    float sample_depth = GetEyeDepth( hyperbolic_depth_map.Sample( linear_wrap_sampler, origin_texcoord + uv_offset ).r );
 
     return float3( offset_multiplied_by_ws_radius, sample_depth - origin_depth );
 }
@@ -44,10 +44,10 @@ float CalcHorizonAngle( float3 diff, float3 normal )
 float main( float4 coord : SV_POSITION ) : SV_TARGET
 {
     float2 depth_tex_size;
-    linear_depth_map.GetDimensions( depth_tex_size.x, depth_tex_size.y );
+    hyperbolic_depth_map.GetDimensions( depth_tex_size.x, depth_tex_size.y );
     float2 target_texcoord = coord.xy / depth_tex_size;
 
-    float linear_depth = GetEyeDepth( linear_depth_map.Sample( point_wrap_sampler, target_texcoord ).r );
+    float linear_depth = GetEyeDepth( hyperbolic_depth_map.Sample( point_wrap_sampler, target_texcoord ).r );
     float3 view_normal = float3( normal_map.Sample( point_wrap_sampler, target_texcoord ).xy, 0 );
     view_normal.z = -sqrt( 1.0f - sqr( view_normal.x ) - sqr( view_normal.y ) );
 

@@ -218,11 +218,12 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 	pc.View = scene.view;
 	pc.EyePosW = m_camera_pos;
 
+	pc.NearZ = 0.1f;
 	pc.FarZ = 100.0f;
 	pc.FovY = MathHelper::Pi / 4;
 	pc.AspectRatio = AspectRatio();
 
-	pc.use_linear_depth = 1;
+	pc.use_linear_depth = 0;
 
 	UpdateLights( pc );
 
@@ -414,5 +415,5 @@ void RenderApp::LoadModel( const std::string& filename )
 
 XMMATRIX RenderApp::CalcProjectionMatrix() const
 {
-	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 0.001f, 100.0f );
+	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 0.1f, 100.0f );
 }

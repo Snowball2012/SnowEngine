@@ -110,7 +110,7 @@ void SceneManager::UpdatePipelineBindings()
 	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();
 
 	SceneCopyOp cur_op = m_operation_counter++;
-
+	ThrowIfFailed( m_cmd_allocators[cur_op % m_nframes_to_buffer]->Reset() );
 	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].Get(), nullptr );
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	ProcessSubmeshes();

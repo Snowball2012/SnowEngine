@@ -114,6 +114,10 @@ void Renderer::Draw( const Context& ctx )
 		const MaterialPBR& material = GetSceneView().GetROScene().AllMaterials()[renderitem.material];
 		renderitem.mat_table = material.DescriptorTable();
 		renderitem.mat_cb = material.GPUConstantBuffer();
+		const StaticSubmesh& submesh = GetSceneView().GetROScene().AllStaticSubmeshes()[renderitem.submesh];
+		renderitem.index_count = submesh.DrawArgs().idx_cnt;
+		renderitem.index_offset = submesh.DrawArgs().start_index_loc;
+		renderitem.vertex_offset = submesh.DrawArgs().base_vertex_loc;
 	}
 
 	for ( auto& shadow_map : m_scene.shadow_maps )
@@ -377,7 +381,7 @@ void Renderer::RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_he
 	depthStencilDesc.DepthOrArraySize = 1;
 	depthStencilDesc.MipLevels = 1;
 
-	depthStencilDesc.Format = DXGI_FORMAT_R24G8_TYPELESS;
+	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
 
 	depthStencilDesc.SampleDesc.Count = 1;
 	depthStencilDesc.SampleDesc.Quality = 0;
@@ -513,7 +517,7 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{
-		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
 		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv_desc.Texture2D.MipLevels = 1;
@@ -597,16 +601,6 @@ void Renderer::BuildMaterials( const ImportedScene& ext_scene )
 	}
 }
 
-namespace
-{
-	void initFromSubmesh( const StaticSubmesh& submesh, SceneClientView& scene, RenderItem& renderitem )
-	{
-		renderitem.index_count = submesh.DrawArgs().idx_cnt;
-		renderitem.index_offset = submesh.DrawArgs().start_index_loc;
-		renderitem.vertex_offset = submesh.DrawArgs().base_vertex_loc;
-	};
-}
-
 void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 {
 	m_scene.renderitems.reserve( ext_scene.submeshes.size() );
@@ -626,8 +620,7 @@ void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 		item.material = m_scene.materials[material_name];
 
 		item.tf_id = m_scene_manager->GetScene().AddTransform( submesh.transform );
-		const StaticSubmesh& submesh_data = m_scene_manager->GetScene().GetROScene().AllStaticSubmeshes()[m_scene.static_geometry[submesh.name]];
-		initFromSubmesh( submesh_data, m_scene_manager->GetScene(), item );
+		item.submesh = m_scene.static_geometry[submesh.name];
 		m_scene.renderitems.push_back( item );
 	}
 }
@@ -733,7 +726,7 @@ void Renderer::CreateShadowMap( GPUTexture& texture )
 	constexpr UINT width = 4096;
 	constexpr UINT height = 4096;
 
-	CD3DX12_RESOURCE_DESC tex_desc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R24G8_TYPELESS, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL );
+	CD3DX12_RESOURCE_DESC tex_desc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R32_TYPELESS, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL );
 	D3D12_CLEAR_VALUE opt_clear;
 	opt_clear.Format = m_depth_stencil_format;
 	opt_clear.DepthStencil.Depth = 1.0f;
@@ -747,7 +740,7 @@ void Renderer::CreateShadowMap( GPUTexture& texture )
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{
-		srv_desc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
 		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv_desc.Texture2D.MipLevels = 1;

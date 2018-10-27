@@ -92,7 +92,7 @@ private:
 	DescriptorTableID m_depth_buffer_srv;
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	D3D12_VIEWPORT m_screen_viewport;
 	D3D12_RECT m_scissor_rect;
 
