@@ -41,7 +41,6 @@ public:
 	void NewGUIFrame();
 	void Resize( size_t new_width, size_t new_height );
 
-
 	// getters/setters
 	D3D12_VIEWPORT& ScreenViewport() { return m_screen_viewport; }
 	const D3D12_VIEWPORT& ScreenViewport() const { return m_screen_viewport; }

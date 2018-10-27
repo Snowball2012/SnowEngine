@@ -42,7 +42,7 @@ public:
 		{
 			ctx.depth_stencil_view = dsv.dsv;
 			ctx.pass_cbv = pass_cb.pass_cb;
-			ctx.renderitems = &scene.scene->renderitems;
+			ctx.renderitems = scene.items;
 		}
 
 		cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
@@ -107,7 +107,7 @@ public:
 		SSNormalStorage normal_buffer;
 		m_pipeline->GetRes( normal_buffer );
 
-		if ( ! ( scene.scene
+		if ( ! ( scene.items
 				 && shadow_maps.light_with_sm
 				 && hdr_color_buffer.rtv.ptr
 				 && shadow_maps.light_with_sm->size() == 1
@@ -121,7 +121,7 @@ public:
 		ForwardLightingPass::Context ctx;
 		ctx.back_buffer_rtv = hdr_color_buffer.rtv;
 		ctx.depth_stencil_view = dsv.dsv;
-		ctx.scene = scene.scene;
+		ctx.renderitems = scene.items;
 		ctx.shadow_map_srv = ( *shadow_maps.light_with_sm )[0]->shadow_map->frame_srv;
 		ctx.pass_cb = pass_cb.pass_cb;
 		ctx.ambient_rtv = ambient_buffer.rtv;

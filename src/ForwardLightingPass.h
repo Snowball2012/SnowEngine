@@ -9,7 +9,7 @@ public:
 
 	struct Context
 	{
-		RenderSceneContext* scene;
+		std::vector<RenderItem>* renderitems;
 		D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
 		D3D12_CPU_DESCRIPTOR_HANDLE ambient_rtv;

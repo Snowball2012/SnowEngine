@@ -55,6 +55,11 @@ StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticS
 	return id;
 }
 
+MeshInstanceID SceneClientView::AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id )
+{
+	return m_scene->AddStaticMeshInstance( tf_id, submesh_id, mat_id );
+}
+
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )

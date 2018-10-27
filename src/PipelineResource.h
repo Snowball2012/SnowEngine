@@ -125,7 +125,7 @@ struct ScreenConstants
 
 struct SceneContext
 {
-	RenderSceneContext* scene;
+	std::vector<RenderItem>* items;
 };
 
 struct FinalBackbuffer

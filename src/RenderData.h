@@ -45,20 +45,15 @@ struct ShadowMap : public GPUTexture
 
 struct RenderItem
 {
-	// geom
-	StaticMeshID geom;
 	D3D12_VERTEX_BUFFER_VIEW vbv;
 	D3D12_INDEX_BUFFER_VIEW ibv;
-	StaticSubmeshID submesh;
 	uint32_t index_count = 0;
 	uint32_t index_offset = 0;
 	uint32_t vertex_offset = 0;
 	
-	MaterialID material;
 	D3D12_GPU_VIRTUAL_ADDRESS mat_cb;
 	D3D12_GPU_DESCRIPTOR_HANDLE mat_table;
 
-	TransformID tf_id;
 	D3D12_GPU_VIRTUAL_ADDRESS tf_addr;
 };
 
@@ -140,12 +135,15 @@ struct RenderSceneContext
 	std::unordered_map<std::string, TextureID> textures;
 	std::unordered_map<std::string, ShadowMap> shadow_maps;
 
-	// scene (render items)
-	std::vector<RenderItem> renderitems;
-
 	// camera
 	DirectX::XMFLOAT4X4 view = Identity4x4;
 	DirectX::XMFLOAT4X4 proj = Identity4x4;
+
+	DirectX::XMFLOAT4X4 shadow_frustrum_proj = Identity4x4;
+	DirectX::XMFLOAT4X4 shadow_frustrum_view = Identity4x4;
+
+	DirectX::XMFLOAT4X4 main_frustrum_proj = Identity4x4;
+	DirectX::XMFLOAT4X4 main_frustrum_view = Identity4x4;
 };
 
 using InputLayout = std::vector<D3D12_INPUT_ELEMENT_DESC>;

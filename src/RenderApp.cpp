@@ -227,6 +227,12 @@ void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<Pa
 
 	UpdateLights( pc );
 
+	XMStoreFloat4x4( &scene.main_frustrum_proj, proj );
+	XMStoreFloat4x4( &scene.main_frustrum_view, view );
+	
+	scene.shadow_frustrum_view = Identity4x4;
+	scene.shadow_frustrum_proj = Identity4x4;
+
 	pass_cb.CopyData( 0, pc );
 
 	// shadow map pass constants

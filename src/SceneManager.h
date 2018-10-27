@@ -37,6 +37,7 @@ public:
 	TransformID AddTransform( DirectX::XMFLOAT4X4 obj2world = Identity4x4 );
 	MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, DirectX::XMFLOAT3 diffuse_fresnel, DirectX::XMFLOAT4X4 uv_transform = Identity4x4 );
 	StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
+	MeshInstanceID AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id );
 
 private:
 	Scene* m_scene;
@@ -62,7 +63,9 @@ public:
 	void UpdatePipelineBindings();
 
 	template<typename PipelineT>
-	void BindToPipeline( PipelineT* pipeline );
+	void BindToPipeline( PipelineT& pipeline,
+						 DirectX::XMFLOAT4X4 camera_frustrum_proj, DirectX::XMFLOAT4X4 camera_frustrum_view,
+						 DirectX::XMFLOAT4X4 sun_frustrum_proj, DirectX::XMFLOAT4X4 sun_frustrum_view );
 
 	void FlushAllOperations();
 
@@ -90,6 +93,10 @@ private:
 	// command objects
 	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> m_cmd_allocators;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cmd_list;
+
+	// temporary
+	std::vector<RenderItem> m_lighting_items;
+	std::vector<RenderItem> m_shadow_items;
 };
 
 #include "SceneManager.hpp"

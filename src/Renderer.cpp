@@ -104,21 +104,7 @@ void Renderer::Draw( const Context& ctx )
 
 	m_scene_manager->UpdatePipelineBindings();
 
-	for ( auto& renderitem : m_scene.renderitems )
-	{
-		const StaticMesh& geom = GetSceneView().GetROScene().AllStaticMeshes()[renderitem.geom];
-		assert( geom.IsLoaded() );
-		renderitem.ibv = geom.IndexBufferView();
-		renderitem.vbv = geom.VertexBufferView();
-		renderitem.tf_addr = GetSceneView().GetROScene().AllTransforms()[renderitem.tf_id].GPUView();
-		const MaterialPBR& material = GetSceneView().GetROScene().AllMaterials()[renderitem.material];
-		renderitem.mat_table = material.DescriptorTable();
-		renderitem.mat_cb = material.GPUConstantBuffer();
-		const StaticSubmesh& submesh = GetSceneView().GetROScene().AllStaticSubmeshes()[renderitem.submesh];
-		renderitem.index_count = submesh.DrawArgs().idx_cnt;
-		renderitem.index_offset = submesh.DrawArgs().start_index_loc;
-		renderitem.vertex_offset = submesh.DrawArgs().base_vertex_loc;
-	}
+	m_scene_manager->BindToPipeline( m_pipeline, m_scene.main_frustrum_proj, m_scene.main_frustrum_view, m_scene.shadow_frustrum_proj, m_scene.shadow_frustrum_view );
 
 	for ( auto& shadow_map : m_scene.shadow_maps )
 		shadow_map.second.frame_srv = GetGPUHandle( shadow_map.second.srv );
@@ -148,10 +134,6 @@ void Renderer::Draw( const Context& ctx )
 	std::vector<D3D12_GPU_VIRTUAL_ADDRESS> sm_pass_cbs;
 
 	{
-		ShadowCasters casters;
-		casters.casters = &m_scene.renderitems;
-		m_pipeline.SetRes( casters );
-
 		ShadowProducers producers;
 		lights_with_shadow.push_back( &m_scene.lights["sun"] );
 		producers.lights = &lights_with_shadow;
@@ -193,10 +175,6 @@ void Renderer::Draw( const Context& ctx )
 		screen.viewport = m_screen_viewport;
 		screen.scissor_rect = m_scissor_rect;
 		m_pipeline.SetRes( screen );
-
-		SceneContext scene_ctx;
-		scene_ctx.scene = &m_scene;
-		m_pipeline.SetRes( scene_ctx );
 
 		SSAOStorage ssao_texture;
 		ssao_texture.resource = m_ssao.texture_gpu.Get();
@@ -603,25 +581,22 @@ void Renderer::BuildMaterials( const ImportedScene& ext_scene )
 
 void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 {
-	m_scene.renderitems.reserve( ext_scene.submeshes.size() );
-
-	for ( const auto& submesh : ext_scene.submeshes )
+	for ( const auto& ext_submesh : ext_scene.submeshes )
 	{
 		RenderItem item;
 
-		item.geom = m_geom_id;
-		const int material_idx = submesh.material_idx;
+		const int material_idx = ext_submesh.material_idx;
 		std::string material_name;
 		if ( material_idx < 0 )
 			material_name = "placeholder";
 		else
 			material_name = ext_scene.materials[material_idx].first;
 
-		item.material = m_scene.materials[material_name];
+		MaterialID mat = m_scene.materials[material_name];
+		TransformID tf = m_scene_manager->GetScene().AddTransform( ext_submesh.transform );
+		StaticSubmeshID submesh_id = m_scene.static_geometry[ext_submesh.name];
 
-		item.tf_id = m_scene_manager->GetScene().AddTransform( submesh.transform );
-		item.submesh = m_scene.static_geometry[submesh.name];
-		m_scene.renderitems.push_back( item );
+		MeshInstanceID mesh_instance = m_scene_manager->GetScene().AddMeshInstance( submesh_id, tf, mat );
 	}
 }
 
