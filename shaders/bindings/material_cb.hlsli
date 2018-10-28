@@ -3,10 +3,15 @@
 
 #ifdef PER_MATERIAL_CB_BINDING
 
+struct MaterialConstants
+{
+    float4x4 transform;
+	float3 diffuse_fresnel;
+};
+
 cbuffer cbPerMaterial : register( PER_MATERIAL_CB_BINDING )
 {
-	float4x4 transform;
-	float3 diffuse_fresnel;
+	MaterialConstants material;
 }
 
 #endif // PER_MATERIAL_CB_BINDING

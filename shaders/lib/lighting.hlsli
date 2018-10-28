@@ -16,8 +16,6 @@ struct Light
 	float spot_power;
 };
 
-
-
 // all outputs are not normalized
 float3 halfvector( float3 to_source, float3 to_camera )
 {
@@ -66,7 +64,7 @@ float shadow_factor( float3 pos_w, float4x4 shadow_map_mat, Texture2D shadow_map
 	shadow_pos_h.y += 1.0f;
 	shadow_pos_h.y = 2.0f - shadow_pos_h.y;
 
-	shadow_pos_h.xy /= 2.0f;
+	shadow_pos_h.xy *= 0.5f;
 
 	uint width, height, nmips;
 	shadow_map.GetDimensions( 0, width, height, nmips );

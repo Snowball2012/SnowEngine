@@ -36,19 +36,15 @@ struct PixelOut
     float2 screen_space_normal : SV_TARGET2;
 };
 
-float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera, float3 normal, float2 uv )
+float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera, float3 normal, float roughness, float metallic )
 {
 	float lambert_term = max( dot( to_source, normal ), 0 );
 	float normal_to_eye_cos = max( dot( to_camera, normal ), 0 );
 	float3 h = normalize( halfvector( to_source, to_camera ) );
 	float source_to_half_cos = max( dot( to_source, h ), 0 );
 
-	float3 specular = specular_map.Sample( anisotropic_wrap_sampler, uv ).rgb; // r - occlusion, g - roughness, b - metallic
-	float roughness = specular.g;
-	float metallic = specular.b;
-
 	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
-	float3 fresnel_r0 = lerp( diffuse_fresnel, base_color.rgb, metallic );
+	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
 
 	return ( lambert_term )
 		    * ( diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo 
@@ -62,11 +58,11 @@ float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera
 float3 ws_normal_bump_mapping( float3 ws_normal, float3 ws_tangent, float3 ws_binormal, float2 ts_normal_compressed, out float tangent_normal_z )
 {
 	ts_normal_compressed = 2 * ts_normal_compressed - float2( 1.0f, 1.0f );
-	tangent_normal_z = sqrt( 1.0 - pow( ts_normal_compressed.x, 2 ) - pow( ts_normal_compressed.y, 2 ) );
-	return normalize( ts_normal_compressed.x * ws_tangent + ts_normal_compressed.y * ws_binormal + tangent_normal_z * ws_normal );
+	tangent_normal_z = sqrt( 1.0 - sqr( ts_normal_compressed.x ) - sqr( ts_normal_compressed.y ) );
+	return ts_normal_compressed.x * ws_tangent + ts_normal_compressed.y * ws_binormal + tangent_normal_z * ws_normal;
 }
 
-float PercievedBrightness(float3 color)
+float percieved_brightness(float3 color)
 {
     return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
 }
@@ -107,27 +103,27 @@ PixelOut main(PixelIn pin)
 											normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
                                             tangent_normal_z );
 
-    float local_ambient_shadowing = 1.0f*((0.5f - acos(tangent_normal_z) * 3.1415f) * 2.0f * 0.2f + 0.8f);
+	float3 specular = specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb; // r - occlusion, g - roughness, b - metallic
 
-	for ( int light_idx = 0; light_idx < n_parallel_lights; ++light_idx )
+	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
 	{
-		float3 light_radiance = rendering_equation( base_color, lights[light_idx].dir,
-												 normalize( eye_pos_w - pin.pos_w ),
+		float3 light_radiance = rendering_equation( base_color, pass_params.lights[light_idx].dir,
+												 normalize( pass_params.eye_pos_w - pin.pos_w ),
 												 normal,
-												 pin.uv );
+												 specular.g, specular.b );
 
-        res_color += lights[light_idx].strength
-                     * light_radiance * shadow_factor( pin.pos_w, lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler );
+        res_color += pass_params.lights[light_idx].strength
+                     * light_radiance * shadow_factor( pin.pos_w, pass_params.lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler );
     }
 
     // ambient for sky, remove after skybox gen
-    const float ambient_power = 6.0f;
+    const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
 
     PixelOut res;
     res.color = float4(res_color, 1.0f);
-    res.ambient_color = ambient_power * float4(PercievedBrightness(lights[0].strength) * base_color * float3(pow(0.12f, 2.2f), pow(0.14f, 2.2f), pow(0.18f, 2.2f)) * local_ambient_shadowing, 1.0f);
+    res.ambient_color = float4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
     res.screen_space_normal = normalize(
-                                  mul( float4(pin.normal, 0.0f), view_mat ).xyz
+                                  mul( float4(normal, 0.0f), pass_params.view_mat ).xyz
                               ).xy;
 	return res;
 }

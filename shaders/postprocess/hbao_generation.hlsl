@@ -23,13 +23,14 @@ Texture2D normal_map : register( t1 );
 
 float GetEyeDepth( float hyperbolic_z )
 {
-    return ( ( near_z / ( near_z - far_z ) ) * far_z ) / ( hyperbolic_z - ( far_z / ( far_z - near_z ) ) );
+    return ( ( pass_params.near_z / ( pass_params.near_z - pass_params.far_z ) ) * pass_params.far_z )
+           / ( hyperbolic_z - ( pass_params.far_z / ( pass_params.far_z - pass_params.near_z ) ) );
 }
 
 float3 CalcSampleOffsetCoord( float2 offset_multiplied_by_ws_radius, float2 origin_texcoord, float origin_depth )
 {
-    float2 uv_offset = offset_multiplied_by_ws_radius / ( origin_depth * fov_y );
-    uv_offset *= float2( 1.0f / aspect_ratio, -1.0f );
+    float2 uv_offset = offset_multiplied_by_ws_radius / ( origin_depth * pass_params.fov_y );
+    uv_offset *= float2( 1.0f / pass_params.aspect_ratio, -1.0f );
 
     float sample_depth = GetEyeDepth( hyperbolic_depth_map.Sample( linear_wrap_sampler, origin_texcoord + uv_offset ).r );
 
