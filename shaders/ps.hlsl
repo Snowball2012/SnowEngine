@@ -48,10 +48,11 @@ float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera
 
 	return ( lambert_term )
 		    * ( diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo 
-				+ specular_strength( fresnel_r0,
+				+ specular_strength_ggx( fresnel_r0,
 									 dot( normal, h ),
 									 source_to_half_cos,
-									 h,
+                                     normal_to_eye_cos,
+                                     lambert_term,
 									 roughness ) );
 }
 

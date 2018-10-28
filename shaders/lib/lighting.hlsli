@@ -41,17 +41,28 @@ float diffuse_disney( float roughness, float source_to_normal_cos, float normal_
 		* ( 1.0f + f * pow( 1 - normal_to_eye_cos, 5 ) ) / 3.14f;
 }
 
+// GGX self-shadowing term with Smith's method, cos_nv = ( n, v ), where v is view vector or light vector , alpha = roughness^2
+float smith_ggx_shadowing( float cos_nv, float alpha2 )
+{
+    float denominator = cos_nv + sqrt( lerp( sqr( cos_nv ), 1.0f, alpha2 ) );
+    return 2.0f * cos_nv / denominator;
+}
+
 // correct only if lambert term is above 0 and triangle is facing camera
-float3 specular_strength( float3 fresnel_r0, float cos_nh, float cos_lh, float3 halfvector, float roughness )
+float3 specular_strength_ggx( float3 fresnel_r0, float cos_nh, float cos_lh, float cos_nv, float cos_nl, float roughness )
 {
 	// ggx ndf, shlick approximation for fresnel
-	// no self shadowing. todo: add microfacet selfshadowing
 	// alpha remapped to [0.5, 1]
-
 	roughness = sqr( lerp( 0.5, 1, roughness ) );
 	float alpha2 = sqr( roughness );
 	float ndf = alpha2 / ( 3.14 * sqr( ( alpha2 - 1 ) * sqr( cos_nh ) + 1 ) );
-	return fresnel_schlick( fresnel_r0, cos_lh ) * ndf;
+
+    // Smith's method for selfshadowing
+    float shadowing = smith_ggx_shadowing( cos_nv, alpha2 ) * smith_ggx_shadowing( cos_nl, alpha2 );
+    float brdf_denominator = 4 * cos_nl * cos_nv;
+
+	return saturate( fresnel_schlick( fresnel_r0, cos_lh ) * ndf * shadowing / brdf_denominator );
+
 }
 
 float shadow_factor( float3 pos_w, float4x4 shadow_map_mat, Texture2D shadow_map, SamplerComparisonState shadow_map_sampler )
