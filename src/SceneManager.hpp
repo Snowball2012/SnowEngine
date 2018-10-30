@@ -15,6 +15,8 @@ void SceneManager::BindToPipeline( PipelineT& pipeline,
 	DirectX::BoundingFrustum main_bf( DirectX::XMLoadFloat4x4( &camera_frustrum_proj ) );
 	DirectX::XMVECTOR det;
 	main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, DirectX::XMLoadFloat4x4( &camera_frustrum_view ) ) );
+
+	//DirectX::BoundingOrientedBox shadow_bb;
 	DirectX::BoundingFrustum shadow_bf( DirectX::XMLoadFloat4x4( &sun_frustrum_proj ) );
 	shadow_bf.Transform( shadow_bf, DirectX::XMMatrixInverse( &det, DirectX::XMLoadFloat4x4( &sun_frustrum_view ) ) );
 	for ( const auto& mesh_instance : m_scene.StaticMeshInstanceSpan() )
@@ -52,7 +54,7 @@ void SceneManager::BindToPipeline( PipelineT& pipeline,
 		item.tf_addr = tf.GPUView();
 
 		DirectX::BoundingBox item_box;
-		submesh.Box().Transform( item_box, /*DirectX::XMMatrixTranspose(*/ DirectX::XMLoadFloat4x4( &tf.Obj2World() )/* )*/ );
+		submesh.Box().Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
 
 		if ( item_box.Intersects( main_bf ) )
 			m_lighting_items.push_back( item );

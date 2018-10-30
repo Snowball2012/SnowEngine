@@ -36,7 +36,7 @@ struct PixelOut
     float2 screen_space_normal : SV_TARGET2;
 };
 
-float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera, float3 normal, float roughness, float metallic )
+float3 rendering_equation( half4 base_color, float3 to_source, float3 to_camera, float3 normal, float roughness, float metallic )
 {
 	float lambert_term = max( dot( to_source, normal ), 0 );
 	float normal_to_eye_cos = max( dot( to_camera, normal ), 0 );
@@ -48,12 +48,12 @@ float3 rendering_equation( float4 base_color, float3 to_source, float3 to_camera
 
 	return ( lambert_term )
 		    * ( diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo 
-				+ specular_strength_ggx( fresnel_r0,
-									 dot( normal, h ),
-									 source_to_half_cos,
-                                     normal_to_eye_cos,
-                                     lambert_term,
-									 roughness ) );
+				+ bsdf_ggx_optimized( fresnel_r0,
+							          dot( normal, h ),
+							          source_to_half_cos,
+                                      normal_to_eye_cos,
+                                      lambert_term,
+							          roughness ) );
 }
 
 float3 ws_normal_bump_mapping( float3 ws_normal, float3 ws_tangent, float3 ws_binormal, float2 ts_normal_compressed, out float tangent_normal_z )
@@ -70,7 +70,7 @@ float percieved_brightness(float3 color)
 
 PixelOut main(PixelIn pin)
 {
-    float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
+    half4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
 
 	// alpha test
 	clip( base_color.a - 0.01 );
@@ -121,10 +121,10 @@ PixelOut main(PixelIn pin)
     const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
 
     PixelOut res;
-    res.color = float4(res_color, 1.0f);
-    res.ambient_color = float4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
+    res.color = half4(res_color, 1.0f);
+    res.ambient_color = half4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
     res.screen_space_normal = normalize(
-                                  mul( float4(normal, 0.0f), pass_params.view_mat ).xyz
+                                  mul( half4(normal, 0.0f), pass_params.view_mat ).xyz
                               ).xy;
 	return res;
 }
