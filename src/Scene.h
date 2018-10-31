@@ -72,6 +72,8 @@ public:
 	auto StaticMeshInstanceSpan() noexcept { return m_static_mesh_instances.get_elems(); }
 	StaticMeshInstance* TryModifyStaticMeshInstance( MeshInstanceID id ) noexcept; // returns nullptr if object no longer exists
 
+
+
 private:
 	template<typename ID>
 	struct ID2Obj;

@@ -241,3 +241,36 @@ private:
 };
 using MeshInstanceID = packed_freelist<StaticMeshInstance>::id;
 
+
+class Camera
+{
+public:
+	struct Data
+	{
+		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT3 dir;
+		DirectX::XMFLOAT3 up;
+		float aspect_ratio;
+		union
+		{
+			float fov_y;
+			float height;
+		};
+		float near_plane;
+		float far_plane;
+		enum class Type
+		{
+			Perspective,
+			Orthographic
+		} type;
+	};
+	const Data& GetData() const noexcept { return m_data; }
+	Data& ModifyData() noexcept { return m_data; }
+
+private:
+	Data m_data;
+};
+using CameraID = packed_freelist<Camera>::id;
+
+
+class Light
