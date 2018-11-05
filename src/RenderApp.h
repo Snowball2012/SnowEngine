@@ -56,6 +56,8 @@ private:
 	void LoadModel( const std::string& filename );
 
 	std::unique_ptr<Renderer> m_renderer = nullptr;
+	CameraID m_camera = CameraID::nullid;
+	LightID m_sun = LightID::nullid;
 
 	// external geometry
 	ImportedScene m_imported_scene;

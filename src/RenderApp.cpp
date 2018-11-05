@@ -41,6 +41,16 @@ bool RenderApp::Initialize()
 
 	m_renderer->Init( m_imported_scene );
 
+	Camera::Data camera_data;
+	camera_data.type = Camera::Type::Perspective;
+	m_camera = m_renderer->GetSceneView().AddCamera( camera_data );
+	m_renderer->SetMainCamera( m_camera );
+	SceneLight::Data sun_data;
+	{
+		sun_data.type = SceneLight::LightType::Parallel;
+	}
+	m_sun = m_renderer->GetSceneView().AddLight( sun_data );
+
 	XMMATRIX proj = CalcProjectionMatrix();
 	XMStoreFloat4x4( &m_renderer->GetScene().proj, proj );
 
@@ -77,9 +87,6 @@ void RenderApp::Update( const GameTimer& gt )
 {
 	m_renderer->NewGUIFrame();
 
-	auto& taa = m_renderer->TemporalAntiAliasing();
-	taa.SetFrame( m_cur_frame_idx );
-
 	ImGui::NewFrame();
 	{
 		ImGui::Begin( "Scene info", nullptr );
@@ -104,25 +111,6 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
 		ImGui::NewLine();
-		ImGui::Checkbox( "Enable TAA", &m_taa_enabled );
-		if ( m_taa_enabled )
-		{
-			ImGui::BeginChild( "TXAA settings" );
-
-			ImGui::PushItemWidth( 150 );
-			ImGui::Checkbox( "Jitter projection matrix", &taa.SetJitter() );
-			if ( taa.IsJitterEnabled() )
-				ImGui::SliderFloat( "Jitter value (px)", &taa.SetJitterVal(), 0.f, 5.0f, "%.2f" );
-			ImGui::Checkbox( "Blend frames", &taa.SetBlend() );
-			if ( taa.IsBlendEnabled() )
-			{
-				ImGui::SliderFloat( "Previous frame blend %", &taa.SetBlendFeedback(), 0.f, 0.99f, "%.2f" );
-				ImGui::SliderFloat( "Color window expansion %", &taa.SetColorWindowExpansion(), 0.f, 1.f, "%.2f" );
-			}
-
-			ImGui::EndChild();
-		}
-
 		{
 			ImGui::BeginChild( "Tonemap settings" );
 
@@ -189,41 +177,21 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb )
 {
-	auto& scene = m_renderer->GetScene();
-	auto& taa = m_renderer->TemporalAntiAliasing();
+	Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
+	if ( ! cam_ptr )
+		throw SnowEngineException( "no main camera" );
 
-	auto cartesian_target = SphericalToCartesian( -1.0f, m_phi, m_theta );
+	Camera::Data& cam_data = cam_ptr->ModifyData();
 
-	cartesian_target += m_camera_pos;
-	XMVECTOR target = XMLoadFloat3( &cartesian_target );
-	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+	cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
+	cam_data.pos = m_camera_pos;
+	cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
+	cam_data.fov_y = MathHelper::Pi / 4;
+	cam_data.aspect_ratio = AspectRatio();
+	cam_data.far_plane = 100.0f;
+	cam_data.near_plane = 0.1f;
 
-	XMMATRIX view = XMMatrixLookAtLH( XMLoadFloat3( &m_camera_pos ), target, up );
-	XMStoreFloat4x4( &scene.view, XMMatrixTranspose( view ) );
 
-
-	XMFLOAT4X4 proj_jittered = scene.proj;
-	if ( m_taa_enabled && taa.IsJitterEnabled() )
-		proj_jittered = taa.JitterProjection( proj_jittered, mClientWidth, mClientHeight );
-	XMMATRIX proj = XMLoadFloat4x4( &proj_jittered );
-
-	const auto& vp = view * proj;
-
-	PassConstants pc;
-	XMStoreFloat4x4( &pc.ViewProj, XMMatrixTranspose( vp ) );
-	pc.Proj = scene.proj;
-	auto det = XMMatrixDeterminant( XMLoadFloat4x4( &scene.proj ) );
-	XMStoreFloat4x4( &pc.InvProj, XMMatrixTranspose( XMMatrixInverse( &det, XMLoadFloat4x4( &scene.proj ) ) ) );
-
-	pc.View = scene.view;
-	pc.EyePosW = m_camera_pos;
-
-	pc.NearZ = 0.1f;
-	pc.FarZ = 100.0f;
-	pc.FovY = MathHelper::Pi / 4;
-	pc.AspectRatio = AspectRatio();
-
-	pc.use_linear_depth = 0;
 
 	UpdateLights( pc );
 

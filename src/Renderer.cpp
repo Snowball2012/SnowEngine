@@ -230,6 +230,12 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 	RecreatePrevFrameTexture( false );
 }
 
+bool Renderer::SetMainCamera( CameraID id )
+{
+	if ( GetSceneView().GetROScene().AllCam )
+	m_main_camera_id = id;
+}
+
 void Renderer::CreateDevice()
 {
 

@@ -60,6 +60,41 @@ MeshInstanceID SceneClientView::AddMeshInstance( StaticSubmeshID submesh_id, Tra
 	return m_scene->AddStaticMeshInstance( tf_id, submesh_id, mat_id );
 }
 
+CameraID SceneClientView::AddCamera( const Camera::Data& data ) noexcept
+{
+	CameraID id = m_scene->AddCamera();
+	m_scene->TryModifyCamera(id)->ModifyData() = data;
+	return id;
+}
+
+const Camera* SceneClientView::GetCamera( CameraID id ) const noexcept
+{
+	return m_scene->AllCameras().try_get( id );
+}
+
+Camera* SceneClientView::ModifyCamera( CameraID id ) noexcept
+{
+	return m_scene->TryModifyCamera( id );
+}
+
+LightID SceneClientView::AddLight( const SceneLight::Data& data ) noexcept
+{
+	LightID id = m_scene->AddLight();
+	m_scene->TryModifyLight( id )->ModifyData() = data;
+	return id;
+}
+
+const SceneLight* SceneClientView::GetLight( LightID id ) const noexcept
+{
+	return m_scene->AllLights().try_get( id );
+}
+
+SceneLight* SceneClientView::ModifyLight( LightID id ) noexcept
+{
+	return m_scene->TryModifyLight( id );
+}
+
+
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
@@ -110,7 +145,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 	return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdatePipelineBindings()
+void SceneManager::UpdatePipelineBindings( CameraID main_camera_id )
 {
 	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();
 

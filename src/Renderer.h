@@ -63,6 +63,8 @@ public:
 
 	SceneClientView& GetSceneView() { return m_scene_manager->GetScene(); }
 
+	// returns false if camera doesn't exist
+	bool SetMainCamera( CameraID id );
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
 
@@ -88,7 +90,7 @@ private:
 	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
 	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
 	std::optional<Descriptor> m_back_buffer_dsv;
-	DescriptorTableID m_depth_buffer_srv;
+	DescriptorTableID m_depth_buffer_srv = DescriptorTableID::nullid;
 
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
@@ -96,8 +98,9 @@ private:
 	D3D12_RECT m_scissor_rect;
 
 	RenderSceneContext m_scene;
-	StaticMeshID m_geom_id;
-	MaterialID m_placeholder_material;
+	StaticMeshID m_geom_id = StaticMeshID::nullid;
+	MaterialID m_placeholder_material = MaterialID::nullid;
+	CameraID m_main_camera_id = CameraID::nullid;
 
 	std::unique_ptr<SceneManager> m_scene_manager;
 
@@ -195,5 +198,4 @@ private:
 	const DescriptorTableBakery& DescriptorTables() const { return m_scene_manager->GetDescriptorTables(); }
 	DescriptorTableBakery& DescriptorTables() { return m_scene_manager->GetDescriptorTables(); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return DescriptorTables().GetTable( id )->gpu_handle; }
-
 };

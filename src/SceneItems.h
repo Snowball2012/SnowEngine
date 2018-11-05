@@ -245,6 +245,11 @@ using MeshInstanceID = packed_freelist<StaticMeshInstance>::id;
 class Camera
 {
 public:
+	enum class Type
+	{
+		Perspective,
+		Orthographic
+	};
 	struct Data
 	{
 		DirectX::XMFLOAT3 pos;
@@ -258,14 +263,12 @@ public:
 		};
 		float near_plane;
 		float far_plane;
-		enum class Type
-		{
-			Perspective,
-			Orthographic
-		} type;
+		Type type;
 	};
 	const Data& GetData() const noexcept { return m_data; }
 	Data& ModifyData() noexcept { return m_data; }
+
+	void CalcMatrix( DirectX::XMMATRIX& matrix ) const noexcept;
 
 private:
 	Data m_data;
@@ -273,4 +276,45 @@ private:
 using CameraID = packed_freelist<Camera>::id;
 
 
-class Light
+class SceneLight
+{
+public:
+	enum class LightType
+	{
+		Parallel,
+		Point,
+		Spotlight
+	};
+
+	struct Data
+	{
+		LightType type;
+		DirectX::XMFLOAT3 strength; // spectral irradiance, watt/sq.meter
+		DirectX::XMFLOAT3 origin; // point and spotlight
+		DirectX::XMFLOAT3 dir; // spotlight and parallel, direction TO the light source
+		float falloff_start; // point and spotlight, meters
+		float falloff_end; // point and spotlight, meters
+		float spot_power; // spotlight only
+	};
+
+	struct ShadowMapDesc
+	{
+		size_t width; // must be power of 2
+		size_t height; // must be power of 2
+
+		// todo: cascade properties
+	};
+
+	const Data& GetData() const noexcept { return m_data; }
+	Data& ModifyData() noexcept { return m_data; }
+
+	const ShadowMapDesc& GetShadowMapDesc() const noexcept { return m_sm; }
+	ShadowMapDesc& ModifyShadowMapDesc() noexcept { return m_sm; }
+
+	void CalcMatrix( DirectX::XMMATRIX& matrix ) const noexcept;
+private:
+
+	Data m_data;
+	ShadowMapDesc m_sm;
+};
+using LightID = packed_freelist<SceneLight>::id;

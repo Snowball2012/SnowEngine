@@ -38,6 +38,14 @@ public:
 	MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, DirectX::XMFLOAT3 diffuse_fresnel, DirectX::XMFLOAT4X4 uv_transform = Identity4x4 );
 	StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
 	MeshInstanceID AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id );
+	
+	CameraID AddCamera( const Camera::Data& data ) noexcept;
+	const Camera* GetCamera( CameraID id ) const noexcept;
+	Camera* ModifyCamera( CameraID id ) noexcept;
+
+	LightID AddLight( const SceneLight::Data& data ) noexcept;
+	const SceneLight* GetLight( LightID id ) const noexcept;
+	SceneLight* ModifyLight( LightID id ) noexcept;
 
 private:
 	Scene* m_scene;
@@ -60,7 +68,7 @@ public:
 	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
 	DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-	void UpdatePipelineBindings();
+	void UpdatePipelineBindings( CameraID main_camera_id );
 
 	template<typename PipelineT>
 	void BindToPipeline( PipelineT& pipeline,

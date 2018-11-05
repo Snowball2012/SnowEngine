@@ -266,3 +266,43 @@ StaticMeshInstance* Scene::TryModifyStaticMeshInstance( MeshInstanceID id ) noex
 {
 	return m_static_mesh_instances.try_get( id );
 }
+
+
+// Cameras
+
+CameraID Scene::AddCamera()
+{
+	return m_cameras.emplace();
+}
+
+bool Scene::RemoveCamera( CameraID id ) noexcept
+{
+	bool has_camera = m_cameras.has( id );
+	m_cameras.erase( id );
+	return has_camera;
+}
+
+Camera* Scene::TryModifyCamera( CameraID id ) noexcept
+{
+	return m_cameras.try_get( id );
+}
+
+
+// Lights
+
+LightID Scene::AddLight()
+{
+	return m_lights.emplace();
+}
+
+bool Scene::RemoveLight( LightID id ) noexcept
+{
+	bool has_camera = m_lights.has( id );
+	m_lights.erase( id );
+	return has_camera;
+}
+
+SceneLight* Scene::TryModifyLight( LightID id ) noexcept
+{
+	return m_lights.try_get( id );
+}
