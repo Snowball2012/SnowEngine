@@ -3,8 +3,6 @@
 #include "RenderData.h"
 #include "Scene.h"
 
-using SceneCopyOp = uint64_t;
-
 #include "StaticMeshManager.h"
 #include "TextureStreamer.h"
 #include "DynamicSceneBuffers.h"

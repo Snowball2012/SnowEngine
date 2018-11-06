@@ -174,6 +174,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\DescriptorHeap.cpp" />
     <ClCompile Include="src\DescriptorTableBakery.cpp" />
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
+    <ClCompile Include="src\ForwardCBProvider.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
     <ClCompile Include="src\FrameResource.cpp" />
     <ClCompile Include="src\GameTimer.cpp" />
@@ -199,14 +200,12 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\ResourceManager.cpp" />
     <ClCompile Include="src\Scene.cpp" />
     <ClCompile Include="src\SceneImporter.cpp" />
     <ClCompile Include="src\RenderApp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\RenderData.cpp" />
     <ClCompile Include="src\RenderPass.cpp" />
     <ClCompile Include="src\RenderUtils.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
@@ -233,6 +232,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\DescriptorHeap.h" />
     <ClInclude Include="src\DescriptorTableBakery.h" />
     <ClInclude Include="src\DynamicSceneBuffers.h" />
+    <ClInclude Include="src\ForwardCBProvider.h" />
     <ClInclude Include="src\ForwardLightingPass.h" />
     <ClInclude Include="src\FrameResource.h" />
     <ClInclude Include="src\GameTimer.h" />
@@ -251,7 +251,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="src\ResourceManager.h" />
     <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\SceneImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
@@ -261,6 +260,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\SceneItems.h" />
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneManager.hpp" />
+    <ClInclude Include="src\SceneSystemData.h" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
     <ClInclude Include="src\StaticMeshManager.h" />
     <ClInclude Include="src\stdafx.h" />

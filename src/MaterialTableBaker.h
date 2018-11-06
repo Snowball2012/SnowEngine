@@ -2,7 +2,7 @@
 
 #include "DescriptorTableBakery.h"
 
-class Scene;
+#include "SceneSystemData.h"
 
 class MaterialTableBaker
 {

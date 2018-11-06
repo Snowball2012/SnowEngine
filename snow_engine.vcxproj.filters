@@ -54,8 +54,14 @@
     <Filter Include="shaders\depth-only">
       <UniqueIdentifier>{901cc896-3b17-47bd-a513-05917b8f9890}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\ResourceSystem">
+    <Filter Include="core\SceneSystems">
+      <UniqueIdentifier>{77a1d5de-257c-40cc-94b7-f24a940275ad}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\DescriptorUtils">
       <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\PipelineDataProviders">
+      <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -76,9 +82,6 @@
     </ClCompile>
     <ClCompile Include="src\XMMath.cpp">
       <Filter>utils</Filter>
-    </ClCompile>
-    <ClCompile Include="src\RenderData.cpp">
-      <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\RenderUtils.cpp">
       <Filter>core</Filter>
@@ -135,13 +138,10 @@
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\DescriptorHeap.cpp">
-      <Filter>core\ResourceSystem</Filter>
+      <Filter>core\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\StagingDescriptorHeap.cpp">
-      <Filter>core\ResourceSystem</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ResourceManager.cpp">
-      <Filter>core\ResourceSystem</Filter>
+      <Filter>core\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\GPUTaskQueue.cpp">
       <Filter>core</Filter>
@@ -152,20 +152,23 @@
     <ClCompile Include="src\SceneManager.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="src\StaticMeshManager.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TextureStreamer.cpp">
-      <Filter>core</Filter>
+    <ClCompile Include="src\DescriptorTableBakery.cpp">
+      <Filter>core\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\DynamicSceneBuffers.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DescriptorTableBakery.cpp">
-      <Filter>core</Filter>
+      <Filter>core\SceneSystems</Filter>
     </ClCompile>
     <ClCompile Include="src\MaterialTableBaker.cpp">
-      <Filter>core</Filter>
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\StaticMeshManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\TextureStreamer.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\ForwardCBProvider.cpp">
+      <Filter>core\PipelineDataProviders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -251,13 +254,10 @@
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\StagingDescriptorHeap.h">
-      <Filter>core\ResourceSystem</Filter>
+      <Filter>core\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\DescriptorHeap.h">
-      <Filter>core\ResourceSystem</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ResourceManager.h">
-      <Filter>core\ResourceSystem</Filter>
+      <Filter>core\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\GPUTaskQueue.h">
       <Filter>core</Filter>
@@ -280,20 +280,26 @@
     <ClInclude Include="src\SceneManager.hpp">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\StaticMeshManager.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\TextureStreamer.h">
-      <Filter>core</Filter>
+    <ClInclude Include="src\DescriptorTableBakery.h">
+      <Filter>core\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\DynamicSceneBuffers.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DescriptorTableBakery.h">
-      <Filter>core</Filter>
+      <Filter>core\SceneSystems</Filter>
     </ClInclude>
     <ClInclude Include="src\MaterialTableBaker.h">
-      <Filter>core</Filter>
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StaticMeshManager.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\TextureStreamer.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SceneSystemData.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ForwardCBProvider.h">
+      <Filter>core\PipelineDataProviders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

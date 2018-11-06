@@ -37,36 +37,13 @@ bool RenderApp::Initialize()
 	m_renderer->InitD3D();
 
 	if ( strlen( m_cmd_line ) != 0 )
-		LoadModel( m_cmd_line );
+		LoadScene( m_cmd_line );
 
-	m_renderer->Init( m_imported_scene );
-
-	Camera::Data camera_data;
-	camera_data.type = Camera::Type::Perspective;
-	m_camera = m_renderer->GetSceneView().AddCamera( camera_data );
-	m_renderer->SetMainCamera( m_camera );
-	SceneLight::Data sun_data;
-	{
-		sun_data.type = SceneLight::LightType::Parallel;
-	}
-	m_sun = m_renderer->GetSceneView().AddLight( sun_data );
-
-	XMMATRIX proj = CalcProjectionMatrix();
-	XMStoreFloat4x4( &m_renderer->GetScene().proj, proj );
+	InitScene();
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
 	
-	m_imported_scene.indices.clear();
-	m_imported_scene.materials.clear();
-	m_imported_scene.submeshes.clear();
-	m_imported_scene.textures.clear();
-	m_imported_scene.vertices.clear();
-
-	m_imported_scene.indices.shrink_to_fit();
-	m_imported_scene.materials.shrink_to_fit();
-	m_imported_scene.submeshes.shrink_to_fit();
-	m_imported_scene.textures.shrink_to_fit();
-	m_imported_scene.vertices.shrink_to_fit();
+	ReleaseIntermediateSceneMemory();
 
 	return true;
 }
@@ -74,16 +51,19 @@ bool RenderApp::Initialize()
 void RenderApp::OnResize()
 {
 	if ( m_renderer )
-	{
 		m_renderer->Resize( mClientWidth, mClientHeight );
-
-		// Need to recompute projection matrix
-		XMMATRIX proj = CalcProjectionMatrix();
-		XMStoreFloat4x4( &m_renderer->GetScene().proj, proj );
-	}
 }
 
 void RenderApp::Update( const GameTimer& gt )
+{
+	ReadKeyboardState( gt );
+
+	UpdateGUI();
+	UpdateCamera();
+	UpdateLights();
+}
+
+void RenderApp::UpdateGUI()
 {
 	m_renderer->NewGUIFrame();
 
@@ -95,13 +75,13 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::NewLine();
 		ImGui::SliderFloat( "Camera speed", &m_camera_speed, 1.0f, 100.0f, "%.2f" );
 		m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
-		
+
 		ImGui::NewLine();
 		ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
 		ImGui::NewLine();
 		ImGui::Text( "Sun Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_sun_phi, m_sun_theta );
 		ImGui::NewLine();
-		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0,0,"%.3f" );
+		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0, "%.3f" );
 		ImGui::NewLine();
 		ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
 		ImGui::End();
@@ -134,11 +114,58 @@ void RenderApp::Update( const GameTimer& gt )
 		ImGui::End();
 	}
 	ImGui::Render();
+}
 
-	ReadKeyboardState( gt );
+void RenderApp::UpdateCamera()
+{
+	Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
+	if ( ! cam_ptr )
+		throw SnowEngineException( "no main camera" );
 
-	// Update pass constants
-	UpdatePassConstants( gt, *m_renderer->GetCurFrameResources().pass_cb );
+	Camera::Data& cam_data = cam_ptr->ModifyData();
+
+	cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
+	cam_data.pos = m_camera_pos;
+	cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
+	cam_data.fov_y = MathHelper::Pi / 4;
+	cam_data.aspect_ratio = AspectRatio();
+	cam_data.far_plane = 100.0f;
+	cam_data.near_plane = 0.1f;
+}
+
+namespace
+{
+	// wt/m^2
+	DirectX::XMFLOAT3 getLightIrradiance( float illuminance_lux, DirectX::XMFLOAT3 color, float gamma )
+	{
+		// convert to linear rgb
+		color.x = std::pow( color.x, gamma );
+		color.y = std::pow( color.y, gamma );
+		color.z = std::pow( color.z, gamma );
+
+
+		if ( color.x == 0 && color.y == 0 && color.z == 0 )
+			return color; // avoid division by zero
+
+		// 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b) == illuminance_lux
+		// therefore  x * 683.0f * (0.2973f * color.r + 1.0f * color.g + 0.1010f * color.b)  == illuminance_lux, radiance = linear_color * x;
+		float x = illuminance_lux / ( 683.0f * ( 0.2973f * color.x + 1.0f * color.y + 0.1010f * color.z ) );
+
+		return color * x;
+	}
+}
+
+void RenderApp::UpdateLights()
+{
+	SceneLight* light_ptr = m_renderer->GetSceneView().ModifyLight( m_sun );
+	if ( ! light_ptr )
+		throw SnowEngineException( "no sun" );
+
+	SceneLight::Data& sun_data = light_ptr->ModifyData();
+	{
+		sun_data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
+		sun_data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
+	}
 }
 
 void RenderApp::ReadEventKeys()
@@ -173,67 +200,6 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 	}
 	m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
 	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
-}
-
-void RenderApp::UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb )
-{
-	Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
-	if ( ! cam_ptr )
-		throw SnowEngineException( "no main camera" );
-
-	Camera::Data& cam_data = cam_ptr->ModifyData();
-
-	cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
-	cam_data.pos = m_camera_pos;
-	cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
-	cam_data.fov_y = MathHelper::Pi / 4;
-	cam_data.aspect_ratio = AspectRatio();
-	cam_data.far_plane = 100.0f;
-	cam_data.near_plane = 0.1f;
-
-
-
-	UpdateLights( pc );
-
-	XMStoreFloat4x4( &scene.main_frustrum_proj, proj );
-	XMStoreFloat4x4( &scene.main_frustrum_view, view );
-	
-	scene.shadow_frustrum_view = Identity4x4;
-	scene.shadow_frustrum_proj = Identity4x4;
-
-	pass_cb.CopyData( 0, pc );
-
-	// shadow map pass constants
-	{
-		pc.ViewProj = scene.lights["sun"].data.shadow_map_matrix;
-		pc.use_linear_depth = 0;
-		pc.FarZ = 1000.0f;
-		pass_cb.CopyData( 1, pc );
-	}
-
-	// main pass
-}
-
-namespace
-{
-	// wt/m^2
-	DirectX::XMFLOAT3 getLightIrradiance( float illuminance_lux, DirectX::XMFLOAT3 color, float gamma )
-	{
-		// convert to linear rgb
-		color.x = std::pow( color.x, gamma );
-		color.y = std::pow( color.y, gamma );
-		color.z = std::pow( color.z, gamma );
-
-
-		if ( color.x == 0 && color.y == 0 && color.z == 0 )
-			return color; // avoid division by zero
-
-		// 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b) == illuminance_lux
-		// therefore  x * 683.0f * (0.2973f * color.r + 1.0f * color.g + 0.1010f * color.b)  == illuminance_lux, radiance = linear_color * x;
-		float x = illuminance_lux / ( 683.0f * ( 0.2973f * color.x + 1.0f * color.y + 0.1010f * color.z ) );
-
-		return color * x;
-	}
 }
 
 void RenderApp::UpdateLights( PassConstants& pc )
@@ -301,7 +267,6 @@ void RenderApp::Draw( const GameTimer& gt )
 		ctx.wireframe_mode = m_wireframe_mode;
 	}
 	m_renderer->Draw( ctx );
-	m_cur_frame_idx++;
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
@@ -382,9 +347,37 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 	return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
 }
 
-void RenderApp::LoadModel( const std::string& filename )
+void RenderApp::LoadScene( const std::string& filename )
 {
 	LoadFbxFromFile( filename, m_imported_scene );
+}
+
+void RenderApp::InitScene()
+{
+	m_renderer->Init( m_imported_scene );
+
+	Camera::Data camera_data;
+	camera_data.type = Camera::Type::Perspective;
+	m_camera = m_renderer->GetSceneView().AddCamera( camera_data );
+	m_renderer->SetMainCamera( m_camera );
+	SceneLight::Data sun_data;
+	sun_data.type = SceneLight::LightType::Parallel;
+	m_sun = m_renderer->GetSceneView().AddLight( sun_data );
+}
+
+void RenderApp::ReleaseIntermediateSceneMemory()
+{
+	m_imported_scene.indices.clear();
+	m_imported_scene.materials.clear();
+	m_imported_scene.submeshes.clear();
+	m_imported_scene.textures.clear();
+	m_imported_scene.vertices.clear();
+
+	m_imported_scene.indices.shrink_to_fit();
+	m_imported_scene.materials.shrink_to_fit();
+	m_imported_scene.submeshes.shrink_to_fit();
+	m_imported_scene.textures.shrink_to_fit();
+	m_imported_scene.vertices.shrink_to_fit();
 }
 
 XMMATRIX RenderApp::CalcProjectionMatrix() const

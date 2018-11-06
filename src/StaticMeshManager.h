@@ -1,9 +1,9 @@
 #pragma once
 
-#include "GPUTaskQueue.h"
-
 #include <wrl.h>
 #include <d3d12.h>
+
+#include "SceneSystemData.h"
 
 // Static mesh loader. No LOD support for now
 

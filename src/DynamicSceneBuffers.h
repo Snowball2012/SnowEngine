@@ -3,6 +3,8 @@
 #include <wrl.h>
 #include <d3d12.h>
 
+#include "SceneSystemData.h"
+
 class DynamicSceneBuffers
 {
 public:

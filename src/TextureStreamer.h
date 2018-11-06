@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GPUTaskQueue.h"
+#include "SceneSystemData.h"
 #include "StagingDescriptorHeap.h"
 
 #include <wrl.h>

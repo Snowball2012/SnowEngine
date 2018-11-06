@@ -57,7 +57,7 @@ private:
 
 	bool m_is_dirty = false;
 };
-using TransformID = packed_freelist<ObjectTransform>::id;
+using TransformID = typename packed_freelist<ObjectTransform>::id;
 
 
 class StaticMesh : public RefCounter
@@ -91,7 +91,7 @@ private:
 	D3D_PRIMITIVE_TOPOLOGY m_topology;
 	bool m_is_loaded = false;
 };
-using StaticMeshID = packed_freelist<StaticMesh>::id;
+using StaticMeshID = typename packed_freelist<StaticMesh>::id;
 
 
 class StaticSubmesh : public RefCounter
@@ -131,7 +131,7 @@ private:
 	DirectX::XMFLOAT2 m_max_inv_uv_density; // for mip streaming
 	bool m_is_dirty = false;
 };
-using StaticSubmeshID = packed_freelist<StaticSubmesh>::id;
+using StaticSubmeshID = typename packed_freelist<StaticSubmesh>::id;
 
 
 class Texture : public RefCounter
@@ -159,7 +159,7 @@ private:
 	bool m_is_dirty = false;
 	bool m_is_loaded = false;
 };
-using TextureID = packed_freelist<Texture>::id;
+using TextureID = typename packed_freelist<Texture>::id;
 
 
 class MaterialPBR : public RefCounter
@@ -209,7 +209,7 @@ private:
 
 	bool m_is_dirty = false;
 };
-using MaterialID = packed_freelist<MaterialPBR>::id;
+using MaterialID = typename packed_freelist<MaterialPBR>::id;
 
 
 class StaticMeshInstance
@@ -239,7 +239,7 @@ private:
 	bool m_has_shadow = false;
 	bool m_is_enabled = true;
 };
-using MeshInstanceID = packed_freelist<StaticMeshInstance>::id;
+using MeshInstanceID = typename packed_freelist<StaticMeshInstance>::id;
 
 
 class Camera
@@ -273,7 +273,7 @@ public:
 private:
 	Data m_data;
 };
-using CameraID = packed_freelist<Camera>::id;
+using CameraID = typename packed_freelist<Camera>::id;
 
 
 class SceneLight
@@ -308,13 +308,13 @@ public:
 	const Data& GetData() const noexcept { return m_data; }
 	Data& ModifyData() noexcept { return m_data; }
 
-	const ShadowMapDesc& GetShadowMapDesc() const noexcept { return m_sm; }
-	ShadowMapDesc& ModifyShadowMapDesc() noexcept { return m_sm; }
+	const std::optional<ShadowMapDesc>& GetShadowMapDesc() const noexcept { return m_sm; }
+	std::optional<ShadowMapDesc>& ModifyShadowMapDesc() noexcept { return m_sm; }
 
 	void CalcMatrix( DirectX::XMMATRIX& matrix ) const noexcept;
 private:
 
 	Data m_data;
-	ShadowMapDesc m_sm;
+	std::optional<ShadowMapDesc> m_sm;
 };
-using LightID = packed_freelist<SceneLight>::id;
+using LightID = typename packed_freelist<SceneLight>::id;

@@ -91,9 +91,9 @@ void Renderer::Init( const ImportedScene& ext_scene )
 	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
 	m_graphics_queue->Flush();
 
-	m_scene_manager->UpdatePipelineBindings();
+	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 	m_scene_manager->FlushAllOperations();
-	m_scene_manager->UpdatePipelineBindings();
+	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 	m_scene_manager->FlushAllOperations();
 }
 
@@ -102,7 +102,7 @@ void Renderer::Draw( const Context& ctx )
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
 
-	m_scene_manager->UpdatePipelineBindings();
+	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 
 	m_scene_manager->BindToPipeline( m_pipeline, m_scene.main_frustrum_proj, m_scene.main_frustrum_view, m_scene.shadow_frustrum_proj, m_scene.shadow_frustrum_view );
 
@@ -232,8 +232,10 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 
 bool Renderer::SetMainCamera( CameraID id )
 {
-	if ( GetSceneView().GetROScene().AllCam )
+	if ( ! GetSceneView().GetROScene().AllCameras().has( id ) )
+		return false;
 	m_main_camera_id = id;
+	return true;
 }
 
 void Renderer::CreateDevice()
@@ -530,9 +532,9 @@ void Renderer::LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_
 		TextureID new_texture_id = m_scene_manager->GetScene().LoadStreamedTexture( ext_scene.textures[i] );
 		if ( flush_per_texture )
 		{
-			m_scene_manager->UpdatePipelineBindings();
+			m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 			m_scene_manager->FlushAllOperations();
-			m_scene_manager->UpdatePipelineBindings();
+			m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 			m_scene_manager->FlushAllOperations();
 		}
 		m_scene.textures.emplace( ext_scene.textures[i], new_texture_id );

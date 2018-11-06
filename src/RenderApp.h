@@ -35,8 +35,11 @@ private:
 	virtual void OnResize() override;
 
 	virtual void Update( const GameTimer& gt ) override;
+
+	void UpdateGUI();
+	void UpdateCamera();
+	void UpdateLights();
 	
-	void UpdatePassConstants( const GameTimer& gt, Utils::UploadBuffer<PassConstants>& pass_cb );
 	void UpdateLights( PassConstants& pc );
 	DirectX::XMMATRIX CalcProjectionMatrix() const;
 
@@ -53,7 +56,9 @@ private:
 	virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
 
 	// scene loading
-	void LoadModel( const std::string& filename );
+	void LoadScene( const std::string& filename );
+	void InitScene( );
+	void ReleaseIntermediateSceneMemory();
 
 	std::unique_ptr<Renderer> m_renderer = nullptr;
 	CameraID m_camera = CameraID::nullid;
@@ -76,7 +81,6 @@ private:
 
 	// temporal AA
 	bool m_taa_enabled = false;
-	uint64_t m_cur_frame_idx = 0;
 
 	// inputs
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;
