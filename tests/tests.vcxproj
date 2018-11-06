@@ -87,7 +87,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>snow_engine_test.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\bin\$(Configuration);..\3rdparty\boost_1_67_0\msvc14_binaries</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -128,7 +128,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>snow_engine_test.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\bin\$(Configuration);..\3rdparty\boost_1_67_0\msvc14_binaries</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
