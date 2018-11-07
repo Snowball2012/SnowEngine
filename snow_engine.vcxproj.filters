@@ -301,6 +301,9 @@
     <ClInclude Include="src\ForwardCBProvider.h">
       <Filter>core\PipelineDataProviders</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\span.h">
+      <Filter>utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
