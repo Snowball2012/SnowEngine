@@ -209,6 +209,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\RenderPass.cpp" />
     <ClCompile Include="src\RenderUtils.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
+    <ClCompile Include="src\ShadowMapProvider.cpp" />
     <ClCompile Include="src\StagingDescriptorHeap.cpp" />
     <ClCompile Include="src\StaticMeshManager.cpp" />
     <ClCompile Include="src\stdafx.cpp">
@@ -261,6 +262,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneManager.hpp" />
     <ClInclude Include="src\SceneSystemData.h" />
+    <ClInclude Include="src\ShadowMapProvider.h" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
     <ClInclude Include="src\StaticMeshManager.h" />
     <ClInclude Include="src\stdafx.h" />

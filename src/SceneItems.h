@@ -297,24 +297,28 @@ public:
 		float spot_power; // spotlight only
 	};
 
-	struct ShadowMapDesc
+	struct Shadow
 	{
-		size_t width; // must be power of 2
-		size_t height; // must be power of 2
-
+		size_t sm_size; // must be power of 2, base resolution for cascade
 		// todo: cascade properties
 	};
 
 	const Data& GetData() const noexcept { return m_data; }
 	Data& ModifyData() noexcept { return m_data; }
 
-	const std::optional<ShadowMapDesc>& GetShadowMapDesc() const noexcept { return m_sm; }
-	std::optional<ShadowMapDesc>& ModifyShadowMapDesc() noexcept { return m_sm; }
+	const std::optional<Shadow>& GetShadow() const noexcept { return m_sm; }
+	std::optional<Shadow>& ModifyShadow() noexcept { return m_sm; }
 
-	void CalcMatrix( DirectX::XMMATRIX& matrix ) const noexcept;
+	// has value if this light casts shadow in this frame
+	// maps 3d points to shadow map uv and depth 
+	const std::optional<DirectX::XMMATRIX>& ShadowMatrix() const noexcept { return m_shadow_matrix; };
+	std::optional<DirectX::XMMATRIX>& ShadowMatrix() noexcept { return m_shadow_matrix; };
+
+
 private:
 
-	Data m_data;
-	std::optional<ShadowMapDesc> m_sm;
+	Data m_data; 
+	std::optional<DirectX::XMMATRIX> m_shadow_matrix;
+	std::optional<Shadow> m_sm;
 };
 using LightID = typename packed_freelist<SceneLight>::id;

@@ -90,18 +90,28 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 	for ( const auto& light : lights )
 	{
 		LightConstants data;
-		data.shadow_map_matrix = light.
+		const auto& shadow_matrix = light.ShadowMatrix();
+		if ( shadow_matrix.has_value() )
+			DirectX::XMStoreFloat4x4( &data.shadow_map_matrix, DirectX::XMMatrixTranspose( shadow_matrix.value() ) );
 
-		switch ( light.second.type )
+		const SceneLight::Data& src_data = light.GetData();
+		data.dir = src_data.dir;
+		data.falloff_end = src_data.falloff_end;
+		data.falloff_start = src_data.falloff_start;
+		data.origin = src_data.origin;
+		data.spot_power = src_data.spot_power;
+		data.strength = src_data.strength;
+
+		switch ( light.GetData().type )
 		{
-			case GPULight::Type::Parallel:
-				parallel_lights.push_back( &light.second.data );
+			case SceneLight::LightType::Parallel:
+				parallel_lights.push_back( &data );
 				break;
-			case GPULight::Type::Point:
-				point_lights.push_back( &light.second.data );
+			case SceneLight::LightType::Point:
+				point_lights.push_back( &data );
 				break;
-			case GPULight::Type::Spotlight:
-				spotlights.push_back( &light.second.data );
+			case SceneLight::LightType::Spotlight:
+				spotlights.push_back( &data );
 				break;
 			default:
 				NOTIMPL;

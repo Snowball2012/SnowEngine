@@ -170,6 +170,9 @@
     <ClCompile Include="src\ForwardCBProvider.cpp">
       <Filter>core\PipelineDataProviders</Filter>
     </ClCompile>
+    <ClCompile Include="src\ShadowMapProvider.cpp">
+      <Filter>core\PipelineDataProviders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -303,6 +306,9 @@
     </ClInclude>
     <ClInclude Include="src\utils\span.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ShadowMapProvider.h">
+      <Filter>core\PipelineDataProviders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
