@@ -9,25 +9,22 @@
 #include "HBAOPass.h"
 
 // resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
-struct ShadowCasters
-{
-	std::vector<RenderItem>* casters = nullptr;
-};
 
 struct ShadowProducers
 {
-	std::vector<GPULight*>* lights = nullptr;
-	std::vector<D3D12_GPU_VIRTUAL_ADDRESS>* pass_cbs = nullptr;
-};
-
-struct ShadowMaps
-{
-	std::vector<GPULight*>* light_with_sm = nullptr;
+	std::vector<ShadowProducer>* arr = nullptr;
 };
 
 struct ShadowMapStorage
 {
-	std::vector<GPULight*>* sm_storage = nullptr;
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	ID3D12Resource* res;
+};
+
+struct ShadowMaps
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct ForwardPassCB
@@ -123,7 +120,7 @@ struct ScreenConstants
 	D3D12_RECT scissor_rect;
 };
 
-struct SceneContext
+struct MainRenderitems
 {
 	std::vector<RenderItem>* items;
 };

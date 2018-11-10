@@ -12,9 +12,10 @@ const typename packed_freelist<T, base_container>::id packed_freelist<T, base_co
 template<typename T, template <typename...> typename base_container>
 bool packed_freelist<T, base_container>::has( id elem_id ) const noexcept
 {
-	assert( elem_id.idx < m_freelist.size() );
-
-	return m_freelist[elem_id.idx].slot_cnt == elem_id.inner_id;
+	if ( elem_id.idx < m_freelist.size() )
+		return m_freelist[elem_id.idx].slot_cnt == elem_id.inner_id;
+	else
+		return false;
 }
 
 

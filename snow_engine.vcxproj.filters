@@ -92,9 +92,6 @@
     <ClCompile Include="src\GameTimer.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="src\RenderPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
     <ClCompile Include="src\SceneImporter.cpp">
       <Filter>serialization</Filter>
     </ClCompile>
@@ -102,9 +99,6 @@
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\DepthOnlyPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\BlurPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
@@ -170,8 +164,11 @@
     <ClCompile Include="src\ForwardCBProvider.cpp">
       <Filter>core\PipelineDataProviders</Filter>
     </ClCompile>
-    <ClCompile Include="src\ShadowMapProvider.cpp">
+    <ClCompile Include="src\ShadowProvider.cpp">
       <Filter>core\PipelineDataProviders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\SceneItems.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -205,9 +202,6 @@
     <ClInclude Include="src\GameTimer.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\RenderPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
     <ClInclude Include="src\ForwardLightingPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
@@ -215,9 +209,6 @@
       <Filter>serialization</Filter>
     </ClInclude>
     <ClInclude Include="src\DepthOnlyPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\BlurPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h">
@@ -307,7 +298,7 @@
     <ClInclude Include="src\utils\span.h">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\ShadowMapProvider.h">
+    <ClInclude Include="src\ShadowProvider.h">
       <Filter>core\PipelineDataProviders</Filter>
     </ClInclude>
   </ItemGroup>

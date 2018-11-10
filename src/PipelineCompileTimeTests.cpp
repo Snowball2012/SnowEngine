@@ -43,7 +43,7 @@ namespace Testing
 	struct ScreenConstants
 	{};
 
-	struct SceneContext
+	struct MainRenderitems
 	{};
 
 	struct PreviousFrameStorage
@@ -68,7 +68,7 @@ namespace Testing
 			HDRColorStorage,
 			DepthStorage,
 			ScreenConstants,
-			SceneContext
+			MainRenderitems
 		>;
 
 		using OutputResources = std::tuple
@@ -173,7 +173,7 @@ namespace Testing
 		pipeline.SetRes( HDRColorStorage() );
 		pipeline.SetRes( ScreenConstants() );
 		pipeline.SetRes( DepthStorage() );
-		pipeline.SetRes( SceneContext() );
+		pipeline.SetRes( MainRenderitems() );
 		pipeline.SetRes( ShadowCasters() );
 		pipeline.SetRes( ShadowMapStorage() );
 		pipeline.SetRes( ShadowProducers() );

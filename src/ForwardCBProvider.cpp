@@ -10,7 +10,7 @@ ForwardCBProvider::ForwardCBProvider( ID3D12Device& device, int n_bufferized_fra
 		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
 		D3D12_HEAP_FLAG_NONE,
 		&CD3DX12_RESOURCE_DESC::Buffer( BufferGPUSize * m_nbuffers ),
-		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS( m_gpu_res.GetAddressOf() ) ) );
 
@@ -86,7 +86,7 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, PassConstants& gpu_data ) const
 {
 	// TODO: store matrices in scene objects, calculate them beforehand
-	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
+	bc::static_vector<LightConstants, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
 	for ( const auto& light : lights )
 	{
 		LightConstants data;
@@ -105,13 +105,13 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 		switch ( light.GetData().type )
 		{
 			case SceneLight::LightType::Parallel:
-				parallel_lights.push_back( &data );
+				parallel_lights.push_back( data );
 				break;
 			case SceneLight::LightType::Point:
-				point_lights.push_back( &data );
+				point_lights.push_back( data );
 				break;
 			case SceneLight::LightType::Spotlight:
-				spotlights.push_back( &data );
+				spotlights.push_back( data );
 				break;
 			default:
 				NOTIMPL;
@@ -126,11 +126,11 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 	gpu_data.n_spotlight_lights = int( spotlights.size() );
 
 	size_t light_offset = 0;
-	for ( const LightConstants* light : boost::range::join( parallel_lights,
+	for ( const LightConstants& light : boost::range::join( parallel_lights,
 															boost::range::join( point_lights,
 																				spotlights ) ) )
 	{
-		gpu_data.lights[light_offset++] = *light;
+		gpu_data.lights[light_offset++] = light;
 	}
 
 }

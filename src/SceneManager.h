@@ -8,6 +8,7 @@
 #include "DynamicSceneBuffers.h"
 #include "DescriptorTableBakery.h"
 #include "MaterialTableBaker.h"
+#include "ShadowProvider.h"
 
 #include <DirectXMath.h>
 class SceneManager;
@@ -58,7 +59,7 @@ private:
 class SceneManager
 {
 public:
-	SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue );
+	SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue );
 
 	const SceneClientView& GetScene() const noexcept;
 	SceneClientView& GetScene() noexcept;
@@ -69,9 +70,7 @@ public:
 	void UpdatePipelineBindings( CameraID main_camera_id );
 
 	template<typename PipelineT>
-	void BindToPipeline( PipelineT& pipeline,
-						 DirectX::XMFLOAT4X4 camera_frustrum_proj, DirectX::XMFLOAT4X4 camera_frustrum_view,
-						 DirectX::XMFLOAT4X4 sun_frustrum_proj, DirectX::XMFLOAT4X4 sun_frustrum_view );
+	void BindToPipeline( PipelineT& pipeline );
 
 	void FlushAllOperations();
 
@@ -89,6 +88,7 @@ private:
 	SceneClientView m_scene_view;
 	DynamicSceneBuffers m_dynamic_buffers;
 	MaterialTableBaker m_material_table_baker;
+	ShadowProvider m_shadow_provider;
 	GPUTaskQueue* m_copy_queue;
 
 	SceneCopyOp m_operation_counter = 0;
@@ -102,7 +102,7 @@ private:
 
 	// temporary
 	std::vector<RenderItem> m_lighting_items;
-	std::vector<RenderItem> m_shadow_items;
+	CameraID m_main_camera_id = CameraID::nullid;
 };
 
 #include "SceneManager.hpp"

@@ -40,9 +40,7 @@ Renderer::~Renderer()
 	m_ambient_lighting.rtv.reset();
 	m_normals.rtv.reset();
 	m_ssao.rtv.reset();
-
-	for ( auto& shadow_map : m_scene.shadow_maps )
-		shadow_map.second.dsv.reset();
+	m_scene_manager.reset();
 }
 
 void Renderer::InitD3D()
@@ -61,10 +59,11 @@ void Renderer::InitD3D()
 	CreateSwapChain();
 
 	InitImgui();
-
-	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, FrameResourceCount, m_copy_queue.get() );
-
 	BuildRtvAndDsvDescriptorHeaps();
+
+	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, m_dsv_heap.get(), FrameResourceCount, m_copy_queue.get() );
+	m_forward_cb_provider = std::make_unique<ForwardCBProvider>( *m_d3d_device.Get(), FrameResourceCount );
+
 	RecreateSwapChainAndDepthBuffers( m_client_width, m_client_height );
 	RecreatePrevFrameTexture( true );
 }
@@ -73,17 +72,13 @@ void Renderer::Init( const ImportedScene& ext_scene )
 {
 	ThrowIfFailed( m_cmd_list->Reset( m_direct_cmd_allocator.Get(), nullptr ) );
 
-	RecreatePrevFrameTexture( false );
-
 	LoadAndBuildTextures( ext_scene, true );
 	BuildGeometry( ext_scene );
 
 	BuildMaterials( ext_scene );
 	BuildRenderItems( ext_scene );
 	BuildFrameResources( );
-	BuildLights();
 
-	BuildConstantBuffers();
 	BuildPasses();
 
 	ThrowIfFailed( m_cmd_list->Close() );
@@ -104,10 +99,12 @@ void Renderer::Draw( const Context& ctx )
 
 	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
 
-	m_scene_manager->BindToPipeline( m_pipeline, m_scene.main_frustrum_proj, m_scene.main_frustrum_view, m_scene.shadow_frustrum_proj, m_scene.shadow_frustrum_view );
+	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
+	if ( ! main_camera )
+		throw SnowEngineException( "no main camera" );
+	m_forward_cb_provider->Update( main_camera->GetData(), GetSceneView().GetROScene().LightSpan() );
 
-	for ( auto& shadow_map : m_scene.shadow_maps )
-		shadow_map.second.frame_srv = GetGPUHandle( shadow_map.second.srv );
+	m_scene_manager->BindToPipeline( m_pipeline );
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
@@ -124,28 +121,16 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	ShadowMapStorage sm_storage;
+	m_pipeline.GetRes( sm_storage );
+	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
 	m_cmd_list->ResourceBarrier( 7, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
-	std::vector<GPULight*> lights_with_shadow;
-	std::vector<D3D12_GPU_VIRTUAL_ADDRESS> sm_pass_cbs;
-
 	{
-		ShadowProducers producers;
-		lights_with_shadow.push_back( &m_scene.lights["sun"] );
-		producers.lights = &lights_with_shadow;
-		sm_pass_cbs.push_back( m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() + Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) ) );
-		producers.pass_cbs = &sm_pass_cbs;
-		m_pipeline.SetRes( producers );
-
-		ShadowMapStorage smstorage;
-		smstorage.sm_storage = &lights_with_shadow;
-		m_pipeline.SetRes( smstorage );
-
-		ForwardPassCB pass_cb{ m_cur_frame_resource->pass_cb->Resource()->GetGPUVirtualAddress() };
+		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
 		m_pipeline.SetRes( pass_cb );
 
 		HDRColorStorage hdr_buffer;
@@ -206,7 +191,7 @@ void Renderer::Draw( const Context& ctx )
 
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_scene.lights["sun"].shadow_map->texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
 
 	m_cmd_list->ResourceBarrier( 3, rtv_barriers );
 
@@ -506,7 +491,9 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv_desc.Texture2D.MipLevels = 1;
 	}
-	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, *DescriptorTables().ModifyTable( m_depth_buffer_srv ) );
+	if ( create_tables )
+		m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
+	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, DescriptorTables().ModifyTable( m_depth_buffer_srv ).value() );
 }
 
 void Renderer::InitImgui()
@@ -609,46 +596,9 @@ void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
 void Renderer::BuildFrameResources( )
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
-		m_frame_resources.emplace_back( m_d3d_device.Get(), 2, 1, 0 );
+		m_frame_resources.emplace_back( m_d3d_device.Get(), 2 );
 	m_cur_fr_idx = 0;
 	m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
-}
-
-void Renderer::BuildLights()
-{
-	auto& parallel_light = m_scene.lights.emplace( "sun", GPULight{ GPULight::Type::Parallel } ).first->second;
-	LightConstants& data = parallel_light.data;
-
-	// 304.5 wt/m^2
-	data.strength = XMFLOAT3( 130.5f, 90.5f, 50.5f );
-	data.dir = XMFLOAT3( 0.172f, -0.818f, -0.549f );
-	XMFloat3Normalize( data.dir );
-	parallel_light.shadow_map = nullptr;
-	parallel_light.is_dynamic = true;
-
-
-	auto& shadow_map = m_scene.shadow_maps["sun"];
-	CreateShadowMap( shadow_map );
-	D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
-	{
-		dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-		dsv_desc.Format = m_depth_stencil_format;
-		dsv_desc.Texture2D.MipSlice = 0;
-		dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
-	}
-	shadow_map.dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateDepthStencilView( shadow_map.texture_gpu.Get(), &dsv_desc, shadow_map.dsv->HandleCPU() );
-
-	parallel_light.shadow_map = &shadow_map;
-}
-
-void Renderer::BuildConstantBuffers()
-{
-	for ( int i = 0; i < FrameResourceCount; ++i )
-	{
-		// pass cb
-		m_frame_resources[i].pass_cb = std::make_unique<Utils::UploadBuffer<PassConstants>>( m_d3d_device.Get(), PassCount, true );
-	}
 }
 
 void Renderer::BuildPasses()

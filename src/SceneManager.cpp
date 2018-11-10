@@ -96,7 +96,7 @@ SceneLight* SceneClientView::ModifyLight( LightID id ) noexcept
 
 
 
-SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
+SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
 	, m_tex_streamer( device, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
@@ -105,6 +105,7 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t 
 	, m_nframes_to_buffer( nframes_to_buffer )
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
 	, m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
+	, m_shadow_provider( device.Get(), int( nframes_to_buffer ), dsv_heap, &m_gpu_descriptor_tables, &m_scene )
 {
 	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
 	{
@@ -147,16 +148,21 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 
 void SceneManager::UpdatePipelineBindings( CameraID main_camera_id )
 {
+	m_main_camera_id = main_camera_id;
+
 	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();
 
 	SceneCopyOp cur_op = m_operation_counter++;
 	ThrowIfFailed( m_cmd_allocators[cur_op % m_nframes_to_buffer]->Reset() );
 	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].Get(), nullptr );
+
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	ProcessSubmeshes();
 	m_tex_streamer.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
+	if ( const Camera* main_cam = m_scene.AllCameras().try_get( main_camera_id ) )
+		m_shadow_provider.Update( m_scene.LightSpan(), main_cam->GetData() );
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };

@@ -16,6 +16,7 @@
 #include "PipelineNodes.h"
 
 #include "SceneManager.h"
+#include "ForwardCBProvider.h"
 
 class ForwardLightingPass;
 class DepthOnlyPass;
@@ -86,8 +87,8 @@ private:
 	ComPtr<IDXGISwapChain> m_swap_chain = nullptr;
 	static constexpr int SwapChainBufferCount = 2;
 	int m_curr_back_buff = 0;
-	ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount];
-	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount];
+	ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount] = { nullptr };
+	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount] = { std::nullopt };
 	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
 	std::optional<Descriptor> m_back_buffer_dsv;
 	DescriptorTableID m_depth_buffer_srv = DescriptorTableID::nullid;
@@ -103,6 +104,7 @@ private:
 	CameraID m_main_camera_id = CameraID::nullid;
 
 	std::unique_ptr<SceneManager> m_scene_manager;
+	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_ui_heap = nullptr;
@@ -183,8 +185,6 @@ private:
 	void BuildMaterials( const ImportedScene& ext_scene );
 	void BuildRenderItems( const ImportedScene& ext_scene );
 	void BuildFrameResources( );
-	void BuildLights();
-	void BuildConstantBuffers();
 	void BuildPasses();
 
 	void CreateShadowMap( GPUTexture& texture );

@@ -70,7 +70,7 @@ float percieved_brightness(float3 color)
 
 PixelOut main(PixelIn pin)
 {
-    half4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
+    float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
 
 	// alpha test
 	clip( base_color.a - 0.01 );
@@ -121,10 +121,10 @@ PixelOut main(PixelIn pin)
     const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
 
     PixelOut res;
-    res.color = half4(res_color, 1.0f);
-    res.ambient_color = half4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
+    res.color = float4(res_color, 1.0f);
+    res.ambient_color = float4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
     res.screen_space_normal = normalize(
-                                  mul( half4(normal, 0.0f), pass_params.view_mat ).xyz
+                                  mul( float4(normal, 0.0f), pass_params.view_mat ).xyz
                               ).xy;
 	return res;
 }

@@ -10,21 +10,6 @@
 
 #include "Scene.h"
 
-struct SubmeshGeometry
-{
-	UINT IndexCount = 0;
-	UINT StartIndexLocation = 0;
-	INT BaseVertexLocation = 0;
-
-	DirectX::BoundingBox Bounds;
-};
-
-struct MaterialConstants
-{
-	DirectX::XMFLOAT4X4 mat_transform;
-	DirectX::XMFLOAT3 diffuse_fresnel;
-};
-
 struct GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
@@ -35,12 +20,6 @@ struct GPUTexture
 struct DynamicTexture : public GPUTexture
 {
 	std::unique_ptr<Descriptor> rtv = nullptr;
-};
-
-struct ShadowMap : public GPUTexture
-{
-	std::unique_ptr<Descriptor> dsv = nullptr;
-	D3D12_GPU_DESCRIPTOR_HANDLE frame_srv;
 };
 
 struct RenderItem
@@ -57,10 +36,28 @@ struct RenderItem
 	D3D12_GPU_VIRTUAL_ADDRESS tf_addr;
 };
 
+struct ShadowMapGenData
+{
+	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
+	D3D12_VIEWPORT viewport;
+};
+
+struct ShadowProducer
+{
+	ShadowMapGenData map_data;
+	std::vector<RenderItem> casters;
+};
+
 struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 model = Identity4x4;
 	DirectX::XMFLOAT4X4 model_inv_transpose = Identity4x4;
+};
+
+struct MaterialConstants
+{
+	DirectX::XMFLOAT4X4 mat_transform;
+	DirectX::XMFLOAT3 diffuse_fresnel;
 };
 
 struct LightConstants
@@ -72,22 +69,6 @@ struct LightConstants
 	float falloff_end; // point and spotlight
 	DirectX::XMFLOAT3 dir; // spotlight and parallel, direction TO the light source
 	float spot_power; // spotlight only
-};
-
-struct GPULight
-{
-	enum class Type
-	{
-		Ambient,
-		Parallel,
-		Point,
-		Spotlight
-	} type;
-
-	LightConstants data;
-
-	ShadowMap* shadow_map;
-	bool is_dynamic = false;
 };
 
 constexpr int MAX_LIGHTS = 16;
@@ -109,8 +90,8 @@ struct PassConstants
 
 	float NearZ = 0.0f;
 	float FarZ = 0.0f;
-	float FovY;
-	float AspectRatio;
+	float FovY = 0.0f;
+	float AspectRatio = 0.0f;
 
 	float TotalTime = 0.0f;
 	float DeltaTime = 0.0f;
@@ -131,19 +112,7 @@ struct RenderSceneContext
 
 	// lighting, materials and textures
 	std::unordered_map<std::string, MaterialID> materials;
-	std::unordered_map<std::string, GPULight> lights;
 	std::unordered_map<std::string, TextureID> textures;
-	std::unordered_map<std::string, ShadowMap> shadow_maps;
-
-	// camera
-	DirectX::XMFLOAT4X4 view = Identity4x4;
-	DirectX::XMFLOAT4X4 proj = Identity4x4;
-
-	DirectX::XMFLOAT4X4 shadow_frustrum_proj = Identity4x4;
-	DirectX::XMFLOAT4X4 shadow_frustrum_view = Identity4x4;
-
-	DirectX::XMFLOAT4X4 main_frustrum_proj = Identity4x4;
-	DirectX::XMFLOAT4X4 main_frustrum_view = Identity4x4;
 };
 
 using InputLayout = std::vector<D3D12_INPUT_ELEMENT_DESC>;

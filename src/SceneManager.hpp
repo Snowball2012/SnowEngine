@@ -5,20 +5,29 @@
 #include "PipelineResource.h"
 
 template<typename PipelineT>
-void SceneManager::BindToPipeline( PipelineT& pipeline,
-								   DirectX::XMFLOAT4X4 camera_frustrum_proj, DirectX::XMFLOAT4X4 camera_frustrum_view,
-								   DirectX::XMFLOAT4X4 sun_frustrum_proj, DirectX::XMFLOAT4X4 sun_frustrum_view )
+void SceneManager::BindToPipeline( PipelineT& pipeline )
 {
-	m_lighting_items.clear();
-	m_shadow_items.clear();
+	const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id );
+	if ( ! main_cam )
+		throw SnowEngineException( "main camera not found" );
+	const auto& cam_data = main_cam->GetData();
+	if ( cam_data.type != Camera::Type::Perspective )
+		NOTIMPL;
 
-	DirectX::BoundingFrustum main_bf( DirectX::XMLoadFloat4x4( &camera_frustrum_proj ) );
+	DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( cam_data.fov_y,
+																cam_data.aspect_ratio,
+																cam_data.near_plane,
+																cam_data.far_plane );
+
+	DirectX::BoundingFrustum main_bf( proj );
+
+	DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &cam_data.pos ),
+														DirectX::XMLoadFloat3( &cam_data.dir ),
+														DirectX::XMLoadFloat3( &cam_data.up ) );
 	DirectX::XMVECTOR det;
-	main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, DirectX::XMLoadFloat4x4( &camera_frustrum_view ) ) );
+	main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
 
-	//DirectX::BoundingOrientedBox shadow_bb;
-	DirectX::BoundingFrustum shadow_bf( DirectX::XMLoadFloat4x4( &sun_frustrum_proj ) );
-	shadow_bf.Transform( shadow_bf, DirectX::XMMatrixInverse( &det, DirectX::XMLoadFloat4x4( &sun_frustrum_view ) ) );
+	m_lighting_items.clear();
 	for ( const auto& mesh_instance : m_scene.StaticMeshInstanceSpan() )
 	{
 		const StaticSubmesh& submesh = m_scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
@@ -58,15 +67,15 @@ void SceneManager::BindToPipeline( PipelineT& pipeline,
 
 		if ( item_box.Intersects( main_bf ) )
 			m_lighting_items.push_back( item );
-		//if ( item_box.Intersects( shadow_bf ) )
-			m_shadow_items.push_back( item );
 	}
 
-	ShadowCasters sc;
-	sc.casters = &m_shadow_items;
-	pipeline.SetRes( sc );
+	ShadowProducers producers;
+	ShadowMapStorage sm_storage;
+	m_shadow_provider.FillPipelineStructures( m_scene.StaticMeshInstanceSpan(), producers, sm_storage );
+	pipeline.SetRes( producers );
+	pipeline.SetRes( sm_storage );
 
-	SceneContext forward_renderitems;
+	MainRenderitems forward_renderitems;
 	forward_renderitems.items = &m_lighting_items;
 	pipeline.SetRes( forward_renderitems );
 }

@@ -166,6 +166,13 @@ void RenderApp::UpdateLights()
 		sun_data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
 		sun_data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
 	}
+	SceneLight::Shadow sun_shadow;
+	{
+		sun_shadow.most_detailed_cascade_ws_halfwidth = 50.0f;
+		sun_shadow.orthogonal_ws_height = 100.0f;
+		sun_shadow.sm_size = 4096;
+	}
+	light_ptr->ModifyShadow() = sun_shadow;
 }
 
 void RenderApp::ReadEventKeys()
@@ -200,63 +207,6 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 	}
 	m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
 	m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
-}
-
-void RenderApp::UpdateLights( PassConstants& pc )
-{
-	auto& scene = m_renderer->GetScene();
-
-	// update sun dir
-	auto& sun_light = scene.lights["sun"];
-	{
-		sun_light.data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
-
-		const auto& cartesian = SphericalToCartesian( -100, m_sun_phi, m_sun_theta );
-
-		XMVECTOR target = XMLoadFloat3( &m_camera_pos );
-		XMVECTOR pos = XMVectorSet( cartesian.x, cartesian.y, cartesian.z, 1.0f ) + target;
-		XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-
-		XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-		XMMATRIX proj = XMMatrixOrthographicLH( 50, 50, 10.0f, 200 );
-		const auto& viewproj = view * proj;
-		XMStoreFloat4x4( &sun_light.data.shadow_map_matrix, XMMatrixTranspose( viewproj ) );
-		sun_light.data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
-	}
-
-	bc::static_vector<const LightConstants*, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
-	for ( const auto& light : scene.lights )
-	{
-		switch ( light.second.type )
-		{
-			case GPULight::Type::Parallel:
-				parallel_lights.push_back( &light.second.data );
-				break;
-			case GPULight::Type::Point:
-				point_lights.push_back( &light.second.data );
-				break;
-			case GPULight::Type::Spotlight:
-				spotlights.push_back( &light.second.data );
-				break;
-			default:
-				throw std::exception( "not implemented" );
-		}
-	}
-
-	if ( parallel_lights.size() + point_lights.size() + spotlights.size() > MAX_LIGHTS )
-		throw std::exception( "too many lights" );
-
-	pc.n_parallel_lights = int( parallel_lights.size() );
-	pc.n_point_lights = int( point_lights.size() );
-	pc.n_spotlight_lights = int( spotlights.size() );
-
-	size_t light_offset = 0;
-	for ( const LightConstants* light : boost::range::join( parallel_lights,
-															boost::range::join( point_lights,
-																				spotlights ) ) )
-	{
-		pc.lights[light_offset++] = *light;
-	}
 }
 
 void RenderApp::Draw( const GameTimer& gt )

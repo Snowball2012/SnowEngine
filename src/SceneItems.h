@@ -121,7 +121,7 @@ public:
 
 private:
 	friend class Scene;
-	StaticSubmesh( StaticMeshID mesh_id ) : m_mesh_id( mesh_id ) {}
+	StaticSubmesh( StaticMeshID mesh_id ) : m_mesh_id( mesh_id ), m_data{ 0, 0, 0 } {}
 	StaticMeshID& Mesh() noexcept { return m_mesh_id; }
 
 	Data m_data;
@@ -268,8 +268,6 @@ public:
 	const Data& GetData() const noexcept { return m_data; }
 	Data& ModifyData() noexcept { return m_data; }
 
-	void CalcMatrix( DirectX::XMMATRIX& matrix ) const noexcept;
-
 private:
 	Data m_data;
 };
@@ -300,6 +298,9 @@ public:
 	struct Shadow
 	{
 		size_t sm_size; // must be power of 2, base resolution for cascade
+		float orthogonal_ws_height; // shadow map pass for parallel light places the light camera above the main camera.
+		                            // This parameter indicates how high will it be placed. It depends mostly on the scene as a whole
+		float most_detailed_cascade_ws_halfwidth; // width of the most detailed slice in world space units
 		// todo: cascade properties
 	};
 

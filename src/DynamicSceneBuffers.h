@@ -39,7 +39,7 @@ private:
 	struct BufferInstance
 	{
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
-		uint8_t* mapped_data;
+		uint8_t* mapped_data = nullptr;
 		size_t capacity = 0;
 	};
 

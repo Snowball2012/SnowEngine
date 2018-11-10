@@ -168,7 +168,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\BlurPass.cpp" />
     <ClCompile Include="src\D3DApp.cpp" />
     <ClCompile Include="src\DepthOnlyPass.cpp" />
     <ClCompile Include="src\DescriptorHeap.cpp" />
@@ -206,10 +205,10 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\RenderPass.cpp" />
     <ClCompile Include="src\RenderUtils.cpp" />
+    <ClCompile Include="src\SceneItems.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
-    <ClCompile Include="src\ShadowMapProvider.cpp" />
+    <ClCompile Include="src\ShadowProvider.cpp" />
     <ClCompile Include="src\StagingDescriptorHeap.cpp" />
     <ClCompile Include="src\StaticMeshManager.cpp" />
     <ClCompile Include="src\stdafx.cpp">
@@ -227,7 +226,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\XMMath.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\BlurPass.h" />
     <ClInclude Include="src\D3DApp.h" />
     <ClInclude Include="src\DepthOnlyPass.h" />
     <ClInclude Include="src\DescriptorHeap.h" />
@@ -256,13 +254,12 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\SceneImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
     <ClInclude Include="src\RenderData.h" />
-    <ClInclude Include="src\RenderPass.h" />
     <ClInclude Include="src\RenderUtils.h" />
     <ClInclude Include="src\SceneItems.h" />
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneManager.hpp" />
     <ClInclude Include="src\SceneSystemData.h" />
-    <ClInclude Include="src\ShadowMapProvider.h" />
+    <ClInclude Include="src\ShadowProvider.h" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
     <ClInclude Include="src\StaticMeshManager.h" />
     <ClInclude Include="src\stdafx.h" />
