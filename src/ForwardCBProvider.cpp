@@ -85,11 +85,51 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 
 void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, PassConstants& gpu_data ) const
 {
-	// TODO: store matrices in scene objects, calculate them beforehand
-	bc::static_vector<LightConstants, MAX_LIGHTS> parallel_lights, point_lights, spotlights;
+	// sort lights by type
+
 	for ( const auto& light : lights )
 	{
-		LightConstants data;
+		switch ( light.GetData().type )
+		{
+			case SceneLight::LightType::Parallel:
+				gpu_data.n_parallel_lights++;
+				break;
+			case SceneLight::LightType::Point:
+				gpu_data.n_point_lights++;
+				break;
+			case SceneLight::LightType::Spotlight:
+				gpu_data.n_spotlight_lights++;
+				break;
+			default:
+				NOTIMPL;
+		}
+	}
+
+	if ( gpu_data.n_parallel_lights + gpu_data.n_point_lights + gpu_data.n_spotlight_lights > MaxLights )
+		throw SnowEngineException( "too many lights" );
+
+	size_t parallel_idx = 0;
+	size_t point_idx = gpu_data.n_parallel_lights;
+	size_t spotlight_idx = gpu_data.n_spotlight_lights;
+
+	for ( const auto& light : lights )
+	{
+		size_t gpu_idx = 0;
+		switch ( light.GetData().type )
+		{
+			case SceneLight::LightType::Parallel:
+				gpu_idx = parallel_idx++;
+				break;
+			case SceneLight::LightType::Point:
+				gpu_idx = point_idx++;
+				break;
+			case SceneLight::LightType::Spotlight:
+				gpu_idx = spotlight_idx++;
+				break;
+			default:
+				NOTIMPL;
+		};
+		LightConstants& data = gpu_data.lights[gpu_idx];
 		const auto& shadow_matrix = light.ShadowMatrix();
 		if ( shadow_matrix.has_value() )
 			DirectX::XMStoreFloat4x4( &data.shadow_map_matrix, DirectX::XMMatrixTranspose( shadow_matrix.value() ) );
@@ -101,36 +141,5 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 		data.origin = src_data.origin;
 		data.spot_power = src_data.spot_power;
 		data.strength = src_data.strength;
-
-		switch ( light.GetData().type )
-		{
-			case SceneLight::LightType::Parallel:
-				parallel_lights.push_back( data );
-				break;
-			case SceneLight::LightType::Point:
-				point_lights.push_back( data );
-				break;
-			case SceneLight::LightType::Spotlight:
-				spotlights.push_back( data );
-				break;
-			default:
-				NOTIMPL;
-		}
 	}
-
-	if ( parallel_lights.size() + point_lights.size() + spotlights.size() > MaxLights )
-		throw SnowEngineException( "too many lights" );
-
-	gpu_data.n_parallel_lights = int( parallel_lights.size() );
-	gpu_data.n_point_lights = int( point_lights.size() );
-	gpu_data.n_spotlight_lights = int( spotlights.size() );
-
-	size_t light_offset = 0;
-	for ( const LightConstants& light : boost::range::join( parallel_lights,
-															boost::range::join( point_lights,
-																				spotlights ) ) )
-	{
-		gpu_data.lights[light_offset++] = light;
-	}
-
 }
