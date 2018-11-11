@@ -46,6 +46,9 @@ public:
 	const SceneLight* GetLight( LightID id ) const noexcept;
 	SceneLight* ModifyLight( LightID id ) noexcept;
 
+	StaticMeshInstance* ModifyInstance( MeshInstanceID id ) noexcept;
+	ObjectTransform* ModifyTransform( TransformID id ) noexcept;
+
 private:
 	Scene* m_scene;
 	StaticMeshManager* m_static_mesh_manager;

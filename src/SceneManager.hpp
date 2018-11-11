@@ -30,6 +30,9 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 	m_lighting_items.clear();
 	for ( const auto& mesh_instance : m_scene.StaticMeshInstanceSpan() )
 	{
+		if ( ! mesh_instance.IsEnabled() )
+			continue;
+
 		const StaticSubmesh& submesh = m_scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
 		const StaticMesh& geom = m_scene.AllStaticMeshes()[submesh.GetMesh()];
 		if ( ! geom.IsLoaded() )

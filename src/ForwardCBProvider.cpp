@@ -89,6 +89,8 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 
 	for ( const auto& light : lights )
 	{
+		if ( ! light.IsEnabled() )
+			continue;
 		switch ( light.GetData().type )
 		{
 			case SceneLight::LightType::Parallel:
@@ -114,6 +116,9 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 
 	for ( const auto& light : lights )
 	{
+		if ( ! light.IsEnabled() )
+			continue;
+
 		size_t gpu_idx = 0;
 		switch ( light.GetData().type )
 		{

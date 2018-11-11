@@ -1,5 +1,7 @@
 #pragma once
 
+#include <future>
+
 #include <Luna/MathHelper.h>
 #include <Luna/UploadBuffer.h>
 
@@ -30,7 +32,6 @@ public:
 	virtual bool Initialize() override;
 
 private:
-
 	// D3DApp
 	virtual void OnResize() override;
 
@@ -39,9 +40,6 @@ private:
 	void UpdateGUI();
 	void UpdateCamera();
 	void UpdateLights();
-	
-	void UpdateLights( PassConstants& pc );
-	DirectX::XMMATRIX CalcProjectionMatrix() const;
 
 	// input
 	void ReadEventKeys();
@@ -58,10 +56,45 @@ private:
 	// scene loading
 	void LoadScene( const std::string& filename );
 	void InitScene( );
+
+	void BuildGeometry( ImportedScene& ext_scene );
+	void BuildMaterials( ImportedScene& ext_scene );
+	void BuildRenderItems( ImportedScene& ext_scene );
+	void LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_texture );
 	void ReleaseIntermediateSceneMemory();
+
+	enum class State
+	{
+		Loading,
+		Main
+	};
+
+	State m_cur_state = State::Loading;
+
+	// Placeholders and loading state scene objects
+	TextureID m_ph_normal_texture = TextureID::nullid;
+	TextureID m_ph_specular_texture = TextureID::nullid;
+
+	class LoadingScreen
+	{
+	public:
+		void Init( SceneClientView& scene );
+		void Enable( SceneClientView& scene, Renderer& renderer );
+		void Disable( SceneClientView& scene, Renderer& renderer );
+		void Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt );
+	private:
+		MeshInstanceID m_cube = MeshInstanceID::nullid;
+		CameraID m_camera = CameraID::nullid;
+		LightID m_light = LightID::nullid;
+		float m_theta = 0;
+	} m_loading_screen;
+
+	std::future<void> m_is_scene_loaded;
 
 	std::unique_ptr<Renderer> m_renderer = nullptr;
 	CameraID m_camera = CameraID::nullid;
+	CameraID m_dbg_frustrum_camera = CameraID::nullid;
+	bool m_dbg_use_separate_camera = false;
 	LightID m_sun = LightID::nullid;
 
 	// external geometry

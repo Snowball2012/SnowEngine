@@ -315,11 +315,14 @@ public:
 	const std::optional<DirectX::XMMATRIX>& ShadowMatrix() const noexcept { return m_shadow_matrix; };
 	std::optional<DirectX::XMMATRIX>& ShadowMatrix() noexcept { return m_shadow_matrix; };
 
+	bool& IsEnabled() noexcept { return m_is_enabled; }
+	const bool& IsEnabled() const noexcept { return m_is_enabled; }
 
 private:
-
 	Data m_data; 
 	std::optional<DirectX::XMMATRIX> m_shadow_matrix;
 	std::optional<Shadow> m_sm;
+
+	bool m_is_enabled = true;
 };
 using LightID = typename packed_freelist<SceneLight>::id;

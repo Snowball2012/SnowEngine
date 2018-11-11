@@ -37,13 +37,12 @@ bool RenderApp::Initialize()
 	m_renderer->InitD3D();
 
 	if ( strlen( m_cmd_line ) != 0 )
-		LoadScene( m_cmd_line );
+		m_is_scene_loaded = std::async( std::launch::async, [this]() { LoadScene( m_cmd_line ); } );
 
-	InitScene();
+	m_loading_screen.Init( m_renderer->GetSceneView() );
+	m_loading_screen.Enable( m_renderer->GetSceneView(), *m_renderer );
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
-	
-	ReleaseIntermediateSceneMemory();
 
 	return true;
 }
@@ -59,8 +58,26 @@ void RenderApp::Update( const GameTimer& gt )
 	ReadKeyboardState( gt );
 
 	UpdateGUI();
-	UpdateCamera();
-	UpdateLights();
+
+	if ( m_cur_state == State::Loading )
+	{
+		if ( m_is_scene_loaded.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready )
+		{
+			m_cur_state = State::Main;
+			m_loading_screen.Disable( m_renderer->GetSceneView(), *m_renderer );
+			InitScene();
+		}
+	}
+
+	if ( m_cur_state == State::Loading )
+	{
+		m_loading_screen.Update( m_renderer->GetSceneView(), mClientWidth, mClientHeight, gt );
+	}
+	else
+	{
+		UpdateCamera();
+		UpdateLights();
+	}
 }
 
 void RenderApp::UpdateGUI()
@@ -84,12 +101,24 @@ void RenderApp::UpdateGUI()
 		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0, "%.3f" );
 		ImGui::NewLine();
 		ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
-		ImGui::End();
+		ImGui::End();		
 	}
 
 	{
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
+		ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
+		if ( m_dbg_use_separate_camera )
+		{
+			m_renderer->SetMainCamera( m_dbg_frustrum_camera );
+			m_renderer->SetFrustrumCullCamera( m_camera );
+		}
+		else
+		{
+			m_renderer->SetMainCamera( m_camera );
+			m_renderer->SetFrustrumCullCamera( CameraID::nullid );
+		}
+
 		ImGui::NewLine();
 		{
 			ImGui::BeginChild( "Tonemap settings" );
@@ -118,19 +147,40 @@ void RenderApp::UpdateGUI()
 
 void RenderApp::UpdateCamera()
 {
-	Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
-	if ( ! cam_ptr )
-		throw SnowEngineException( "no main camera" );
+	// main camera
+	{
+		Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
+		if ( ! cam_ptr )
+			throw SnowEngineException( "no main camera" );
 
-	Camera::Data& cam_data = cam_ptr->ModifyData();
+		Camera::Data& cam_data = cam_ptr->ModifyData();
 
-	cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
-	cam_data.pos = m_camera_pos;
-	cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
-	cam_data.fov_y = MathHelper::Pi / 4;
-	cam_data.aspect_ratio = AspectRatio();
-	cam_data.far_plane = 100.0f;
-	cam_data.near_plane = 0.1f;
+		cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
+		cam_data.pos = m_camera_pos;
+		cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
+		cam_data.fov_y = MathHelper::Pi / 4;
+		cam_data.aspect_ratio = AspectRatio();
+		cam_data.far_plane = 100.0f;
+		cam_data.near_plane = 0.1f;
+	}
+
+	// debug camera
+	{
+		Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_dbg_frustrum_camera );
+		if ( ! cam_ptr )
+			throw SnowEngineException( "no debug camera" );
+
+		Camera::Data& cam_data = cam_ptr->ModifyData();
+
+		cam_data.pos = DirectX::XMFLOAT3( 30.f, 30.f, -30.f );
+		cam_data.dir = cam_data.pos * -1.0f;
+		XMFloat3Normalize( cam_data.dir );
+		cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
+		cam_data.fov_y = MathHelper::Pi / 4;
+		cam_data.aspect_ratio = AspectRatio();
+		cam_data.far_plane = 100.0f;
+		cam_data.near_plane = 0.1f;
+	}
 }
 
 namespace
@@ -304,7 +354,11 @@ void RenderApp::LoadScene( const std::string& filename )
 
 void RenderApp::InitScene()
 {
-	m_renderer->Init( m_imported_scene );
+	LoadAndBuildTextures( m_imported_scene, true );
+	BuildGeometry( m_imported_scene );
+	BuildMaterials( m_imported_scene );
+	BuildRenderItems( m_imported_scene );
+	ReleaseIntermediateSceneMemory();
 
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
@@ -313,7 +367,79 @@ void RenderApp::InitScene()
 	SceneLight::Data sun_data;
 	sun_data.type = SceneLight::LightType::Parallel;
 	m_sun = m_renderer->GetSceneView().AddLight( sun_data );
+
+	Camera::Data dbg_frustrum_cam_data;
+	camera_data.type = Camera::Type::Perspective;
+	m_dbg_frustrum_camera = m_renderer->GetSceneView().AddCamera( dbg_frustrum_cam_data );
 }
+
+
+void RenderApp::LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_texture )
+{
+	auto& scene = m_renderer->GetSceneView();
+	for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
+		ext_scene.textures[i].second = scene.LoadStreamedTexture( ext_scene.textures[i].first );
+}
+
+void RenderApp::BuildGeometry( ImportedScene& ext_scene )
+{
+	auto& scene = m_renderer->GetSceneView();
+
+	ext_scene.mesh_id = scene.LoadStaticMesh(
+		"main",
+		ext_scene.vertices,
+		ext_scene.indices );
+}
+
+void RenderApp::BuildMaterials( ImportedScene& ext_scene )
+{
+	auto& scene = m_renderer->GetSceneView();
+
+	TextureID loading_cube_albedo = scene.LoadStreamedTexture( "resources/textures/loading_box_base.dds" );
+	TextureID ph_normal_id = scene.LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
+	TextureID ph_specular_id = scene.LoadStreamedTexture( "resources/textures/default_spec.dds" );
+
+	/*MaterialID loading_cube_material = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_albedo, ph_normal_id, ph_specular_id },
+														  XMFLOAT3( 0.03f, 0.03f, 0.03f ) );*/
+
+	for ( int i = 0; i < ext_scene.materials.size(); ++i )
+	{
+		MaterialPBR::TextureIds textures;
+		textures.base_color = ext_scene.textures[ext_scene.materials[i].second.base_color_tex_idx].second;
+		textures.normal = ext_scene.textures[ext_scene.materials[i].second.normal_tex_idx].second;
+		int spec_map_idx = ext_scene.materials[i].second.specular_tex_idx;
+		if ( spec_map_idx < 0 )
+			textures.specular = ph_specular_id;
+		else
+			textures.specular = ext_scene.textures[spec_map_idx].second;
+
+		ext_scene.materials[i].second.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
+	}
+}
+
+void RenderApp::BuildRenderItems( ImportedScene& ext_scene )
+{
+	auto& scene = m_renderer->GetSceneView();
+
+	for ( const auto& ext_submesh : ext_scene.submeshes )
+	{
+		StaticSubmeshID submesh_id = scene.AddSubmesh( ext_scene.mesh_id,
+													   StaticSubmesh::Data{ uint32_t( ext_submesh.nindices ),
+																			uint32_t( ext_submesh.index_offset ),
+																			0 } );
+		RenderItem item;
+
+		const int material_idx = ext_submesh.material_idx;
+		if ( material_idx < 0 )
+			throw SnowEngineException( "no material!" );
+
+		MaterialID mat = ext_scene.materials[material_idx].second.material_id;
+		TransformID tf = scene.AddTransform( ext_submesh.transform );
+
+		MeshInstanceID mesh_instance = scene.AddMeshInstance( submesh_id, tf, mat );
+	}
+}
+
 
 void RenderApp::ReleaseIntermediateSceneMemory()
 {
@@ -330,7 +456,52 @@ void RenderApp::ReleaseIntermediateSceneMemory()
 	m_imported_scene.vertices.shrink_to_fit();
 }
 
-XMMATRIX RenderApp::CalcProjectionMatrix() const
+void RenderApp::LoadingScreen::Init( SceneClientView& scene )
 {
-	return XMMatrixPerspectiveFovLH( MathHelper::Pi / 4, AspectRatio(), 0.1f, 100.0f );
+	Camera::Data camera_data;
+	camera_data.type = Camera::Type::Perspective;
+	camera_data.pos = DirectX::XMFLOAT3( 0, 1, -3 );
+	camera_data.dir = DirectX::XMFLOAT3( 0, 0, 1 );
+	camera_data.fov_y = MathHelper::Pi / 4;
+	camera_data.far_plane = 1000.0f;
+	camera_data.near_plane = 0.1f;
+	m_camera = scene.AddCamera( camera_data );
+
+	SceneLight::Data light_data;
+	light_data.type = SceneLight::LightType::Parallel;
+	light_data.dir = DirectX::XMFLOAT3( -1, -1, 1 );
+	light_data.strength = getLightIrradiance( 110.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
+	XMFloat3Normalize( light_data.dir );
+	m_light = scene.AddLight( light_data );
+	scene.ModifyLight( m_light )->ModifyShadow() = SceneLight::Shadow{ 512, 3.0f, 3.0f };
+}
+
+void RenderApp::LoadingScreen::Enable( SceneClientView& scene, Renderer& renderer )
+{
+	renderer.SetFrustrumCullCamera( CameraID::nullid );
+	renderer.SetMainCamera( m_camera );
+	SceneLight* light = scene.ModifyLight( m_light );
+	if ( ! light )
+		throw SnowEngineException( "light not found!" );
+	light->IsEnabled() = true;
+}
+
+void RenderApp::LoadingScreen::Disable( SceneClientView& scene, Renderer& renderer )
+{
+	renderer.SetMainCamera( CameraID::nullid );
+	SceneLight* light = scene.ModifyLight( m_light );
+	if ( ! light )
+		throw SnowEngineException( "light not found!" );
+	light->IsEnabled() = false;
+}
+
+void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
+{
+	m_theta = gt.TotalTime();
+	Camera* cam = scene.ModifyCamera( m_camera );
+	if ( ! cam )
+		throw SnowEngineException( "camera not found!" );
+
+	auto& data = cam->ModifyData();
+	data.aspect_ratio = screen_width / screen_height;
 }

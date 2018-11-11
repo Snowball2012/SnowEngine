@@ -66,38 +66,25 @@ void Renderer::InitD3D()
 
 	RecreateSwapChainAndDepthBuffers( m_client_width, m_client_height );
 	RecreatePrevFrameTexture( true );
-}
 
-void Renderer::Init( const ImportedScene& ext_scene )
-{
-	ThrowIfFailed( m_cmd_list->Reset( m_direct_cmd_allocator.Get(), nullptr ) );
-
-	LoadAndBuildTextures( ext_scene, true );
-	BuildGeometry( ext_scene );
-
-	BuildMaterials( ext_scene );
-	BuildRenderItems( ext_scene );
-	BuildFrameResources( );
+	BuildFrameResources();
 
 	BuildPasses();
-
-	ThrowIfFailed( m_cmd_list->Close() );
-	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
-	m_graphics_queue->Flush();
-
-	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
-	m_scene_manager->FlushAllOperations();
-	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
-	m_scene_manager->FlushAllOperations();
 }
+
 
 void Renderer::Draw( const Context& ctx )
 {
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
 
-	m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
+	CameraID scene_camera;
+	if ( ! ( m_frustrum_cull_camera_id == CameraID::nullid ) )
+		scene_camera = m_frustrum_cull_camera_id;
+	else
+		scene_camera = m_main_camera_id;
+
+	m_scene_manager->UpdatePipelineBindings( scene_camera );
 
 	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
@@ -220,6 +207,14 @@ bool Renderer::SetMainCamera( CameraID id )
 	if ( ! GetSceneView().GetROScene().AllCameras().has( id ) )
 		return false;
 	m_main_camera_id = id;
+	return true;
+}
+
+bool Renderer::SetFrustrumCullCamera( CameraID id )
+{
+	if ( ! GetSceneView().GetROScene().AllCameras().has( id ) )
+		return false;
+	m_frustrum_cull_camera_id = id;
 	return true;
 }
 
@@ -508,91 +503,6 @@ void Renderer::InitImgui()
 	ImGui::StyleColorsDark();
 }
 
-void Renderer::LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture )
-{
-	TextureID ph_albedo_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/WoodCrate01.dds" );
-	TextureID ph_normal_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
-	TextureID ph_specular_id = m_scene_manager->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
-	
-	for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
-	{
-		TextureID new_texture_id = m_scene_manager->GetScene().LoadStreamedTexture( ext_scene.textures[i] );
-		if ( flush_per_texture )
-		{
-			m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
-			m_scene_manager->FlushAllOperations();
-			m_scene_manager->UpdatePipelineBindings( m_main_camera_id );
-			m_scene_manager->FlushAllOperations();
-		}
-		m_scene.textures.emplace( ext_scene.textures[i], new_texture_id );
-	}
-}
-
-void Renderer::BuildGeometry( const ImportedScene& ext_scene )
-{
-	// static
-	{
-		m_geom_id = GetSceneView().LoadStaticMesh(
-			"main",
-			ext_scene.vertices,
-			ext_scene.indices );
-
-		for ( const auto& cpu_submesh : ext_scene.submeshes )
-		{
-			StaticSubmeshID submesh_id = GetSceneView().AddSubmesh( m_geom_id,
-																	StaticSubmesh::Data{ uint32_t( cpu_submesh.nindices ),
-																	                     uint32_t( cpu_submesh.index_offset ),
-																	                     0 } );
-
-			m_scene.static_geometry[cpu_submesh.name] = submesh_id;
-		}
-	}
-}
-
-void Renderer::BuildMaterials( const ImportedScene& ext_scene )
-{
-	m_placeholder_material = GetSceneView().AddMaterial( MaterialPBR::TextureIds{ m_scene.textures["placeholder_albedo"],
-								m_scene.textures["placeholder_normal"],
-								m_scene.textures["placeholder_specular"] }, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
-
-	for ( int i = 0; i < ext_scene.materials.size(); ++i )
-	{
-		MaterialPBR::TextureIds textures;
-		textures.base_color = m_scene.textures[ext_scene.textures[ext_scene.materials[i].second.base_color_tex_idx]];
-		textures.normal = m_scene.textures[ext_scene.textures[ext_scene.materials[i].second.normal_tex_idx]];
-		int spec_map_idx = ext_scene.materials[i].second.specular_tex_idx;
-		if ( spec_map_idx < 0 )
-			textures.specular = m_scene.textures["placeholder_specular"];
-		else
-			textures.specular = m_scene.textures[ext_scene.textures[spec_map_idx]];
-
-		MaterialID new_material = GetSceneView().AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
-
-		auto& material = m_scene.materials.emplace( ext_scene.materials[i].first, new_material ).first->second;
-	}
-}
-
-void Renderer::BuildRenderItems( const ImportedScene& ext_scene )
-{
-	for ( const auto& ext_submesh : ext_scene.submeshes )
-	{
-		RenderItem item;
-
-		const int material_idx = ext_submesh.material_idx;
-		std::string material_name;
-		if ( material_idx < 0 )
-			material_name = "placeholder";
-		else
-			material_name = ext_scene.materials[material_idx].first;
-
-		MaterialID mat = m_scene.materials[material_name];
-		TransformID tf = m_scene_manager->GetScene().AddTransform( ext_submesh.transform );
-		StaticSubmeshID submesh_id = m_scene.static_geometry[ext_submesh.name];
-
-		MeshInstanceID mesh_instance = m_scene_manager->GetScene().AddMeshInstance( submesh_id, tf, mat );
-	}
-}
-
 void Renderer::BuildFrameResources( )
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
@@ -603,7 +513,11 @@ void Renderer::BuildFrameResources( )
 
 void Renderer::BuildPasses()
 {
-	ForwardLightingPass::BuildData( BuildStaticSamplers(), DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get(),
+	ForwardLightingPass::BuildData( BuildStaticSamplers(),
+									DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
+									DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
+									DXGI_FORMAT_R16G16_FLOAT, // normals
+									m_depth_stencil_format, *m_d3d_device.Get(),
 									m_forward_pso_main, m_forward_pso_wireframe, m_forward_root_signature );
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 
@@ -650,33 +564,6 @@ void Renderer::BuildPasses()
 		nullptr, // Initial PipelineStateObject
 		IID_PPV_ARGS( m_sm_cmd_lst.GetAddressOf() ) ) );
 	m_sm_cmd_lst->Close();
-}
-
-void Renderer::CreateShadowMap( GPUTexture& texture )
-{
-	constexpr UINT width = 4096;
-	constexpr UINT height = 4096;
-
-	CD3DX12_RESOURCE_DESC tex_desc = CD3DX12_RESOURCE_DESC::Tex2D( DXGI_FORMAT_R32_TYPELESS, width, height, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL );
-	D3D12_CLEAR_VALUE opt_clear;
-	opt_clear.Format = m_depth_stencil_format;
-	opt_clear.DepthStencil.Depth = 1.0f;
-	opt_clear.DepthStencil.Stencil = 0;
-
-	ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-														  &tex_desc, D3D12_RESOURCE_STATE_COMMON,
-														  &opt_clear, IID_PPV_ARGS( &texture.texture_gpu ) ) );
-
-	texture.srv = DescriptorTables().AllocateTable( 1 );
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
-	{
-		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Texture2D.MipLevels = 1;
-	}
-	m_d3d_device->CreateShaderResourceView( texture.texture_gpu.Get(), &srv_desc, *DescriptorTables().ModifyTable( texture.srv ) );
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> Renderer::BuildStaticSamplers() const

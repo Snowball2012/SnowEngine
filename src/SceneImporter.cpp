@@ -89,7 +89,7 @@ namespace
 					double tv = tex->GetTranslationV();
 					double wrk = 0;
 				}
-				res.textures.emplace_back( tex->GetFileName() );
+				res.textures.emplace_back( tex->GetFileName(), TextureID::nullid );
 			}
 
 			for ( int i = 0; i < nmaterials; ++i )

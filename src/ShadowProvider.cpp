@@ -68,6 +68,9 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 	bool shadow_found = false;
 	for ( SceneLight& light : scene_lights )
 	{
+		if ( ! light.IsEnabled() )
+			continue;
+
 		if ( const auto& shadow_desc = light.GetShadow() )
 		{
 			if ( shadow_found )
@@ -103,12 +106,17 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 void ShadowProvider::FillPipelineStructures( span<const StaticMeshInstance> renderitems, ShadowProducers& producers, ShadowMapStorage& storage )
 {
 	// todo: frustrum cull renderitems
+	if ( m_producers.empty() )
+		return;
 
 	for ( auto& producer : m_producers )
 		producer.casters.clear();
 
 	for ( const auto& mesh_instance : renderitems )
 	{
+		if ( ! mesh_instance.IsEnabled() )
+			continue;
+
 		const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[mesh_instance.Submesh()];
 		const StaticMesh& geom = m_scene->AllStaticMeshes()[submesh.GetMesh()];
 		if ( ! geom.IsLoaded() )

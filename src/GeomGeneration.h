@@ -16,7 +16,7 @@ namespace GeomGeneration
 
 	// clockwise triangles
 	template<class fnVertexCollector, class fnIndexCollector, class fnUVCollector>
-	void MakeGrid( size_t nx, size_t ny, float size_x, float size_y, fnVertexCollector&& vc, fnIndexCollector&& ic, fnUVCollector&& uvc );
+	void MakeGrid( size_t nx, size_t ny, float size_x, float size_y, fnVertexCollector&& vc, fnIndexCollector&& ic, fnUVCollector&& uvc );	
 
 	constexpr std::pair<size_t/*nvertices*/, size_t/*nindices*/> GetGridSize( size_t nx, size_t ny ); // may nor work on MSVC17
 	constexpr size_t GetGridNIndices( size_t nx, size_t ny );

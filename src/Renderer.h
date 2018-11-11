@@ -30,7 +30,6 @@ public:
 	~Renderer();
 
 	void InitD3D( );
-	void Init( const ImportedScene& ext_scene );
 	
 	// returns draw_gui retval
 	struct Context
@@ -66,6 +65,7 @@ public:
 
 	// returns false if camera doesn't exist
 	bool SetMainCamera( CameraID id );
+	bool SetFrustrumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
 
@@ -102,6 +102,7 @@ private:
 	StaticMeshID m_geom_id = StaticMeshID::nullid;
 	MaterialID m_placeholder_material = MaterialID::nullid;
 	CameraID m_main_camera_id = CameraID::nullid;
+	CameraID m_frustrum_cull_camera_id = CameraID::nullid;
 
 	std::unique_ptr<SceneManager> m_scene_manager;
 	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
@@ -179,15 +180,10 @@ private:
 	void BuildRtvAndDsvDescriptorHeaps();
 	void BuildUIDescriptorHeap( );
 	void InitImgui();
-	void LoadAndBuildTextures( const ImportedScene& ext_scene, bool flush_per_texture );
 
-	void BuildGeometry( const ImportedScene& ext_scene );
-	void BuildMaterials( const ImportedScene& ext_scene );
-	void BuildRenderItems( const ImportedScene& ext_scene );
-	void BuildFrameResources( );
+	void BuildFrameResources();
 	void BuildPasses();
-
-	void CreateShadowMap( GPUTexture& texture );
+	
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 	
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
