@@ -512,6 +512,13 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, Renderer& render
 
 void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
 {
+	Camera* cam = scene.ModifyCamera( m_camera );
+	if ( ! cam )
+		throw SnowEngineException( "camera not found!" );
+
+	auto& cam_data = cam->ModifyData();
+	cam_data.aspect_ratio = screen_width / screen_height;
+
 	StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
 	if ( ! cube )
 		throw SnowEngineException( "cube not found!" );
@@ -525,15 +532,10 @@ void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_widt
 	auto rotation = XMMatrixLookToLH( XMVectorZero(),
 									  XMLoadFloat3( &cube_eye_dir ),
 									  XMVectorSet( 0, 1, 0, 0 ) );
-	auto translation = XMMatrixTranslation( 2.0f, -0.3f, 0 );
+	auto translation = XMMatrixTranslation( 1.0f * cam_data.aspect_ratio, -0.3f, 0 );
 	XMStoreFloat4x4( &cube_local2world, scale * rotation * translation );
 
-	Camera* cam = scene.ModifyCamera( m_camera );
-	if ( ! cam )
-		throw SnowEngineException( "camera not found!" );
-
-	auto& data = cam->ModifyData();
-	data.aspect_ratio = screen_width / screen_height;
+	
 }
 
 void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
