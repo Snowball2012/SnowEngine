@@ -215,7 +215,7 @@ using MaterialID = typename packed_freelist<MaterialPBR>::id;
 class StaticMeshInstance
 {
 public:
-	TransformID Transform() const noexcept { return m_transform; }
+	TransformID GetTransform() const noexcept { return m_transform; }
 	MaterialID Material() const noexcept { return m_material; }
 	StaticSubmeshID Submesh() const noexcept { return m_submesh; }
 

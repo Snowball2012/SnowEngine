@@ -146,7 +146,7 @@ void ShadowProvider::FillPipelineStructures( span<const StaticMeshInstance> rend
 		if ( has_unloaded_texture )
 			continue;
 
-		const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.Transform()];
+		const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.GetTransform()];
 		item.tf_addr = tf.GPUView();
 
 		for ( auto& producer : m_producers )

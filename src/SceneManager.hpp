@@ -62,7 +62,7 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 		if ( has_unloaded_texture )
 			continue;
 
-		const ObjectTransform& tf = m_scene.AllTransforms()[mesh_instance.Transform()];
+		const ObjectTransform& tf = m_scene.AllTransforms()[mesh_instance.GetTransform()];
 		item.tf_addr = tf.GPUView();
 
 		DirectX::BoundingBox item_box;

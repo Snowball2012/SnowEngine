@@ -246,7 +246,7 @@ bool Scene::RemoveStaticMeshInstance( MeshInstanceID id ) noexcept
 	if ( ! instance )
 		return true;
 
-	ObjectTransform* tf = m_obj_tfs.try_get( instance->Transform() );
+	ObjectTransform* tf = m_obj_tfs.try_get( instance->GetTransform() );
 	StaticSubmesh* submesh = m_static_submeshes.try_get( instance->Submesh() );
 	MaterialPBR* material = m_materials.try_get( instance->Material() );
 

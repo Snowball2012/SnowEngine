@@ -39,7 +39,9 @@ bool RenderApp::Initialize()
 	if ( strlen( m_cmd_line ) != 0 )
 		m_is_scene_loaded = std::async( std::launch::async, [this]() { LoadScene( m_cmd_line ); } );
 
-	m_loading_screen.Init( m_renderer->GetSceneView() );
+	LoadPlaceholderTextures();
+
+	m_loading_screen.Init( m_renderer->GetSceneView(), m_ph_normal_texture, m_ph_specular_texture );
 	m_loading_screen.Enable( m_renderer->GetSceneView(), *m_renderer );
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
@@ -381,6 +383,12 @@ void RenderApp::LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_t
 		ext_scene.textures[i].second = scene.LoadStreamedTexture( ext_scene.textures[i].first );
 }
 
+void RenderApp::LoadPlaceholderTextures()
+{
+	m_ph_normal_texture = m_renderer->GetSceneView().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
+	m_ph_specular_texture = m_renderer->GetSceneView().LoadStreamedTexture( "resources/textures/default_spec.dds" );
+}
+
 void RenderApp::BuildGeometry( ImportedScene& ext_scene )
 {
 	auto& scene = m_renderer->GetSceneView();
@@ -395,13 +403,6 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 {
 	auto& scene = m_renderer->GetSceneView();
 
-	TextureID loading_cube_albedo = scene.LoadStreamedTexture( "resources/textures/loading_box_base.dds" );
-	TextureID ph_normal_id = scene.LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
-	TextureID ph_specular_id = scene.LoadStreamedTexture( "resources/textures/default_spec.dds" );
-
-	/*MaterialID loading_cube_material = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_albedo, ph_normal_id, ph_specular_id },
-														  XMFLOAT3( 0.03f, 0.03f, 0.03f ) );*/
-
 	for ( int i = 0; i < ext_scene.materials.size(); ++i )
 	{
 		MaterialPBR::TextureIds textures;
@@ -409,7 +410,7 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 		textures.normal = ext_scene.textures[ext_scene.materials[i].second.normal_tex_idx].second;
 		int spec_map_idx = ext_scene.materials[i].second.specular_tex_idx;
 		if ( spec_map_idx < 0 )
-			textures.specular = ph_specular_id;
+			textures.specular = m_ph_specular_texture;
 		else
 			textures.specular = ext_scene.textures[spec_map_idx].second;
 
@@ -456,12 +457,14 @@ void RenderApp::ReleaseIntermediateSceneMemory()
 	m_imported_scene.vertices.shrink_to_fit();
 }
 
-void RenderApp::LoadingScreen::Init( SceneClientView& scene )
+void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
 {
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
-	camera_data.pos = DirectX::XMFLOAT3( 0, 1, -3 );
-	camera_data.dir = DirectX::XMFLOAT3( 0, 0, 1 );
+	camera_data.pos = DirectX::XMFLOAT3( 0, 1.7f, -3 );
+	camera_data.dir = DirectX::XMFLOAT3( 0, -0.3f, 1 );
+	XMFloat3Normalize( camera_data.dir );
+	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
 	camera_data.fov_y = MathHelper::Pi / 4;
 	camera_data.far_plane = 1000.0f;
 	camera_data.near_plane = 0.1f;
@@ -469,11 +472,13 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene )
 
 	SceneLight::Data light_data;
 	light_data.type = SceneLight::LightType::Parallel;
-	light_data.dir = DirectX::XMFLOAT3( -1, -1, 1 );
-	light_data.strength = getLightIrradiance( 110.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
+	light_data.dir = DirectX::XMFLOAT3( 1, 1, -1 );
 	XMFloat3Normalize( light_data.dir );
+	light_data.strength = getLightIrradiance( 70.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
 	m_light = scene.AddLight( light_data );
 	scene.ModifyLight( m_light )->ModifyShadow() = SceneLight::Shadow{ 512, 3.0f, 3.0f };
+
+	LoadCube( scene, normal_tex_id, specular_tex_id );
 }
 
 void RenderApp::LoadingScreen::Enable( SceneClientView& scene, Renderer& renderer )
@@ -484,6 +489,11 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, Renderer& rendere
 	if ( ! light )
 		throw SnowEngineException( "light not found!" );
 	light->IsEnabled() = true;
+
+	StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
+	if ( ! cube )
+		throw SnowEngineException( "cube not found!" );
+	cube->IsEnabled() = true;
 }
 
 void RenderApp::LoadingScreen::Disable( SceneClientView& scene, Renderer& renderer )
@@ -493,15 +503,56 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, Renderer& render
 	if ( ! light )
 		throw SnowEngineException( "light not found!" );
 	light->IsEnabled() = false;
+
+	StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
+	if ( ! cube )
+		throw SnowEngineException( "cube not found!" );
+	cube->IsEnabled() = false;
 }
 
 void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
 {
+	StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
+	if ( ! cube )
+		throw SnowEngineException( "cube not found!" );
+	ObjectTransform* tf = scene.ModifyTransform( cube->GetTransform() );
+	assert( tf );
 	m_theta = gt.TotalTime();
+	XMFLOAT3 cube_eye_dir = SphericalToCartesian( 1, MathHelper::Pi / 2.0f, m_theta );
+	auto& cube_local2world = tf->ModifyMat();
+
+	auto scale = XMMatrixScaling( 0.1f, 0.1f, 0.1f );
+	auto rotation = XMMatrixLookToLH( XMVectorZero(),
+									  XMLoadFloat3( &cube_eye_dir ),
+									  XMVectorSet( 0, 1, 0, 0 ) );
+	auto translation = XMMatrixTranslation( 2.0f, -0.3f, 0 );
+	XMStoreFloat4x4( &cube_local2world, scale * rotation * translation );
+
 	Camera* cam = scene.ModifyCamera( m_camera );
 	if ( ! cam )
 		throw SnowEngineException( "camera not found!" );
 
 	auto& data = cam->ModifyData();
 	data.aspect_ratio = screen_width / screen_height;
+}
+
+void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
+{
+	TransformID tf_id = scene.AddTransform( Identity4x4 );
+	TextureID loading_cube_texture = scene.LoadStreamedTexture( "resources/textures/loading_box_base.dds" );
+	MaterialID cube_material_id = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_texture, normal_tex_id, specular_tex_id },
+													 DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), Identity4x4 );
+
+	std::vector<Vertex> cube_vertices;
+	std::vector<uint32_t> cube_indices;
+	{
+		cube_vertices.reserve( GeomGeneration::CubeVertices.size() );
+		cube_vertices.assign( GeomGeneration::CubeVertices.cbegin(), GeomGeneration::CubeVertices.cend() );
+		cube_indices.reserve( GeomGeneration::CubeIndices.size() );
+		cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
+	}
+	StaticMeshID mesh_id = scene.LoadStaticMesh( "loading cube", std::move( cube_vertices ), std::move( cube_indices ) );
+	StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
+
+	m_cube = scene.AddMeshInstance( submesh_id, tf_id, cube_material_id );
 }

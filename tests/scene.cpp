@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE( creation )
 	BOOST_TEST( instance != nullptr );
 	BOOST_TEST( ( instance->Material() == material ) );
 	BOOST_TEST( ( instance->Submesh() == submesh ) );
-	BOOST_TEST( ( instance->Transform() == tf ) );
+	BOOST_TEST( ( instance->GetTransform() == tf ) );
 }
 
 struct Fixture
