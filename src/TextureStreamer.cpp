@@ -29,6 +29,9 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 
 	tex_data.id = id;
 
+	if ( ! InitMemoryMappedTexture( path, tex_data ) )
+		throw SnowEngineException( "failed to load the texture" );
+
 	std::unique_ptr<uint8_t[]> dds_data;
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( m_device.Get(),
@@ -210,4 +213,30 @@ TextureStreamer::UploadData TextureStreamer::CreateAndFillUploader( const Micros
 	uploader.resource->Unmap( 0, nullptr );
 
 	return std::move( uploader );
+}
+
+bool TextureStreamer::InitMemoryMappedTexture( const std::string_view& path, TextureData& data )
+{
+	// be careful with return value for failed winapi functions!
+	// different functions return different values for handles!
+
+	data.file_handle = CreateFileA( path.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
+	if ( data.file_handle == INVALID_HANDLE_VALUE )
+		return false;
+	
+	LARGE_INTEGER filesize;
+	if ( ! GetFileSizeEx( data.file_handle, &filesize ) )
+		return false;
+	data.file_size = filesize.QuadPart;
+	if ( data.file_size == 0 )
+		return false;
+	data.file_mapping = CreateFileMappingA( data.file_handle, nullptr, PAGE_READONLY, 0, 0, NULL );
+	if ( ! data.file_mapping )
+		return false;
+
+	data.mapped_file_data = reinterpret_cast<const uint8_t*>( MapViewOfFile( data.file_mapping, FILE_MAP_READ, 0, 0, 0 ) );
+	if ( ! data.mapped_file_data )
+		return false;
+
+	return true;
 }

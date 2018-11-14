@@ -33,7 +33,13 @@ private:
 		TextureID id;
 		std::unique_ptr<Descriptor> staging_srv;
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
-		std::string path;
+		std::string path; // mainly for debug purposes
+
+		// File mapping stuff
+		HANDLE file_handle = INVALID_HANDLE_VALUE;
+		HANDLE file_mapping = NULL; // different default values because of different error values for corresponding winapi functions
+		uint64_t file_size = 0;
+		const uint8_t* mapped_file_data = nullptr;
 	};
 
 	struct UploadData
@@ -63,6 +69,9 @@ private:
 	void UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, ID3D12GraphicsCommandList& cmd_list );
 
 	UploadData CreateAndFillUploader( const Microsoft::WRL::ComPtr<ID3D12Resource>& gpu_res, const span<D3D12_SUBRESOURCE_DATA>& subresources );
+
+	// File mapping
+	bool InitMemoryMappedTexture( const std::string_view& path, TextureData& data );
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 
