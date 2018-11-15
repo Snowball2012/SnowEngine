@@ -38,8 +38,9 @@ private:
 		// File mapping stuff
 		HANDLE file_handle = INVALID_HANDLE_VALUE;
 		HANDLE file_mapping = NULL; // different default values because of different error values for corresponding winapi functions
-		uint64_t file_size = 0;
-		const uint8_t* mapped_file_data = nullptr;
+		span<const uint8_t> mapped_file_data;
+
+		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
 	};
 
 	struct UploadData

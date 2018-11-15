@@ -215,6 +215,7 @@ TextureStreamer::UploadData TextureStreamer::CreateAndFillUploader( const Micros
 	return std::move( uploader );
 }
 
+
 bool TextureStreamer::InitMemoryMappedTexture( const std::string_view& path, TextureData& data )
 {
 	// be careful with return value for failed winapi functions!
@@ -227,16 +228,24 @@ bool TextureStreamer::InitMemoryMappedTexture( const std::string_view& path, Tex
 	LARGE_INTEGER filesize;
 	if ( ! GetFileSizeEx( data.file_handle, &filesize ) )
 		return false;
-	data.file_size = filesize.QuadPart;
-	if ( data.file_size == 0 )
+	if ( filesize.QuadPart == 0 )
 		return false;
 	data.file_mapping = CreateFileMappingA( data.file_handle, nullptr, PAGE_READONLY, 0, 0, NULL );
 	if ( ! data.file_mapping )
 		return false;
 
-	data.mapped_file_data = reinterpret_cast<const uint8_t*>( MapViewOfFile( data.file_mapping, FILE_MAP_READ, 0, 0, 0 ) );
-	if ( ! data.mapped_file_data )
+	const uint8_t* mapped_region_start = reinterpret_cast<const uint8_t*>( MapViewOfFile( data.file_mapping, FILE_MAP_READ, 0, 0, 0 ) );
+	if ( ! mapped_region_start )
 		return false;
 
-	return true;
+	data.mapped_file_data = span<const uint8_t>( mapped_region_start, mapped_region_start + filesize.QuadPart );
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> reserved_resource;
+	HRESULT hr = DirectX::LoadDDSTextureFromMemoryEx( m_device.Get(),
+												   data.mapped_file_data.cbegin(), filesize.QuadPart, 0,
+													  D3D12_RESOURCE_FLAG_NONE,
+													  DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_RESERVED_RESOURCE,
+													  reserved_resource.GetAddressOf(), data.subresources );
+
+	return SUCCEEDED( hr );
 }
