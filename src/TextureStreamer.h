@@ -39,31 +39,44 @@ private:
 	using GPUPhysicalLayout = std::vector<GPUPagedAllocator::ChunkID>;
 	using FileLayout = std::vector<D3D12_SUBRESOURCE_DATA>;
 
+	class MemoryMappedFile
+	{
+	public:
+		MemoryMappedFile() = default;
+		~MemoryMappedFile();
+		bool Open( const std::string_view& path ) noexcept;
+		bool IsOpened() const noexcept;
+		void Close() noexcept;
+		const span<const uint8_t>& GetData() const noexcept { return m_mapped_file_data; }
+
+	private:
+		HANDLE m_file_handle = INVALID_HANDLE_VALUE;
+		HANDLE m_file_mapping = nullptr; // different default values because of different error values for corresponding winapi functions
+		span<const uint8_t> m_mapped_file_data;
+	};
+
 	struct TextureData
 	{
 		TextureID id;
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
 
-		FileLayout file_mem;
-		GPUVirtualLayout virtual_mem;
-		GPUPhysicalLayout backing_mem;
+		FileLayout file_layout;
+		GPUVirtualLayout virtual_layout;
+		GPUPhysicalLayout backing_layout;
 		std::vector<Descriptor> mip_cumulative_srv; // srv for mip 0 includes all following mips
 		uint32_t most_detailed_loaded_mip = 0;// std::numeric_limits<uint32_t>::max();
 
 		// file mapping stuff
-		HANDLE file_handle = INVALID_HANDLE_VALUE;
-		HANDLE file_mapping = NULL; // different default values because of different error values for corresponding winapi functions
-		span<const uint8_t> mapped_file_data;
+		MemoryMappedFile file;
 
 		std::string path; // mainly for debug purposes
 	};
 
-	// File mapping
-	bool InitMemoryMappedTexture( const std::string_view& path, TextureData& data );
-
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 
 	std::vector<TextureData> m_loaded_textures;
+
+	std::vector<TextureData> m_textures_to_load;
 
 	StagingDescriptorHeap m_srv_heap;
 
