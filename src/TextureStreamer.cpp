@@ -32,16 +32,19 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 	if ( ! InitMemoryMappedTexture( path, tex_data ) )
 		throw SnowEngineException( "failed to load the texture" );
 
-	std::unique_ptr<uint8_t[]> dds_data;
-	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( m_device.Get(),
-													std::wstring( path.cbegin(), path.cend() ).c_str(),
-													tex_data.gpu_res.GetAddressOf(), dds_data, subresources ) );
+	D3D12_RESOURCE_DESC commited_desc = tex_data.gpu_res->GetDesc();
+	commited_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	tex_data.gpu_res.Reset();
+	ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
+													  D3D12_HEAP_FLAG_NONE,
+													  &commited_desc,
+													  D3D12_RESOURCE_STATE_COMMON, nullptr,
+													  IID_PPV_ARGS( tex_data.gpu_res.GetAddressOf() ) ) );
 
 	tex_data.path = std::move( path );
 
 	m_pending_transaction.uploaders.push_back(
-		CreateAndFillUploader( tex_data.gpu_res, make_span( subresources.data(), subresources.data() + subresources.size() ) ) );
+		CreateAndFillUploader( tex_data.gpu_res, make_span( tex_data.subresources.data(), tex_data.subresources.data() + tex_data.subresources.size() ) ) );
 
 	tex_data.staging_srv = std::make_unique<Descriptor>( std::move( m_srv_heap.AllocateDescriptor() ) );
 
@@ -240,12 +243,11 @@ bool TextureStreamer::InitMemoryMappedTexture( const std::string_view& path, Tex
 
 	data.mapped_file_data = span<const uint8_t>( mapped_region_start, mapped_region_start + filesize.QuadPart );
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> reserved_resource;
 	HRESULT hr = DirectX::LoadDDSTextureFromMemoryEx( m_device.Get(),
-												   data.mapped_file_data.cbegin(), filesize.QuadPart, 0,
+													  data.mapped_file_data.cbegin(), filesize.QuadPart, 0,
 													  D3D12_RESOURCE_FLAG_NONE,
 													  DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_RESERVED_RESOURCE,
-													  reserved_resource.GetAddressOf(), data.subresources );
+													  data.gpu_res.GetAddressOf(), data.subresources );
 
 	return SUCCEEDED( hr );
 }

@@ -167,8 +167,8 @@
     <ClCompile Include="src\ShadowProvider.cpp">
       <Filter>core\PipelineDataProviders</Filter>
     </ClCompile>
-    <ClCompile Include="src\SceneItems.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="src\GPUPagedAllocator.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -300,6 +300,10 @@
     </ClInclude>
     <ClInclude Include="src\ShadowProvider.h">
       <Filter>core\PipelineDataProviders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Ptr.h" />
+    <ClInclude Include="src\GPUPagedAllocator.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

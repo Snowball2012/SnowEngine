@@ -24,11 +24,7 @@ namespace bc = boost::container;
 
 #include <dxgi1_5.h>
 
-#include <wrl.h>
-#include <WindowsX.h>
-template<typename T>
-using ComPtr = Microsoft::WRL::ComPtr<T>;
-
+#include "Ptr.h"
 #include "RenderUtils.h"
 
 class SnowEngineException

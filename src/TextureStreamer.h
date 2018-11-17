@@ -40,7 +40,8 @@ private:
 		HANDLE file_mapping = NULL; // different default values because of different error values for corresponding winapi functions
 		span<const uint8_t> mapped_file_data;
 
-		std::vector<D3D12_SUBRESOURCE_DATA> subresources;
+		std::vector<D3D12_SUBRESOURCE_DATA> file_subresources;
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 	};
 
 	struct UploadData

@@ -178,6 +178,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\FrameResource.cpp" />
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
+    <ClCompile Include="src\GPUPagedAllocator.cpp" />
     <ClCompile Include="src\GPUTaskQueue.cpp" />
     <ClCompile Include="src\HBAOPass.cpp" />
     <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
@@ -206,7 +207,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\RenderUtils.cpp" />
-    <ClCompile Include="src\SceneItems.cpp" />
     <ClCompile Include="src\SceneManager.cpp" />
     <ClCompile Include="src\ShadowProvider.cpp" />
     <ClCompile Include="src\StagingDescriptorHeap.cpp" />
@@ -237,6 +237,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
     <ClInclude Include="src\GeomGeneration.hpp" />
+    <ClInclude Include="src\GPUPagedAllocator.h" />
     <ClInclude Include="src\GPUTaskQueue.h" />
     <ClInclude Include="src\HBAOPass.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
@@ -246,6 +247,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\Pipeline.hpp" />
     <ClInclude Include="src\PipelineNodes.h" />
     <ClInclude Include="src\PipelineResource.h" />
+    <ClInclude Include="src\Ptr.h" />
     <ClInclude Include="src\Renderer.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
