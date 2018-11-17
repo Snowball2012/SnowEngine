@@ -2,6 +2,7 @@
 
 #include "SceneSystemData.h"
 #include "StagingDescriptorHeap.h"
+#include "GPUPagedAllocator.h"
 
 #include <wrl.h>
 #include <d3d12.h>
@@ -28,49 +29,34 @@ public:
 	void LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp );
 
 private:
+
+	struct GPUVirtualLayout
+	{
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
+		std::vector<UINT> nrows;
+		std::vector<UINT64> row_size;
+	};
+	using GPUPhysicalLayout = std::vector<GPUPagedAllocator::ChunkID>;
+	using FileLayout = std::vector<D3D12_SUBRESOURCE_DATA>;
+
 	struct TextureData
 	{
 		TextureID id;
-		std::unique_ptr<Descriptor> staging_srv;
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
-		std::string path; // mainly for debug purposes
 
-		// File mapping stuff
+		FileLayout file_mem;
+		GPUVirtualLayout virtual_mem;
+		GPUPhysicalLayout backing_mem;
+		std::vector<Descriptor> mip_cumulative_srv; // srv for mip 0 includes all following mips
+		uint32_t most_detailed_loaded_mip = 0;// std::numeric_limits<uint32_t>::max();
+
+		// file mapping stuff
 		HANDLE file_handle = INVALID_HANDLE_VALUE;
 		HANDLE file_mapping = NULL; // different default values because of different error values for corresponding winapi functions
 		span<const uint8_t> mapped_file_data;
 
-		std::vector<D3D12_SUBRESOURCE_DATA> file_subresources;
-		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
+		std::string path; // mainly for debug purposes
 	};
-
-	struct UploadData
-	{
-		Microsoft::WRL::ComPtr<ID3D12Resource> resource;
-		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
-	};
-
-	struct UploadTransaction
-	{
-		std::vector<TextureData> textures_to_upload;
-		std::vector<TextureData> textures_to_remove;
-		std::vector<UploadData> uploaders;
-	};
-
-	struct ActiveTransaction
-	{
-		UploadTransaction transaction;
-
-		SceneCopyOp operation_tag;
-		std::optional<GPUTaskQueue::Timestamp> end_timestamp;
-	};
-
-	void LoadTexturesFromTransaction( UploadTransaction& transaction );
-	void FinalizeCompletedTransactions( GPUTaskQueue::Timestamp current_timestamp );
-	void EnqueueRemovedTexturesForDestruction();
-	void UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, ID3D12GraphicsCommandList& cmd_list );
-
-	UploadData CreateAndFillUploader( const Microsoft::WRL::ComPtr<ID3D12Resource>& gpu_res, const span<D3D12_SUBRESOURCE_DATA>& subresources );
 
 	// File mapping
 	bool InitMemoryMappedTexture( const std::string_view& path, TextureData& data );
@@ -80,9 +66,6 @@ private:
 	std::vector<TextureData> m_loaded_textures;
 
 	StagingDescriptorHeap m_srv_heap;
-
-	std::vector<ActiveTransaction> m_active_transactions;
-	UploadTransaction m_pending_transaction;
 
 	Scene* m_scene = nullptr;
 };
