@@ -9,7 +9,7 @@ GPUPagedAllocator::GPUPagedAllocator( ComPtr<ID3D12Heap> heap )
 	m_free_chunks.emplace_back();
 	auto& free_chunk = m_free_chunks.back();
 
-	const D3D12_HEAP_DESC& desc = heap->GetDesc();
+	const D3D12_HEAP_DESC& desc = m_heap->GetDesc();
 	m_free_pages_num = ( desc.SizeInBytes + PageSize - 1 ) / PageSize;
 	free_chunk.resize( m_free_pages_num );
 	for ( uint32_t page = 0; page < m_free_pages_num; ++page )

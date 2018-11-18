@@ -108,7 +108,7 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
-	, m_tex_streamer( device, &m_scene )
+	, m_tex_streamer( device, 1024*1024*1024, 512*1024*1024, nframes_to_buffer, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
 	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
 	, m_copy_queue( copy_queue )
@@ -168,7 +168,7 @@ void SceneManager::UpdatePipelineBindings( CameraID main_camera_id )
 
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	ProcessSubmeshes();
-	m_tex_streamer.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
+	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_cmd_list.Get() );
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
 	if ( const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id ) )

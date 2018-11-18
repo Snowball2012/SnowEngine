@@ -7,10 +7,26 @@
 #include <dxtk12/DirectXHelpers.h>
 
 
-TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, Scene* scene ) noexcept
-	: m_device( std::move( device ) ), m_scene( scene ), m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device )
+TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget, uint64_t cpu_mem_budget,
+								  uint8_t n_bufferized_frames, Scene* scene )
+	: m_device( std::move( device ) ), m_scene( scene )
+	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device )
+	, m_n_bufferized_frames( n_bufferized_frames )
 {
+	ComPtr<ID3D12Heap> heap;
+	CD3DX12_HEAP_DESC heap_desc( gpu_mem_budget, CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ) );
+	heap_desc.Flags = D3D12_HEAP_FLAG_DENY_BUFFERS | D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES;
+
+	constexpr uint64_t alignment = 1 << 16; // 64kb
+	heap_desc.Alignment = alignment;
+
+	ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
+	m_gpu_mem = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
+
+	// 64k alignment
+	m_upload_buffer = std::make_unique<CircularUploadBuffer>( m_device, cpu_mem_budget, alignment );
 }
+
 
 TextureStreamer::~TextureStreamer()
 {
@@ -21,8 +37,9 @@ TextureStreamer::~TextureStreamer()
 
 void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 {
-	m_textures_to_load.emplace_back();
-	auto& tex_data = m_textures_to_load.back();
+	StreamedTextureID new_texture_id = m_loaded_textures.emplace();
+
+	auto& tex_data = m_loaded_textures[new_texture_id];
 
 	tex_data.id = id;
 
@@ -43,7 +60,8 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 	UINT64 virtual_bytes_total = 0;
 	tex_data.virtual_layout.nrows.resize( subresource_num );
 	tex_data.virtual_layout.row_size.resize( subresource_num );
-	m_device->GetCopyableFootprints( &res_desc, 0, tex_data.file_layout.size(), 0,
+	tex_data.virtual_layout.footprints.resize( subresource_num );
+	m_device->GetCopyableFootprints( &res_desc, 0, subresource_num, 0,
 									 tex_data.virtual_layout.footprints.data(),
 									 tex_data.virtual_layout.nrows.data(),
 									 tex_data.virtual_layout.row_size.data(), &virtual_bytes_total );
@@ -67,12 +85,30 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 		srv_desc.Texture2D.ResourceMinLODClamp = FLOAT( mip_idx );
 		m_device->CreateShaderResourceView( tex_data.gpu_res.Get(), &srv_desc, tex_data.mip_cumulative_srv.back().HandleCPU() );
 	}
+
+	UINT ntiles_for_resource;
+	UINT num_subresource_tilings = subresource_num;
+	std::vector<D3D12_SUBRESOURCE_TILING> subresource_tilings_for_nonpacked_mips( num_subresource_tilings );
+
+	m_device->GetResourceTiling( tex_data.gpu_res.Get(),
+								 &ntiles_for_resource,
+								 &tex_data.tiling.packed_mip_info,
+								 &tex_data.tiling.tile_shape_for_nonpacked_mips,
+								 &num_subresource_tilings,
+								 0,
+								 subresource_tilings_for_nonpacked_mips.data() );
+
+	for ( size_t i = 0; i < tex_data.tiling.packed_mip_info.NumStandardMips; ++i )
+	{
+		tex_data.tiling.nonpacked_tiling.emplace_back();
+		auto& subresource_tiling = tex_data.tiling.nonpacked_tiling.back();
+		subresource_tiling.data = subresource_tilings_for_nonpacked_mips[i];
+	}
 }
 
-
-void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list )
+	
+void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, ID3D12GraphicsCommandList& cmd_list )
 {
-	NOTIMPL;
 
 	for ( const auto& tex_data : m_loaded_textures )
 	{
@@ -85,19 +121,38 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 
 void TextureStreamer::PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp )
 {
-	NOTIMPL;
 }
 
 
 void TextureStreamer::LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp )
 {
-	NOTIMPL;
 }
 
 
 TextureStreamer::MemoryMappedFile::~MemoryMappedFile()
 {
 	Close();
+}
+
+TextureStreamer::MemoryMappedFile::MemoryMappedFile( MemoryMappedFile&& other ) noexcept
+{
+	m_file_handle = other.m_file_handle;
+	m_file_mapping = other.m_file_mapping;
+	m_mapped_file_data = other.m_mapped_file_data;
+	other.m_file_handle = INVALID_HANDLE_VALUE;
+	other.m_file_mapping = nullptr;
+	other.m_mapped_file_data = span<const uint8_t>();
+}
+
+TextureStreamer::MemoryMappedFile& TextureStreamer::MemoryMappedFile::operator=( MemoryMappedFile && other ) noexcept
+{
+	m_file_handle = other.m_file_handle;
+	m_file_mapping = other.m_file_mapping;
+	m_mapped_file_data = other.m_mapped_file_data;
+	other.m_file_handle = INVALID_HANDLE_VALUE;
+	other.m_file_mapping = nullptr;
+	other.m_mapped_file_data = span<const uint8_t>();
+	return *this;
 }
 
 

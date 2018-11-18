@@ -170,6 +170,9 @@
     <ClCompile Include="src\GPUPagedAllocator.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\CircularUploadBuffer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -303,6 +306,9 @@
     </ClInclude>
     <ClInclude Include="src\Ptr.h" />
     <ClInclude Include="src\GPUPagedAllocator.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CircularUploadBuffer.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
