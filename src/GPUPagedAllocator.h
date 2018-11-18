@@ -19,7 +19,7 @@ public:
 
 	// returns empty range if there is no chunk with this id
 	span<const uint32_t> GetPages( ChunkID id ) const noexcept;
-
+	uint32_t GetFreePagesNum() const noexcept { return m_free_pages_num; }
 	ID3D12Heap* GetDXHeap() noexcept { return m_heap.Get(); }
 
 	static constexpr uint32_t PageSize = 1 << 16;

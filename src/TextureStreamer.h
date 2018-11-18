@@ -38,8 +38,8 @@ private:
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		std::vector<UINT> nrows;
 		std::vector<UINT64> row_size;
+		uint64_t total_size;
 	};
-	using GPUPhysicalLayout = std::vector<GPUPagedAllocator::ChunkID>;
 	using FileLayout = std::vector<D3D12_SUBRESOURCE_DATA>;
 
 	class MemoryMappedFile
@@ -82,8 +82,12 @@ private:
 		Normal,
 		MipLoading
 	};
+
+	struct TextureData;
+	using StreamedTextureID = typename packed_freelist<TextureData>::id;
 	struct TextureData
 	{
+		StreamedTextureID data_id;
 		TextureID id;
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
 
@@ -92,6 +96,7 @@ private:
 		Tiling tiling;
 		std::vector<Descriptor> mip_cumulative_srv; // srv for mip 0 includes all following mips
 		uint32_t most_detailed_loaded_mip = std::numeric_limits<uint32_t>::max();
+		uint32_t desired_mip = 0;
 		TextureState state = TextureState::Normal;
 
 		// file mapping stuff
@@ -100,38 +105,42 @@ private:
 		std::string path; // mainly for debug purposes
 	};
 
-	ComPtr<ID3D12Device> m_device;
-
-	const uint8_t m_n_bufferized_frames;
-	packed_freelist<TextureData> m_loaded_textures;
-	using StreamedTextureID = packed_freelist<TextureData>::id;
-
 	using GPUTimestamp = GPUTaskQueue::Timestamp;
 
 	struct MipToLoad
 	{
 		StreamedTextureID id;
 		ID3D12Resource* uploader; // placed resource in upload heap with compatible format
-		span<uint8_t> mapped_uploader;
 	};
 	struct UploaderFillData
 	{
 		std::vector<MipToLoad> mips;
 		std::future<void> op_completed;
 	};
-	std::vector<UploaderFillData> m_uploaders_to_fill;
 	struct UploadTransaction
 	{
 		std::vector<MipToLoad> mip;
 		SceneCopyOp op;
-		std::optional<GPUTimestamp> timestamp;
+		std::optional<GPUTimestamp> timestamp = std::nullopt;
 	};
-	std::vector<UploadTransaction> m_active_copy_transactions;
+
+	void FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp current_timestamp );
+	void CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsCommandList& cmd_list );
+	void CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip, ID3D12GraphicsCommandList& cmd_list );
+	void CalcDesiredMipLevels();
+	 
+	ComPtr<ID3D12Device> m_device;
+	StagingDescriptorHeap m_srv_heap;
 
 	std::unique_ptr<GPUPagedAllocator> m_gpu_mem;
 	std::unique_ptr<CircularUploadBuffer> m_upload_buffer;
 
-	StagingDescriptorHeap m_srv_heap;
+	const uint8_t m_n_bufferized_frames;
+
+	packed_freelist<TextureData> m_loaded_textures;
+
+	std::vector<UploaderFillData> m_uploaders_to_fill;
+	std::vector<UploadTransaction> m_active_copy_transactions;
 
 	Scene* m_scene = nullptr;
 };

@@ -47,14 +47,14 @@ std::pair<ID3D12Resource*, span<uint8_t>> CircularUploadBuffer::AllocateBuffer( 
 		}
 	}
 	m_allocations.emplace();
-	auto& alloc = m_allocations.front();
+	auto& alloc = m_allocations.back();
 	alloc.placed_res.Reset();
 
 
 	ThrowIfFailed( m_device->CreatePlacedResource( m_heap.Get(),
 												   new_allocation_offset,
 												   &CD3DX12_RESOURCE_DESC::Buffer( size ),
-												   D3D12_RESOURCE_STATE_COMMON,
+												   D3D12_RESOURCE_STATE_GENERIC_READ,
 												   nullptr,
 												   IID_PPV_ARGS( alloc.placed_res.GetAddressOf() ) ) );
 
@@ -78,7 +78,7 @@ void CircularUploadBuffer::DeallocateOldest()
 	if ( m_allocations.empty() )
 		throw SnowEngineException( "buffer is already empty. Something strange happened in the caller function" );
 	
-	auto& alloc = m_allocations.back();
+	auto& alloc = m_allocations.front();
 
 	alloc.placed_res->Unmap( 0, nullptr );
 	m_allocations.pop();
