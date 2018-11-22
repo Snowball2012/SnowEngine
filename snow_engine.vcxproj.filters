@@ -173,6 +173,9 @@
     <ClCompile Include="src\CircularUploadBuffer.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\UVScreenDensityCalculator.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -310,6 +313,9 @@
     </ClInclude>
     <ClInclude Include="src\CircularUploadBuffer.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UVScreenDensityCalculator.h">
+      <Filter>core\SceneSystems</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
