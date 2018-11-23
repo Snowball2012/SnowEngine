@@ -91,5 +91,6 @@ uint64_t CircularUploadBuffer::CalcAlignedSize( uint64_t size ) const noexcept
 {
 	if ( m_alignment > 1 )
 		return ( size + ( m_alignment - 1 ) ) & ~( m_alignment - 1 );
+	return size;
 }
 

@@ -4,11 +4,10 @@
 
 // StaticMesh
 
-void StaticMesh::Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibv, D3D_PRIMITIVE_TOPOLOGY topology ) noexcept
+void StaticMesh::Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibv ) noexcept
 {
 	m_vbv = vbv;
 	m_ibv = ibv;
-	m_topology = topology;
 	m_is_loaded = true;
 }
 

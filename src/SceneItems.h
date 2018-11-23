@@ -75,9 +75,10 @@ public:
 	auto& Indices() noexcept { return m_indices; }
 
 	D3D_PRIMITIVE_TOPOLOGY Topology() const noexcept { return m_topology; }
+	D3D_PRIMITIVE_TOPOLOGY& Topology() noexcept { return m_topology; }
 
 	bool IsLoaded() const noexcept { return m_is_loaded; }
-	void Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibv, D3D_PRIMITIVE_TOPOLOGY topology ) noexcept;
+	void Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibvy ) noexcept;
 
 private:
 	friend class Scene;

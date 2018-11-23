@@ -50,6 +50,7 @@ void StaticMeshManager::LoadStaticMesh( StaticMeshID id, std::string name, const
 
 	mesh_data.id = id;
 	mesh_data.name = std::move( name );
+	mesh_data.topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	const size_t vb_byte_size = vertices.size() * sizeof( Vertex );
 	const size_t ib_byte_size = indices.size() * sizeof( uint32_t );
 
@@ -159,7 +160,7 @@ void StaticMeshManager::LoadMeshesFromTransaction( UploadTransaction& transactio
 		StaticMesh* mesh = m_scene->TryModifyStaticMesh( mesh_data.id );
 		if ( mesh ) // mesh could have already been deleted
 		{
-			mesh->Load( mesh_data.vbv, mesh_data.ibv, mesh_data.topology );
+			mesh->Load( mesh_data.vbv, mesh_data.ibv );
 			m_loaded_meshes.push_back( std::move( mesh_data ) );
 		}
 	}

@@ -14,6 +14,7 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vert
 										   make_span( indices.data(), indices.data() + indices.size() ) );
 	m_scene->TryModifyStaticMesh( mesh_id )->Vertices() = std::move( vertices );
 	m_scene->TryModifyStaticMesh( mesh_id )->Indices() = std::move( indices );
+	m_scene->TryModifyStaticMesh( mesh_id )->Topology() = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	return mesh_id;
 }
 
@@ -116,6 +117,7 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
 	, m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
 	, m_shadow_provider( device.Get(), int( nframes_to_buffer ), dsv_heap, &m_gpu_descriptor_tables, &m_scene )
+	, m_uv_density_calculator( &m_scene )
 {
 	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
 	{
@@ -218,6 +220,7 @@ void SceneManager::ProcessSubmeshes()
 		if ( submesh.IsDirty() )
 		{
 			CalcSubmeshBoundingBox( submesh );
+			m_uv_density_calculator.CalcUVDensityInObjectSpace( submesh );
 		}
 	}
 }

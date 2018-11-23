@@ -9,6 +9,7 @@
 #include "DescriptorTableBakery.h"
 #include "MaterialTableBaker.h"
 #include "ShadowProvider.h"
+#include "UVScreenDensityCalculator.h"
 
 #include <DirectXMath.h>
 class SceneManager;
@@ -92,6 +93,7 @@ private:
 	DynamicSceneBuffers m_dynamic_buffers;
 	MaterialTableBaker m_material_table_baker;
 	ShadowProvider m_shadow_provider;
+	UVScreenDensityCalculator m_uv_density_calculator;
 	GPUTaskQueue* m_copy_queue;
 
 	SceneCopyOp m_operation_counter = 0;
