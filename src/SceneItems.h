@@ -143,7 +143,7 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE StagingSRV() const noexcept { return m_staging_srv; }
 
 	// properties
-	DirectX::XMFLOAT2& MaxNDCPerUV() noexcept { return m_max_ndc_per_uv; }
+	DirectX::XMFLOAT2& MaxPixelsPerUV() noexcept { return m_max_pixels_per_uv; }
 
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }
@@ -156,7 +156,7 @@ private:
 	Texture() {}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_staging_srv;
-	DirectX::XMFLOAT2 m_max_ndc_per_uv; // for mip streaming
+	DirectX::XMFLOAT2 m_max_pixels_per_uv; // for mip streaming
 	bool m_is_dirty = false;
 	bool m_is_loaded = false;
 };

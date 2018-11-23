@@ -10,9 +10,37 @@ UVScreenDensityCalculator::UVScreenDensityCalculator( Scene* scene )
 }
 
 
-void UVScreenDensityCalculator::Update( CameraID camera )
+void UVScreenDensityCalculator::Update( CameraID camera, const D3D12_VIEWPORT& viewport )
 {
+	// For each mesh instance
+	// 1. Find distance to camera
+	// 2. Calc approximate number of pixels per uv coord
 
+	for ( const auto& mesh_instance : m_scene->StaticMeshInstanceSpan() )
+	{
+		if ( ! mesh_instance.IsEnabled() )
+			continue;
+
+		const MaterialPBR& material = m_scene->AllMaterials()[mesh_instance.Material()];
+		std::array<const Texture*, 3> textures;
+		textures[0] = m_scene->AllTextures().try_get( material.Textures().base_color );
+		textures[1] = m_scene->AllTextures().try_get( material.Textures().specular );
+		textures[2] = m_scene->AllTextures().try_get( material.Textures().normal );
+
+		bool has_unloaded_texture = false;
+		for ( int i : { 0, 1, 2 } )
+			if ( has_unloaded_texture = ! textures[i]->IsLoaded() )
+				break;
+
+		if ( has_unloaded_texture )
+			continue;
+
+		const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[mesh_instance.Submesh()];
+		const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.GetTransform()];
+
+		NOTIMPL;
+		// todo: calc distance to transformed box
+	}
 }
 
 void UVScreenDensityCalculator::CalcUVDensityInObjectSpace( StaticSubmesh& submesh )
