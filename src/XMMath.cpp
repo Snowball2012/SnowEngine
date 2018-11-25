@@ -2,6 +2,8 @@
 
 #include "XMMath.h"
 
+#include <DirectXCollision.h>
+
 using namespace DirectX;
 
 XMFLOAT3 operator-( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
@@ -63,10 +65,31 @@ XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta )
 	return res;
 }
 
-DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m )
+XMMATRIX InverseTranspose( DirectX::CXMMATRIX m )
 {
 	XMMATRIX zeroed_translation = m;
 	zeroed_translation.r[3] = XMVectorSet( 0, 0, 0, 1 );
 	XMVECTOR det = XMMatrixDeterminant( zeroed_translation );
 	return XMMatrixTranspose( XMMatrixInverse( &det, zeroed_translation ) );
+}
+
+float DistanceToBoxSqr( const XMVECTOR& point, const BoundingOrientedBox& box )
+{
+	float dist2 = 0.0f;
+
+	XMVECTOR pt2center = XMVectorSubtract( point, XMLoadFloat3( &box.Center ) );
+
+	for ( int i : { 0, 1, 2 } )
+	{
+		XMVECTOR ort = XMVectorZero();
+		ort = XMVectorSetByIndex( ort, 1.0f, i );
+		XMVector3Rotate( ort, XMLoadFloat4( &box.Orientation ) );
+		const float dist_component = std::abs( XMVectorGetX( XMVector3Dot( pt2center, ort ) ) );
+
+		const float extent = reinterpret_cast<const float*>( &box.Extents )[i]; // !!! HACK HACK HACK !!! too bad XMFLOAT3 doesn't have index operator
+		if ( dist_component > extent )
+			dist2 += squared( dist_component - extent );
+	}
+	
+	return dist2;
 }

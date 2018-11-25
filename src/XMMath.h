@@ -1,6 +1,10 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <DirectXCollision.h>
+
+template<class T>
+constexpr T squared( T val ) { return val * val; }
 
 DirectX::XMFLOAT3 operator-( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator+( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
@@ -16,6 +20,9 @@ float XMFloat3Normalize( DirectX::XMFLOAT3& lhs );
 DirectX::XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta );
 
 DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m );
+
+// returns 0 if the point is inside the box
+float DistanceToBoxSqr( const DirectX::XMVECTOR& point, const DirectX::BoundingOrientedBox& box );
 
 constexpr DirectX::XMFLOAT4X4 Identity4x4 =
 {

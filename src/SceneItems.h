@@ -116,6 +116,7 @@ public:
 	const DirectX::BoundingBox& Box() const noexcept { return m_box; }
 
 	DirectX::XMFLOAT2& MaxInverseUVDensity() noexcept { return m_max_inv_uv_density; }
+	const DirectX::XMFLOAT2& MaxInverseUVDensity() const noexcept { return m_max_inv_uv_density; }
 
 	bool IsDirty() const noexcept { return m_is_dirty; }
 	void Clean() noexcept { m_is_dirty = false; }

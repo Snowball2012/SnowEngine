@@ -10,11 +10,19 @@ UVScreenDensityCalculator::UVScreenDensityCalculator( Scene* scene )
 }
 
 
-void UVScreenDensityCalculator::Update( CameraID camera, const D3D12_VIEWPORT& viewport )
+void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT& viewport )
 {
 	// For each mesh instance
 	// 1. Find distance to camera
 	// 2. Calc approximate number of pixels per uv coord
+
+	const Camera& camera = m_scene->AllCameras()[camera_id];
+	if ( camera.GetData().type != Camera::Type::Perspective )
+		NOTIMPL;
+
+	const float pixels_per_angle_est = std::max( viewport.Height, viewport.Width / camera.GetData().aspect_ratio ) / camera.GetData().fov_y;
+
+	XMVECTOR camera_origin= XMLoadFloat3( &camera.GetData().pos );
 
 	for ( const auto& mesh_instance : m_scene->StaticMeshInstanceSpan() )
 	{
@@ -22,10 +30,10 @@ void UVScreenDensityCalculator::Update( CameraID camera, const D3D12_VIEWPORT& v
 			continue;
 
 		const MaterialPBR& material = m_scene->AllMaterials()[mesh_instance.Material()];
-		std::array<const Texture*, 3> textures;
-		textures[0] = m_scene->AllTextures().try_get( material.Textures().base_color );
-		textures[1] = m_scene->AllTextures().try_get( material.Textures().specular );
-		textures[2] = m_scene->AllTextures().try_get( material.Textures().normal );
+		std::array<Texture*, 3> textures;
+		textures[0] = m_scene->TryModifyTexture( material.Textures().base_color );
+		textures[1] = m_scene->TryModifyTexture( material.Textures().specular );
+		textures[2] = m_scene->TryModifyTexture( material.Textures().normal );
 
 		bool has_unloaded_texture = false;
 		for ( int i : { 0, 1, 2 } )
@@ -38,8 +46,25 @@ void UVScreenDensityCalculator::Update( CameraID camera, const D3D12_VIEWPORT& v
 		const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[mesh_instance.Submesh()];
 		const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.GetTransform()];
 
-		NOTIMPL;
-		// todo: calc distance to transformed box
+		BoundingOrientedBox bob;
+		BoundingOrientedBox::CreateFromBoundingBox( bob, submesh.Box() );
+
+		const float lengths2_sum_local = XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &bob.Extents ) ) );
+		bob.Transform( bob, XMLoadFloat4x4( &tf.Obj2World() ) );
+
+		const float lengths2_sum_world = XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &bob.Extents ) ) );
+
+		const float camera2box = std::sqrt( DistanceToBoxSqr( camera_origin, bob ) );
+
+		// Add FLT_EPSILON to avoid division by zero because camera may be inside the box
+		XMVECTOR pixels_per_uv = XMLoadFloat2( &submesh.MaxInverseUVDensity() );
+		pixels_per_uv *= pixels_per_angle_est
+			             * ( std::sqrt( lengths2_sum_world
+										/ lengths2_sum_local )
+							 / ( camera2box + FLT_EPSILON ) );
+
+		for ( int i : { 0, 1, 2 } )
+			XMStoreFloat2( &textures[i]->MaxPixelsPerUV(), pixels_per_uv );
 	}
 }
 

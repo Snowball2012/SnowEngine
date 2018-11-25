@@ -71,7 +71,7 @@ public:
 	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
 	DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-	void UpdatePipelineBindings( CameraID main_camera_id );
+	void UpdatePipelineBindings( CameraID main_camera_id, const D3D12_VIEWPORT& main_viewport );
 
 	template<typename PipelineT>
 	void BindToPipeline( PipelineT& pipeline );

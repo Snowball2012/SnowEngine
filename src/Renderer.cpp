@@ -84,7 +84,7 @@ void Renderer::Draw( const Context& ctx )
 	else
 		scene_camera = m_main_camera_id;
 
-	m_scene_manager->UpdatePipelineBindings( scene_camera );
+	m_scene_manager->UpdatePipelineBindings( scene_camera, m_screen_viewport );
 
 	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
 	if ( ! main_camera )

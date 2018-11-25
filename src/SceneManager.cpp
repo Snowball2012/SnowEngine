@@ -158,7 +158,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 	return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdatePipelineBindings( CameraID main_camera_id )
+void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_VIEWPORT& main_viewport )
 {
 	m_main_camera_id = main_camera_id;
 
@@ -170,6 +170,7 @@ void SceneManager::UpdatePipelineBindings( CameraID main_camera_id )
 
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	ProcessSubmeshes();
+	m_uv_density_calculator.Update( main_camera_id, main_viewport );
 	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_cmd_list.Get() );
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
