@@ -29,7 +29,7 @@ std::pair<ID3D12Resource*, span<uint8_t>> CircularUploadBuffer::AllocateBuffer( 
 	uint64_t free_segment_end = size;
 
 	if ( ! m_allocations.empty() )
-		free_segment_end = m_allocations.back().offset_in_heap;
+		free_segment_end = m_allocations.front().offset_in_heap;
 
 	uint64_t new_allocation_offset = m_allocation_offset;
 	if ( free_segment_end >= m_allocation_offset )
@@ -84,6 +84,17 @@ void CircularUploadBuffer::DeallocateOldest()
 	m_allocations.pop();
 	if ( m_allocations.empty() )
 		m_allocation_offset = 0;
+}
+
+uint64_t CircularUploadBuffer::GetFreeMem() const noexcept
+{
+	if ( m_allocations.empty() )
+		return m_heap->GetDesc().SizeInBytes;
+	
+	if ( m_allocation_offset <= m_allocations.front().offset_in_heap )
+		return m_allocations.front().offset_in_heap - m_allocation_offset;
+	
+	return m_heap->GetDesc().SizeInBytes - m_allocation_offset + m_allocations.front().offset_in_heap;
 }
 
 

@@ -78,6 +78,8 @@ public:
 
 	void FlushAllOperations();
 
+	const TextureStreamer& GetTexStreamer() const noexcept { return m_tex_streamer; }
+
 private:
 
 	void CleanModifiedItemsStatus();
@@ -102,7 +104,7 @@ private:
 	const size_t m_nframes_to_buffer;
 
 	// command objects
-	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> m_cmd_allocators;
+	std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, GPUTaskQueue::Timestamp>> m_cmd_allocators;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_cmd_list;
 
 	// temporary

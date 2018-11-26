@@ -237,6 +237,17 @@ void TextureStreamer::LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp tim
 	FinalizeCompletedGPUUploads( timestamp );
 }
 
+TextureStreamer::Stats TextureStreamer::GetPerformanceStats() const noexcept
+{
+	Stats res;
+	res.uploader_mem_allocated = m_upload_buffer->GetHeap()->GetDesc().SizeInBytes;
+	res.uploader_mem_in_use = res.uploader_mem_allocated - m_upload_buffer->GetFreeMem();
+	res.vidmem_allocated = m_gpu_mem->GetDXHeap()->GetDesc().SizeInBytes;
+	res.vidmem_in_use = res.vidmem_allocated - m_gpu_mem->PageSize * m_gpu_mem->GetFreePagesNum();
+
+	return res;
+}
+
 
 void TextureStreamer::FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp current_timestamp )
 {

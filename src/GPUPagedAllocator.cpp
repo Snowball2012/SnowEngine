@@ -64,7 +64,7 @@ GPUPagedAllocator::ChunkID GPUPagedAllocator::Alloc( uint32_t npages )
 				m_free_chunks.pop_back();
 			}
 		}
-		if ( new_chunk.size() < npages )
+		if ( new_chunk.size() != npages )
 			throw SnowEngineException( "gpu heap corruption" );
 	}
 

@@ -109,7 +109,7 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
-	, m_tex_streamer( device, 1024*1024*1024, 128*1024*1024, nframes_to_buffer, &m_scene )
+	, m_tex_streamer( device, 32*1024*1024, 1*1024*1024, nframes_to_buffer, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
 	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
 	, m_copy_queue( copy_queue )
@@ -124,13 +124,14 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 		m_cmd_allocators.emplace_back();
 		ThrowIfFailed( device->CreateCommandAllocator(
 			D3D12_COMMAND_LIST_TYPE_COPY,
-			IID_PPV_ARGS( m_cmd_allocators.back().GetAddressOf() ) ) );
+			IID_PPV_ARGS( m_cmd_allocators.back().first.GetAddressOf() ) ) );
+		m_cmd_allocators.back().second = 0;
 	}
 
 	ThrowIfFailed( device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_COPY,
-		m_cmd_allocators[0].Get(), // Associated command allocator
+		m_cmd_allocators[0].first.Get(), // Associated command allocator
 		nullptr,                   // Initial PipelineStateObject
 		IID_PPV_ARGS( m_cmd_list.GetAddressOf() ) ) );
 
@@ -160,13 +161,15 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 
 void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_VIEWPORT& main_viewport )
 {
+	SceneCopyOp cur_op = m_operation_counter++;
+
+	m_copy_queue->WaitForTimestamp( m_cmd_allocators[cur_op % m_nframes_to_buffer].second );
+	ThrowIfFailed( m_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
+	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
+
 	m_main_camera_id = main_camera_id;
 
-	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();
-
-	SceneCopyOp cur_op = m_operation_counter++;
-	ThrowIfFailed( m_cmd_allocators[cur_op % m_nframes_to_buffer]->Reset() );
-	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].Get(), nullptr );
+	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
 	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	ProcessSubmeshes();
@@ -182,8 +185,12 @@ void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_
 	m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 	
 	m_last_copy_timestamp = m_copy_queue->CreateTimestamp();
+	m_cmd_allocators[cur_op % m_nframes_to_buffer].second = m_last_copy_timestamp;
+
 	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
+
+
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
 		m_material_table_baker.UpdateGPUDescriptors();

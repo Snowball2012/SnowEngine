@@ -144,6 +144,20 @@ void RenderApp::UpdateGUI()
 
 		ImGui::End();
 	}
+
+	{
+		ImGui::Begin( "Performance", nullptr );
+
+		Renderer::PerformanceStats stats = m_renderer->GetPerformanceStats();
+
+		ImGui::Text( "TextureStreamer vidmem:\n\tIn use: %u MB\n\tTotal:  %u MB", stats.tex_streamer.vidmem_in_use / ( 1024 * 1024 ), stats.tex_streamer.vidmem_allocated / (1024*1024) );
+		ImGui::NewLine();
+		ImGui::Text( "TextureStreamer upload mem:\n\tIn use: %u MB\n\tTotal:  %u MB", stats.tex_streamer.uploader_mem_in_use / ( 1024 * 1024 ), stats.tex_streamer.uploader_mem_allocated / ( 1024 * 1024 ) );
+		ImGui::NewLine();
+
+
+		ImGui::End();
+	}
 	ImGui::Render();
 }
 

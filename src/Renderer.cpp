@@ -218,6 +218,11 @@ bool Renderer::SetFrustrumCullCamera( CameraID id )
 	return true;
 }
 
+Renderer::PerformanceStats Renderer::GetPerformanceStats() const noexcept
+{
+	return { m_scene_manager->GetTexStreamer().GetPerformanceStats() };
+}
+
 void Renderer::CreateDevice()
 {
 

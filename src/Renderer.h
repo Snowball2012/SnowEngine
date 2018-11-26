@@ -66,6 +66,14 @@ public:
 	// returns false if camera doesn't exist
 	bool SetMainCamera( CameraID id );
 	bool SetFrustrumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
+
+	struct PerformanceStats
+	{
+		TextureStreamer::Stats tex_streamer;
+	};
+	
+	PerformanceStats GetPerformanceStats() const noexcept;
+
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
 

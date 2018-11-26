@@ -19,6 +19,7 @@ public:
 	void DeallocateOldest();
 
 	ID3D12Heap* GetHeap() noexcept { return m_heap.Get(); }
+	uint64_t GetFreeMem() const noexcept;
 
 private:
 	uint64_t CalcAlignedSize( uint64_t size ) const noexcept;

@@ -31,6 +31,16 @@ public:
 	// Use this method if you are sure this timestamp will be reached before any subsequent operations on any mesh in transaction
 	void LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp );
 
+	struct Stats
+	{
+		uint64_t vidmem_allocated;
+		uint64_t vidmem_in_use;
+		uint64_t uploader_mem_allocated;
+		uint64_t uploader_mem_in_use;
+	};
+
+	Stats GetPerformanceStats() const noexcept;
+
 private:
 
 	struct GPUVirtualLayout
