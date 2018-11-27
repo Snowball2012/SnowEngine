@@ -671,4 +671,20 @@
     <CodeCurrent>1045059924</CodeCurrent>
     <CodeNext>123</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>MemoryMappedFile.cpp</FileName>
+    <ErrorCode>V2001</ErrorCode>
+    <Message>Consider using the extended version of the MapViewOfFile function here: MapViewOfFileEx.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>729096365</CodeCurrent>
+    <CodeNext>675898081</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>MemoryMappedFile.cpp</FileName>
+    <ErrorCode>V2001</ErrorCode>
+    <Message>Consider using the extended version of the UnmapViewOfFile function here: UnmapViewOfFileEx.</Message>
+    <CodePrev>668276121</CodePrev>
+    <CodeCurrent>1142999735</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </snow_engine>
 </NewDataSet>

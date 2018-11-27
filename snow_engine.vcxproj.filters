@@ -176,6 +176,9 @@
     <ClCompile Include="src\UVScreenDensityCalculator.cpp">
       <Filter>core\SceneSystems</Filter>
     </ClCompile>
+    <ClCompile Include="src\utils\MemoryMappedFile.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -318,6 +321,9 @@
     </ClInclude>
     <ClInclude Include="src\Ptr.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\MemoryMappedFile.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -224,6 +224,10 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\utils\MemoryMappedFile.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="src\UVScreenDensityCalculator.cpp" />
     <ClCompile Include="src\XMMath.cpp" />
   </ItemGroup>
@@ -272,6 +276,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\TemporalBlendPass.h" />
     <ClInclude Include="src\TextureStreamer.h" />
     <ClInclude Include="src\ToneMappingPass.h" />
+    <ClInclude Include="src\utils\MemoryMappedFile.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />
     <ClInclude Include="src\utils\packed_freelist.hpp" />
     <ClInclude Include="src\utils\span.h" />

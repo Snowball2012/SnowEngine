@@ -381,84 +381,26 @@ void TextureStreamer::CalcDesiredMipLevels()
 	for ( auto& texture : m_loaded_textures )
 	{
 		if ( texture.state == TextureState::Normal )
-			texture.desired_mip = texture.tiling.packed_mip_info.NumStandardMips;
+		{
+			const auto& scene_texture = m_scene->AllTextures()[texture.id];
+			DirectX::XMFLOAT2 desired_pixels_per_uv = scene_texture.MaxPixelsPerUV();
+
+			// avoid division by zero
+			desired_pixels_per_uv.x += 1.0f;
+			desired_pixels_per_uv.y += 1.0f;
+
+			const auto& texture_desc = texture.gpu_res->GetDesc();
+
+			desired_pixels_per_uv.x = std::min( desired_pixels_per_uv.x, float( texture_desc.Width ) );
+			desired_pixels_per_uv.y = std::min( desired_pixels_per_uv.y, float( texture_desc.Height ) );
+
+			const float mip_pow_2 = std::min( float( texture_desc.Width ) / desired_pixels_per_uv.x,
+											  float( texture_desc.Height ) / desired_pixels_per_uv.y );
+
+			const float mip_level = std::floor( std::log2f( mip_pow_2 ) );
+
+			// load 1 mip level ahead
+			texture.desired_mip = uint32_t( std::clamp( int( mip_level ) - 1, 0, int( texture.tiling.packed_mip_info.NumStandardMips ) ) );
+		}
 	}
-}
-
-
-TextureStreamer::MemoryMappedFile::~MemoryMappedFile()
-{
-	Close();
-}
-
-TextureStreamer::MemoryMappedFile::MemoryMappedFile( MemoryMappedFile&& other ) noexcept
-{
-	m_file_handle = other.m_file_handle;
-	m_file_mapping = other.m_file_mapping;
-	m_mapped_file_data = other.m_mapped_file_data;
-	other.m_file_handle = INVALID_HANDLE_VALUE;
-	other.m_file_mapping = nullptr;
-	other.m_mapped_file_data = span<const uint8_t>();
-}
-
-TextureStreamer::MemoryMappedFile& TextureStreamer::MemoryMappedFile::operator=( MemoryMappedFile && other ) noexcept
-{
-	m_file_handle = other.m_file_handle;
-	m_file_mapping = other.m_file_mapping;
-	m_mapped_file_data = other.m_mapped_file_data;
-	other.m_file_handle = INVALID_HANDLE_VALUE;
-	other.m_file_mapping = nullptr;
-	other.m_mapped_file_data = span<const uint8_t>();
-	return *this;
-}
-
-
-bool TextureStreamer::MemoryMappedFile::Open( const std::string_view& path ) noexcept
-{
-	// be careful with return value for failed winapi functions!
-	// different functions return different values for handles!
-	if ( IsOpened() )
-		return false;
-
-	m_file_handle = CreateFileA( path.data(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr );
-	if ( m_file_handle == INVALID_HANDLE_VALUE )
-		return false;
-
-	LARGE_INTEGER filesize;
-	if ( ! GetFileSizeEx( m_file_handle, &filesize ) )
-		return false;
-	if ( filesize.QuadPart == 0 )
-		return false;
-	m_file_mapping = CreateFileMappingA( m_file_handle, nullptr, PAGE_READONLY, 0, 0, NULL );
-	if ( ! m_file_mapping )
-		return false;
-
-	const uint8_t* mapped_region_start = reinterpret_cast<const uint8_t*>( MapViewOfFile( m_file_mapping, FILE_MAP_READ, 0, 0, 0 ) );
-	if ( ! mapped_region_start )
-		return false;
-
-	m_mapped_file_data = span<const uint8_t>( mapped_region_start, mapped_region_start + filesize.QuadPart );
-
-	return true;
-}
-
-
-bool TextureStreamer::MemoryMappedFile::IsOpened() const noexcept
-{
-	return m_file_handle != nullptr && m_file_handle != INVALID_HANDLE_VALUE
-		&& m_file_mapping != nullptr && m_file_mapping != INVALID_HANDLE_VALUE
-		&& m_mapped_file_data.cbegin() != nullptr;
-}
-
-
-void TextureStreamer::MemoryMappedFile::Close() noexcept
-{
-	if ( m_mapped_file_data.cbegin() != nullptr )
-		UnmapViewOfFile( m_mapped_file_data.cbegin() );
-
-	if ( m_file_mapping != nullptr && m_file_mapping != INVALID_HANDLE_VALUE )
-		CloseHandle( m_file_mapping );
-
-	if ( m_file_handle != nullptr && m_file_handle != INVALID_HANDLE_VALUE )
-		CloseHandle( m_file_handle );
 }
