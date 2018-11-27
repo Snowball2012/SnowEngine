@@ -437,7 +437,7 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 	}
 }
 
-void RenderApp::BuildRenderItems( ImportedScene& ext_scene )
+void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
 {
 	auto& scene = m_renderer->GetSceneView();
 

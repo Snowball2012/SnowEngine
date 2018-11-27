@@ -59,7 +59,7 @@ private:
 
 	void BuildGeometry( ImportedScene& ext_scene );
 	void BuildMaterials( ImportedScene& ext_scene );
-	void BuildRenderItems( ImportedScene& ext_scene );
+	void BuildRenderItems( const ImportedScene& ext_scene );
 	void LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_texture );
 	void LoadPlaceholderTextures();
 	void ReleaseIntermediateSceneMemory();

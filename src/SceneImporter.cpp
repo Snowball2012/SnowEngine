@@ -21,7 +21,7 @@ namespace
 	class FbxSceneTraverser
 	{
 	public:
-		bool TraverseFbxScene( FbxScene& scene, FbxSceneVisitor& visitor )
+		bool TraverseFbxScene( const FbxScene& scene, FbxSceneVisitor& visitor )
 		{
 			FbxNode* root_node = scene.GetRootNode();
 			if ( ! root_node )
@@ -342,7 +342,7 @@ namespace
 	{
 	public:
 		FbxScenePrinter() = default;
-		bool PrintScene( FbxScene& scene, std::ostream& out )
+		bool PrintScene( const FbxScene& scene, std::ostream& out )
 		{
 			FbxNode* root_node = scene.GetRootNode();
 			if ( ! root_node )

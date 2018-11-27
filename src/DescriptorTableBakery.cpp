@@ -155,7 +155,7 @@ void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capac
 							   UINT( src_ranges_start.size() ), src_ranges_start.data(), src_ranges_size.data(),
 							   new_heap_desc.Type );
 
-	staging_heap.heap = new_heap;
+	staging_heap.heap = std::move( new_heap );
 	staging_heap.heap_end = size_t( new_end );
 }
 
