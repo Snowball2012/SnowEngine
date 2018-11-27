@@ -9,21 +9,26 @@
 #include <dxtk12/DirectXHelpers.h>
 
 
-TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget, uint64_t cpu_mem_budget,
+TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
 								  uint8_t n_bufferized_frames, Scene* scene )
 	: m_device( std::move( device ) ), m_scene( scene )
 	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device )
 	, m_n_bufferized_frames( n_bufferized_frames )
 {
+	constexpr uint64_t basic_budget = 32 * 1024 * 1024;
 	ComPtr<ID3D12Heap> heap;
-	CD3DX12_HEAP_DESC heap_desc( gpu_mem_budget, CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ) );
+	CD3DX12_HEAP_DESC heap_desc( basic_budget, CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ) );
 	heap_desc.Flags = D3D12_HEAP_FLAG_DENY_BUFFERS | D3D12_HEAP_FLAG_DENY_RT_DS_TEXTURES;
 
 	constexpr uint64_t alignment = 1 << 16; // 64kb
 	heap_desc.Alignment = alignment;
 
 	ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
-	m_gpu_mem = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
+	m_gpu_mem_basic_mips = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
+
+	heap_desc.SizeInBytes = gpu_mem_budget_detailed_mips;
+	ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
+	m_gpu_mem_detailed_mips = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
 
 	// 64k alignment
 	m_upload_buffer = std::make_unique<CircularUploadBuffer>( m_device, cpu_mem_budget, alignment );
@@ -162,7 +167,11 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 				task.src_data.assign( texture.file_layout.cbegin() + start_mip, texture.file_layout.cend() );
 
 				// Tile mappings
-				texture.tiling.packed_mip_pages = m_gpu_mem->Alloc( required_tiles_num );
+				texture.tiling.packed_mip_pages = m_gpu_mem_basic_mips->Alloc( required_tiles_num );
+
+				if ( texture.tiling.packed_mip_pages == GPUPagedAllocator::ChunkID::nullid )
+					throw SnowEngineException( "not enough vidmem for basic mips" );
+
 				std::vector<D3D12_TILED_RESOURCE_COORDINATE> resource_region_coords;
 				resource_region_coords.emplace_back();
 				auto& coords = resource_region_coords.back();
@@ -180,7 +189,7 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 				range_flags.resize( required_tiles_num, D3D12_TILE_RANGE_FLAG_NONE );
 				std::vector<UINT> range_start_offsets;
 				range_start_offsets.reserve( required_tiles_num );
-				for ( uint32_t page : m_gpu_mem->GetPages( texture.tiling.packed_mip_pages ) )
+				for ( uint32_t page : m_gpu_mem_basic_mips->GetPages( texture.tiling.packed_mip_pages ) )
 					range_start_offsets.push_back( page );
 				std::vector<UINT> range_tile_counts;
 				range_tile_counts.resize( required_tiles_num, 1 );
@@ -188,7 +197,7 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 															  resource_region_coords.size(),
 															  resource_region_coords.data(),
 															  resource_region_sizes.data(),
-															  m_gpu_mem->GetDXHeap(),
+															  m_gpu_mem_basic_mips->GetDXHeap(),
 															  range_flags.size(),
 															  range_flags.data(),
 															  range_start_offsets.data(),
@@ -246,8 +255,8 @@ TextureStreamer::Stats TextureStreamer::GetPerformanceStats() const noexcept
 	Stats res;
 	res.uploader_mem_allocated = m_upload_buffer->GetHeap()->GetDesc().SizeInBytes;
 	res.uploader_mem_in_use = res.uploader_mem_allocated - m_upload_buffer->GetFreeMem();
-	res.vidmem_allocated = m_gpu_mem->GetDXHeap()->GetDesc().SizeInBytes;
-	res.vidmem_in_use = res.vidmem_allocated - m_gpu_mem->PageSize * m_gpu_mem->GetFreePagesNum();
+	res.vidmem_allocated = m_gpu_mem_basic_mips->GetDXHeap()->GetDesc().SizeInBytes + m_gpu_mem_detailed_mips->GetDXHeap()->GetDesc().SizeInBytes;
+	res.vidmem_in_use = res.vidmem_allocated - GPUPagedAllocator::PageSize * ( m_gpu_mem_basic_mips->GetFreePagesNum() + m_gpu_mem_detailed_mips->GetFreePagesNum() );
 
 	return res;
 }

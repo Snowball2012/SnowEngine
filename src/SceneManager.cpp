@@ -195,8 +195,6 @@ void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_
 	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
 
-
-
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
 		m_material_table_baker.UpdateGPUDescriptors();
 

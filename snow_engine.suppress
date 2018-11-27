@@ -655,4 +655,20 @@
     <CodeCurrent>1142999735</CodeCurrent>
     <CodeNext>0</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>SceneManager.cpp</FileName>
+    <ErrorCode>V104</ErrorCode>
+    <Message>Implicit conversion of 'submesh.DrawArgs().start_index_loc' to memsize type in an arithmetic expression.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>628737402</CodeCurrent>
+    <CodeNext>193</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>SceneManager.cpp</FileName>
+    <ErrorCode>V104</ErrorCode>
+    <Message>Implicit conversion of 'submesh.DrawArgs().idx_cnt' to memsize type in an arithmetic expression: i &lt; submesh.DrawArgs().idx_cnt</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>1045059924</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
 </NewDataSet>

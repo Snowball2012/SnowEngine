@@ -69,8 +69,10 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 		const ObjectTransform& tf = m_scene.AllTransforms()[mesh_instance.GetTransform()];
 		item.tf_addr = tf.GPUView();
 
-		DirectX::BoundingBox item_box;
-		submesh.Box().Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
+		DirectX::BoundingOrientedBox item_box;
+		DirectX::BoundingOrientedBox::CreateFromBoundingBox( item_box, submesh.Box() );
+
+		item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
 
 		if ( item_box.Intersects( main_bf ) )
 			m_lighting_items.push_back( item );

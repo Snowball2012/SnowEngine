@@ -15,7 +15,7 @@
 class TextureStreamer
 {
 public:
-	TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget, uint64_t cpu_mem_budget,
+	TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
 					 uint8_t n_bufferized_frames, Scene* scene );
 	~TextureStreamer( );
 
@@ -142,7 +142,8 @@ private:
 	ComPtr<ID3D12Device> m_device;
 	StagingDescriptorHeap m_srv_heap;
 
-	std::unique_ptr<GPUPagedAllocator> m_gpu_mem;
+	std::unique_ptr<GPUPagedAllocator> m_gpu_mem_basic_mips;
+	std::unique_ptr<GPUPagedAllocator> m_gpu_mem_detailed_mips;
 	std::unique_ptr<CircularUploadBuffer> m_upload_buffer;
 
 	const uint8_t m_n_bufferized_frames;
