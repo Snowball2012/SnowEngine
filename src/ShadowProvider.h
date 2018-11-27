@@ -18,7 +18,7 @@ public:
 
 	void Update( span<SceneLight> scene_lights, const Camera::Data& main_camera_data );
 
-	void FillPipelineStructures( span<const StaticMeshInstance> renderitems, ShadowProducers& producers, ShadowMapStorage& storage );
+	void FillPipelineStructures( const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowMapStorage& storage );
 
 private:
 	using SrvID = DescriptorTableBakery::TableID;

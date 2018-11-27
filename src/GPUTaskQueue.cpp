@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 #include "GPUTaskQueue.h"
 
@@ -38,7 +38,7 @@ void GPUTaskQueue::WaitForTimestamp( Timestamp ts )
 {
 	if ( GetCurrentTimestamp() < ts )
 	{
-		HANDLE eventHandle = CreateEventEx( nullptr, false, false, EVENT_ALL_ACCESS );
+		HANDLE eventHandle = CreateEventEx( nullptr, nullptr, 0, EVENT_ALL_ACCESS );
 
 		// Fire event when GPU hits current fence.  
 		ThrowIfFailed( m_fence->SetEventOnCompletion( ts, eventHandle ) );

@@ -48,7 +48,7 @@ private:
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
 		std::vector<UINT> nrows;
 		std::vector<UINT64> row_size;
-		uint64_t total_size;
+		uint64_t total_size = 0;
 	};
 	using FileLayout = std::vector<D3D12_SUBRESOURCE_DATA>;
 
@@ -76,7 +76,7 @@ private:
 	{
 		D3D12_SUBRESOURCE_TILING data;
 		ChunkID mip_pages = ChunkID::nullid;
-		uint8_t nframes_in_use;
+		uint8_t nframes_in_use = 0;
 	};
 	struct Tiling
 	{
@@ -97,8 +97,8 @@ private:
 	using StreamedTextureID = typename packed_freelist<TextureData>::id;
 	struct TextureData
 	{
-		StreamedTextureID data_id;
-		TextureID id;
+		StreamedTextureID data_id = StreamedTextureID::nullid;
+		TextureID id = TextureID::nullid;
 		Microsoft::WRL::ComPtr<ID3D12Resource> gpu_res;
 
 		FileLayout file_layout;
@@ -130,7 +130,7 @@ private:
 	struct UploadTransaction
 	{
 		std::vector<MipToLoad> mip;
-		SceneCopyOp op;
+		SceneCopyOp op = std::numeric_limits<SceneCopyOp>::max();
 		std::optional<GPUTimestamp> timestamp = std::nullopt;
 	};
 

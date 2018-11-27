@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "SceneManager.h"
@@ -14,9 +14,11 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vert
 	m_static_mesh_manager->LoadStaticMesh( mesh_id, std::move( name ),
 										   make_span( vertices.data(), vertices.data() + vertices.size() ),
 										   make_span( indices.data(), indices.data() + indices.size() ) );
-	m_scene->TryModifyStaticMesh( mesh_id )->Vertices() = std::move( vertices );
-	m_scene->TryModifyStaticMesh( mesh_id )->Indices() = std::move( indices );
-	m_scene->TryModifyStaticMesh( mesh_id )->Topology() = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	auto* mesh = m_scene->TryModifyStaticMesh( mesh_id );
+	mesh->Vertices() = std::move( vertices );
+	mesh->Indices() = std::move( indices );
+	mesh->Topology() = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 	return mesh_id;
 }
 
@@ -27,7 +29,7 @@ TextureID SceneClientView::LoadStreamedTexture( std::string path )
 	return tex_id;
 }
 
-TransformID SceneClientView::AddTransform( DirectX::XMFLOAT4X4 obj2world )
+TransformID SceneClientView::AddTransform( const DirectX::XMFLOAT4X4& obj2world )
 {
 	TransformID tf_id = m_scene->AddTransform();
 	m_scene->TryModifyTransform( tf_id )->ModifyMat() = obj2world;
@@ -36,7 +38,7 @@ TransformID SceneClientView::AddTransform( DirectX::XMFLOAT4X4 obj2world )
 	return tf_id;
 }
 
-MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures, DirectX::XMFLOAT3 diffuse_fresnel, DirectX::XMFLOAT4X4 uv_transform )
+MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT4X4& uv_transform )
 {
 	MaterialID mat_id = m_scene->AddMaterial( textures );
 
@@ -124,10 +126,11 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
 	{
 		m_cmd_allocators.emplace_back();
+		auto& allocator = m_cmd_allocators.back();
 		ThrowIfFailed( device->CreateCommandAllocator(
 			D3D12_COMMAND_LIST_TYPE_COPY,
-			IID_PPV_ARGS( m_cmd_allocators.back().first.GetAddressOf() ) ) );
-		m_cmd_allocators.back().second = 0;
+			IID_PPV_ARGS( allocator.first.GetAddressOf() ) ) );
+		allocator.second = 0;
 	}
 
 	ThrowIfFailed( device->CreateCommandList(

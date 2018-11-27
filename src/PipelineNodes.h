@@ -271,7 +271,7 @@ public:
 			{
 				sm_scissor.bottom = producer.map_data.viewport.Height + producer.map_data.viewport.TopLeftY;
 				sm_scissor.left = producer.map_data.viewport.TopLeftX;
-				sm_scissor.right = producer.map_data.viewport.Width + producer.map_data.viewport.TopLeftX;
+				sm_scissor.right = producer.map_data.viewport.Width + producer.map_data.viewport.TopLeftX; //-V537
 				sm_scissor.top = producer.map_data.viewport.TopLeftY;
 			}
 			cmd_list.RSSetScissorRects( 1, &sm_scissor );

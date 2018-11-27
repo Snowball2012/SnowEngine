@@ -55,8 +55,7 @@ typename packed_freelist<T, base_container>::id packed_freelist<T, base_containe
 		freelist_elem& new_elem = m_freelist[m_free_head];
 		new_id.idx = uint32_t( m_free_head );
 		new_id.inner_id = new_elem.slot_cnt;
-		if ( m_free_head != FREE_END ) // end of the list
-			m_free_head = new_elem.next_free;
+		m_free_head = new_elem.next_free;
 		new_elem.packed_idx = packed_idx;
 	}
 

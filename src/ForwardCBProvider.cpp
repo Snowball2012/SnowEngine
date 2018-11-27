@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "ForwardCBProvider.h"
@@ -34,7 +34,7 @@ ForwardCBProvider::~ForwardCBProvider() noexcept
 void ForwardCBProvider::Update( const Camera::Data& camera, const span<const SceneLight>& scene_lights )
 {
 	// ToDo: fill time info
-	++m_cur_res_idx %= m_nbuffers;
+	++m_cur_res_idx %= m_nbuffers; //-V567
 
 	PassConstants gpu_data;
 	FillCameraData( camera, gpu_data );

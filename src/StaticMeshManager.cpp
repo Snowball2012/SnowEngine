@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "SceneManager.h"
@@ -113,7 +113,7 @@ void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timesta
 	if ( m_pending_transaction.meshes_to_upload.empty() && m_pending_transaction.meshes_to_remove.empty() )
 		return; // nothing to do
 
-	if ( m_pending_transaction.meshes_to_upload.size() != m_pending_transaction.meshes_to_upload.size() )
+	if ( m_pending_transaction.meshes_to_upload.size() != m_pending_transaction.uploaders.size() )
 		throw SnowEngineException( "number of meshes must match the number of uploaders" );
 
 	for ( size_t i = 0; i < m_pending_transaction.meshes_to_upload.size(); i++ )

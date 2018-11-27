@@ -307,7 +307,6 @@
     <ClInclude Include="src\ShadowProvider.h">
       <Filter>core\PipelineDataProviders</Filter>
     </ClInclude>
-    <ClInclude Include="src\Ptr.h" />
     <ClInclude Include="src\GPUPagedAllocator.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -316,6 +315,9 @@
     </ClInclude>
     <ClInclude Include="src\UVScreenDensityCalculator.h">
       <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Ptr.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

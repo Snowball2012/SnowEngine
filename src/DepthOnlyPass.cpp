@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "DepthOnlyPass.h"
@@ -98,9 +98,6 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
 
 void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
 {
-	const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
-
-	const auto shaders = LoadAndCompileShaders();
 	if ( ! rootsig )
 		rootsig = BuildRootSignature( device );
 
@@ -109,6 +106,9 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culli
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
 		ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
 
+		const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
+		const auto shaders = LoadAndCompileShaders();
+		
 		pso_desc.InputLayout = { input_layout.data(), UINT( input_layout.size() ) };
 		pso_desc.pRootSignature = rootsig.Get();
 

@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "SceneManager.h"
@@ -165,10 +165,11 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 				texture.tiling.packed_mip_pages = m_gpu_mem->Alloc( required_tiles_num );
 				std::vector<D3D12_TILED_RESOURCE_COORDINATE> resource_region_coords;
 				resource_region_coords.emplace_back();
-				resource_region_coords.back().Subresource = texture.tiling.packed_mip_info.NumStandardMips;
-				resource_region_coords.back().X = 0;
-				resource_region_coords.back().Y = 0;
-				resource_region_coords.back().Z = 0;
+				auto& coords = resource_region_coords.back();
+				coords.Subresource = texture.tiling.packed_mip_info.NumStandardMips;
+				coords.X = 0;
+				coords.Y = 0;
+				coords.Z = 0;
 
 				std::vector<D3D12_TILE_REGION_SIZE> resource_region_sizes;
 				resource_region_sizes.emplace_back();
@@ -205,12 +206,13 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 			{
 				for ( size_t i = 0; i < task.dst_footprints.size(); ++i )
 				{
+					const auto& footprint = task.dst_footprints[i];
 					D3D12_MEMCPY_DEST dst;
-					dst.pData = task.mapped_uploader.begin() + task.dst_footprints[i].Offset - task.dst_footprints[0].Offset;
-					dst.RowPitch = task.dst_footprints[i].Footprint.RowPitch;
+					dst.pData = task.mapped_uploader.begin() + footprint.Offset - task.dst_footprints[0].Offset;
+					dst.RowPitch = footprint.Footprint.RowPitch;
 					dst.SlicePitch = dst.RowPitch * task.dst_nrows[i];
 
-					MemcpySubresource( &dst, &task.src_data[i], SIZE_T( task.dst_row_size[i] ), task.dst_nrows[i], task.dst_footprints[i].Footprint.Depth );
+					MemcpySubresource( &dst, &task.src_data[i], SIZE_T( task.dst_row_size[i] ), task.dst_nrows[i], footprint.Footprint.Depth );
 				}
 			}
 		} );

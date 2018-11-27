@@ -41,16 +41,20 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 		RenderItem item;
 		item.ibv = geom.IndexBufferView();
 		item.vbv = geom.VertexBufferView();
-		item.index_count = submesh.DrawArgs().idx_cnt;
-		item.index_offset = submesh.DrawArgs().start_index_loc;
-		item.vertex_offset = submesh.DrawArgs().base_vertex_loc;
+
+		const auto& submesh_draw_args = submesh.DrawArgs();
+
+		item.index_count = submesh_draw_args.idx_cnt;
+		item.index_offset = submesh_draw_args.start_index_loc;
+		item.vertex_offset = submesh_draw_args.base_vertex_loc;
 
 		const MaterialPBR& material = m_scene.AllMaterials()[mesh_instance.Material()];
 		item.mat_cb = material.GPUConstantBuffer();
 		item.mat_table = material.DescriptorTable();
 
 		bool has_unloaded_texture = false;
-		for ( TextureID tex_id : { material.Textures().base_color, material.Textures().normal, material.Textures().specular } )
+		const auto& textures = material.Textures();
+		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
 		{
 			if ( ! m_scene.AllTextures()[tex_id].IsLoaded() )
 			{

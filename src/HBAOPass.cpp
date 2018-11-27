@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "HBAOPass.h"
@@ -97,7 +97,6 @@ ComPtr<ID3D12RootSignature> HBAOPass::BuildRootSignature( ID3D12Device& device )
 
 void HBAOPass::BuildData( DXGI_FORMAT rtv_format, ID3D12Device & device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
 {
-	const auto shaders = LoadAndCompileShaders();
 	if ( ! rootsig )
 		rootsig = BuildRootSignature( device );
 
@@ -108,6 +107,7 @@ void HBAOPass::BuildData( DXGI_FORMAT rtv_format, ID3D12Device & device, ComPtr<
 		pso_desc.InputLayout.NumElements = 0;
 		pso_desc.pRootSignature = rootsig.Get();
 
+		const auto shaders = LoadAndCompileShaders();
 		pso_desc.VS =
 		{
 			reinterpret_cast<BYTE*>( shaders.first->GetBufferPointer() ),

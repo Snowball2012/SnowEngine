@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "UVScreenDensityCalculator.h"
@@ -18,28 +18,28 @@ void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT
 	// 1. Find distance to camera
 	// 2. Calc approximate number of pixels per uv coord
 
-	const Camera& camera = m_scene->AllCameras()[camera_id];
-	if ( camera.GetData().type != Camera::Type::Perspective )
+	const Camera::Data& camera_data = m_scene->AllCameras()[camera_id].GetData();
+	if ( camera_data.type != Camera::Type::Perspective )
 		NOTIMPL;
 
-	const float pixels_per_angle_est = std::max( viewport.Height, viewport.Width / camera.GetData().aspect_ratio ) / camera.GetData().fov_y;
+	const float pixels_per_angle_est = std::max( viewport.Height, viewport.Width / camera_data.aspect_ratio ) / camera_data.fov_y;
 
-	XMVECTOR camera_origin= XMLoadFloat3( &camera.GetData().pos );
+	XMVECTOR camera_origin= XMLoadFloat3( &camera_data.pos );
 
 	for ( const auto& mesh_instance : m_scene->StaticMeshInstanceSpan() )
 	{
 		if ( ! mesh_instance.IsEnabled() )
 			continue;
 
-		const MaterialPBR& material = m_scene->AllMaterials()[mesh_instance.Material()];
+		const MaterialPBR::TextureIds& material_textures = m_scene->AllMaterials()[mesh_instance.Material()].Textures();
 		std::array<Texture*, 3> textures;
-		textures[0] = m_scene->TryModifyTexture( material.Textures().base_color );
-		textures[1] = m_scene->TryModifyTexture( material.Textures().specular );
-		textures[2] = m_scene->TryModifyTexture( material.Textures().normal );
+		textures[0] = m_scene->TryModifyTexture( material_textures.base_color );
+		textures[1] = m_scene->TryModifyTexture( material_textures.specular );
+		textures[2] = m_scene->TryModifyTexture( material_textures.normal );
 
 		bool has_unloaded_texture = false;
 		for ( int i : { 0, 1, 2 } )
-			if ( has_unloaded_texture = ! textures[i]->IsLoaded() )
+			if ( has_unloaded_texture = ! textures[i]->IsLoaded() ) //-V559
 				break;
 
 		if ( has_unloaded_texture )
@@ -78,20 +78,24 @@ void UVScreenDensityCalculator::CalcUVDensityInObjectSpace( StaticSubmesh& subme
 
 	const StaticMesh& mesh = m_scene->AllStaticMeshes()[mesh_id];
 
-	if ( ! ( mesh.Indices().size() % 3 == 0 && mesh.Topology() == D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST ) )
+	const auto& mesh_vertices = mesh.Vertices();
+	const auto& mesh_indices = mesh.Indices();
+	const auto& submesh_draw_args = submesh.DrawArgs();
+
+	if ( ! ( mesh_indices.size() % 3 == 0 && mesh.Topology() == D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST ) )
 		throw SnowEngineException( "only triangle meshes are supported" );
 
 	XMFLOAT2 max_uv_basis_len2( 0.0f, 0.0f );
 
-	const int32_t vertex_offset = submesh.DrawArgs().base_vertex_loc;
+	const int32_t vertex_offset = submesh_draw_args.base_vertex_loc;
 
-	for ( auto i = mesh.Indices().begin() + submesh.DrawArgs().start_index_loc,
-		  end = mesh.Indices().begin() + submesh.DrawArgs().start_index_loc + submesh.DrawArgs().idx_cnt;
+	for ( auto i = mesh_indices.begin() + submesh_draw_args.start_index_loc,
+		  end = mesh_indices.begin() + submesh_draw_args.start_index_loc + submesh_draw_args.idx_cnt;
 		  i != end; )
 	{
-		const Vertex& v1 = mesh.Vertices()[*i++ + vertex_offset];
-		const Vertex& v2 = mesh.Vertices()[*i++ + vertex_offset];
-		const Vertex& v3 = mesh.Vertices()[*i++ + vertex_offset];
+		const Vertex& v1 = mesh_vertices[*i++ + vertex_offset];
+		const Vertex& v2 = mesh_vertices[*i++ + vertex_offset];
+		const Vertex& v3 = mesh_vertices[*i++ + vertex_offset];
 
 		// Find basis of UV-space on triangle in object space
 		// let a = v2 - v1; b = v3 - v1

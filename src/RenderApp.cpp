@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "RenderApp.h"
 #include "stdafx.h"
 
@@ -21,7 +21,7 @@
 using namespace DirectX;
 
 RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
-	: D3DApp( hinstance ), m_cmd_line( cmd_line )
+	: D3DApp( hinstance ), m_cmd_line( cmd_line ), m_last_mouse_pos{ 0, 0 }
 {
 	mMainWndCaption = L"Snow Engine";
 	mClientWidth = 1920;
@@ -38,7 +38,7 @@ bool RenderApp::Initialize()
 	m_renderer = std::make_unique<Renderer>( mhMainWnd, mClientWidth, mClientHeight );
 	m_renderer->InitD3D();
 
-	if ( strlen( m_cmd_line ) != 0 )
+	if ( strlen( m_cmd_line ) != 0 ) //-V805
 		m_is_scene_loaded = std::async( std::launch::async, [this]() { LoadScene( m_cmd_line ); } );
 
 	LoadPlaceholderTextures();
@@ -128,7 +128,7 @@ void RenderApp::UpdateGUI()
 			ImGui::BeginChild( "Tonemap settings" );
 
 			ImGui::PushItemWidth( 150 );
-			ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 100000.0f, "%.2f" );
+			ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 100000.0f, "%.2f" ); //-V807
 			ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 100000.0f, "%.2f" );
 			ImGui::Checkbox( "Blur ref luminance 3x3", &m_renderer->m_tonemap_settings.blend_luminance );
 			ImGui::EndChild();
@@ -136,7 +136,7 @@ void RenderApp::UpdateGUI()
 
 		{
 			ImGui::Begin( "HBAO settings" );
-			ImGui::SliderFloat( "Max radius", &m_renderer->m_hbao_settings.max_r, 0.f, 5.f, "%.2f" );
+			ImGui::SliderFloat( "Max radius", &m_renderer->m_hbao_settings.max_r, 0.f, 5.f, "%.2f" ); //-V807
 			float angle_bias_in_deg = m_renderer->m_hbao_settings.angle_bias * 180.0f / DirectX::XM_PI;
 			ImGui::SliderFloat( "Angle bias in degrees", &angle_bias_in_deg, 0.f, 90.0f, "%.2f" );
 			m_renderer->m_hbao_settings.angle_bias = angle_bias_in_deg / 180.0f * DirectX::XM_PI;
@@ -212,7 +212,7 @@ namespace
 		color.z = std::pow( color.z, gamma );
 
 
-		if ( color.x == 0 && color.y == 0 && color.z == 0 )
+		if ( color.x == 0 && color.y == 0 && color.z == 0 ) //-V550
 			return color; // avoid division by zero
 
 		// 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b) == illuminance_lux
@@ -378,17 +378,19 @@ void RenderApp::InitScene()
 	BuildRenderItems( m_imported_scene );
 	ReleaseIntermediateSceneMemory();
 
+	auto& scene = m_renderer->GetSceneView();
+
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
-	m_camera = m_renderer->GetSceneView().AddCamera( camera_data );
+	m_camera = scene.AddCamera( camera_data );
 	m_renderer->SetMainCamera( m_camera );
 	SceneLight::Data sun_data;
 	sun_data.type = SceneLight::LightType::Parallel;
-	m_sun = m_renderer->GetSceneView().AddLight( sun_data );
+	m_sun = scene.AddLight( sun_data );
 
 	Camera::Data dbg_frustrum_cam_data;
 	camera_data.type = Camera::Type::Perspective;
-	m_dbg_frustrum_camera = m_renderer->GetSceneView().AddCamera( dbg_frustrum_cam_data );
+	m_dbg_frustrum_camera = scene.AddCamera( dbg_frustrum_cam_data );
 }
 
 
@@ -422,15 +424,16 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 	for ( int i = 0; i < ext_scene.materials.size(); ++i )
 	{
 		MaterialPBR::TextureIds textures;
-		textures.base_color = ext_scene.textures[ext_scene.materials[i].second.base_color_tex_idx].second;
-		textures.normal = ext_scene.textures[ext_scene.materials[i].second.normal_tex_idx].second;
-		int spec_map_idx = ext_scene.materials[i].second.specular_tex_idx;
+		ImportedScene::SceneMaterial& ext_material = ext_scene.materials[i].second;
+		textures.base_color = ext_scene.textures[ext_material.base_color_tex_idx].second;
+		textures.normal = ext_scene.textures[ext_material.normal_tex_idx].second;
+		int spec_map_idx = ext_material.specular_tex_idx;
 		if ( spec_map_idx < 0 )
 			textures.specular = m_ph_specular_texture;
 		else
 			textures.specular = ext_scene.textures[spec_map_idx].second;
 
-		ext_scene.materials[i].second.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
+		ext_material.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
 	}
 }
 

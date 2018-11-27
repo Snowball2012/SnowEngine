@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 //***************************************************************************************
 // GameTimer.cpp by Frank Luna (C) 2011 All Rights Reserved.
 //***************************************************************************************
@@ -10,7 +10,7 @@
 
 GameTimer::GameTimer()
 	: mSecondsPerCount( 0.0 ), mDeltaTime( -1.0 ), mBaseTime( 0 ),
-	mPausedTime( 0 ), mPrevTime( 0 ), mCurrTime( 0 ), mStopped( false )
+	mPausedTime( 0 ), mPrevTime( 0 ), mCurrTime( 0 ), mStopTime( 0 ), mStopped( false )
 {
 	__int64 countsPerSec;
 	QueryPerformanceFrequency( (LARGE_INTEGER*)&countsPerSec );

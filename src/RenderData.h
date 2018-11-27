@@ -13,7 +13,7 @@
 struct GPUTexture
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
-	DescriptorTableBakery::TableID srv;
+	DescriptorTableBakery::TableID srv = DescriptorTableBakery::TableID::nullid;
 };
 
 // resides only in GPU mem

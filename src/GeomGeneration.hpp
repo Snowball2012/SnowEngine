@@ -25,7 +25,7 @@ namespace GeomGeneration
 				{ j * nx + i,       j * nx + i + 1,
 				  (j + 1) * nx + i, (j + 1) * nx + i + 1 };
 
-				index_collector( indices[2] );
+				index_collector( indices[2] ); //-V525
 				index_collector( indices[3] );
 				index_collector( indices[0] );
 

@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "ShadowProvider.h"
@@ -93,7 +93,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 			producer.map_data.viewport.Height = shadow_desc->sm_size;
 
 			// cb
-			++m_cur_cb_idx %= m_nbuffers;
+			++m_cur_cb_idx %= m_nbuffers; //-V567
 			PassConstants gpu_data;
 			FillPassCB( light, shadow_desc.value(), main_camera_data.pos, gpu_data );
 			const UINT offset_in_cb = BufferGPUSize * m_cur_cb_idx;
@@ -105,7 +105,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 }
 
 
-void ShadowProvider::FillPipelineStructures( span<const StaticMeshInstance> renderitems, ShadowProducers& producers, ShadowMapStorage& storage )
+void ShadowProvider::FillPipelineStructures( const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowMapStorage& storage )
 {
 	// todo: frustrum cull renderitems
 	if ( m_producers.empty() )
@@ -127,16 +127,19 @@ void ShadowProvider::FillPipelineStructures( span<const StaticMeshInstance> rend
 		RenderItem item;
 		item.ibv = geom.IndexBufferView();
 		item.vbv = geom.VertexBufferView();
-		item.index_count = submesh.DrawArgs().idx_cnt;
-		item.index_offset = submesh.DrawArgs().start_index_loc;
-		item.vertex_offset = submesh.DrawArgs().base_vertex_loc;
+
+		const auto& submesh_draw_args = submesh.DrawArgs();
+		item.index_count = submesh_draw_args.idx_cnt;
+		item.index_offset = submesh_draw_args.start_index_loc;
+		item.vertex_offset = submesh_draw_args.base_vertex_loc;
 
 		const MaterialPBR& material = m_scene->AllMaterials()[mesh_instance.Material()];
 		item.mat_cb = material.GPUConstantBuffer();
 		item.mat_table = material.DescriptorTable();
 
 		bool has_unloaded_texture = false;
-		for ( TextureID tex_id : { material.Textures().base_color, material.Textures().normal, material.Textures().specular } )
+		const auto& textures = material.Textures();
+		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
 		{
 			if ( ! m_scene->AllTextures()[tex_id].IsLoaded() )
 			{

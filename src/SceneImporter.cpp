@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "SceneImporter.h"
@@ -170,10 +170,8 @@ namespace
 
 				const FbxVector4* ctrl_pts = fbmesh->GetControlPoints();
 
-				FbxLayerElementArrayTemplate<int>* materials = nullptr;
-
 				auto* mesh_element_material = fbmesh->GetElementMaterial();
-				materials = &mesh_element_material->GetIndexArray();
+				FbxLayerElementArrayTemplate<int>* materials = &mesh_element_material->GetIndexArray();
 
 				for ( int fb_polygon_idx = 0; fb_polygon_idx < fbmesh->GetPolygonCount(); ++fb_polygon_idx )
 				{
@@ -187,16 +185,18 @@ namespace
 						int cp_idx = fbmesh->GetPolygonVertex( fb_polygon_idx, fb_idx_in_poly );
 						int out_idx = submesh.index_offset + submesh.triangle_count * 3 + (2 - fb_idx_in_poly);
 
-						res.vertices[out_idx].pos.x = -ctrl_pts[cp_idx][0];
-						res.vertices[out_idx].pos.y = ctrl_pts[cp_idx][1];
-						res.vertices[out_idx].pos.z = ctrl_pts[cp_idx][2];
+						auto& vpos = res.vertices[out_idx].pos;
+						vpos.x = -ctrl_pts[cp_idx][0];
+						vpos.y = ctrl_pts[cp_idx][1];
+						vpos.z = ctrl_pts[cp_idx][2];
 
 						FbxVector4 normal;
 						if ( ! fbmesh->GetPolygonVertexNormal( fb_polygon_idx, fb_idx_in_poly, normal ) )
 							throw SnowEngineException( "failed to extract normal" );
-						res.vertices[out_idx].normal.x = -normal[0];
-						res.vertices[out_idx].normal.y = normal[1];
-						res.vertices[out_idx].normal.z = normal[2];
+						auto& vnormal = res.vertices[out_idx].normal;
+						vnormal.x = -normal[0];
+						vnormal.y = normal[1];
+						vnormal.z = normal[2];
 
 						FbxVector2 uv;
 						bool unused;
@@ -274,7 +274,7 @@ namespace
 				{
 					materials = &mesh_element_material->GetIndexArray();
 					material_mapping_mode = mesh_element_material->GetMappingMode();
-					if ( materials && material_mapping_mode == FbxGeometryElement::eByPolygon )
+					if ( material_mapping_mode == FbxGeometryElement::eByPolygon )
 					{
 						if ( materials->GetCount() != mesh_polygon_count )
 							throw SnowEngineException( "per-polygon material mapping is invalid" );
@@ -429,7 +429,7 @@ namespace
 					{
 						lMaterialIndice = &pMesh->GetElementMaterial()->GetIndexArray();
 						lMaterialMappingMode = pMesh->GetElementMaterial()->GetMappingMode();
-						if ( lMaterialIndice && lMaterialMappingMode == FbxGeometryElement::eByPolygon )
+						if ( lMaterialMappingMode == FbxGeometryElement::eByPolygon )
 						{
 							int multimaterial = 1;
 						}

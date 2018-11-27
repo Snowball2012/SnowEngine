@@ -1,5 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
-// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
 #include "SceneManager.h"
@@ -77,7 +77,8 @@ void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, Ta
 		}
 	};
 
-	update_texture( material.Textures().base_color, 0 );
-	update_texture( material.Textures().normal, 1 );
-	update_texture( material.Textures().specular, 2 );
+	const auto& textures = material.Textures();
+	update_texture( textures.base_color, 0 );
+	update_texture( textures.normal, 1 );
+	update_texture( textures.specular, 2 );
 }
