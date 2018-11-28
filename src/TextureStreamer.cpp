@@ -124,15 +124,8 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 
 	// TODO: drop mips
 	UploaderFillData new_upload;
-	struct AsyncTask
-	{
-		span<uint8_t> mapped_uploader;
-		std::vector<D3D12_SUBRESOURCE_DATA> src_data;
-		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> dst_footprints;
-		std::vector<UINT> dst_nrows;
-		std::vector<UINT64> dst_row_size;
-	};
-	std::vector<AsyncTask> tasks;
+	
+	std::vector<AsyncFileReadTask> tasks;
 	for ( auto& texture : m_loaded_textures )
 	{
 		if ( texture.state != TextureState::Normal )
@@ -142,67 +135,61 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 		{
 			if ( texture.most_detailed_loaded_mip >= texture.mip_cumulative_srv.size() )
 			{
-				// first load
-				uint32_t required_tiles_num = texture.tiling.packed_mip_info.NumTilesForPackedMips;
-				uint64_t required_uploader_size = texture.virtual_layout.total_size - texture.virtual_layout.footprints[texture.tiling.packed_mip_info.NumStandardMips].Offset;
+				auto&& task = CreatePackedMipsUploadTask( texture, copy_queue );
 
-				auto uploader_chunk = m_upload_buffer->AllocateBuffer( required_uploader_size );
-				if ( ! uploader_chunk.first )
-					continue;
+				if ( task.has_value() )
+				{
+					new_upload.uploaders.emplace_back();
+					auto& uploader = new_upload.uploaders.back();
+					tasks.emplace_back();
+					auto& file_read_task = tasks.back();
 
-				texture.state = TextureState::MipLoading;
+					std::tie( new_upload.uploaders.back(), tasks.back() ) = std::move( task.value() );
 
-				new_upload.mips.emplace_back();
-				auto& mip = new_upload.mips.back();
-				tasks.emplace_back();
-				auto& task = tasks.back();
+					texture.state = TextureState::MipLoading;
+				}
+			}
+			else
+			{
+				auto&& task = CreateMipUploadTask( texture, copy_queue );
 
-				mip.id = texture.data_id;
-				mip.uploader = uploader_chunk.first;
-				task.mapped_uploader = uploader_chunk.second;
-				uint32_t start_mip = texture.tiling.packed_mip_info.NumStandardMips;
-				task.dst_footprints.assign( texture.virtual_layout.footprints.cbegin() + start_mip, texture.virtual_layout.footprints.cend() );
-				task.dst_nrows.assign( texture.virtual_layout.nrows.cbegin() + start_mip, texture.virtual_layout.nrows.cend() );
-				task.dst_row_size.assign( texture.virtual_layout.row_size.cbegin() + start_mip, texture.virtual_layout.row_size.cend() );
-				task.src_data.assign( texture.file_layout.cbegin() + start_mip, texture.file_layout.cend() );
+				if ( task.has_value() )
+				{
+					new_upload.uploaders.emplace_back();
+					auto& uploader = new_upload.uploaders.back();
+					tasks.emplace_back();
+					auto& file_read_task = tasks.back();
 
-				// Tile mappings
-				texture.tiling.packed_mip_pages = m_gpu_mem_basic_mips->Alloc( required_tiles_num );
+					std::tie( new_upload.uploaders.back(), tasks.back() ) = std::move( task.value() );
 
-				if ( texture.tiling.packed_mip_pages == GPUPagedAllocator::ChunkID::nullid )
-					throw SnowEngineException( "not enough vidmem for basic mips" );
+					texture.state = TextureState::MipLoading;
+				}
+			}
+		}
+		else if ( ( texture.desired_mip > texture.most_detailed_loaded_mip + 1 )
+				  && ( texture.most_detailed_loaded_mip < texture.tiling.packed_mip_info.NumStandardMips ) )
+		{
+			texture.most_detailed_loaded_mip++;
+		}
 
-				std::vector<D3D12_TILED_RESOURCE_COORDINATE> resource_region_coords;
-				resource_region_coords.emplace_back();
-				auto& coords = resource_region_coords.back();
-				coords.Subresource = texture.tiling.packed_mip_info.NumStandardMips;
-				coords.X = 0;
-				coords.Y = 0;
-				coords.Z = 0;
-
-				std::vector<D3D12_TILE_REGION_SIZE> resource_region_sizes;
-				resource_region_sizes.emplace_back();
-				resource_region_sizes.back().UseBox = FALSE;
-				resource_region_sizes.back().NumTiles = required_tiles_num;
-
-				std::vector<D3D12_TILE_RANGE_FLAGS> range_flags;
-				range_flags.resize( required_tiles_num, D3D12_TILE_RANGE_FLAG_NONE );
-				std::vector<UINT> range_start_offsets;
-				range_start_offsets.reserve( required_tiles_num );
-				for ( uint32_t page : m_gpu_mem_basic_mips->GetPages( texture.tiling.packed_mip_pages ) )
-					range_start_offsets.push_back( page );
-				std::vector<UINT> range_tile_counts;
-				range_tile_counts.resize( required_tiles_num, 1 );
-				copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
-															  resource_region_coords.size(),
-															  resource_region_coords.data(),
-															  resource_region_sizes.data(),
-															  m_gpu_mem_basic_mips->GetDXHeap(),
-															  range_flags.size(),
-															  range_flags.data(),
-															  range_start_offsets.data(),
-															  range_tile_counts.data(),
-															  D3D12_TILE_MAPPING_FLAG_NONE );
+		if ( texture.state == TextureState::Normal )
+		{
+			// free unused mip memory
+			for ( int mip_level = texture.most_detailed_loaded_mip - 1; mip_level >= 0; --mip_level )
+			{
+				auto& tiling = texture.tiling.nonpacked_tiling[mip_level];
+				if ( ! ( tiling.mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
+				{
+					if ( tiling.nframes_in_use == 0 )
+					{
+						m_gpu_mem_detailed_mips->Free( tiling.mip_pages );
+						tiling.mip_pages = GPUPagedAllocator::ChunkID::nullid;
+					}
+					else
+					{
+						tiling.nframes_in_use--;
+					}
+				}
 			}
 		}
 	}
@@ -211,7 +198,7 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 	{
 		new_upload.op_completed = std::async( std::launch::async, [this, tasks{ move( tasks ) }]() mutable
 		{
-			for ( AsyncTask& task : tasks )
+			for ( AsyncFileReadTask& task : tasks )
 			{
 				for ( size_t i = 0; i < task.dst_footprints.size(); ++i )
 				{
@@ -234,6 +221,167 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 		if ( texture.IsLoaded() )
 			texture.ModifyStagingSRV() = tex_data.mip_cumulative_srv[tex_data.most_detailed_loaded_mip].HandleCPU();
 	}
+}
+
+
+std::optional<
+	std::pair<
+		TextureStreamer::MipUploader,
+		TextureStreamer::AsyncFileReadTask
+	>
+> TextureStreamer::CreatePackedMipsUploadTask( TextureData& texture, GPUTaskQueue& copy_queue )
+{
+
+	// first load
+	uint32_t required_tiles_num = texture.tiling.packed_mip_info.NumTilesForPackedMips;
+	uint64_t required_uploader_size = texture.virtual_layout.total_size - texture.virtual_layout.footprints[texture.tiling.packed_mip_info.NumStandardMips].Offset;
+
+	auto uploader_chunk = m_upload_buffer->AllocateBuffer( required_uploader_size );
+	if ( ! uploader_chunk.first )
+		return std::nullopt;
+
+	std::pair<MipUploader, AsyncFileReadTask> retval;
+
+	auto& uploader = retval.first;
+	auto& task = retval.second;
+
+	uploader.id = texture.data_id;
+	uploader.resource = uploader_chunk.first;
+	task.mapped_uploader = uploader_chunk.second;
+	uint32_t start_mip = texture.tiling.packed_mip_info.NumStandardMips;
+	task.dst_footprints.assign( texture.virtual_layout.footprints.cbegin() + start_mip, texture.virtual_layout.footprints.cend() );
+	task.dst_nrows.assign( texture.virtual_layout.nrows.cbegin() + start_mip, texture.virtual_layout.nrows.cend() );
+	task.dst_row_size.assign( texture.virtual_layout.row_size.cbegin() + start_mip, texture.virtual_layout.row_size.cend() );
+	task.src_data.assign( texture.file_layout.cbegin() + start_mip, texture.file_layout.cend() );
+
+	// Tile mappings
+	texture.tiling.packed_mip_pages = m_gpu_mem_basic_mips->Alloc( required_tiles_num );
+
+	if ( texture.tiling.packed_mip_pages == GPUPagedAllocator::ChunkID::nullid )
+		throw SnowEngineException( "not enough vidmem for basic mips" );
+
+	std::vector<D3D12_TILED_RESOURCE_COORDINATE> resource_region_coords;
+	resource_region_coords.emplace_back();
+	auto& coords = resource_region_coords.back();
+	coords.Subresource = texture.tiling.packed_mip_info.NumStandardMips;
+	coords.X = 0;
+	coords.Y = 0;
+	coords.Z = 0;
+
+	std::vector<D3D12_TILE_REGION_SIZE> resource_region_sizes;
+	resource_region_sizes.emplace_back();
+	resource_region_sizes.back().UseBox = FALSE;
+	resource_region_sizes.back().NumTiles = required_tiles_num;
+
+	std::vector<D3D12_TILE_RANGE_FLAGS> range_flags;
+	range_flags.resize( required_tiles_num, D3D12_TILE_RANGE_FLAG_NONE );
+	std::vector<UINT> range_start_offsets;
+	range_start_offsets.reserve( required_tiles_num );
+	for ( uint32_t page : m_gpu_mem_basic_mips->GetPages( texture.tiling.packed_mip_pages ) )
+		range_start_offsets.push_back( page );
+	std::vector<UINT> range_tile_counts;
+	range_tile_counts.resize( required_tiles_num, 1 );
+	copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
+												  resource_region_coords.size(),
+												  resource_region_coords.data(),
+												  resource_region_sizes.data(),
+												  m_gpu_mem_basic_mips->GetDXHeap(),
+												  range_flags.size(),
+												  range_flags.data(),
+												  range_start_offsets.data(),
+												  range_tile_counts.data(),
+												  D3D12_TILE_MAPPING_FLAG_NONE );
+
+	return retval;
+}
+
+
+std::optional<
+	std::pair<
+	TextureStreamer::MipUploader,
+	TextureStreamer::AsyncFileReadTask
+	>
+> TextureStreamer::CreateMipUploadTask( TextureData& texture, GPUTaskQueue& copy_queue )
+{
+	const uint32_t mip_to_load = texture.most_detailed_loaded_mip - 1;
+
+	const auto& mip_tiling = texture.tiling.nonpacked_tiling[mip_to_load].data;
+	const auto& virtual_layout = texture.virtual_layout;
+
+	// try to reuse previously allocated mem
+	if ( ! ( texture.tiling.nonpacked_tiling[mip_to_load].mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
+	{
+		texture.tiling.nonpacked_tiling[mip_to_load].nframes_in_use = m_n_bufferized_frames;
+		texture.most_detailed_loaded_mip = mip_to_load;
+		return std::nullopt;
+	}
+
+	const uint32_t required_tiles_num = mip_tiling.WidthInTiles * mip_tiling.HeightInTiles * mip_tiling.DepthInTiles;
+	const uint64_t required_uploader_size = virtual_layout.nrows[mip_to_load] * virtual_layout.row_size[mip_to_load];
+
+	auto& pages = texture.tiling.nonpacked_tiling[mip_to_load].mip_pages;
+	pages = m_gpu_mem_detailed_mips->Alloc( required_tiles_num );
+	if ( pages == GPUPagedAllocator::ChunkID::nullid )
+		return std::nullopt;
+
+	auto uploader_chunk = m_upload_buffer->AllocateBuffer( required_uploader_size );
+	if ( ! uploader_chunk.first )
+	{
+		m_gpu_mem_detailed_mips->Free( pages );
+		return std::nullopt;
+	}
+
+	texture.tiling.nonpacked_tiling[mip_to_load].nframes_in_use = m_n_bufferized_frames;
+
+	std::pair<MipUploader, AsyncFileReadTask> retval;
+
+	auto& uploader = retval.first;
+	auto& task = retval.second;
+
+	uploader.id = texture.data_id;
+	uploader.resource = uploader_chunk.first;
+	task.mapped_uploader = uploader_chunk.second;
+	task.dst_footprints.push_back( texture.virtual_layout.footprints[mip_to_load] );
+	task.dst_nrows.push_back( texture.virtual_layout.nrows[mip_to_load] );
+	task.dst_row_size.push_back( texture.virtual_layout.row_size[mip_to_load] );
+	task.src_data.push_back( texture.file_layout[mip_to_load] );
+
+	// Tile mappings
+	std::vector<D3D12_TILED_RESOURCE_COORDINATE> resource_region_coords;
+	resource_region_coords.emplace_back();
+	auto& coords = resource_region_coords.back();
+	coords.Subresource = mip_to_load;
+	coords.X = 0;
+	coords.Y = 0;
+	coords.Z = 0;
+
+	std::vector<D3D12_TILE_REGION_SIZE> resource_region_sizes;
+	resource_region_sizes.emplace_back();
+	resource_region_sizes.back().UseBox = FALSE;
+	resource_region_sizes.back().NumTiles = required_tiles_num;
+
+	std::vector<D3D12_TILE_RANGE_FLAGS> range_flags;
+	range_flags.resize( required_tiles_num, D3D12_TILE_RANGE_FLAG_NONE );
+	std::vector<UINT> range_start_offsets;
+	range_start_offsets.reserve( required_tiles_num );
+	for ( uint32_t page : m_gpu_mem_detailed_mips->GetPages( pages ) )
+		range_start_offsets.push_back( page );
+	std::vector<UINT> range_tile_counts;
+	range_tile_counts.resize( required_tiles_num, 1 );
+	copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
+												  resource_region_coords.size(),
+												  resource_region_coords.data(),
+												  resource_region_sizes.data(),
+												  m_gpu_mem_detailed_mips->GetDXHeap(),
+												  range_flags.size(),
+												  range_flags.data(),
+												  range_start_offsets.data(),
+												  range_tile_counts.data(),
+												  D3D12_TILE_MAPPING_FLAG_NONE );
+
+
+
+	return retval;
 }
 
 
@@ -274,7 +422,7 @@ void TextureStreamer::FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp curre
 
 	for ( size_t i = 0; i < first_still_active_transaction; ++i )
 	{
-		for ( auto& mip : m_active_copy_transactions[i].mip )
+		for ( auto& mip : m_active_copy_transactions[i].uploaders )
 		{
 			TextureData* texture = m_loaded_textures.try_get( mip.id );
 			if ( ! texture )
@@ -306,7 +454,7 @@ void TextureStreamer::FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp curre
 	if ( first_still_active_transaction > 0 )
 	{
 		boost::rotate( m_active_copy_transactions, m_active_copy_transactions.begin() + first_still_active_transaction );
-		m_active_copy_transactions.erase( m_active_copy_transactions.end() - first_still_active_transaction );
+		m_active_copy_transactions.erase( m_active_copy_transactions.end() - first_still_active_transaction, m_active_copy_transactions.end() );
 	}
 }
 
@@ -323,7 +471,7 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
 
 	for ( size_t i = 0; i < first_still_active_disk_op; ++i )
 	{
-		for ( auto& mip : m_uploaders_to_fill[i].mips )
+		for ( auto& mip : m_uploaders_to_fill[i].uploaders )
 		{
 			TextureData* texture = m_loaded_textures.try_get( mip.id );
 			if ( ! texture )
@@ -339,19 +487,19 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
 				for ( size_t packed_mip_idx = 0; packed_mip_idx < texture->tiling.packed_mip_info.NumPackedMips; ++packed_mip_idx )
 				{
 					const size_t subresource_idx = packed_mip_idx + texture->tiling.packed_mip_info.NumStandardMips;
-					CopyUploaderToMainResource( *texture, mip.uploader, subresource_idx, texture->tiling.packed_mip_info.NumStandardMips, cmd_list );
+					CopyUploaderToMainResource( *texture, mip.resource, subresource_idx, texture->tiling.packed_mip_info.NumStandardMips, cmd_list );
 				}
 			}
 			else
 			{
 				// one mip
 				const uint32_t mip_idx = texture->most_detailed_loaded_mip - 1;
-				CopyUploaderToMainResource( *texture, mip.uploader, mip_idx, mip_idx, cmd_list );
+				CopyUploaderToMainResource( *texture, mip.resource, mip_idx, mip_idx, cmd_list );
 			}
 		}
 
 		UploadTransaction copy_to_main_res;
-		copy_to_main_res.mip = std::move( m_uploaders_to_fill[i].mips );
+		copy_to_main_res.uploaders = std::move( m_uploaders_to_fill[i].uploaders );
 		copy_to_main_res.op = op;
 		m_active_copy_transactions.push_back( std::move( copy_to_main_res ) );
 	}
@@ -359,7 +507,7 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
 	if ( first_still_active_disk_op > 0 )
 	{
 		boost::rotate( m_uploaders_to_fill, m_uploaders_to_fill.begin() + first_still_active_disk_op );
-		m_uploaders_to_fill.erase( m_uploaders_to_fill.end() - first_still_active_disk_op );
+		m_uploaders_to_fill.erase( m_uploaders_to_fill.end() - first_still_active_disk_op, m_uploaders_to_fill.end() );
 	}
 }
 
@@ -404,3 +552,5 @@ void TextureStreamer::CalcDesiredMipLevels()
 		}
 	}
 }
+
+

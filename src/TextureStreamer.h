@@ -100,28 +100,41 @@ private:
 
 	using GPUTimestamp = GPUTaskQueue::Timestamp;
 
-	struct MipToLoad
+	struct MipUploader
 	{
 		StreamedTextureID id;
-		ID3D12Resource* uploader; // placed resource in upload heap with compatible format
+		ID3D12Resource* resource; // placed resource in upload heap with compatible format
 	};
 	struct UploaderFillData
 	{
-		std::vector<MipToLoad> mips;
+		std::vector<MipUploader> uploaders;
 		std::future<void> op_completed;
 	};
 	struct UploadTransaction
 	{
-		std::vector<MipToLoad> mip;
+		std::vector<MipUploader> uploaders;
 		SceneCopyOp op = std::numeric_limits<SceneCopyOp>::max();
 		std::optional<GPUTimestamp> timestamp = std::nullopt;
+	};
+	struct AsyncFileReadTask
+	{
+		span<uint8_t> mapped_uploader;
+		std::vector<D3D12_SUBRESOURCE_DATA> src_data;
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> dst_footprints;
+		std::vector<UINT> dst_nrows;
+		std::vector<UINT64> dst_row_size;
 	};
 
 	void FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp current_timestamp );
 	void CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsCommandList& cmd_list );
 	void CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip, ID3D12GraphicsCommandList& cmd_list );
 	void CalcDesiredMipLevels();
-	 
+
+
+	// can return null if uploader doesn't have available space for the moment
+	std::optional<std::pair<MipUploader, AsyncFileReadTask>> CreatePackedMipsUploadTask( TextureData& texture, GPUTaskQueue& copy_queue );
+	std::optional<std::pair<MipUploader, AsyncFileReadTask>> CreateMipUploadTask( TextureData& texture, GPUTaskQueue& copy_queue );
+
 	ComPtr<ID3D12Device> m_device;
 	StagingDescriptorHeap m_srv_heap;
 
