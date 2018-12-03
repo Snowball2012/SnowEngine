@@ -10,8 +10,8 @@ struct PixelIn
 Texture2D base_color_map : register( t0 );
 SamplerState base_color_sampler : register( s0 );
 
-float4 main( PixelIn pin ) : SV_TARGET
+void main( PixelIn pin )
 {
     clip( base_color_map.Sample( base_color_sampler, pin.uv).a - ALPHA_BIAS );
-	return float4(1.0f, 1.0f, 1.0f, 1.0f);
+	return;
 }

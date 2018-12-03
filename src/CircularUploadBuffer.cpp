@@ -42,8 +42,8 @@ std::pair<ID3D12Resource*, span<uint8_t>> CircularUploadBuffer::AllocateBuffer( 
 	else
 	{
 		if ( heap_size - m_allocation_offset < size )
-			if ( free_segment_end < size )
 		{
+			if ( free_segment_end < size )
 				return res;
 			new_allocation_offset = 0;
 		}

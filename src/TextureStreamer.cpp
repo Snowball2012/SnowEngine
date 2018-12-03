@@ -305,18 +305,18 @@ std::optional<
 {
 	const uint32_t mip_to_load = texture.most_detailed_loaded_mip - 1;
 
-	const auto& mip_tiling = texture.tiling.nonpacked_tiling[mip_to_load].data;
+	auto& mip_tiling = texture.tiling.nonpacked_tiling[mip_to_load];
 	const auto& virtual_layout = texture.virtual_layout;
 
 	// try to reuse previously allocated mem
-	if ( ! ( texture.tiling.nonpacked_tiling[mip_to_load].mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
+	if ( ! ( mip_tiling.mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
 	{
-		texture.tiling.nonpacked_tiling[mip_to_load].nframes_in_use = m_n_bufferized_frames;
+		mip_tiling.nframes_in_use = m_n_bufferized_frames;
 		texture.most_detailed_loaded_mip = mip_to_load;
 		return std::nullopt;
 	}
 
-	const uint32_t required_tiles_num = mip_tiling.WidthInTiles * mip_tiling.HeightInTiles * mip_tiling.DepthInTiles;
+	const uint32_t required_tiles_num = mip_tiling.data.WidthInTiles * mip_tiling.data.HeightInTiles * mip_tiling.data.DepthInTiles;
 	const uint64_t required_uploader_size = virtual_layout.nrows[mip_to_load] * virtual_layout.row_size[mip_to_load];
 
 	auto& pages = texture.tiling.nonpacked_tiling[mip_to_load].mip_pages;
