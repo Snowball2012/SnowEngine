@@ -179,6 +179,9 @@
     <ClCompile Include="src\utils\MemoryMappedFile.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="src\BlurPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -325,6 +328,9 @@
     <ClInclude Include="src\utils\MemoryMappedFile.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="src\BlurPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -352,6 +358,9 @@
       <Filter>shaders\depth-only</Filter>
     </FxCompile>
     <FxCompile Include="shaders\postprocess\hbao_generation.hlsl">
+      <Filter>shaders\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\postprocess\separable_blur.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
   </ItemGroup>

@@ -87,6 +87,7 @@ namespace Utils
 		Filename( filename ),
 		LineNumber( lineNumber )
 	{
+		MessageBoxW( NULL, ToString().c_str(), L"exception", MB_OK );
 	}
 
 	std::wstring DxException::ToString()const

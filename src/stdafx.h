@@ -34,7 +34,9 @@ public:
 	{}
 	SnowEngineException( std::string msg )
 		: m_msg( std::move( msg ) )
-	{}
+	{
+		MessageBoxA( NULL, "se", m_msg.c_str(), MB_OK );
+	}
 
 private:
 	friend std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex );

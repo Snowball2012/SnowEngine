@@ -62,7 +62,20 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
                           float2( 0.7f, -0.7f ),
                           float2( -0.7f, -0.7f ) };
 
-    const float pi_div_2 = 3.1415f / 2.0f;
+    const int nrotations = 8;
+    float2 rotations[nrotations] = {
+        float2( 0, 1 ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 1.0f ), cos( M_PI / ( 8.0f * nrotations )* 1.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 2.0f ), cos( M_PI / ( 8.0f * nrotations )* 2.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 3.0f ), cos( M_PI / ( 8.0f * nrotations )* 3.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 4.0f ), cos( M_PI / ( 8.0f * nrotations )* 4.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 5.0f ), cos( M_PI / ( 8.0f * nrotations )* 5.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 6.0f ), cos( M_PI / ( 8.0f * nrotations )* 6.0f ) ),
+        float2( sin( M_PI / ( 8.0f * nrotations )* 7.0f ), cos( M_PI / ( 8.0f * nrotations )* 7.0f ) ),
+    };
+
+
+    const float pi_div_2 = M_PI / 2.0f;
     const float angle_bias = settings.angle_bias;
     
     const int nsamples = settings.nsamples_per_direction;
@@ -70,13 +83,17 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
 
     float occlusion = 0.0f;
 
+    int rotation = ( ( asuint( 34.845732f * coord.x + 168.0321341f * coord.y ) ) >> 5 ) % nrotations;
+
     [unroll]
     for ( int dir = 0; dir < ndirs; ++dir )
     {
+        float2 offset_dir_ss = offsets[dir];
+        offset_dir_ss = float2( dot( rotations[rotation], offset_dir_ss ), rotations[rotation].x * offset_dir_ss.y - rotations[rotation].y * offset_dir_ss.x );
         float max_horizon = angle_bias;
         for ( int isample = 1; isample <= nsamples; isample++ )
         {
-            float2 offset_in_ws = offsets[dir] * ( float( isample ) * max_r / float( nsamples ) );
+            float2 offset_in_ws = offset_dir_ss * ( float( isample ) * max_r / float( nsamples ) );
             float3 diff = CalcSampleOffsetCoord( offset_in_ws, target_texcoord, linear_depth );
             if ( abs( diff.z ) < max_r )
                 max_horizon = max( max_horizon, CalcHorizonAngle( diff, view_normal ) );
