@@ -46,7 +46,6 @@ public:
 	const D3D12_VIEWPORT& ScreenViewport() const { return m_screen_viewport; }
 	D3D12_RECT& ScissorRect() { return m_scissor_rect; }
 	const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
-	TemporalAA& TemporalAntiAliasing() { return m_taa; }
 
 	struct TonemapSettings
 	{
@@ -138,11 +137,22 @@ private:
 	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_shadow_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
-	std::unique_ptr<TemporalBlendPass> m_txaa_pass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
+	std::unique_ptr<DepthAwareBlurPass> m_blur_pass = nullptr;
 
-	using PipelineInstance = Pipeline<DepthPrepassNode, ShadowPassNode, ForwardPassNode, HBAOGeneratorNode, ToneMapPassNode, UIPassNode>;
+	using PipelineInstance =
+		Pipeline
+		<
+			DepthPrepassNode,
+			ShadowPassNode,
+			ForwardPassNode,
+			HBAOGeneratorNode,
+			BlurSSAONode,
+			ToneMapPassNode,
+			UIPassNode
+		>;
+
 	PipelineInstance m_pipeline;
 
 	// cmd lists
@@ -163,20 +173,18 @@ private:
 	ComPtr<ID3D12PipelineState> m_z_prepass_pso = nullptr;
 
 	// postprocessing
-	ComPtr<ID3D12RootSignature> m_txaa_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_txaa_pso = nullptr;
-	GPUTexture m_prev_frame_texture;
-	GPUTexture m_jittered_frame_texture;
 	DynamicTexture m_fp_backbuffer;
 	DynamicTexture m_ambient_lighting;
 	DynamicTexture m_normals;
 	DynamicTexture m_ssao;
+	DynamicTexture m_ssao_blurred;
+
 	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
 	ComPtr<ID3D12RootSignature> m_hbao_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_hbao_pso = nullptr;
-
-	TemporalAA m_taa;
+	ComPtr<ID3D12RootSignature> m_blur_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_blur_pso = nullptr;
 
 	// methods
 	void CreateDevice();

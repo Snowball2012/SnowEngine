@@ -20,6 +20,7 @@ struct GPUTexture
 struct DynamicTexture : public GPUTexture
 {
 	std::unique_ptr<Descriptor> rtv = nullptr;
+	DescriptorTableBakery::TableID uav = DescriptorTableBakery::TableID::nullid;
 };
 
 struct RenderItem

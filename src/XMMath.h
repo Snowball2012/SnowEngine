@@ -6,6 +6,9 @@
 template<class T>
 constexpr T squared( T val ) { return val * val; }
 
+template<class T>
+constexpr T ceil_integer_div( T val, T divisor ) { return ( val + divisor - 1 ) / divisor; }
+
 DirectX::XMFLOAT3 operator-( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator+( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3& operator+=( DirectX::XMFLOAT3& op, const DirectX::XMFLOAT3& rhs );

@@ -687,4 +687,12 @@
     <CodeCurrent>1142999735</CodeCurrent>
     <CodeNext>0</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>DepthAwareBlurPass.cpp</FileName>
+    <ErrorCode>V525</ErrorCode>
+    <Message>The code contains the collection of similar blocks. Check items 'D_D__DESCRIPTOR_RANGE_TYPE_SRV', 'D_D__DESCRIPTOR_RANGE_TYPE_SRV', 'D_D__DESCRIPTOR_RANGE_TYPE_UAV' in lines _, _, _.</Message>
+    <CodePrev>1535566701</CodePrev>
+    <CodeCurrent>2545661681</CodeCurrent>
+    <CodeNext>2545657589</CodeNext>
+  </snow_engine>
 </NewDataSet>

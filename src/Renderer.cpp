@@ -109,6 +109,7 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	ShadowMapStorage sm_storage;
 	m_pipeline.GetRes( sm_storage );
@@ -155,6 +156,13 @@ void Renderer::Draw( const Context& ctx )
 		ssao_texture.rtv = m_ssao.rtv->HandleCPU();
 		ssao_texture.srv = GetGPUHandle( m_ssao.srv );
 		m_pipeline.SetRes( ssao_texture );
+
+		SSAOStorage_Blurred ssao_blurred_texture;
+		ssao_blurred_texture.resource = m_ssao_blurred.texture_gpu.Get();
+		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred.uav );
+		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred.srv );
+		m_pipeline.SetRes( ssao_blurred_texture );
+
 
 		TonemapNodeSettings tm_settings;
 		tm_settings.data.blend_luminance = m_tonemap_settings.blend_luminance;
@@ -433,7 +441,7 @@ void Renderer::BuildUIDescriptorHeap( )
 void Renderer::RecreatePrevFrameTexture( bool create_tables )
 {
 
-	auto recreate_tex = [&]( auto& tex, DXGI_FORMAT texture_format )
+	auto recreate_tex = [&]( auto& tex, DXGI_FORMAT texture_format, bool allow_unordered_access = false )
 	{
 		tex.texture_gpu = nullptr;
 
@@ -445,6 +453,8 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 		opt_clear.Color[2] = 0;
 		opt_clear.Color[3] = 0;
 		opt_clear.Format = texture_format;
+		if ( allow_unordered_access )
+			tex_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
 																&tex_desc, D3D12_RESOURCE_STATE_COMMON,
 																&opt_clear, IID_PPV_ARGS( &tex.texture_gpu ) ) );
@@ -462,9 +472,6 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 
 		m_d3d_device->CreateShaderResourceView( tex.texture_gpu.Get(), &srv_desc, *DescriptorTables().ModifyTable( tex.srv ) );
 	};
-
-	recreate_tex( m_prev_frame_texture, DXGI_FORMAT_R16G16B16A16_FLOAT );
-	recreate_tex( m_jittered_frame_texture, DXGI_FORMAT_R16G16B16A16_FLOAT );
 
 	recreate_tex( m_fp_backbuffer, DXGI_FORMAT_R16G16B16A16_FLOAT );
 	m_fp_backbuffer.rtv.reset();
@@ -485,6 +492,11 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 	m_ssao.rtv.reset();
 	m_ssao.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
 	m_d3d_device->CreateRenderTargetView( m_ssao.texture_gpu.Get(), nullptr, m_ssao.rtv->HandleCPU() );
+
+	recreate_tex( m_ssao_blurred, DXGI_FORMAT_R16_FLOAT, true );
+	if ( create_tables )
+		m_ssao_blurred.uav = DescriptorTables().AllocateTable( 1 );
+	m_d3d_device->CreateUnorderedAccessView( m_ssao_blurred.texture_gpu.Get(), nullptr, nullptr, *DescriptorTables().ModifyTable( m_ssao_blurred.uav ) );
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{
@@ -534,9 +546,6 @@ void Renderer::BuildPasses()
 	m_shadow_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
 	{
-		TemporalBlendPass::BuildData( DXGI_FORMAT_R16G16B16A16_FLOAT, *m_d3d_device.Get(), m_txaa_pso, m_txaa_root_signature );
-		m_txaa_pass = std::make_unique<TemporalBlendPass>( m_txaa_pso.Get(), m_txaa_root_signature.Get() );
-
 		ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
 		m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
 	}
@@ -548,9 +557,13 @@ void Renderer::BuildPasses()
 	HBAOPass::BuildData( m_ssao.texture_gpu->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
 	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
 
+	DepthAwareBlurPass::BuildData( *m_d3d_device.Get(), m_blur_pso, m_blur_root_signature );
+	m_blur_pass = std::make_unique<DepthAwareBlurPass>( m_blur_pso.Get(), m_blur_root_signature.Get() );
+
 	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
 	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
 	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
+	m_pipeline.ConstructNode<BlurSSAONode>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
@@ -560,6 +573,7 @@ void Renderer::BuildPasses()
 	m_pipeline.Enable<ToneMapPassNode>();
 	m_pipeline.Enable<UIPassNode>();
 	m_pipeline.Enable<HBAOGeneratorNode>();
+	m_pipeline.Enable<BlurSSAONode>();
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

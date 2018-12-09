@@ -123,7 +123,7 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 	, m_shadow_provider( device.Get(), int( nframes_to_buffer ), dsv_heap, &m_gpu_descriptor_tables, &m_scene )
 	, m_uv_density_calculator( &m_scene )
 {
-	for ( size_t i = 0; i < m_nframes_to_buffer; ++i )
+	for ( size_t i = 0; i < size_t( m_nframes_to_buffer ); ++i )
 	{
 		m_cmd_allocators.emplace_back();
 		auto& allocator = m_cmd_allocators.back();

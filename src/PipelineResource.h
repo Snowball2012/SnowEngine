@@ -80,6 +80,18 @@ struct SSAOTexture_Noisy
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
+struct SSAOStorage_Blurred
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_GPU_DESCRIPTOR_HANDLE uav;
+};
+
+struct SSAOTexture_Blurred
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;	
+};
+
 struct TonemapNodeSettings
 {
 	ToneMappingPass::ShaderData data;

@@ -6,6 +6,7 @@
 #include "ForwardLightingPass.h"
 #include "ToneMappingPass.h"
 #include "HBAOPass.h"
+#include "DepthAwareBlurPass.h"
 
 template<class Pipeline>
 class DepthPrepassNode : public BaseRenderNode
@@ -310,7 +311,7 @@ public:
 		<
 		HDRColorOut,
 		TonemapNodeSettings,
-		SSAOTexture_Noisy,
+		SSAOTexture_Blurred,
 		SSAmbientLighting,
 		BackbufferStorage
 		>;
@@ -330,7 +331,7 @@ public:
 		m_pipeline->GetRes( hdr_buffer );
 		SSAmbientLighting ambient;
 		m_pipeline->GetRes( ambient );
-		SSAOTexture_Noisy ssao;
+		SSAOTexture_Blurred ssao;
 		m_pipeline->GetRes( ssao );
 		TonemapNodeSettings settings;
 		m_pipeline->GetRes( settings );
@@ -393,4 +394,67 @@ public:
 
 private:
 	Pipeline* m_pipeline;
+};
+
+
+template<class Pipeline>
+class BlurSSAONode : public BaseRenderNode
+{
+public:
+	using InputResources = std::tuple
+		<
+		SSAOTexture_Noisy,
+		FinalSceneDepth,
+		SSAOStorage_Blurred
+		>;
+
+	using OutputResources = std::tuple
+		<
+		SSAOTexture_Blurred
+		>;
+
+	BlurSSAONode( Pipeline* pipeline, DepthAwareBlurPass* blur_pass )
+		: m_pass( blur_pass ), m_pipeline( pipeline )
+	{}
+
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	{
+		SSAOTexture_Noisy input;
+		FinalSceneDepth depth;
+		SSAOStorage_Blurred storage;
+		m_pipeline->GetRes( input );
+		m_pipeline->GetRes( depth );
+		m_pipeline->GetRes( storage );
+
+		DepthAwareBlurPass::Context ctx;
+		ctx.depth_srv = depth.srv;
+		ctx.input_srv = input.srv;
+		ctx.blurred_uav = storage.uav;
+
+		const auto& resource_desc = storage.resource->GetDesc();
+
+		if ( resource_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D )
+			throw SnowEngineException( "destination resource for ssao blur is not a 2d texture" );
+
+		ctx.uav_width = resource_desc.Width;
+		ctx.uav_height = resource_desc.Height;
+
+		m_pass->Draw( ctx, cmd_list );
+
+		CD3DX12_RESOURCE_BARRIER barriers[] =
+		{
+			CD3DX12_RESOURCE_BARRIER::Transition( storage.resource,
+			                                      D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
+		};
+
+		cmd_list.ResourceBarrier( 1, barriers );
+
+		SSAOTexture_Blurred out{ storage.srv };
+		m_pipeline->SetRes( out );
+	}
+
+private:
+	DepthAwareBlurPass* m_pass = nullptr;
+	Pipeline* m_pipeline = nullptr;
 };

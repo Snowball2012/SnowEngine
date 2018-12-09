@@ -179,7 +179,7 @@
     <ClCompile Include="src\utils\MemoryMappedFile.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="src\BlurPass.cpp">
+    <ClCompile Include="src\DepthAwareBlurPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
@@ -328,7 +328,7 @@
     <ClInclude Include="src\utils\MemoryMappedFile.h">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\BlurPass.h">
+    <ClInclude Include="src\DepthAwareBlurPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
