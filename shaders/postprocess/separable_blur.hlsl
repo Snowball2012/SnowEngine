@@ -2,7 +2,7 @@
 Texture2D input : register( t0 );
 Texture2D depth : register( t1 );
 
-RWTexture2D<float> output : register( u0 );
+RWTexture2D<min16float> output : register( u0 );
 
 [numthreads(64, 4, 1)]
 void main( uint3 thread : SV_DispatchThreadID )
