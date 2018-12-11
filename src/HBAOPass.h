@@ -13,9 +13,9 @@ public:
 
 	struct Settings
 	{
-		float max_r = 0.25f;
+		float max_r = 0.20f;
 		float angle_bias = DirectX::XM_PIDIV2 / 10.0f;
-		int nsamples_per_direction = 5;
+		int nsamples_per_direction = 4;
 	};
 
 	struct Context
