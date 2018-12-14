@@ -8,19 +8,31 @@
 
 #include "DescriptorTableBakery.h"
 
+#include "ResizableTexture.h"
+
 #include "Scene.h"
 
-struct GPUTexture
-{
-	Microsoft::WRL::ComPtr<ID3D12Resource> texture_gpu = nullptr;
-	DescriptorTableBakery::TableID srv = DescriptorTableBakery::TableID::nullid;
-};
-
 // resides only in GPU mem
-struct DynamicTexture : public GPUTexture
+class DynamicTexture : public ResizableTexture
 {
-	std::unique_ptr<Descriptor> rtv = nullptr;
-	DescriptorTableBakery::TableID uav = DescriptorTableBakery::TableID::nullid;
+public:
+	DynamicTexture( ComPtr<ID3D12Resource>&& texture, ID3D12Device* device,
+					D3D12_RESOURCE_STATES initial_state, const D3D12_CLEAR_VALUE* opt_clear_value ) noexcept
+		: ResizableTexture( std::move( texture ), device, initial_state, opt_clear_value )
+	{}
+
+	DescriptorTableBakery::TableID SRV() const { return m_srv; }
+	DescriptorTableBakery::TableID UAV() const { return m_uav; }
+	const Descriptor* RTV() const { return m_rtv.get(); }
+
+	DescriptorTableBakery::TableID& SRV() { return m_srv; }
+	DescriptorTableBakery::TableID& UAV() { return m_uav; }
+	std::unique_ptr<Descriptor>& RTV() { return m_rtv; }
+
+private:
+	DescriptorTableBakery::TableID m_srv = DescriptorTableBakery::TableID::nullid;
+	DescriptorTableBakery::TableID m_uav = DescriptorTableBakery::TableID::nullid;
+	std::unique_ptr<Descriptor> m_rtv = nullptr;
 };
 
 struct RenderItem

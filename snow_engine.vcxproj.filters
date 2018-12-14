@@ -182,6 +182,9 @@
     <ClCompile Include="src\DepthAwareBlurPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\ResizableTexture.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -330,6 +333,9 @@
     </ClInclude>
     <ClInclude Include="src\DepthAwareBlurPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ResizableTexture.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

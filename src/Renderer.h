@@ -173,11 +173,11 @@ private:
 	ComPtr<ID3D12PipelineState> m_z_prepass_pso = nullptr;
 
 	// postprocessing
-	DynamicTexture m_fp_backbuffer;
-	DynamicTexture m_ambient_lighting;
-	DynamicTexture m_normals;
-	DynamicTexture m_ssao;
-	DynamicTexture m_ssao_blurred;
+	std::unique_ptr<DynamicTexture> m_fp_backbuffer;
+	std::unique_ptr<DynamicTexture> m_ambient_lighting;
+	std::unique_ptr<DynamicTexture> m_normals;
+	std::unique_ptr<DynamicTexture> m_ssao;
+	std::unique_ptr<DynamicTexture> m_ssao_blurred;
 
 	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
@@ -191,7 +191,8 @@ private:
 	void CreateBaseCommandObjects();
 	void CreateSwapChain();
 	void RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_height );
-	void RecreatePrevFrameTexture( bool create_tables );
+	void CreateTransientTextures();
+	void ResizeTransientTextures();
 
 	void BuildRtvAndDsvDescriptorHeaps();
 	void BuildUIDescriptorHeap( );

@@ -38,10 +38,10 @@ Renderer::~Renderer()
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 	m_ui_font_desc.reset();
-	m_fp_backbuffer.rtv.reset();
-	m_ambient_lighting.rtv.reset();
-	m_normals.rtv.reset();
-	m_ssao.rtv.reset();
+	m_fp_backbuffer->RTV().reset();
+	m_ambient_lighting->RTV().reset();
+	m_normals->RTV().reset();
+	m_ssao->RTV().reset();
 	m_scene_manager.reset();
 }
 
@@ -67,7 +67,7 @@ void Renderer::InitD3D()
 	m_forward_cb_provider = std::make_unique<ForwardCBProvider>( *m_d3d_device.Get(), FrameResourceCount );
 
 	RecreateSwapChainAndDepthBuffers( m_client_width, m_client_height );
-	RecreatePrevFrameTexture( true );
+	CreateTransientTextures();
 
 	BuildFrameResources();
 
@@ -103,19 +103,19 @@ void Renderer::Draw( const Context& ctx )
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[7];
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[8];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred.texture_gpu.Get(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
-	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
+	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	ShadowMapStorage sm_storage;
 	m_pipeline.GetRes( sm_storage );
-	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
-	m_cmd_list->ResourceBarrier( 7, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 8, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
@@ -124,21 +124,21 @@ void Renderer::Draw( const Context& ctx )
 		m_pipeline.SetRes( pass_cb );
 
 		HDRColorStorage hdr_buffer;
-		hdr_buffer.resource = m_fp_backbuffer.texture_gpu.Get();
-		hdr_buffer.rtv = m_fp_backbuffer.rtv->HandleCPU();
-		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer.srv );
+		hdr_buffer.resource = m_fp_backbuffer->Resource();
+		hdr_buffer.rtv = m_fp_backbuffer->RTV()->HandleCPU();
+		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer->SRV() );
 		m_pipeline.SetRes( hdr_buffer );
 
 		SSAmbientLightingStorage ambient_buffer;
-		ambient_buffer.resource = m_ambient_lighting.texture_gpu.Get();
-		ambient_buffer.rtv = m_ambient_lighting.rtv->HandleCPU();
-		ambient_buffer.srv = GetGPUHandle( m_ambient_lighting.srv );
+		ambient_buffer.resource = m_ambient_lighting->Resource();
+		ambient_buffer.rtv = m_ambient_lighting->RTV()->HandleCPU();
+		ambient_buffer.srv = GetGPUHandle( m_ambient_lighting->SRV() );
 		m_pipeline.SetRes( ambient_buffer );
 
 		SSNormalStorage normal_buffer;
-		normal_buffer.resource = m_normals.texture_gpu.Get();
-		normal_buffer.rtv = m_normals.rtv->HandleCPU();
-		normal_buffer.srv = GetGPUHandle( m_normals.srv );
+		normal_buffer.resource = m_normals->Resource();
+		normal_buffer.rtv = m_normals->RTV()->HandleCPU();
+		normal_buffer.srv = GetGPUHandle( m_normals->SRV() );
 		m_pipeline.SetRes( normal_buffer );
 
 		DepthStorage depth_buffer;
@@ -152,15 +152,15 @@ void Renderer::Draw( const Context& ctx )
 		m_pipeline.SetRes( screen );
 
 		SSAOStorage ssao_texture;
-		ssao_texture.resource = m_ssao.texture_gpu.Get();
-		ssao_texture.rtv = m_ssao.rtv->HandleCPU();
-		ssao_texture.srv = GetGPUHandle( m_ssao.srv );
+		ssao_texture.resource = m_ssao->Resource();
+		ssao_texture.rtv = m_ssao->RTV()->HandleCPU();
+		ssao_texture.srv = GetGPUHandle( m_ssao->SRV() );
 		m_pipeline.SetRes( ssao_texture );
 
 		SSAOStorage_Blurred ssao_blurred_texture;
-		ssao_blurred_texture.resource = m_ssao_blurred.texture_gpu.Get();
-		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred.uav );
-		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred.srv );
+		ssao_blurred_texture.resource = m_ssao_blurred->Resource();
+		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred->UAV() );
+		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred->SRV() );
 		m_pipeline.SetRes( ssao_blurred_texture );
 
 
@@ -209,7 +209,7 @@ void Renderer::Resize( size_t new_width, size_t new_height )
 {
 	RecreateSwapChainAndDepthBuffers( new_width, new_height );
 
-	RecreatePrevFrameTexture( false );
+	ResizeTransientTextures( );
 }
 
 bool Renderer::SetMainCamera( CameraID id )
@@ -438,65 +438,80 @@ void Renderer::BuildUIDescriptorHeap( )
 	}
 }
 
-void Renderer::RecreatePrevFrameTexture( bool create_tables )
+void Renderer::CreateTransientTextures()
 {
-
-	auto recreate_tex = [&]( auto& tex, DXGI_FORMAT texture_format, bool allow_unordered_access = false )
+	// little hack here, create 1x1 textures and resize them right after
+	
+	auto create_tex = [&]( std::unique_ptr<DynamicTexture>& tex, DXGI_FORMAT texture_format,
+						   bool create_srv_table, bool create_uav_table, bool create_rtv_desc )
 	{
-		tex.texture_gpu = nullptr;
+		CD3DX12_RESOURCE_DESC desc( CD3DX12_RESOURCE_DESC::Tex2D( texture_format,
+																  /*width=*/1, /*height=*/1,
+																  /*depth=*/1, /*mip_levels=*/1 ) );
 
-		CD3DX12_RESOURCE_DESC tex_desc( CurrentBackBuffer()->GetDesc() );
-		tex_desc.Format = texture_format;
-		D3D12_CLEAR_VALUE opt_clear;
-		opt_clear.Color[0] = 0;
-		opt_clear.Color[1] = 0;
-		opt_clear.Color[2] = 0;
-		opt_clear.Color[3] = 0;
-		opt_clear.Format = texture_format;
-		if ( allow_unordered_access )
-			tex_desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-																&tex_desc, D3D12_RESOURCE_STATE_COMMON,
-																&opt_clear, IID_PPV_ARGS( &tex.texture_gpu ) ) );
+		D3D12_CLEAR_VALUE clear_value;
+		clear_value.Color[0] = 0;
+		clear_value.Color[1] = 0;
+		clear_value.Color[2] = 0;
+		clear_value.Color[3] = 0;
+		clear_value.Format = texture_format;
 
+		if ( create_uav_table )
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		if ( create_rtv_desc )
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+		// create resource (maybe create it in DynamicTexture?)
 		{
-			srv_desc.Format = tex_desc.Format;
-			srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srv_desc.Texture2D.MipLevels = 1;
-		}
-		if ( create_tables )
-			tex.srv = DescriptorTables().AllocateTable( 1 );
+			const D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON;
 
-		m_d3d_device->CreateShaderResourceView( tex.texture_gpu.Get(), &srv_desc, *DescriptorTables().ModifyTable( tex.srv ) );
+			const auto* opt_clear_ptr = create_rtv_desc ? &clear_value : nullptr;
+			ComPtr<ID3D12Resource> res;
+			ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+																  &desc, initial_state,
+																  opt_clear_ptr,
+																  IID_PPV_ARGS( res.GetAddressOf() ) ) );
+
+			tex = std::make_unique<DynamicTexture>( std::move( res ), m_d3d_device.Get(), initial_state, opt_clear_ptr );
+		}
+
+		if ( create_srv_table )
+			tex->SRV() = DescriptorTables().AllocateTable( 1 );
+		if ( create_uav_table )
+			tex->UAV() = DescriptorTables().AllocateTable( 1 );
+		if ( create_rtv_desc )
+			tex->RTV() = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
 	};
 
-	recreate_tex( m_fp_backbuffer, DXGI_FORMAT_R16G16B16A16_FLOAT );
-	m_fp_backbuffer.rtv.reset();
-	m_fp_backbuffer.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateRenderTargetView( m_fp_backbuffer.texture_gpu.Get(), nullptr, m_fp_backbuffer.rtv->HandleCPU() );
+	create_tex( m_fp_backbuffer, DXGI_FORMAT_R16G16B16A16_FLOAT, true, false, true );
+	create_tex( m_ambient_lighting, DXGI_FORMAT_R16G16B16A16_FLOAT, true, false, true );
+	create_tex( m_normals, DXGI_FORMAT_R16G16_FLOAT, true, false, true );
+	create_tex( m_ssao, DXGI_FORMAT_R16_FLOAT, true, false, true );
+	create_tex( m_ssao_blurred, DXGI_FORMAT_R16_FLOAT, true, true, false );
 
-	recreate_tex( m_ambient_lighting, DXGI_FORMAT_R16G16B16A16_FLOAT );
-	m_ambient_lighting.rtv.reset();
-	m_ambient_lighting.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateRenderTargetView( m_ambient_lighting.texture_gpu.Get(), nullptr, m_ambient_lighting.rtv->HandleCPU() );
+	m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
 
-	recreate_tex( m_normals, DXGI_FORMAT_R16G16_FLOAT );
-	m_normals.rtv.reset();
-	m_normals.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateRenderTargetView( m_normals.texture_gpu.Get(), nullptr, m_normals.rtv->HandleCPU() );
+	ResizeTransientTextures();
+}
 
-	recreate_tex( m_ssao, DXGI_FORMAT_R16_FLOAT );
-	m_ssao.rtv.reset();
-	m_ssao.rtv = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateRenderTargetView( m_ssao.texture_gpu.Get(), nullptr, m_ssao.rtv->HandleCPU() );
+void Renderer::ResizeTransientTextures( )
+{
+	auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
+	{
+		tex.Resize( width, height );
+		if ( make_srv )
+			m_d3d_device->CreateShaderResourceView( tex.Resource(), nullptr, *DescriptorTables().ModifyTable( tex.SRV() ) );
+		if ( make_uav )
+			m_d3d_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *DescriptorTables().ModifyTable( tex.UAV() ) );
+		if ( make_rtv )
+			m_d3d_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
+	};
 
-	recreate_tex( m_ssao_blurred, DXGI_FORMAT_R16_FLOAT, true );
-	if ( create_tables )
-		m_ssao_blurred.uav = DescriptorTables().AllocateTable( 1 );
-	m_d3d_device->CreateUnorderedAccessView( m_ssao_blurred.texture_gpu.Get(), nullptr, nullptr, *DescriptorTables().ModifyTable( m_ssao_blurred.uav ) );
+	resize_tex( *m_fp_backbuffer, m_client_width, m_client_height, true, false, true );
+	resize_tex( *m_ambient_lighting, m_client_width, m_client_height, true, false, true );
+	resize_tex( *m_normals, m_client_width, m_client_height, true, false, true );
+	resize_tex( *m_ssao, m_client_width, m_client_height, true, false, true );
+	resize_tex( *m_ssao_blurred, m_client_width, m_client_height, true, true, false );
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{
@@ -505,8 +520,6 @@ void Renderer::RecreatePrevFrameTexture( bool create_tables )
 		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srv_desc.Texture2D.MipLevels = 1;
 	}
-	if ( create_tables )
-		m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
 	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, DescriptorTables().ModifyTable( m_depth_buffer_srv ).value() );
 }
 
@@ -554,7 +567,7 @@ void Renderer::BuildPasses()
 							  m_z_prepass_pso, m_do_root_signature );
 	m_depth_prepass = std::make_unique<DepthOnlyPass>( m_z_prepass_pso.Get(), m_do_root_signature.Get() );
 
-	HBAOPass::BuildData( m_ssao.texture_gpu->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
+	HBAOPass::BuildData( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
 	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
 
 	DepthAwareBlurPass::BuildData( *m_d3d_device.Get(), m_blur_pso, m_blur_root_signature );
