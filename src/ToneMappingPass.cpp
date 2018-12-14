@@ -54,7 +54,9 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
 	slot_root_parameter[3].InitAsDescriptorTable( 1, desc_table + 2 );
 
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter );
+	CD3DX12_STATIC_SAMPLER_DESC linear_wrap_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT );
+	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
+											   1, &linear_wrap_sampler );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;

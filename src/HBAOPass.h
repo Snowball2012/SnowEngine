@@ -13,6 +13,7 @@ public:
 
 	struct Settings
 	{
+		DirectX::XMFLOAT2 render_target_size;
 		float max_r = 0.20f;
 		float angle_bias = DirectX::XM_PIDIV2 / 10.0f;
 		int nsamples_per_direction = 4;

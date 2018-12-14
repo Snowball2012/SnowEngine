@@ -5,6 +5,7 @@
 
 struct HBAOSettings
 {
+    float2 render_target_size; 
     float max_r;
     float angle_bias;
     int nsamples_per_direction;
@@ -51,9 +52,7 @@ float CalcHorizonAngle( float3 diff, float3 normal )
 
 float main( float4 coord : SV_POSITION ) : SV_TARGET
 {
-    float2 depth_tex_size;
-    hyperbolic_depth_map.GetDimensions( depth_tex_size.x, depth_tex_size.y );
-    float2 target_texcoord = coord.xy / depth_tex_size;
+    float2 target_texcoord = coord.xy / settings.render_target_size;
 
     float depth_tf_numerator_part = pass_params.near_z * rcp( pass_params.near_z - pass_params.far_z );
     float2 depth_tf = float2( depth_tf_numerator_part * pass_params.far_z, 1.0h - depth_tf_numerator_part );

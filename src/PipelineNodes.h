@@ -194,25 +194,43 @@ public:
 		SSNormals normals;
 		FinalSceneDepth projected_depth;
 		SSAOStorage storage;
-		ScreenConstants screen_constants;
 		ForwardPassCB pass_cb;
 		HBAOSettings settings;
 		m_pipeline->GetRes( normals );
 		m_pipeline->GetRes( projected_depth );
 		m_pipeline->GetRes( storage );
-		m_pipeline->GetRes( screen_constants );
 		m_pipeline->GetRes( pass_cb );
 		m_pipeline->GetRes( settings );
+
+		const auto& storage_desc = storage.resource->GetDesc();
+		D3D12_VIEWPORT viewport;
+		{
+			viewport.TopLeftX = 0;
+			viewport.TopLeftY = 0;
+			viewport.MinDepth = 0;
+			viewport.MaxDepth = 1;
+			viewport.Width = storage_desc.Width;
+			viewport.Height = storage_desc.Height;
+		}
+		D3D12_RECT scissor;
+		{
+			scissor.left = 0;
+			scissor.top = 0;
+			scissor.right = storage_desc.Width;
+			scissor.bottom = storage_desc.Height;
+		}
+
+		cmd_list.RSSetViewports( 1, &viewport );
+		cmd_list.RSSetScissorRects( 1, &scissor );
+
+		settings.data.render_target_size = DirectX::XMFLOAT2( viewport.Width, viewport.Height );
 
 		HBAOPass::Context ctx;
 		ctx.depth_srv = projected_depth.srv;
 		ctx.normals_srv = normals.srv;
 		ctx.pass_cb = pass_cb.pass_cb;
 		ctx.ssao_rtv = storage.rtv;
-		ctx.settings = settings.data;
-
-		cmd_list.RSSetViewports( 1, &screen_constants.viewport );
-		cmd_list.RSSetScissorRects( 1, &screen_constants.scissor_rect );
+		ctx.settings = settings.data;		
 
 		m_pass->Draw( ctx, cmd_list );
 
@@ -313,7 +331,8 @@ public:
 		TonemapNodeSettings,
 		SSAOTexture_Blurred,
 		SSAmbientLighting,
-		BackbufferStorage
+		BackbufferStorage,
+		ScreenConstants
 		>;
 
 	using OutputResources = std::tuple
@@ -337,6 +356,8 @@ public:
 		m_pipeline->GetRes( settings );
 		BackbufferStorage ldr_buffer;
 		m_pipeline->GetRes( ldr_buffer );
+		ScreenConstants screen_constants;
+		m_pipeline->GetRes( screen_constants );
 
 		ToneMappingPass::Context ctx;
 		ctx.gpu_data = settings.data;
@@ -345,6 +366,8 @@ public:
 		ctx.ambient_srv = ambient.srv;
 		ctx.ssao_srv = ssao.srv;
 
+		cmd_list.RSSetViewports( 1, &screen_constants.viewport );
+		cmd_list.RSSetScissorRects( 1, &screen_constants.scissor_rect );
 		m_pass->Draw( ctx, cmd_list );
 
 		TonemappedBackbuffer out{ ldr_buffer.resource, ldr_buffer.rtv };
