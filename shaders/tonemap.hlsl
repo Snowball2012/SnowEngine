@@ -41,7 +41,7 @@ float4 main(float4 coord : SV_POSITION) : SV_TARGET
     float2 rt_dimensions;
     frame.GetDimensions( rt_dimensions.x, rt_dimensions.y );
 
-    float4 ambient_radiance = ambient.Load(int3(coord2d, 0)) * pow( ssao.Sample( linear_wrap_sampler, coord.xy / rt_dimensions ).r, 2.2f );
+    float4 ambient_radiance = ambient.Load(int3(coord2d, 0)) * ssao.Sample( linear_wrap_sampler, coord.xy / rt_dimensions ).r;
     cur_radiance += ambient_radiance;
     
     float cur_luminance = PhotopicLuminance(cur_radiance.rgb);

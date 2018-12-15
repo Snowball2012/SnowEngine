@@ -23,45 +23,74 @@ Texture2D hyperbolic_depth_map : register( t0 );
 Texture2D normal_map : register( t1 );
 
 
-// full formula is:
-// linear_depth = ( ( pass_params.near_z / ( pass_params.near_z - pass_params.far_z ) ) * pass_params.far_z )
-//                / ( hyperbolic_z - ( pass_params.far_z / ( pass_params.far_z - pass_params.near_z ) ) );
-//
-// numerator = ( ( pass_params.near_z / ( pass_params.near_z - pass_params.far_z ) ) * pass_params.far_z )
-// denominator_part = ( pass_params.far_z / ( pass_params.far_z - pass_params.near_z )
-// they are packed together in depth_tf
-float GetEyeDepth( float hyperbolic_z, float2 depth_tf )
+float Occlusion( float3 origin2sample, float3 normal, float max_r )
 {
-    return depth_tf.x / ( hyperbolic_z - depth_tf.y );
+    float horizon_occlusion = saturate( dot( normalize( origin2sample ), normal ) );
+
+    // reset occlusion to 0 without branching if distance to the sample is too big;
+    return min( horizon_occlusion, ( max_r * max_r ) > dot( origin2sample, origin2sample ) );
 }
 
-float3 CalcSampleOffsetCoord( float2 offset_multiplied_by_ws_radius, float2 origin_texcoord, float origin_depth, float2 depth_tf )
+float4 ReconstructPositionVS( float2 uv )
 {
-    float2 uv_offset = offset_multiplied_by_ws_radius * rcp( max( origin_depth * pass_params.fov_y, 10 ) );
-    uv_offset *= float2( rcp( pass_params.aspect_ratio ), -1.0h );
+    float4 ndc = float4( uv, hyperbolic_depth_map.Sample( linear_wrap_sampler, uv ).r, 1.0f );
+    ndc.xy *= 2.0f;
+    ndc.xy = float2( ndc.x - 1.0f, 1.0f - ndc.y );
 
-    float sample_depth = GetEyeDepth( hyperbolic_depth_map.Sample( point_wrap_sampler, origin_texcoord + uv_offset ).r, depth_tf );
+    float4 vs_coord = mul( ndc, pass_params.proj_inv_mat );
+    vs_coord.xyz /= vs_coord.w;
 
-    return float3( offset_multiplied_by_ws_radius, sample_depth - origin_depth );
+    return vs_coord;
 }
 
-float CalcOcclusion( float3 diff, float3 normal )
+float3 ReconstructNormalVS( float2 uv )
 {
-    return saturate( dot( normalize( diff ), normal ) );
+    float3 normal_vs;
+    normal_vs.xy = normal_map.Sample( linear_wrap_sampler, uv ).xy;
+    normal_vs.z = -sqrt( 1.0h - sqr( normal_vs.x ) - sqr( normal_vs.y ) );
+
+    return normal_vs;
+}
+
+float2 SampleStepUV( float vs_step, float distance_to_camera )
+{
+    float2 sample_step_uv = float2( rcp( pass_params.aspect_ratio ), -1.0h );
+    sample_step_uv *= vs_step * rcp( max( distance_to_camera * pass_params.fov_y, 10 ) );
+
+    return sample_step_uv;
+}
+
+// produces sine and cosine of a random rotation
+float2 RandomRotation( float2 seed )
+{
+    float2 rotation;
+    sincos( abs(seed.x + seed.y) * M_PI / 2.0f , rotation.x, rotation.y );
+    return rotation;
+}
+
+float2 RotateDirection( float2 direction, float2 rotation )
+{
+    return float2( dot( rotation, direction ), rotation.x * direction.y - rotation.y * direction.x );
+}
+
+float BiasedOcclusion( float occlusion, float bias )
+{
+    return max( occlusion - bias, 0.0h ) * rcp( 1.0f - bias );
 }
 
 float main( float4 coord : SV_POSITION ) : SV_TARGET
 {
-    float2 target_texcoord = coord.xy / settings.render_target_size;
+    float2 origin_uv = coord.xy / settings.render_target_size;
 
-    float depth_tf_numerator_part = pass_params.near_z * rcp( pass_params.near_z - pass_params.far_z );
-    float2 depth_tf = float2( depth_tf_numerator_part * pass_params.far_z, 1.0h - depth_tf_numerator_part );
+    float2 seed = (frac(sin(dot(origin_uv ,float2(12.9898,78.233)*2.0)) * 43758.5453)); // randomization for marching directions & pixel position jittering
 
-    float linear_depth = GetEyeDepth( hyperbolic_depth_map.Sample( point_wrap_sampler, target_texcoord ).r, depth_tf );
-    float3 view_normal;
-    view_normal.xy = normal_map.Sample( point_wrap_sampler, target_texcoord ).xy;
-    view_normal.z = -sqrt( 1.0h - sqr( view_normal.x ) - sqr( view_normal.y ) );
+    // origin sample setup
+    origin_uv += seed / ( 2.0f * settings.render_target_size );
 
+    float3 origin_vs = ReconstructPositionVS( origin_uv ).xyz;
+    float3 normal_vs = ReconstructNormalVS( origin_uv );
+
+    // direction marching setup
     const int ndirs = 4;
     float2 offsets[ndirs] =
     {
@@ -76,33 +105,27 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     
     const float max_r = settings.max_r;
     const int nsamples = settings.nsamples_per_direction;
-    float sample_step_ws = max_r * rcp( float( nsamples ) );
+    
+    float2 sample_step_uv = SampleStepUV( max_r * rcp( float( nsamples ) ), length( origin_vs ) );
+    float2 rotation = RandomRotation( seed );
 
     float occlusion = 0.0f;
-
-    float2 rotation;
-    float2 seed = (frac(sin(dot(target_texcoord ,float2(12.9898,78.233)*2.0)) * 43758.5453));
-    sincos( abs(seed.x + seed.y) * M_PI / 2.0f , rotation.x, rotation.y );
-    
     [unroll]
     for ( int dir = 0; dir < ndirs; ++dir )
     {
-        float2 offset_dir_ss = offsets[dir];
-        offset_dir_ss = float2( dot( rotation, offset_dir_ss ), rotation.x * offset_dir_ss.y - rotation.y * offset_dir_ss.x );
-        offset_dir_ss *= sample_step_ws;
-
+        float2 offset_dir_uv = RotateDirection( offsets[dir], rotation );
+        offset_dir_uv *= sample_step_uv;
 
         float max_occlusion = occlusion_bias;
 
         for ( int isample = 1; isample <= nsamples; isample++ )
         {
-            float2 offset_in_ws = offset_dir_ss * isample; 
-            float3 diff = CalcSampleOffsetCoord( offset_in_ws, target_texcoord, linear_depth, depth_tf );
-            
-            max_occlusion = max( max_occlusion, min( CalcOcclusion( diff, view_normal ), max_r > abs( diff.z ) ) );
+            float3 diff_vs = ReconstructPositionVS( origin_uv + offset_dir_uv * isample ).xyz - origin_vs;
+            float sample_occlusion = Occlusion( diff_vs, normal_vs, max_r );
+            max_occlusion = max( max_occlusion, sample_occlusion );
         }
 
-        occlusion += max( max_occlusion - occlusion_bias, 0.0h ) * rcp( 1.0f - occlusion_bias );
+        occlusion += BiasedOcclusion( max_occlusion, occlusion_bias );
     }
 
     occlusion /= ndirs;
