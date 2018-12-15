@@ -82,10 +82,11 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
 {
     float2 origin_uv = coord.xy / settings.render_target_size;
 
-    float2 seed = (frac(sin(dot(origin_uv ,float2(12.9898,78.233)*2.0)) * 43758.5453)); // randomization for marching directions & pixel position jittering
+    float2 seed = (frac(sin(dot(origin_uv ,float2(12.9898,78.233)*2.0)) * 43758.5453)); // random vector for marching directions & pixel position jittering
+    float2 rotation = RandomRotation( seed );
 
     // origin sample setup
-    origin_uv += seed / ( 2.0f * settings.render_target_size );
+    origin_uv += rotation / ( 2.0f * settings.render_target_size );
 
     float3 origin_vs = ReconstructPositionVS( origin_uv ).xyz;
     float3 normal_vs = ReconstructNormalVS( origin_uv );
@@ -107,7 +108,6 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     const int nsamples = settings.nsamples_per_direction;
     
     float2 sample_step_uv = SampleStepUV( max_r * rcp( float( nsamples ) ), length( origin_vs ) );
-    float2 rotation = RandomRotation( seed );
 
     float occlusion = 0.0f;
     [unroll]
