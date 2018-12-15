@@ -45,9 +45,9 @@ float3 CalcSampleOffsetCoord( float2 offset_multiplied_by_ws_radius, float2 orig
     return float3( offset_multiplied_by_ws_radius, sample_depth - origin_depth );
 }
 
-float CalcHorizonAngle( float3 diff, float3 normal )
+float CalcOcclusion( float3 diff, float3 normal )
 {
-    return ( 3.14h / 2.0h ) - acos( dot( normalize( diff ), normal ) );
+    return saturate( dot( normalize( diff ), normal ) );
 }
 
 float main( float4 coord : SV_POSITION ) : SV_TARGET
@@ -72,7 +72,7 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     };
 
     const float pi_div_2 = M_PI / 2.0f;
-    const float angle_bias = settings.angle_bias;
+    const float occlusion_bias = settings.angle_bias / pi_div_2;
     
     const float max_r = settings.max_r;
     const int nsamples = settings.nsamples_per_direction;
@@ -83,24 +83,26 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     float2 rotation;
     float2 seed = (frac(sin(dot(target_texcoord ,float2(12.9898,78.233)*2.0)) * 43758.5453));
     sincos( abs(seed.x + seed.y) * M_PI / 2.0f , rotation.x, rotation.y );
-
+    
     [unroll]
     for ( int dir = 0; dir < ndirs; ++dir )
     {
         float2 offset_dir_ss = offsets[dir];
         offset_dir_ss = float2( dot( rotation, offset_dir_ss ), rotation.x * offset_dir_ss.y - rotation.y * offset_dir_ss.x );
         offset_dir_ss *= sample_step_ws;
-        float max_horizon = angle_bias;
+
+
+        float max_occlusion = occlusion_bias;
 
         for ( int isample = 1; isample <= nsamples; isample++ )
         {
             float2 offset_in_ws = offset_dir_ss * isample; 
             float3 diff = CalcSampleOffsetCoord( offset_in_ws, target_texcoord, linear_depth, depth_tf );
             
-            max_horizon = max( max_horizon, min( CalcHorizonAngle( diff, view_normal ), ( max_r > abs( diff.z ) ) * M_PI ) );
+            max_occlusion = max( max_occlusion, min( CalcOcclusion( diff, view_normal ), max_r > abs( diff.z ) ) );
         }
 
-        occlusion += max( max_horizon - angle_bias, 0.0h ) * rcp( pi_div_2 - angle_bias );
+        occlusion += max( max_occlusion - occlusion_bias, 0.0h ) * rcp( 1.0f - occlusion_bias );
     }
 
     occlusion /= ndirs;
