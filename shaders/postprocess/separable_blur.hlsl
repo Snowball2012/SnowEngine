@@ -33,17 +33,6 @@ void main( uint3 thread : SV_DispatchThreadID )
         int2( -3,  3 ), int2( -2,  3 ), int2( -1,  3 ), int2(  0,  3 ), int2(  1,  3 ), int2( 2,  3 ), int2( 3,  3 ) 
     };
 
-    float weights[noffsets] = 
-    {
-        0.016641f,	0.018385f,	0.019518f,	0.019911f,	0.019518f,	0.018385f,	0.016641f,
-        0.018385f,	0.020312f,	0.021564f,	0.021998f,	0.021564f,	0.020312f,	0.018385f,
-        0.019518f,	0.021564f,	0.022893f,	0.023354f,	0.022893f,	0.021564f,	0.019518f,
-        0.019911f,	0.021998f,	0.023354f,	0.023824f,	0.023354f,	0.021998f,	0.019911f,
-        0.019518f,	0.021564f,	0.022893f,	0.023354f,	0.022893f,	0.021564f,	0.019518f,
-        0.018385f,	0.020312f,	0.021564f,	0.021998f,	0.021564f,	0.020312f,	0.018385f,
-        0.016641f,	0.018385f,	0.019518f,	0.019911f,	0.019518f,	0.018385f,	0.016641f,
-    };
-
     float2 rt_dimensions;
     depth.GetDimensions( rt_dimensions.x, rt_dimensions.y );
 
@@ -58,8 +47,8 @@ void main( uint3 thread : SV_DispatchThreadID )
         float sample_depth = LinearDepth( depth[thread.xy + offsets[i]].r );
 
         float depth_weight = rcp( pow( 2, 50 * abs( sample_depth - depth_ref ) ) );
-        sum += input.SampleLevel( linear_wrap_sampler, texcoord, 0 ).r * /*weights[i] **/ depth_weight;
-        weight_sum += /*weights[i] **/ depth_weight;
+        sum += input.SampleLevel( linear_wrap_sampler, texcoord, 0 ).r * depth_weight;
+        weight_sum += depth_weight;
     }
 
     output[thread.xy] = min16float( saturate( sum / weight_sum ) );

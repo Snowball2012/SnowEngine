@@ -178,7 +178,7 @@ void RenderApp::UpdateCamera()
 		cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
 		cam_data.fov_y = MathHelper::Pi / 4;
 		cam_data.aspect_ratio = AspectRatio();
-		cam_data.far_plane = 100.0f;
+		cam_data.far_plane = 10000.0f;
 		cam_data.near_plane = 0.1f;
 	}
 
@@ -485,7 +485,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 	XMFloat3Normalize( camera_data.dir );
 	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
 	camera_data.fov_y = MathHelper::Pi / 4;
-	camera_data.far_plane = 1000.0f;
+	camera_data.far_plane = 10000.0f;
 	camera_data.near_plane = 0.1f;
 	m_camera = scene.AddCamera( camera_data );
 

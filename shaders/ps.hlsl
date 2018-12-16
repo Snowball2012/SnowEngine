@@ -72,10 +72,7 @@ PixelOut main(PixelIn pin)
 {
     float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
 
-	// alpha test
-	clip( base_color.a - 0.01 );
-
-#ifdef VISUALIZE_LOD
+#ifdef DEBUG_TEXTURE_LOD
     float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
     if ( lod > 1.0f )
     {
