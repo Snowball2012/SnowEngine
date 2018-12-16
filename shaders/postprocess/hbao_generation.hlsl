@@ -17,7 +17,6 @@ cbuffer cbSettings : register( b1 )
 };
 
 SamplerState linear_wrap_sampler : register( s0 );
-SamplerState point_wrap_sampler : register( s1 );
 
 Texture2D hyperbolic_depth_map : register( t0 );
 Texture2D normal_map : register( t1 );

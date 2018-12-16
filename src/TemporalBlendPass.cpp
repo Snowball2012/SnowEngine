@@ -21,7 +21,7 @@ void TemporalBlendPass::Draw( const Context& context, ID3D12GraphicsCommandList&
 	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
 	cmd_list.IASetIndexBuffer( nullptr );
 	cmd_list.IASetVertexBuffers( 0, 0, nullptr );
-	cmd_list.DrawInstanced( 4, 1, 0, 0 );
+	cmd_list.DrawInstanced( 3, 1, 0, 0 );
 }
 
 ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device& device )
