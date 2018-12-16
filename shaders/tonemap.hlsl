@@ -33,6 +33,8 @@ float3 Radiance2LinearRGB(float3 radiance, float brightness)
     return linear_color;
 }
 
+//#define DEBUG_SSAO
+
 float4 main(float4 coord : SV_POSITION) : SV_TARGET
 {
     int2 coord2d = int2(coord.x, coord.y);
@@ -46,8 +48,12 @@ float4 main(float4 coord : SV_POSITION) : SV_TARGET
     
     float cur_luminance = PhotopicLuminance(cur_radiance.rgb);
 
-    float linear_brightness = clamp((cur_luminance - min_luminance) / (max_luminance - min_luminance), 0, 1);
+    float linear_brightness = saturate( (cur_luminance - min_luminance) / (max_luminance - min_luminance) );
 
-
-    return float4(Radiance2LinearRGB(cur_radiance.rgb, linear_brightness), cur_radiance.a);
+    #ifdef DEBUG_SSAO
+        float ssao_factor = ssao.Sample( linear_wrap_sampler, coord.xy / rt_dimensions ).r;
+        return float4( ssao_factor, ssao_factor, ssao_factor, 1.0f );
+    #else
+        return float4(Radiance2LinearRGB(cur_radiance.rgb, linear_brightness), cur_radiance.a);
+    #endif
 }

@@ -4,7 +4,6 @@
 
 // Separable Gaussian blur
 // Strictly speaking this kind of bilateral filter is not separable, but the results are passable anyway
-// As of now the pass is not actually depth-aware =)
 
 class DepthAwareBlurPass
 {
@@ -17,6 +16,7 @@ public:
 		D3D12_GPU_DESCRIPTOR_HANDLE input_srv;
 		D3D12_GPU_DESCRIPTOR_HANDLE depth_srv;
 		D3D12_GPU_DESCRIPTOR_HANDLE blurred_uav;
+		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 		uint32_t uav_width;
 		uint32_t uav_height;
 	};

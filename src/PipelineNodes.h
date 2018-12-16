@@ -428,7 +428,8 @@ public:
 		<
 		SSAOTexture_Noisy,
 		FinalSceneDepth,
-		SSAOStorage_Blurred
+		SSAOStorage_Blurred,
+		ForwardPassCB
 		>;
 
 	using OutputResources = std::tuple
@@ -445,14 +446,17 @@ public:
 		SSAOTexture_Noisy input;
 		FinalSceneDepth depth;
 		SSAOStorage_Blurred storage;
+		ForwardPassCB pass_cb;
 		m_pipeline->GetRes( input );
 		m_pipeline->GetRes( depth );
 		m_pipeline->GetRes( storage );
+		m_pipeline->GetRes( pass_cb );
 
 		DepthAwareBlurPass::Context ctx;
 		ctx.depth_srv = depth.srv;
 		ctx.input_srv = input.srv;
 		ctx.blurred_uav = storage.uav;
+		ctx.pass_cb = pass_cb.pass_cb;
 
 		const auto& resource_desc = storage.resource->GetDesc();
 

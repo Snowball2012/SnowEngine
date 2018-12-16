@@ -1,5 +1,5 @@
 
-#define ALPHA_BIAS 0.001f
+#define ALPHA_BIAS 0.1f
 
 struct PixelIn
 {

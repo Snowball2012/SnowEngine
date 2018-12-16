@@ -511,7 +511,7 @@ void Renderer::ResizeTransientTextures( )
 	resize_tex( *m_ambient_lighting, m_client_width, m_client_height, true, false, true );
 	resize_tex( *m_normals, m_client_width, m_client_height, true, false, true );
 	resize_tex( *m_ssao, m_client_width / 2, m_client_height / 2, true, false, true );
-	resize_tex( *m_ssao_blurred, m_client_width / 2, m_client_height / 2, true, true, false );
+	resize_tex( *m_ssao_blurred, m_client_width, m_client_height, true, true, false );
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{

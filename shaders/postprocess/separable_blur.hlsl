@@ -1,36 +1,66 @@
+// Dimensions for output and depth textures must match
+
+#define PER_PASS_CB_BINDING b0
+#include "../bindings/pass_cb.hlsli"
 
 Texture2D input : register( t0 );
 Texture2D depth : register( t1 );
 
 RWTexture2D<min16float> output : register( u0 );
 
+SamplerState linear_wrap_sampler : register( s0 );
+
+float LinearDepth( float hyperbolic_z )
+{
+    return ( ( pass_params.near_z / ( pass_params.near_z - pass_params.far_z ) ) * pass_params.far_z )
+           / ( hyperbolic_z - ( pass_params.far_z / ( pass_params.far_z - pass_params.near_z ) ) );
+}
+
+
 [numthreads(64, 4, 1)]
 void main( uint3 thread : SV_DispatchThreadID )
 {
     // we're fine with a potential underflow, reads from inaccessible mem return 0 anyway
-    const int noffsets = 25;
-    int2 offsets[noffsets] = 
+    const int noffsets = 49;
+    int2 offsets[noffsets] =
     {
-        int2( -2, -2 ), int2( -1, -2 ), int2(  0, -2 ), int2(  1, -2 ), int2( 2, -2 ),
-        int2( -2, -1 ), int2( -1, -1 ), int2(  0, -1 ), int2(  1, -1 ), int2( 2, -1 ),
-        int2( -2,  0 ), int2( -1,  0 ), int2(  0,  0 ), int2(  1,  0 ), int2( 2,  0 ),
-        int2( -2,  1 ), int2( -1,  1 ), int2(  0,  1 ), int2(  1,  1 ), int2( 2,  1 ),
-        int2( -2,  2 ), int2( -1,  2 ), int2(  0,  2 ), int2(  1,  2 ), int2( 2,  2 )
+        int2( -3, -3 ), int2( -2, -3 ), int2( -1, -3 ), int2(  0, -3 ), int2(  1, -3 ), int2( 2, -3 ), int2( 3, -3 ), 
+        int2( -3, -2 ), int2( -2, -2 ), int2( -1, -2 ), int2(  0, -2 ), int2(  1, -2 ), int2( 2, -2 ), int2( 3, -2 ), 
+        int2( -3, -1 ), int2( -2, -1 ), int2( -1, -1 ), int2(  0, -1 ), int2(  1, -1 ), int2( 2, -1 ), int2( 3, -1 ), 
+        int2( -3,  0 ), int2( -2,  0 ), int2( -1,  0 ), int2(  0,  0 ), int2(  1,  0 ), int2( 2,  0 ), int2( 3,  0 ), 
+        int2( -3,  1 ), int2( -2,  1 ), int2( -1,  1 ), int2(  0,  1 ), int2(  1,  1 ), int2( 2,  1 ), int2( 3,  1 ), 
+        int2( -3,  2 ), int2( -2,  2 ), int2( -1,  2 ), int2(  0,  2 ), int2(  1,  2 ), int2( 2,  2 ), int2( 3,  2 ),
+        int2( -3,  3 ), int2( -2,  3 ), int2( -1,  3 ), int2(  0,  3 ), int2(  1,  3 ), int2( 2,  3 ), int2( 3,  3 ) 
     };
 
     float weights[noffsets] = 
     {
-        0.003765f,	0.015019f,	0.023792f,	0.015019f,	0.003765f,
-        0.015019f,	0.059912f,	0.094907f,	0.059912f,	0.015019f,
-        0.023792f,	0.094907f,	0.150342f,	0.094907f,	0.023792f,
-        0.015019f,	0.059912f,	0.094907f,	0.059912f,	0.015019f,
-        0.003765f,	0.015019f,	0.023792f,	0.015019f,	0.003765f
+        0.016641f,	0.018385f,	0.019518f,	0.019911f,	0.019518f,	0.018385f,	0.016641f,
+        0.018385f,	0.020312f,	0.021564f,	0.021998f,	0.021564f,	0.020312f,	0.018385f,
+        0.019518f,	0.021564f,	0.022893f,	0.023354f,	0.022893f,	0.021564f,	0.019518f,
+        0.019911f,	0.021998f,	0.023354f,	0.023824f,	0.023354f,	0.021998f,	0.019911f,
+        0.019518f,	0.021564f,	0.022893f,	0.023354f,	0.022893f,	0.021564f,	0.019518f,
+        0.018385f,	0.020312f,	0.021564f,	0.021998f,	0.021564f,	0.020312f,	0.018385f,
+        0.016641f,	0.018385f,	0.019518f,	0.019911f,	0.019518f,	0.018385f,	0.016641f,
     };
 
-    min16float sum = 0.0f;
+    float2 rt_dimensions;
+    depth.GetDimensions( rt_dimensions.x, rt_dimensions.y );
+
+    float depth_ref = LinearDepth( depth[thread.xy].r );
+
+    float sum = 0.0f;
+    float weight_sum = 0.0f;
     [unroll]
     for ( int i = 0; i < noffsets; ++i )
-        sum += input[thread.xy + offsets[i]].r * weights[i];
+    {
+        float2 texcoord = float2( thread.xy + offsets[i] ) / rt_dimensions;
+        float sample_depth = LinearDepth( depth[thread.xy + offsets[i]].r );
 
-    output[thread.xy] = saturate( sum );
+        float depth_weight = rcp( pow( 2, 50 * abs( sample_depth - depth_ref ) ) );
+        sum += input.SampleLevel( linear_wrap_sampler, texcoord, 0 ).r * /*weights[i] **/ depth_weight;
+        weight_sum += /*weights[i] **/ depth_weight;
+    }
+
+    output[thread.xy] = min16float( saturate( sum / weight_sum ) );
 }
