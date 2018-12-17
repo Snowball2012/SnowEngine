@@ -148,7 +148,8 @@ private:
 			ShadowPassNode,
 			ForwardPassNode,
 			HBAOGeneratorNode,
-			BlurSSAONode,
+			BlurSSAONodeHorizontal,
+			BlurSSAONodeVertical,
 			ToneMapPassNode,
 			UIPassNode
 		>;
@@ -178,6 +179,7 @@ private:
 	std::unique_ptr<DynamicTexture> m_normals;
 	std::unique_ptr<DynamicTexture> m_ssao;
 	std::unique_ptr<DynamicTexture> m_ssao_blurred;
+	std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed;
 
 	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;

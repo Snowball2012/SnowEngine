@@ -421,23 +421,23 @@ private:
 
 
 template<class Pipeline>
-class BlurSSAONode : public BaseRenderNode
+class BlurSSAONodeHorizontal : public BaseRenderNode
 {
 public:
 	using InputResources = std::tuple
 		<
 		SSAOTexture_Noisy,
 		FinalSceneDepth,
-		SSAOStorage_Blurred,
+		SSAOStorage_BlurredHorizontal,
 		ForwardPassCB
 		>;
 
 	using OutputResources = std::tuple
 		<
-		SSAOTexture_Blurred
+		SSAOTexture_BlurredHorizontal
 		>;
 
-	BlurSSAONode( Pipeline* pipeline, DepthAwareBlurPass* blur_pass )
+	BlurSSAONodeHorizontal( Pipeline* pipeline, DepthAwareBlurPass* blur_pass )
 		: m_pass( blur_pass ), m_pipeline( pipeline )
 	{}
 
@@ -445,7 +445,7 @@ public:
 	{
 		SSAOTexture_Noisy input;
 		FinalSceneDepth depth;
-		SSAOStorage_Blurred storage;
+		SSAOStorage_BlurredHorizontal storage;
 		ForwardPassCB pass_cb;
 		m_pipeline->GetRes( input );
 		m_pipeline->GetRes( depth );
@@ -465,6 +465,7 @@ public:
 
 		ctx.uav_width = resource_desc.Width;
 		ctx.uav_height = resource_desc.Height;
+		ctx.transpose_flag = false;
 
 		m_pass->Draw( ctx, cmd_list );
 
@@ -473,6 +474,74 @@ public:
 			CD3DX12_RESOURCE_BARRIER::Transition( storage.resource,
 			                                      D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			                                      D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
+		};
+
+		cmd_list.ResourceBarrier( 1, barriers );
+
+		SSAOTexture_BlurredHorizontal out{ storage.srv };
+		m_pipeline->SetRes( out );
+	}
+
+private:
+	DepthAwareBlurPass* m_pass = nullptr;
+	Pipeline* m_pipeline = nullptr;
+};
+
+
+template<class Pipeline>
+class BlurSSAONodeVertical : public BaseRenderNode
+{
+public:
+	using InputResources = std::tuple
+		<
+		SSAOTexture_BlurredHorizontal,
+		FinalSceneDepth,
+		SSAOStorage_Blurred,
+		ForwardPassCB
+		>;
+
+	using OutputResources = std::tuple
+		<
+		SSAOTexture_Blurred
+		>;
+
+	BlurSSAONodeVertical( Pipeline* pipeline, DepthAwareBlurPass* blur_pass )
+		: m_pass( blur_pass ), m_pipeline( pipeline )
+	{}
+
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	{
+		SSAOTexture_BlurredHorizontal input;
+		FinalSceneDepth depth;
+		SSAOStorage_Blurred storage;
+		ForwardPassCB pass_cb;
+		m_pipeline->GetRes( input );
+		m_pipeline->GetRes( depth );
+		m_pipeline->GetRes( storage );
+		m_pipeline->GetRes( pass_cb );
+
+		DepthAwareBlurPass::Context ctx;
+		ctx.depth_srv = depth.srv;
+		ctx.input_srv = input.srv;
+		ctx.blurred_uav = storage.uav;
+		ctx.pass_cb = pass_cb.pass_cb;
+		ctx.transpose_flag = true;
+
+		const auto& resource_desc = storage.resource->GetDesc();
+
+		if ( resource_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D )
+			throw SnowEngineException( "destination resource for ssao blur is not a 2d texture" );
+
+		ctx.uav_width = resource_desc.Width;
+		ctx.uav_height = resource_desc.Height;
+
+		m_pass->Draw( ctx, cmd_list );
+
+		CD3DX12_RESOURCE_BARRIER barriers[] =
+		{
+			CD3DX12_RESOURCE_BARRIER::Transition( storage.resource,
+												  D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+												  D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 		};
 
 		cmd_list.ResourceBarrier( 1, barriers );

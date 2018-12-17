@@ -19,6 +19,7 @@ public:
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 		uint32_t uav_width;
 		uint32_t uav_height;
+		bool transpose_flag;
 	};
 
 	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );

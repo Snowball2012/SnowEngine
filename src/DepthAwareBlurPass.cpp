@@ -21,9 +21,12 @@ void DepthAwareBlurPass::Draw( const Context& context, ID3D12GraphicsCommandList
 	cmd_list.SetComputeRootDescriptorTable( 1, context.depth_srv );
 	cmd_list.SetComputeRootDescriptorTable( 2, context.blurred_uav );
 	cmd_list.SetComputeRootConstantBufferView( 3, context.pass_cb );
-
-	const UINT group_cnt_x = ceil_integer_div( context.uav_width, GroupSizeX );
-	const UINT group_cnt_y = ceil_integer_div( context.uav_height, GroupSizeY );
+	uint32_t transpose_val = uint32_t( context.transpose_flag );
+	cmd_list.SetComputeRoot32BitConstant( 4, transpose_val, 0 );
+	UINT group_cnt_x, group_cnt_y;
+	group_cnt_x = ceil_integer_div( context.uav_height, GroupSizeX );
+	group_cnt_y = ceil_integer_div( context.uav_width, GroupSizeY );
+	
 	cmd_list.Dispatch( group_cnt_x, group_cnt_y, 1 );
 }
 
@@ -36,15 +39,18 @@ ComPtr<ID3D12RootSignature> DepthAwareBlurPass::BuildRootSignature( ID3D12Device
 	1 - z-buffer
 	2 - output texture UAV
 	3 - pass cbv
+	4 - transpose flag
 
 	Shader register bindings
 	t0 - source
 	t1 - zbuffer
 	u0 - output
 	s0 - linear sampler
+	b0 - pass constants
+	b1 - transpose flag
 	*/
 
-	constexpr int nparams = 4;
+	constexpr int nparams = 5;
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
@@ -56,6 +62,7 @@ ComPtr<ID3D12RootSignature> DepthAwareBlurPass::BuildRootSignature( ID3D12Device
 	slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table + 1 );
 	slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 2 );
 	slot_root_parameter[3].InitAsConstantBufferView( 0 );
+	slot_root_parameter[4].InitAsConstants( 1, 1 );
 
 	CD3DX12_STATIC_SAMPLER_DESC input_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT );
 

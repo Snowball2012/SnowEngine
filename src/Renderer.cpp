@@ -103,14 +103,15 @@ void Renderer::Draw( const Context& ctx )
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[8];
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[9];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
-	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred_transposed->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	ShadowMapStorage sm_storage;
 	m_pipeline.GetRes( sm_storage );
 	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
@@ -162,6 +163,13 @@ void Renderer::Draw( const Context& ctx )
 		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred->UAV() );
 		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred->SRV() );
 		m_pipeline.SetRes( ssao_blurred_texture );
+
+
+		SSAOStorage_BlurredHorizontal ssao_blurred_texture_horizontal;
+		ssao_blurred_texture_horizontal.resource = m_ssao_blurred_transposed->Resource();
+		ssao_blurred_texture_horizontal.uav = GetGPUHandle( m_ssao_blurred_transposed->UAV() );
+		ssao_blurred_texture_horizontal.srv = GetGPUHandle( m_ssao_blurred_transposed->SRV() );
+		m_pipeline.SetRes( ssao_blurred_texture_horizontal );
 
 
 		TonemapNodeSettings tm_settings;
@@ -488,6 +496,7 @@ void Renderer::CreateTransientTextures()
 	create_tex( m_normals, DXGI_FORMAT_R16G16_FLOAT, true, false, true );
 	create_tex( m_ssao, DXGI_FORMAT_R16_FLOAT, true, false, true );
 	create_tex( m_ssao_blurred, DXGI_FORMAT_R16_FLOAT, true, true, false );
+	create_tex( m_ssao_blurred_transposed, DXGI_FORMAT_R16_FLOAT, true, true, false );
 
 	m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
 
@@ -512,6 +521,7 @@ void Renderer::ResizeTransientTextures( )
 	resize_tex( *m_normals, m_client_width, m_client_height, true, false, true );
 	resize_tex( *m_ssao, m_client_width / 2, m_client_height / 2, true, false, true );
 	resize_tex( *m_ssao_blurred, m_client_width, m_client_height, true, true, false );
+	resize_tex( *m_ssao_blurred_transposed, m_client_height, m_client_width, true, true, false );
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
 	{
@@ -576,7 +586,8 @@ void Renderer::BuildPasses()
 	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
 	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
 	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
-	m_pipeline.ConstructNode<BlurSSAONode>( m_blur_pass.get() );
+	m_pipeline.ConstructNode<BlurSSAONodeHorizontal>( m_blur_pass.get() );
+	m_pipeline.ConstructNode<BlurSSAONodeVertical>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
@@ -586,7 +597,8 @@ void Renderer::BuildPasses()
 	m_pipeline.Enable<ToneMapPassNode>();
 	m_pipeline.Enable<UIPassNode>();
 	m_pipeline.Enable<HBAOGeneratorNode>();
-	m_pipeline.Enable<BlurSSAONode>();
+	m_pipeline.Enable<BlurSSAONodeHorizontal>();
+	m_pipeline.Enable<BlurSSAONodeVertical>();
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

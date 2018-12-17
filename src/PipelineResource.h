@@ -87,9 +87,21 @@ struct SSAOStorage_Blurred
 	D3D12_GPU_DESCRIPTOR_HANDLE uav;
 };
 
+struct SSAOStorage_BlurredHorizontal
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_GPU_DESCRIPTOR_HANDLE uav;
+};
+
 struct SSAOTexture_Blurred
 {
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;	
+};
+
+struct SSAOTexture_BlurredHorizontal
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct TonemapNodeSettings
