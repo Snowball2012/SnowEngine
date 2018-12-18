@@ -119,7 +119,7 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
 
         for ( int isample = 1; isample <= nsamples; isample++ )
         {
-            float3 diff_vs = ReconstructPositionVS( origin_uv + offset_dir_uv * isample ).xyz - origin_vs;
+            float3 diff_vs = ReconstructPositionVS( origin_uv + offset_dir_uv * isample * isample / nsamples ).xyz - origin_vs;
             float sample_occlusion = Occlusion( diff_vs, normal_vs, max_r );
             max_occlusion = max( max_occlusion, sample_occlusion );
         }
