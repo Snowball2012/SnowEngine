@@ -1,9 +1,14 @@
 #ifndef SHADOWS_HLSLI
 #define SHADOWS_HLSLI
 
-int csm_get_split( float depth, float near_z, float far_z, int nsplits )
-{
+#include "lighting.hlsli"
 
+int csm_get_frustrum( float depth, int num_split_positions, float split_positions[MAX_CASCADE_SIZE-1] )
+{
+    int frustrum = 0;
+    for ( int i = 0; i < num_split_positions; i++ )
+        frustrum += depth > split_positions[i]; // no branching, since num_split_positions should be ~[2..4]
+    return frustrum;
 }
 
 float shadow_factor( float3 pos_v, float4x4 shadow_map_mat, Texture2D shadow_map, SamplerComparisonState shadow_map_sampler )
@@ -44,6 +49,12 @@ float shadow_factor( float3 pos_v, float4x4 shadow_map_mat, Texture2D shadow_map
 		percent_lit += shadow_map.SampleCmpLevelZero( shadow_map_sampler, shadow_pos_h.xy + offsets[i], shadow_pos_h.z ).r * gauss_kernel[i];
 
 	return percent_lit;
+}
+
+float csm_shadow_factor( float3 pos_v, ParallelLight light, Texture2D shadow_cascade[], float split_positions[MAX_CASCADE_SIZE-1], SamplerComparisonState shadow_map_sampler )
+{
+    int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_splits, split_positions );
+    return shadow_factor( pos_v, light.shadow_map_mat[frustrum], shadow_cascade[frustrum], shadow_map_sampler );
 }
 
 #endif // SHADOWS_HLSLI

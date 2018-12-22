@@ -5,6 +5,9 @@
 
 #include "../lib/lighting.hlsli"
 
+#define MAX_LIGHTS 15
+#define MAX_CSM_LIGHTS 1
+
 struct PassConstants
 {
     float4x4 view_mat;
@@ -30,6 +33,11 @@ struct PassConstants
     float2 _padding2;
 
 	Light lights[MAX_LIGHTS];
+	ParallelLight parallel_lights[MAX_CSM_LIGHTS];
+    float csm_split_positions[MAX_CASCADE_SIZE - 1];
+#if ( (MAX_CASCADE_SIZE - 1) / 4 * 4 ) != MAX_CASCADE_SIZE
+    float _padding_split_positions[4 - MAX_CASCADE_SIZE % 4];
+#endif
 
 	int n_parallel_lights;
 	int n_point_lights;
