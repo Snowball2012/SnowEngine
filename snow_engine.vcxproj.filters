@@ -386,5 +386,8 @@
     <None Include="shaders\lib\math_utils.hlsli">
       <Filter>shaders\lib</Filter>
     </None>
+    <None Include="shaders\lib\shadows.hlsli">
+      <Filter>shaders\lib</Filter>
+    </None>
   </ItemGroup>
 </Project>

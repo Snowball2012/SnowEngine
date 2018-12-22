@@ -1,7 +1,7 @@
 struct GSInput
 {
 	float4 pos : SV_POSITION;
-	float3 pos_w : POSITION;
+	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
 	float2 uv : TEXCOORD;
 };
@@ -9,7 +9,7 @@ struct GSInput
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
-	float3 pos_w : POSITION;
+	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
@@ -22,8 +22,8 @@ void main(
 	inout TriangleStream< GSOutput > output
 )
 {
-	float3 dp1 = input[1].pos_w - input[0].pos_w;
-	float3 dp2 = input[2].pos_w - input[0].pos_w;
+	float3 dp1 = input[1].pos_v - input[0].pos_v;
+	float3 dp2 = input[2].pos_v - input[0].pos_v;
 
 	float2 duv1 = input[1].uv - input[0].uv;
 	float2 duv2 = input[2].uv - input[0].uv;
@@ -36,7 +36,7 @@ void main(
 	{
 		GSOutput element;
 		element.pos = input[i].pos;
-		element.pos_w = input[i].pos_w;
+		element.pos_v = input[i].pos_v;
 		element.normal = input[i].normal;
 		element.uv = input[i].uv;
 		element.tangent = tangent;

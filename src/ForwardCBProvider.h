@@ -21,7 +21,12 @@ public:
 
 private:
 	void FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
-	void FillLightData( const span<const SceneLight>& lights, PassConstants& gpu_data ) const;
+
+	// pass transposed matrix here, it's more convenient for the caller 
+	void FillLightData( const span<const SceneLight>& lights,
+						const DirectX::XMMATRIX& inv_view_matrix_transposed,
+						const DirectX::XMMATRIX& view_matrix,
+						PassConstants& gpu_data ) const;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
 	span<uint8_t> m_mapped_data;

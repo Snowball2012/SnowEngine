@@ -38,7 +38,10 @@ void ForwardCBProvider::Update( const Camera::Data& camera, const span<const Sce
 
 	PassConstants gpu_data;
 	FillCameraData( camera, gpu_data );
-	FillLightData( scene_lights, gpu_data );
+	FillLightData( scene_lights,
+				   DirectX::XMLoadFloat4x4( &gpu_data.InvView ),
+				   DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.View ) ),
+				   gpu_data );
 	
 	memcpy( m_mapped_data.begin() + BufferGPUSize * m_cur_res_idx, &gpu_data, BufferGPUSize );
 }
@@ -85,7 +88,10 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 }
 
 
-void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, PassConstants& gpu_data ) const
+void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
+									   const DirectX::XMMATRIX& inv_view_matrix_transposed,
+									   const DirectX::XMMATRIX& view_matrix,
+									   PassConstants& gpu_data ) const
 {
 	// sort lights by type
 
@@ -137,12 +143,15 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights, Pas
 				NOTIMPL;
 		};
 		LightConstants& data = gpu_data.lights[gpu_idx];
-		const auto& shadow_matrix = light.ShadowMatrix();
+		const auto& shadow_matrix = light.ShadowMatrix(); // here matrix is in world space, we need to convert it to view space for the shaders
 		if ( shadow_matrix.has_value() )
-			DirectX::XMStoreFloat4x4( &data.shadow_map_matrix, DirectX::XMMatrixTranspose( shadow_matrix.value() ) );
+		{
+			DirectX::XMStoreFloat4x4( &data.shadow_map_matrix,
+									  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrix.value() ), inv_view_matrix_transposed ) );
+		}
 
 		const SceneLight::Data& src_data = light.GetData();
-		data.dir = src_data.dir;
+		DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
 		data.falloff_end = src_data.falloff_end;
 		data.falloff_start = src_data.falloff_start;
 		data.origin = src_data.origin;

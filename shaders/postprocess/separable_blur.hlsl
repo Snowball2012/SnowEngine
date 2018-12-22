@@ -37,7 +37,7 @@ void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupT
     float2 rt_dimensions;
     uint2 ref_coord;
     int2 offset;
-    if ( transposed ) // static branching
+    if ( transposed )
     {
         depth.GetDimensions( rt_dimensions.y, rt_dimensions.x );
         ref_coord = thread.yx;
@@ -81,9 +81,6 @@ void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupT
         sum += shared_ssao_data[group_data_idx + i] * weight;
         weight_sum += weight;
     }
-
-
-
 
     output[thread.yx] = min16float( saturate( sum / weight_sum ) );
 }

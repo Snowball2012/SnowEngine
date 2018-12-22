@@ -34,7 +34,6 @@ struct PassConstants
 	int n_parallel_lights;
 	int n_point_lights;
 	int n_spotlight_lights;
-    int use_linear_depth;
 };
 
 cbuffer cbPerPass : register( PER_PASS_CB_BINDING )

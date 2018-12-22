@@ -1,4 +1,5 @@
 #include "lib/lighting.hlsli"
+#include "lib/shadows.hlsli"
 
 #define PER_MATERIAL_CB_BINDING b1
 #include "bindings/material_cb.hlsli"
@@ -22,7 +23,7 @@ Texture2D shadow_map : register(t3);
 struct PixelIn
 {
 	float4 pos : SV_POSITION;
-	float3 pos_w : POSITION;
+	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
 	float3 binormal : BINORMAL;
@@ -106,12 +107,12 @@ PixelOut main(PixelIn pin)
 	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
 	{
 		float3 light_radiance = rendering_equation( base_color, pass_params.lights[light_idx].dir,
-												 normalize( pass_params.eye_pos_w - pin.pos_w ),
+												 normalize( - pin.pos_v ),
 												 normal,
 												 specular.g, specular.b );
 
         res_color += pass_params.lights[light_idx].strength
-                     * light_radiance * shadow_factor( pin.pos_w, pass_params.lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler );
+                     * light_radiance * shadow_factor( pin.pos_v, pass_params.lights[light_idx].shadow_map_mat, shadow_map, shadow_map_sampler );
     }
 
     // ambient for sky, remove after skybox gen
@@ -120,8 +121,6 @@ PixelOut main(PixelIn pin)
     PixelOut res;
     res.color = float4(res_color, 1.0f);
     res.ambient_color = float4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
-    res.screen_space_normal = normalize(
-                                  mul( float4(normal, 0.0f), pass_params.view_mat ).xyz
-                              ).xy;
+    res.screen_space_normal = normal.xy;
 	return res;
 }

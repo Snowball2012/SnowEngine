@@ -392,6 +392,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <None Include="shaders\bindings\pass_cb.hlsli" />
     <None Include="shaders\lib\lighting.hlsli" />
     <None Include="shaders\lib\math_utils.hlsli" />
+    <None Include="shaders\lib\shadows.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
