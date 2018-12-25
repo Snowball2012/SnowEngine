@@ -96,7 +96,7 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
 	return rootsig;
 }
 
-void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
+void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool reversed_z, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
 {
 	if ( ! rootsig )
 		rootsig = BuildRootSignature( device );
@@ -133,6 +133,9 @@ void DepthOnlyPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culli
 		pso_desc.RasterizerState.CullMode = back_culling ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_FRONT;
 		pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
 		pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
+		if ( reversed_z )
+			pso_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+
 		pso_desc.SampleMask = UINT_MAX;
 		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 

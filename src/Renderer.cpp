@@ -379,7 +379,7 @@ void Renderer::RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_he
 
 	D3D12_CLEAR_VALUE optClear;
 	optClear.Format = m_depth_stencil_format;
-	optClear.DepthStencil.Depth = 1.0f;
+	optClear.DepthStencil.Depth = 0.0f;
 	optClear.DepthStencil.Stencil = 0;
 	ThrowIfFailed( m_d3d_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
@@ -564,7 +564,7 @@ void Renderer::BuildPasses()
 	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
 
 
-	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, true, *m_d3d_device.Get(),
+	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, false, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
 	m_shadow_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
@@ -573,7 +573,7 @@ void Renderer::BuildPasses()
 		m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
 	}
 
-	DepthOnlyPass::BuildData( m_depth_stencil_format, 0, true, *m_d3d_device.Get(),
+	DepthOnlyPass::BuildData( m_depth_stencil_format, 0, true, true, *m_d3d_device.Get(),
 							  m_z_prepass_pso, m_do_root_signature );
 	m_depth_prepass = std::make_unique<DepthOnlyPass>( m_z_prepass_pso.Get(), m_do_root_signature.Get() );
 

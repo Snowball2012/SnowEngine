@@ -46,7 +46,7 @@ public:
 			ctx.renderitems = scene.items;
 		}
 
-		cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr );
+		cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr );
 
 		cmd_list.RSSetViewports( 1, &view.viewport );
 		cmd_list.RSSetScissorRects( 1, &view.scissor_rect );

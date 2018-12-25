@@ -55,10 +55,11 @@ D3D12_GPU_VIRTUAL_ADDRESS ForwardCBProvider::GetCBPointer() const noexcept
 
 void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
 {
+	// reversed z
 	DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
 																camera.aspect_ratio,
-																camera.near_plane,
-																camera.far_plane );
+																camera.far_plane,
+																camera.near_plane );
 
 	DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
 														DirectX::XMLoadFloat3( &camera.dir ),
@@ -82,8 +83,10 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 
 	gpu_data.AspectRatio = camera.aspect_ratio;
 	gpu_data.EyePosW = camera.pos;
-	gpu_data.FarZ = camera.far_plane;
-	gpu_data.NearZ = camera.near_plane;
+
+	// reversed z
+	gpu_data.FarZ = camera.near_plane;
+	gpu_data.NearZ = camera.far_plane;
 	gpu_data.FovY = camera.fov_y;
 }
 
