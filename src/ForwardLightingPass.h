@@ -15,6 +15,7 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE ambient_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
+		D3D12_GPU_DESCRIPTOR_HANDLE shadow_cascade_srv;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 	};
 
@@ -61,7 +62,8 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 		1 - cbv per material
 		2 - material textures descriptor table
 		3 - shadow
-		4 - cbv per pass
+		4 - shadow cascade
+		5 - cbv per pass
 
 		Shader register bindings
 		b0 - cbv per obj
@@ -72,24 +74,27 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 		t1 - normal
 		t2 - specular
 		t3 - shadow
+		t4 - shadow cascade
 
 		To optimize state changes keep material textures together when possible. Descriptor duplication?
 	*/
-	constexpr int nparams = 5;
+	constexpr int nparams = 6;
 
 	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
 	for ( int i = 0; i < 2; ++i )
 		slot_root_parameter[i].InitAsConstantBufferView( i );
 
-	CD3DX12_DESCRIPTOR_RANGE desc_table[2];
+	CD3DX12_DESCRIPTOR_RANGE desc_table[3];
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0 ); // albedo, normal, specular
 	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
+	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow cascade
 
-	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_ALL );
-	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_ALL );
+	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_PIXEL );
 
-	slot_root_parameter[4].InitAsConstantBufferView( 2 );
+	slot_root_parameter[5].InitAsConstantBufferView( 2 );
 
 	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
 											   UINT( static_samplers.size() ), static_samplers.data(),
@@ -101,9 +106,8 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 											  serialized_root_sig.GetAddressOf(), error_blob.GetAddressOf() );
 
 	if ( error_blob )
-	{
 		OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
-	}
+
 	ThrowIfFailed( hr );
 
 	ComPtr<ID3D12RootSignature> rootsig;

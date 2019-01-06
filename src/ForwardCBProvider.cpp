@@ -42,6 +42,7 @@ void ForwardCBProvider::Update( const Camera::Data& camera, const span<const Sce
 				   DirectX::XMLoadFloat4x4( &gpu_data.InvView ),
 				   DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.View ) ),
 				   gpu_data );
+	FillCSMData( camera, gpu_data );
 	
 	memcpy( m_mapped_data.begin() + BufferGPUSize * m_cur_res_idx, &gpu_data, BufferGPUSize );
 }
@@ -158,4 +159,9 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 		data.spot_power = src_data.spot_power;
 		data.strength = src_data.strength;
 	}
+}
+
+void ForwardCBProvider::FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
+{
+	// fill split positions
 }

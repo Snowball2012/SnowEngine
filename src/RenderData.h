@@ -76,15 +76,26 @@ struct MaterialConstants
 struct LightConstants
 {
 	DirectX::XMFLOAT4X4 shadow_map_matrix;
-	DirectX::XMFLOAT3 strength; // spectral irradiance for parallel lights, in watt/sq.meter
+	DirectX::XMFLOAT3 strength;
 	float falloff_start; // point and spotlight
 	DirectX::XMFLOAT3 origin; // point and spotlight
 	float falloff_end; // point and spotlight
-	DirectX::XMFLOAT3 dir; // spotlight and parallel, direction TO the light source
+	DirectX::XMFLOAT3 dir; // spotlight, direction TO the light source
 	float spot_power; // spotlight only
 };
 
-constexpr int MAX_LIGHTS = 16;
+constexpr uint32_t MAX_CASCADE_SIZE = 3;
+
+struct ParallelLightConstants
+{
+	DirectX::XMFLOAT4X4 shadow_map_matrix[MAX_CASCADE_SIZE];
+	DirectX::XMFLOAT3 strength; // spectral irradiance, in watt/sq.meter (visible spectrum only)
+	int32_t csm_num_splits;     // must be <= MaxCascadeSize
+	DirectX::XMFLOAT3 dir;      // to the light source
+};
+
+constexpr uint32_t MAX_LIGHTS = 16;
+constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
 struct PassConstants
 {
@@ -111,6 +122,10 @@ struct PassConstants
 	DirectX::XMFLOAT2 _padding;
 
 	LightConstants lights[MAX_LIGHTS];
+
+	ParallelLightConstants parallel_lights[MAX_CSM_LIGHTS];
+	float csm_split_positions[MAX_CASCADE_SIZE - 1];
+
 	int n_parallel_lights = 0;
 	int n_point_lights = 0;
 	int n_spotlight_lights = 0;

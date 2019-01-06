@@ -28,6 +28,8 @@ private:
 						const DirectX::XMMATRIX& view_matrix,
 						PassConstants& gpu_data ) const;
 
+	void FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
+
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
 	span<uint8_t> m_mapped_data;
 	int m_cur_res_idx = 0;
@@ -35,4 +37,5 @@ private:
 
 	static constexpr UINT BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
 	static constexpr size_t MaxLights = sizeof( PassConstants::lights ) / sizeof( LightConstants );
+	static constexpr size_t MaxParallelLights = sizeof( PassConstants::parallel_lights ) / sizeof( ParallelLightConstants );
 };

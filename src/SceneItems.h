@@ -303,8 +303,7 @@ public:
 		size_t sm_size; // must be power of 2, base resolution for cascade
 		float orthogonal_ws_height; // shadow map pass for parallel light places the light camera above the main camera.
 		                            // This parameter indicates how high will it be placed. It depends mostly on the scene as a whole
-		float most_detailed_cascade_ws_halfwidth; // width of the most detailed slice in world space units
-		// todo: cascade properties
+		float ws_halfwidth; // width in world space units. Useless for CSM. Todo: remove this
 	};
 
 	const Data& GetData() const noexcept { return m_data; }

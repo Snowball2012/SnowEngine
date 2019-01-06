@@ -180,8 +180,8 @@ void ShadowProvider::FillPassCB( const SceneLight& light,
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.most_detailed_cascade_ws_halfwidth,
-											shadow_desc.most_detailed_cascade_ws_halfwidth,
+	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth,
+											shadow_desc.ws_halfwidth,
 											shadow_desc.orthogonal_ws_height * 0.1f,
 											shadow_desc.orthogonal_ws_height * 2.0f );
 	const auto& viewproj = view * proj;

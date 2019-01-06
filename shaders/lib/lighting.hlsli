@@ -21,7 +21,6 @@ struct ParallelLight
     float3 strength;
     int csm_num_splits;
 	float3 dir;
-    float _unused;
 };
 
 static const float M_PI = 3.14159265f;

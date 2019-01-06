@@ -236,7 +236,7 @@ void RenderApp::UpdateLights()
 	}
 	SceneLight::Shadow sun_shadow;
 	{
-		sun_shadow.most_detailed_cascade_ws_halfwidth = 50.0f;
+		sun_shadow.ws_halfwidth = 50.0f;
 		sun_shadow.orthogonal_ws_height = 100.0f;
 		sun_shadow.sm_size = 4096;
 	}

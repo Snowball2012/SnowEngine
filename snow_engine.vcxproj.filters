@@ -185,6 +185,9 @@
     <ClCompile Include="src\ResizableTexture.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\ParallelSplitShadowMapping.cpp">
+      <Filter>core\Effects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -336,6 +339,9 @@
     </ClInclude>
     <ClInclude Include="src\ResizableTexture.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ParallelSplitShadowMapping.h">
+      <Filter>core\Effects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

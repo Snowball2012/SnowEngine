@@ -19,7 +19,7 @@ Texture2D base_color_map : register(t0);
 Texture2D normal_map : register(t1);
 Texture2D specular_map : register(t2);
 Texture2D shadow_map : register(t3);
-Texture2D shadow_cascade[MAX_CASCADE_SIZE] : register(t4);
+Texture2DArray shadow_cascade : register(t4);
 
 struct PixelIn
 {

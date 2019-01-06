@@ -114,9 +114,9 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	ShadowMapStorage sm_storage;
 	m_pipeline.GetRes( sm_storage );
-	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
-	m_cmd_list->ResourceBarrier( 8, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 9, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
