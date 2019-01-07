@@ -110,7 +110,7 @@ PixelOut main(PixelIn pin)
         ParallelLight light = pass_params.parallel_lights[light_idx];
 
 		float3 light_radiance = rendering_equation( base_color, light.dir,
-												 normalize( - pin.pos_v ),
+												 normalize( -pin.pos_v ),
 												 normal,
 												 specular.g, specular.b );
 
@@ -123,7 +123,7 @@ PixelOut main(PixelIn pin)
 
     PixelOut res;
     res.color = float4(res_color, 1.0f);
-    res.ambient_color = float4( percieved_brightness( pass_params.lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
+    res.ambient_color = float4( percieved_brightness( pass_params.parallel_lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
     res.screen_space_normal = normal.xy;
 	return res;
 }

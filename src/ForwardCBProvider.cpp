@@ -4,6 +4,8 @@
 
 #include "ForwardCBProvider.h"
 
+#include "ParallelSplitShadowMapping.h"
+
 
 ForwardCBProvider::ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames )
 	: m_nbuffers( n_bufferized_frames )
@@ -120,8 +122,8 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 		throw SnowEngineException( "too many lights" );
 
 	size_t parallel_idx = 0;
-	size_t point_idx = gpu_data.n_parallel_lights;
-	size_t spotlight_idx = gpu_data.n_spotlight_lights;
+	size_t point_idx = 0;
+	size_t spotlight_idx = gpu_data.n_point_lights;
 
 	for ( const auto& light : lights )
 	{
@@ -143,25 +145,47 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 			default:
 				NOTIMPL;
 		};
-		LightConstants& data = gpu_data.lights[gpu_idx];
-		const auto& shadow_matrix = light.ShadowMatrix(); // here matrix is in world space, we need to convert it to view space for the shaders
-		if ( shadow_matrix.has_value() )
-		{
-			DirectX::XMStoreFloat4x4( &data.shadow_map_matrix,
-									  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrix.value() ), inv_view_matrix_transposed ) );
-		}
 
-		const SceneLight::Data& src_data = light.GetData();
-		DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
-		data.falloff_end = src_data.falloff_end;
-		data.falloff_start = src_data.falloff_start;
-		data.origin = src_data.origin;
-		data.spot_power = src_data.spot_power;
-		data.strength = src_data.strength;
+		if ( light.GetData().type == SceneLight::LightType::Parallel )
+		{
+			ParallelLightConstants& data = gpu_data.parallel_lights[gpu_idx];
+			const auto& shadow_matrices = light.GetShadowMatrices(); // here matrix is in world space, we need to convert it to view space for the shaders
+			if ( shadow_matrices.size() > MAX_CASCADE_SIZE )
+				throw SnowEngineException( "too many matrices for csm" );
+			for ( int i = 0; i < shadow_matrices.size(); ++i )
+			{
+				DirectX::XMStoreFloat4x4( &data.shadow_map_matrix[i],
+										  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrices[i] ), inv_view_matrix_transposed ) );
+			}
+			data.csm_num_splits = shadow_matrices.size();
+
+			const SceneLight::Data& src_data = light.GetData();
+			DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
+			data.strength = src_data.strength;
+		}
+		else
+		{
+			LightConstants& data = gpu_data.lights[gpu_idx];
+			const auto& shadow_matrix = light.GetShadowMatrices(); // here matrix is in world space, we need to convert it to view space for the shaders
+			if ( shadow_matrix.size() == 1 )
+			{
+				DirectX::XMStoreFloat4x4( &data.shadow_map_matrix,
+										  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrix[0] ), inv_view_matrix_transposed ) );
+			}
+
+			const SceneLight::Data& src_data = light.GetData();
+			DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
+			data.falloff_end = src_data.falloff_end;
+			data.falloff_start = src_data.falloff_start;
+			data.origin = src_data.origin;
+			data.spot_power = src_data.spot_power;
+			data.strength = src_data.strength;
+		}
 	}
 }
 
 void ForwardCBProvider::FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
 {
 	// fill split positions
+	ParallelSplitShadowMapping::CalcSplitPositionsVS( camera.near_plane, camera.far_plane, MAX_CASCADE_SIZE, 0.5f, gpu_data.csm_split_positions );
 }

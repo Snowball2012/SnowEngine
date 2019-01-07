@@ -3,6 +3,7 @@
 #include <d3d12.h>
 #include <DirectXCollision.h>
 #include <DirectXMath.h>
+#include <boost/container/small_vector.hpp>
 
 #include "utils/packed_freelist.h"
 
@@ -304,6 +305,7 @@ public:
 		float orthogonal_ws_height; // shadow map pass for parallel light places the light camera above the main camera.
 		                            // This parameter indicates how high will it be placed. It depends mostly on the scene as a whole
 		float ws_halfwidth; // width in world space units. Useless for CSM. Todo: remove this
+		uint32_t cascades_cnt;
 	};
 
 	const Data& GetData() const noexcept { return m_data; }
@@ -314,15 +316,16 @@ public:
 
 	// has value if this light casts shadow in this frame
 	// maps 3d points to shadow map uv and depth 
-	const std::optional<DirectX::XMMATRIX>& ShadowMatrix() const noexcept { return m_shadow_matrix; };
-	std::optional<DirectX::XMMATRIX>& ShadowMatrix() noexcept { return m_shadow_matrix; };
+	using ShadowMatrices = boost::container::small_vector<DirectX::XMMATRIX, 1>;
+	const ShadowMatrices& GetShadowMatrices() const noexcept { return m_shadow_matrices; };
+	ShadowMatrices& SetShadowMatrices() noexcept { return m_shadow_matrices; };
 
 	bool& IsEnabled() noexcept { return m_is_enabled; }
 	const bool& IsEnabled() const noexcept { return m_is_enabled; }
 
 private:
 	Data m_data; 
-	std::optional<DirectX::XMMATRIX> m_shadow_matrix;
+	ShadowMatrices m_shadow_matrices;
 	std::optional<Shadow> m_sm;
 
 	bool m_is_enabled = true;

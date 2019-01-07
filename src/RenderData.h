@@ -89,12 +89,15 @@ constexpr uint32_t MAX_CASCADE_SIZE = 3;
 struct ParallelLightConstants
 {
 	DirectX::XMFLOAT4X4 shadow_map_matrix[MAX_CASCADE_SIZE];
+
 	DirectX::XMFLOAT3 strength; // spectral irradiance, in watt/sq.meter (visible spectrum only)
 	int32_t csm_num_splits;     // must be <= MaxCascadeSize
+
 	DirectX::XMFLOAT3 dir;      // to the light source
+	float _padding;
 };
 
-constexpr uint32_t MAX_LIGHTS = 16;
+constexpr uint32_t MAX_LIGHTS = 15;
 constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
 struct PassConstants
@@ -129,8 +132,6 @@ struct PassConstants
 	int n_parallel_lights = 0;
 	int n_point_lights = 0;
 	int n_spotlight_lights = 0;
-
-	int use_linear_depth = 0;
 };
 
 // scene representation for renderer

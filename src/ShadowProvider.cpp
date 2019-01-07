@@ -193,5 +193,7 @@ void ShadowProvider::FillPassCB( const SceneLight& light,
 void ShadowProvider::CalcLightingPassShadowMatrix( SceneLight& light, const DirectX::XMFLOAT4X4& pass_cb_matrix )
 {
 	// ToDo: calc corrected matrix in case of multiple lights
-	light.ShadowMatrix() = XMMatrixTranspose( XMLoadFloat4x4( &pass_cb_matrix ) );
+	light.SetShadowMatrices().resize( 1 );
+	light.SetShadowMatrices()[0] = XMMatrixTranspose( XMLoadFloat4x4( &pass_cb_matrix ) );
+	light.ModifyShadow()->cascades_cnt = 1;
 }
