@@ -99,7 +99,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 			const UINT offset_in_cb = BufferGPUSize * m_cur_cb_idx;
 			memcpy( m_mapped_data.begin() + offset_in_cb, &gpu_data, BufferGPUSize );
 			producer.map_data.pass_cb = m_pass_cb->GetGPUVirtualAddress() + offset_in_cb;
-			CalcLightingPassShadowMatrix( light, gpu_data.ViewProj );
+			CalcLightingPassShadowMatrix( light, gpu_data.view_proj_mat );
 		}
 	}
 }
@@ -185,7 +185,7 @@ void ShadowProvider::FillPassCB( const SceneLight& light,
 											shadow_desc.orthogonal_ws_height * 0.1f,
 											shadow_desc.orthogonal_ws_height * 2.0f );
 	const auto& viewproj = view * proj;
-	XMStoreFloat4x4( &gpu_data.ViewProj, XMMatrixTranspose( viewproj ) );
+	XMStoreFloat4x4( &gpu_data.view_proj_mat, XMMatrixTranspose( viewproj ) );
 	// we don't need other data, at least for now
 }
 

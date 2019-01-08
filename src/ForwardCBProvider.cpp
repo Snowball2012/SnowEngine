@@ -41,8 +41,8 @@ void ForwardCBProvider::Update( const Camera::Data& camera, const span<const Sce
 	PassConstants gpu_data;
 	FillCameraData( camera, gpu_data );
 	FillLightData( scene_lights,
-				   DirectX::XMLoadFloat4x4( &gpu_data.InvView ),
-				   DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.View ) ),
+				   DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
+				   DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
 				   gpu_data );
 	FillCSMData( camera, gpu_data );
 	
@@ -75,19 +75,19 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 	DirectX::XMMATRIX inv_view_proj = DirectX::XMMatrixInverse( &determinant, view_proj );
 
 	// HLSL vectors are row vectors, so we need to transpose all the matrices before uploading them to gpu
-	DirectX::XMStoreFloat4x4( &gpu_data.Proj, DirectX::XMMatrixTranspose( proj ) );
-	DirectX::XMStoreFloat4x4( &gpu_data.View, DirectX::XMMatrixTranspose( view ) );
-	DirectX::XMStoreFloat4x4( &gpu_data.ViewProj, DirectX::XMMatrixTranspose( view_proj ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.proj_mat, DirectX::XMMatrixTranspose( proj ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.view_mat, DirectX::XMMatrixTranspose( view ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.view_proj_mat, DirectX::XMMatrixTranspose( view_proj ) );
 
-	DirectX::XMStoreFloat4x4( &gpu_data.InvProj, DirectX::XMMatrixTranspose( inv_proj ) );
-	DirectX::XMStoreFloat4x4( &gpu_data.InvView, DirectX::XMMatrixTranspose( inv_view ) );
-	DirectX::XMStoreFloat4x4( &gpu_data.InvViewProj, DirectX::XMMatrixTranspose( inv_view_proj ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.proj_inv_mat, DirectX::XMMatrixTranspose( inv_proj ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.view_inv_mat, DirectX::XMMatrixTranspose( inv_view ) );
+	DirectX::XMStoreFloat4x4( &gpu_data.view_proj_inv_mat, DirectX::XMMatrixTranspose( inv_view_proj ) );
 
-	gpu_data.AspectRatio = camera.aspect_ratio;
-	gpu_data.EyePosW = camera.pos;
-	gpu_data.FarZ = camera.far_plane;
-	gpu_data.NearZ = camera.near_plane;
-	gpu_data.FovY = camera.fov_y;
+	gpu_data.aspect_ratio = camera.aspect_ratio;
+	gpu_data.eye_pos_w = camera.pos;
+	gpu_data.far_z = camera.far_plane;
+	gpu_data.near_z = camera.near_plane;
+	gpu_data.fov_y = camera.fov_y;
 }
 
 

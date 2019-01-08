@@ -10,8 +10,6 @@
 
 struct PassConstants
 {
-
-
     float4x4 view_mat;
 	float4x4 view_inv_mat;
 	float4x4 proj_mat;

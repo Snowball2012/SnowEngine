@@ -84,7 +84,7 @@ struct LightConstants
 	float spot_power; // spotlight only
 };
 
-constexpr uint32_t MAX_CASCADE_SIZE = 4;
+constexpr uint32_t MAX_CASCADE_SIZE = 3;
 
 
 struct ParallelLightConstants
@@ -103,27 +103,27 @@ constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
 struct alignas( 16 ) PassConstants
 {
-	DirectX::XMFLOAT4X4 View = Identity4x4;
-	DirectX::XMFLOAT4X4 InvView = Identity4x4;
-	DirectX::XMFLOAT4X4 Proj = Identity4x4;
-	DirectX::XMFLOAT4X4 InvProj = Identity4x4;
-	DirectX::XMFLOAT4X4 ViewProj = Identity4x4;
-	DirectX::XMFLOAT4X4 InvViewProj = Identity4x4;
+	DirectX::XMFLOAT4X4 view_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_inv_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 proj_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 proj_inv_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_proj_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_proj_inv_mat = Identity4x4;
 
-	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
-	float cbPerObjectPad1 = 0.0f;
+	DirectX::XMFLOAT3 eye_pos_w = { 0.0f, 0.0f, 0.0f };
+	float _padding1 = 0.0f;
 
-	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
-	DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
+	DirectX::XMFLOAT2 render_target_size = { 0.0f, 0.0f };
+	DirectX::XMFLOAT2 render_target_size_inv = { 0.0f, 0.0f };
 
-	float NearZ = 0.0f;
-	float FarZ = 0.0f;
-	float FovY = 0.0f;
-	float AspectRatio = 0.0f;
+	float near_z = 0.0f;
+	float far_z = 0.0f;
+	float fov_y = 0.0f;
+	float aspect_ratio = 0.0f;
 
-	float TotalTime = 0.0f;
-	float DeltaTime = 0.0f;
-	DirectX::XMFLOAT2 _padding;
+	float total_time = 0.0f;
+	float delta_time = 0.0f;
+	DirectX::XMFLOAT2 _padding2;
 
 	LightConstants lights[MAX_LIGHTS];
 
