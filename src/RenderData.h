@@ -84,7 +84,8 @@ struct LightConstants
 	float spot_power; // spotlight only
 };
 
-constexpr uint32_t MAX_CASCADE_SIZE = 3;
+constexpr uint32_t MAX_CASCADE_SIZE = 4;
+
 
 struct ParallelLightConstants
 {
@@ -100,7 +101,7 @@ struct ParallelLightConstants
 constexpr uint32_t MAX_LIGHTS = 15;
 constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
-struct PassConstants
+struct alignas( 16 ) PassConstants
 {
 	DirectX::XMFLOAT4X4 View = Identity4x4;
 	DirectX::XMFLOAT4X4 InvView = Identity4x4;
@@ -127,11 +128,12 @@ struct PassConstants
 	LightConstants lights[MAX_LIGHTS];
 
 	ParallelLightConstants parallel_lights[MAX_CSM_LIGHTS];
-	float csm_split_positions[MAX_CASCADE_SIZE - 1];
+	float csm_split_positions[( MAX_CASCADE_SIZE - 1 ) * 4];
 
-	int n_parallel_lights = 0;
-	int n_point_lights = 0;
-	int n_spotlight_lights = 0;
+	int32_t n_parallel_lights = 0;
+	int32_t n_point_lights = 0;
+	int32_t n_spotlight_lights = 0;
+	int32_t _padding3 = 0;
 };
 
 // scene representation for renderer

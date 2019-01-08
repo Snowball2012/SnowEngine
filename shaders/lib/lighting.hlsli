@@ -14,7 +14,7 @@ struct Light
 	float spot_power;
 };
 
-#define MAX_CASCADE_SIZE 3
+#define MAX_CASCADE_SIZE 4
 struct ParallelLight
 {
 	float4x4 shadow_map_mat[MAX_CASCADE_SIZE];

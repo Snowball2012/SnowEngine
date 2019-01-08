@@ -188,4 +188,6 @@ void ForwardCBProvider::FillCSMData( const Camera::Data& camera, PassConstants& 
 {
 	// fill split positions
 	ParallelSplitShadowMapping::CalcSplitPositionsVS( camera.near_plane, camera.far_plane, MAX_CASCADE_SIZE, 0.5f, gpu_data.csm_split_positions );
+	for ( int i = MAX_CASCADE_SIZE - 2; i > 0; --i )
+		gpu_data.csm_split_positions[4 * i] = gpu_data.csm_split_positions[i];
 }
