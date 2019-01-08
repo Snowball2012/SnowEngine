@@ -23,9 +23,10 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 
 	cmd_list.SetGraphicsRootSignature( m_root_signature );
 
-	cmd_list.SetGraphicsRootConstantBufferView( 4, context.pass_cb );
-
 	cmd_list.SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
+	cmd_list.SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
+
+	cmd_list.SetGraphicsRootConstantBufferView( 5, context.pass_cb );
 
 	for ( const auto& render_item : *context.renderitems )
 	{

@@ -111,6 +111,7 @@ void RenderApp::UpdateGUI()
 	{
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
+		ImGui::SliderFloat( "INTERPOLATOR", &m_renderer->m_forward_cb_provider->m_interpolator,0 , 1, "%.2f" );
 		ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
 		if ( m_dbg_use_separate_camera )
 		{
@@ -178,7 +179,7 @@ void RenderApp::UpdateCamera()
 		cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
 		cam_data.fov_y = MathHelper::Pi / 4;
 		cam_data.aspect_ratio = AspectRatio();
-		cam_data.far_plane = 10000.0f;
+		cam_data.far_plane = 500.0f;
 		cam_data.near_plane = 0.1f;
 	}
 
@@ -236,7 +237,7 @@ void RenderApp::UpdateLights()
 	}
 	SceneLight::Shadow sun_shadow;
 	{
-		sun_shadow.most_detailed_cascade_ws_halfwidth = 50.0f;
+		sun_shadow.ws_halfwidth = 50.0f;
 		sun_shadow.orthogonal_ws_height = 100.0f;
 		sun_shadow.sm_size = 4096;
 	}

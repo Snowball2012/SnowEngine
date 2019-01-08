@@ -27,6 +27,18 @@ struct ShadowMaps
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
+struct ShadowCascadeStorage
+{
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	ID3D12Resource* res;
+};
+
+struct ShadowCascade
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
 struct ForwardPassCB
 {
 	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;

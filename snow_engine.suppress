@@ -695,4 +695,44 @@
     <CodeCurrent>2545661681</CodeCurrent>
     <CodeNext>2545657589</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>RenderData.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: lights, parallel_lights, csm_split_positions.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>25003531</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>ForwardLightingPass.h</FileName>
+    <ErrorCode>V525</ErrorCode>
+    <Message>The code contains the collection of similar blocks. Check items '_', '_', '_' in lines _, _, _.</Message>
+    <CodePrev>1535566701</CodePrev>
+    <CodeCurrent>3306278414</CodeCurrent>
+    <CodeNext>3148278534</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>ForwardCBProvider.cpp</FileName>
+    <ErrorCode>V2007</ErrorCode>
+    <Message>The '_ * i' expression can be simplified. One of the operands in the '*' operation equals _. Probably it is a mistake.</Message>
+    <CodePrev>666124016</CodePrev>
+    <CodeCurrent>508691043</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>ForwardCBProvider.cpp</FileName>
+    <ErrorCode>V1008</ErrorCode>
+    <Message>Consider inspecting the 'for' operator. No more than one iteration of the loop will be performed.</Message>
+    <CodePrev>3542504141</CodePrev>
+    <CodeCurrent>666124016</CodeCurrent>
+    <CodeNext>508691043</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>RenderData.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: lights, parallel_lights, csm_split_positions.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>4110247424</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
 </NewDataSet>

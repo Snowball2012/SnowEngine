@@ -99,7 +99,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 			const UINT offset_in_cb = BufferGPUSize * m_cur_cb_idx;
 			memcpy( m_mapped_data.begin() + offset_in_cb, &gpu_data, BufferGPUSize );
 			producer.map_data.pass_cb = m_pass_cb->GetGPUVirtualAddress() + offset_in_cb;
-			CalcLightingPassShadowMatrix( light, gpu_data.ViewProj );
+			CalcLightingPassShadowMatrix( light, gpu_data.view_proj_mat );
 		}
 	}
 }
@@ -180,12 +180,12 @@ void ShadowProvider::FillPassCB( const SceneLight& light,
 	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
 
 	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.most_detailed_cascade_ws_halfwidth,
-											shadow_desc.most_detailed_cascade_ws_halfwidth,
+	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth,
+											shadow_desc.ws_halfwidth,
 											shadow_desc.orthogonal_ws_height * 0.1f,
 											shadow_desc.orthogonal_ws_height * 2.0f );
 	const auto& viewproj = view * proj;
-	XMStoreFloat4x4( &gpu_data.ViewProj, XMMatrixTranspose( viewproj ) );
+	XMStoreFloat4x4( &gpu_data.view_proj_mat, XMMatrixTranspose( viewproj ) );
 	// we don't need other data, at least for now
 }
 
@@ -193,5 +193,7 @@ void ShadowProvider::FillPassCB( const SceneLight& light,
 void ShadowProvider::CalcLightingPassShadowMatrix( SceneLight& light, const DirectX::XMFLOAT4X4& pass_cb_matrix )
 {
 	// ToDo: calc corrected matrix in case of multiple lights
-	light.ShadowMatrix() = XMMatrixTranspose( XMLoadFloat4x4( &pass_cb_matrix ) );
+	light.SetShadowMatrices().resize( 1 );
+	light.SetShadowMatrices()[0] = XMMatrixTranspose( XMLoadFloat4x4( &pass_cb_matrix ) );
+	light.ModifyShadow()->cascades_cnt = 1;
 }

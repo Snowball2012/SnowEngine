@@ -5,6 +5,9 @@
 
 #include "../lib/lighting.hlsli"
 
+#define MAX_LIGHTS 15
+#define MAX_CSM_LIGHTS 1
+
 struct PassConstants
 {
     float4x4 view_mat;
@@ -30,10 +33,15 @@ struct PassConstants
     float2 _padding2;
 
 	Light lights[MAX_LIGHTS];
+	ParallelLight parallel_lights[MAX_CSM_LIGHTS];
+    float csm_split_positions[MAX_CASCADE_SIZE - 1];
+    
+    float3 _padding4;
 
 	int n_parallel_lights;
 	int n_point_lights;
 	int n_spotlight_lights;
+	int _padding3;
 };
 
 cbuffer cbPerPass : register( PER_PASS_CB_BINDING )

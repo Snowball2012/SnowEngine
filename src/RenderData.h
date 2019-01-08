@@ -76,46 +76,64 @@ struct MaterialConstants
 struct LightConstants
 {
 	DirectX::XMFLOAT4X4 shadow_map_matrix;
-	DirectX::XMFLOAT3 strength; // spectral irradiance for parallel lights, in watt/sq.meter
+	DirectX::XMFLOAT3 strength;
 	float falloff_start; // point and spotlight
 	DirectX::XMFLOAT3 origin; // point and spotlight
 	float falloff_end; // point and spotlight
-	DirectX::XMFLOAT3 dir; // spotlight and parallel, direction TO the light source
+	DirectX::XMFLOAT3 dir; // spotlight, direction TO the light source
 	float spot_power; // spotlight only
 };
 
-constexpr int MAX_LIGHTS = 16;
+constexpr uint32_t MAX_CASCADE_SIZE = 4;
 
-struct PassConstants
+
+struct ParallelLightConstants
 {
-	DirectX::XMFLOAT4X4 View = Identity4x4;
-	DirectX::XMFLOAT4X4 InvView = Identity4x4;
-	DirectX::XMFLOAT4X4 Proj = Identity4x4;
-	DirectX::XMFLOAT4X4 InvProj = Identity4x4;
-	DirectX::XMFLOAT4X4 ViewProj = Identity4x4;
-	DirectX::XMFLOAT4X4 InvViewProj = Identity4x4;
+	DirectX::XMFLOAT4X4 shadow_map_matrix[MAX_CASCADE_SIZE];
 
-	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
-	float cbPerObjectPad1 = 0.0f;
+	DirectX::XMFLOAT3 strength; // spectral irradiance, in watt/sq.meter (visible spectrum only)
+	int32_t csm_num_split_positions;     // must be <= MaxCascadeSize
 
-	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
-	DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
+	DirectX::XMFLOAT3 dir;      // to the light source
+	float _padding;
+};
 
-	float NearZ = 0.0f;
-	float FarZ = 0.0f;
-	float FovY = 0.0f;
-	float AspectRatio = 0.0f;
+constexpr uint32_t MAX_LIGHTS = 15;
+constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
-	float TotalTime = 0.0f;
-	float DeltaTime = 0.0f;
-	DirectX::XMFLOAT2 _padding;
+struct alignas( 16 ) PassConstants
+{
+	DirectX::XMFLOAT4X4 view_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_inv_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 proj_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 proj_inv_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_proj_mat = Identity4x4;
+	DirectX::XMFLOAT4X4 view_proj_inv_mat = Identity4x4;
+
+	DirectX::XMFLOAT3 eye_pos_w = { 0.0f, 0.0f, 0.0f };
+	float _padding1 = 0.0f;
+
+	DirectX::XMFLOAT2 render_target_size = { 0.0f, 0.0f };
+	DirectX::XMFLOAT2 render_target_size_inv = { 0.0f, 0.0f };
+
+	float near_z = 0.0f;
+	float far_z = 0.0f;
+	float fov_y = 0.0f;
+	float aspect_ratio = 0.0f;
+
+	float total_time = 0.0f;
+	float delta_time = 0.0f;
+	DirectX::XMFLOAT2 _padding2;
 
 	LightConstants lights[MAX_LIGHTS];
-	int n_parallel_lights = 0;
-	int n_point_lights = 0;
-	int n_spotlight_lights = 0;
 
-	int use_linear_depth = 0;
+	ParallelLightConstants parallel_lights[MAX_CSM_LIGHTS];
+	float csm_split_positions[( MAX_CASCADE_SIZE - 1 ) * 4];
+
+	int32_t n_parallel_lights = 0;
+	int32_t n_point_lights = 0;
+	int32_t n_spotlight_lights = 0;
+	int32_t _padding3 = 0;
 };
 
 // scene representation for renderer

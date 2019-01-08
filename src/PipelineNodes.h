@@ -69,6 +69,7 @@ public:
 	using InputResources = std::tuple
 		<
 		ShadowMaps,
+		ShadowCascade,
 		HDRColorStorage,
 		SSAmbientLightingStorage,
 		SSNormalStorage,
@@ -93,6 +94,8 @@ public:
 	{
 		ShadowMaps shadow_maps;
 		m_pipeline->GetRes( shadow_maps );
+		ShadowCascade shadow_cascade;
+		m_pipeline->GetRes( shadow_cascade );
 		HDRColorStorage hdr_color_buffer;
 		m_pipeline->GetRes( hdr_color_buffer );
 		FinalSceneDepth dsv;
@@ -114,7 +117,8 @@ public:
 				 && ambient_buffer.rtv.ptr
 				 && ambient_buffer.srv.ptr
 				 && normal_buffer.rtv.ptr
-				 && normal_buffer.srv.ptr ) )
+				 && normal_buffer.srv.ptr
+				 && shadow_cascade.srv.ptr ) )
 			throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
 
 		ForwardLightingPass::Context ctx;
@@ -125,6 +129,7 @@ public:
 		ctx.pass_cb = pass_cb.pass_cb;
 		ctx.ambient_rtv = ambient_buffer.rtv;
 		ctx.normals_rtv = normal_buffer.rtv;
+		ctx.shadow_cascade_srv = shadow_cascade.srv;
 
 		const float bgr_color[4] = { 0, 0, 0, 0 };
 		cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
@@ -312,7 +317,10 @@ public:
 																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
 
+		ShadowCascade cascade;
+		cascade.srv = output.srv;
 		m_pipeline->SetRes( output );
+		m_pipeline->SetRes( cascade );
 	}
 
 private:
