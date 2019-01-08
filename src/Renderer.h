@@ -72,6 +72,7 @@ public:
 	};
 	
 	PerformanceStats GetPerformanceStats() const noexcept;
+	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
@@ -112,7 +113,6 @@ private:
 	CameraID m_frustrum_cull_camera_id = CameraID::nullid;
 
 	std::unique_ptr<SceneManager> m_scene_manager;
-	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_ui_heap = nullptr;

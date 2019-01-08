@@ -19,7 +19,7 @@ struct ParallelLight
 {
 	float4x4 shadow_map_mat[MAX_CASCADE_SIZE];
     float3 strength;
-    int csm_num_splits;
+    int csm_num_split_positions;
 	float3 dir;
     float _padding;
 };

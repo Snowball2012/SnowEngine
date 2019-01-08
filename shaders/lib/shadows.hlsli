@@ -97,7 +97,7 @@ float shadow_factor_array( float3 pos_v, float4x4 shadow_map_mat, Texture2DArray
 
 float csm_shadow_factor( float3 pos_v, ParallelLight light, Texture2DArray shadow_cascade, float split_positions[MAX_CASCADE_SIZE-1], SamplerComparisonState shadow_map_sampler )
 {
-    int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_splits, split_positions );
+    int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_split_positions, split_positions );
     return shadow_factor_array( pos_v, light.shadow_map_mat[frustrum], shadow_cascade, frustrum, shadow_map_sampler );
 }
 

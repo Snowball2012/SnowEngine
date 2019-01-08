@@ -19,6 +19,8 @@ public:
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
 
+	float m_interpolator = 0.0f;
+
 private:
 	void FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
 

@@ -157,7 +157,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 				DirectX::XMStoreFloat4x4( &data.shadow_map_matrix[i],
 										  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrices[i] ), inv_view_matrix_transposed ) );
 			}
-			data.csm_num_splits = shadow_matrices.size();
+			data.csm_num_split_positions = 2;// shadow_matrices.size();
 
 			const SceneLight::Data& src_data = light.GetData();
 			DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
@@ -187,7 +187,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 void ForwardCBProvider::FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
 {
 	// fill split positions
-	ParallelSplitShadowMapping::CalcSplitPositionsVS( camera.near_plane, camera.far_plane, MAX_CASCADE_SIZE, 0.5f, gpu_data.csm_split_positions );
+	ParallelSplitShadowMapping::CalcSplitPositionsVS( camera.near_plane, camera.far_plane, MAX_CASCADE_SIZE, m_interpolator, gpu_data.csm_split_positions );
 	for ( int i = MAX_CASCADE_SIZE - 2; i > 0; --i )
 		gpu_data.csm_split_positions[4 * i] = gpu_data.csm_split_positions[i];
 }

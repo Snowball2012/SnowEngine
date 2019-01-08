@@ -92,7 +92,7 @@ struct ParallelLightConstants
 	DirectX::XMFLOAT4X4 shadow_map_matrix[MAX_CASCADE_SIZE];
 
 	DirectX::XMFLOAT3 strength; // spectral irradiance, in watt/sq.meter (visible spectrum only)
-	int32_t csm_num_splits;     // must be <= MaxCascadeSize
+	int32_t csm_num_split_positions;     // must be <= MaxCascadeSize
 
 	DirectX::XMFLOAT3 dir;      // to the light source
 	float _padding;

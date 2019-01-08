@@ -111,6 +111,7 @@ void RenderApp::UpdateGUI()
 	{
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
+		ImGui::SliderFloat( "INTERPOLATOR", &m_renderer->m_forward_cb_provider->m_interpolator,0 , 1, "%.2f" );
 		ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
 		if ( m_dbg_use_separate_camera )
 		{
