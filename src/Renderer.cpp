@@ -45,7 +45,7 @@ Renderer::~Renderer()
 	m_scene_manager.reset();
 }
 
-void Renderer::InitD3D()
+void Renderer::Init()
 {
 	CreateDevice();
 
@@ -72,6 +72,9 @@ void Renderer::InitD3D()
 	BuildFrameResources();
 
 	BuildPasses();
+
+	m_pssm.SetSplitsNum( MAX_CASCADE_SIZE );
+	m_pssm.SetUniformFactor( 0.15f );
 }
 
 
@@ -91,7 +94,7 @@ void Renderer::Draw( const Context& ctx )
 	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
-	m_forward_cb_provider->Update( main_camera->GetData(), GetSceneView().GetROScene().LightSpan() );
+	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetSceneView().GetROScene().LightSpan() );
 
 	m_scene_manager->BindToPipeline( m_pipeline );
 
@@ -602,14 +605,6 @@ void Renderer::BuildPasses()
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
-
-	ThrowIfFailed( m_d3d_device->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		m_frame_resources[0].cmd_list_allocs[1].Get(), // Associated command allocator
-		nullptr, // Initial PipelineStateObject
-		IID_PPV_ARGS( m_sm_cmd_lst.GetAddressOf() ) ) );
-	m_sm_cmd_lst->Close();
 }
 
 std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> Renderer::BuildStaticSamplers() const

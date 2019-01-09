@@ -1,5 +1,8 @@
 #include <boost/test/unit_test.hpp>
 
+#include <Windows.h>
+#include <DirectXMath.h>
+
 #include "../src/ParallelSplitShadowMapping.h"
 
 BOOST_AUTO_TEST_SUITE( pssm )
@@ -14,7 +17,7 @@ BOOST_AUTO_TEST_CASE( split_pos_calc )
 
 	const float uniform_factor = 0.5f;
 
-	ParallelSplitShadowMapping::CalcSplitPositionsVS( n, f, split_positions.size() + 1, uniform_factor, split_positions.data() );
+	ParallelSplitShadowMapping::CalcSplitPositionsVS( n, f, uniform_factor, span<float>( split_positions.data(), split_positions.data() + split_positions.size() ) );
 
 	BOOST_CHECK_CLOSE( split_positions[0], 16.777, 1 );
 }

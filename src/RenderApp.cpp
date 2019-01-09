@@ -36,7 +36,7 @@ bool RenderApp::Initialize()
 		return false;
 
 	m_renderer = std::make_unique<Renderer>( mhMainWnd, mClientWidth, mClientHeight );
-	m_renderer->InitD3D();
+	m_renderer->Init();
 
 	if ( strlen( m_cmd_line ) != 0 ) //-V805
 		m_is_scene_loaded = std::async( std::launch::async, [this]() { LoadScene( m_cmd_line ); } );
@@ -111,7 +111,10 @@ void RenderApp::UpdateGUI()
 	{
 		ImGui::Begin( "Render settings", nullptr );
 		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
-		ImGui::SliderFloat( "INTERPOLATOR", &m_renderer->m_forward_cb_provider->m_interpolator,0 , 1, "%.2f" );
+		float pssm_interpolator = m_renderer->PSSM().GetUniformFactor();
+		ImGui::SliderFloat( "INTERPOLATOR", &pssm_interpolator,0 , 1, "%.2f" );
+		m_renderer->PSSM().SetUniformFactor( pssm_interpolator );
+
 		ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
 		if ( m_dbg_use_separate_camera )
 		{

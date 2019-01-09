@@ -1,25 +1,35 @@
 #pragma once
 
-struct PassConstants;
+#include "utils/span.h"
+
+#include "Ptr.h"
+
+#include "SceneItems.h"
 
 class ParallelSplitShadowMapping
 {
 public:
 	// returned positions are sorted, near_z and far_z are clipping planes in view space
 	// uniform_factor is an interpolation factor between logarithmic and uniform split schemes
-	// positions[] must have space for at least splits_cnt - 1 elements
-	static void CalcSplitPositionsVS( float near_z, float far_z, uint32_t splits_cnt, float uniform_factor, float positions[] ) noexcept;
+	// positions_storage.size() determines the number of splits (splits_num = position_starage.size() + 1)
+	static void CalcSplitPositionsVS( float near_z, float far_z, float uniform_factor, span<float> positions_storage ) noexcept;
 
-	//span<float> GetSplitPositions() const noexcept;
+	// positions_storage and matrices_storage must have enough space to contain up to
+	// MAX_CASCADE_SIZE - 1 and MAX_CASCADE_SIZE elements respectively
+	// returns subrange of the source span
+	span<float> CalcSplitPositionsVS( const Camera::Data& camera_data, span<float> positions_storage ) const noexcept;
 
-	// fills shadow matrices for the light
-	//void CalcShadowMatrices( const SceneLight& light, const Camera::Data& camera, const DirectX::XMVECTOR& light_dir );
+	// light must be parallel, split_positions must be initialized
+	span<DirectX::XMFLOAT4X4> CalcShadowMatricesWS( const Camera& camera, const SceneLight& light, const span<float>& split_positions, span<DirectX::XMFLOAT4X4> matrices_storage ) const noexcept;
 
-	void SetSplitCount( uint32_t split_cnt );
-	void SetUniformFactor( float uniform_factor );
+	// settings
+	void SetUniformFactor( float uniform_factor ) noexcept;
+	float GetUniformFactor() const noexcept { return m_uniform_factor; }
+
+	void SetSplitsNum( uint32_t splits_num ) noexcept { m_splits_num = splits_num; }
+	uint32_t GetSplitsNum() const noexcept { return m_splits_num; }
 
 private:
-	float m_uniform_factor;
-	uint32_t m_splits_cnt;
-	mutable std::vector<float> m_split_positions;
+	float m_uniform_factor = 0.5f;
+	uint32_t m_splits_num = 1;
 };

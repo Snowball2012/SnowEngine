@@ -8,6 +8,8 @@
 #include "RenderData.h"
 #include "SceneItems.h"
 
+class ParallelSplitShadowMapping;
+
 // Fills PassConstants circular buffer on GPU
 class ForwardCBProvider
 {
@@ -15,7 +17,7 @@ public:
 	ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames );
 	~ForwardCBProvider() noexcept;
 
-	void Update( const Camera::Data& camera, const span<const SceneLight>& scene_lights );
+	void Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const SceneLight>& scene_lights );
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
 
@@ -30,7 +32,7 @@ private:
 						const DirectX::XMMATRIX& view_matrix,
 						PassConstants& gpu_data ) const;
 
-	void FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
+	void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, PassConstants& gpu_data ) const noexcept;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
 	span<uint8_t> m_mapped_data;

@@ -6,7 +6,7 @@
 
 #include "StagingDescriptorHeap.h"
 
-#include "TemporalAA.h"
+#include "ParallelSplitShadowMapping.h"
 #include "ToneMappingPass.h"
 #include "HBAOPass.h"
 
@@ -29,7 +29,7 @@ public:
 	Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height );
 	~Renderer();
 
-	void InitD3D( );
+	void Init( );
 	
 	// returns draw_gui retval
 	struct Context
@@ -55,6 +55,8 @@ public:
 	} m_tonemap_settings;
 
 	HBAOPass::Settings m_hbao_settings;
+	ParallelSplitShadowMapping& PSSM() noexcept { return m_pssm; }
+	const ParallelSplitShadowMapping& PSSM() const noexcept { return m_pssm; }
 
 	// for update. Todo: something smarter
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
@@ -72,7 +74,6 @@ public:
 	};
 	
 	PerformanceStats GetPerformanceStats() const noexcept;
-	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
@@ -141,6 +142,8 @@ private:
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
 	std::unique_ptr<DepthAwareBlurPass> m_blur_pass = nullptr;
 
+	ParallelSplitShadowMapping m_pssm;
+
 	using PipelineInstance =
 		Pipeline
 		<
@@ -187,6 +190,8 @@ private:
 	ComPtr<ID3D12PipelineState> m_hbao_pso = nullptr;
 	ComPtr<ID3D12RootSignature> m_blur_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_blur_pso = nullptr;
+
+	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 	// methods
 	void CreateDevice();

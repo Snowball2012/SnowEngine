@@ -33,7 +33,7 @@ ForwardCBProvider::~ForwardCBProvider() noexcept
 }
 
 
-void ForwardCBProvider::Update( const Camera::Data& camera, const span<const SceneLight>& scene_lights )
+void ForwardCBProvider::Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const SceneLight>& scene_lights )
 {
 	// ToDo: fill time info
 	++m_cur_res_idx %= m_nbuffers; //-V567
@@ -44,7 +44,7 @@ void ForwardCBProvider::Update( const Camera::Data& camera, const span<const Sce
 				   DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
 				   DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
 				   gpu_data );
-	FillCSMData( camera, gpu_data );
+	FillCSMData( camera, pssm, gpu_data );
 	
 	memcpy( m_mapped_data.begin() + BufferGPUSize * m_cur_res_idx, &gpu_data, BufferGPUSize );
 }
@@ -187,10 +187,10 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 	}
 }
 
-void ForwardCBProvider::FillCSMData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
+void ForwardCBProvider::FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, PassConstants& gpu_data ) const noexcept
 {
 	// fill split positions
-	ParallelSplitShadowMapping::CalcSplitPositionsVS( camera.near_plane, camera.far_plane, MAX_CASCADE_SIZE, m_interpolator, gpu_data.csm_split_positions );
-	for ( int i = MAX_CASCADE_SIZE - 2; i > 0; --i )
-		gpu_data.csm_split_positions[4 * i] = gpu_data.csm_split_positions[i];
+	const auto& res_positions = pssm.CalcSplitPositionsVS( camera, make_span( gpu_data.csm_split_positions, gpu_data.csm_split_positions + MAX_CASCADE_SIZE - 1 ) );
+	for ( int i = res_positions.size() - 1; i > 0; --i )
+		gpu_data.csm_split_positions[4 * i] = res_positions[i];
 }
