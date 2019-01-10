@@ -63,6 +63,9 @@
     <Filter Include="core\PipelineDataProviders">
       <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\pssm">
+      <UniqueIdentifier>{afd82de6-ae6e-48f3-8b16-900e968d79d0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -374,6 +377,12 @@
     </FxCompile>
     <FxCompile Include="shaders\postprocess\separable_blur.hlsl">
       <Filter>shaders\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\pssm_gs.hlsl">
+      <Filter>shaders\pssm</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\pssm_vs.hlsl">
+      <Filter>shaders\pssm</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
