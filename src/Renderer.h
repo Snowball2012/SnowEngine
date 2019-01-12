@@ -20,13 +20,14 @@
 
 class ForwardLightingPass;
 class DepthOnlyPass;
+class PSSMGenPass;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class Renderer
 {
 public:
 	
-	Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height );
+	Renderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height );
 	~Renderer();
 
 	void Init( );
@@ -39,7 +40,7 @@ public:
 	};
 	void Draw( const Context& ctx );
 	void NewGUIFrame();
-	void Resize( size_t new_width, size_t new_height );
+	void Resize( uint32_t new_width, uint32_t new_height );
 
 	// getters/setters
 	D3D12_VIEWPORT& ScreenViewport() { return m_screen_viewport; }
@@ -82,8 +83,8 @@ private:
 
 	// windows stuff
 	HWND m_main_hwnd = nullptr;
-	size_t m_client_width = 800;
-	size_t m_client_height = 600;
+	uint32_t m_client_width = 800;
+	uint32_t m_client_height = 600;
 
 	// d3d stuff
 	ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
@@ -137,6 +138,7 @@ private:
 	// pipeline
 	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_shadow_pass = nullptr;
+	std::unique_ptr<PSSMGenPass> m_pssm_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
@@ -149,6 +151,7 @@ private:
 		<
 			DepthPrepassNode,
 			ShadowPassNode,
+			PSSMGenNode,
 			ForwardPassNode,
 			HBAOGeneratorNode,
 			BlurSSAONodeHorizontal,
@@ -176,6 +179,10 @@ private:
 	ComPtr<ID3D12PipelineState> m_do_pso = nullptr;
 	ComPtr<ID3D12PipelineState> m_z_prepass_pso = nullptr;
 
+	// pssm
+	ComPtr<ID3D12RootSignature> m_pssm_gen_root_signature = nullptr;
+	ComPtr<ID3D12PipelineState> m_pssm_gen_pso = nullptr;
+
 	// postprocessing
 	std::unique_ptr<DynamicTexture> m_fp_backbuffer;
 	std::unique_ptr<DynamicTexture> m_ambient_lighting;
@@ -197,7 +204,7 @@ private:
 	void CreateDevice();
 	void CreateBaseCommandObjects();
 	void CreateSwapChain();
-	void RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_height );
+	void RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height );
 	void CreateTransientTextures();
 	void ResizeTransientTextures();
 

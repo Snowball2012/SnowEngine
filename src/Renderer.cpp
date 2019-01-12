@@ -14,6 +14,7 @@
 #include "DepthOnlyPass.h"
 #include "TemporalBlendPass.h"
 #include "ToneMappingPass.h"
+#include "PSSMGenPass.h"
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
@@ -25,7 +26,7 @@
 
 using namespace DirectX;
 
-Renderer::Renderer( HWND main_hwnd, size_t screen_width, size_t screen_height )
+Renderer::Renderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height )
 	: m_main_hwnd( main_hwnd ), m_client_width( screen_width ), m_client_height( screen_height )
 {}
 
@@ -106,7 +107,7 @@ void Renderer::Draw( const Context& ctx )
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
 	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[9];
+	CD3DX12_RESOURCE_BARRIER rtv_barriers[10];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -118,8 +119,11 @@ void Renderer::Draw( const Context& ctx )
 	ShadowMapStorage sm_storage;
 	m_pipeline.GetRes( sm_storage );
 	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	ShadowCascadeStorage pssm_storage;
+	m_pipeline.GetRes( pssm_storage );
+	rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
-	m_cmd_list->ResourceBarrier( 9, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 10, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
@@ -200,8 +204,9 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
 	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
+	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage.res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
 
-	m_cmd_list->ResourceBarrier( 3, rtv_barriers );
+	m_cmd_list->ResourceBarrier( 4, rtv_barriers );
 
 	ThrowIfFailed( m_cmd_list->Close() );
 
@@ -216,7 +221,7 @@ void Renderer::NewGUIFrame()
 	ImGui_ImplWin32_NewFrame();
 }
 
-void Renderer::Resize( size_t new_width, size_t new_height )
+void Renderer::Resize( uint32_t new_width, uint32_t new_height )
 {
 	RecreateSwapChainAndDepthBuffers( new_width, new_height );
 
@@ -326,7 +331,7 @@ void Renderer::CreateSwapChain()
 		m_swap_chain.GetAddressOf() ) );
 }
 
-void Renderer::RecreateSwapChainAndDepthBuffers( size_t new_width, size_t new_height )
+void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height )
 {
 	assert( m_swap_chain );
 	assert( m_direct_cmd_allocator );
@@ -571,10 +576,12 @@ void Renderer::BuildPasses()
 							  m_do_pso, m_do_root_signature );
 	m_shadow_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
 
-	{
-		ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
-		m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
-	}
+	ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
+	m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
+
+	PSSMGenPass::BuildData( m_depth_stencil_format, 5000, true, *m_d3d_device.Get(),
+							  m_pssm_gen_pso, m_pssm_gen_root_signature );
+	m_pssm_pass = std::make_unique<PSSMGenPass>( m_pssm_gen_pso.Get(), m_pssm_gen_root_signature.Get() );
 
 	DepthOnlyPass::BuildData( m_depth_stencil_format, 0, true, true, *m_d3d_device.Get(),
 							  m_z_prepass_pso, m_do_root_signature );
@@ -592,11 +599,13 @@ void Renderer::BuildPasses()
 	m_pipeline.ConstructNode<BlurSSAONodeHorizontal>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<BlurSSAONodeVertical>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
+	m_pipeline.ConstructNode<PSSMGenNode>( m_pssm_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
 	m_pipeline.Enable<DepthPrepassNode>();
 	m_pipeline.Enable<ForwardPassNode>();
 	m_pipeline.Enable<ShadowPassNode>();
+	m_pipeline.Enable<PSSMGenNode>();
 	m_pipeline.Enable<ToneMapPassNode>();
 	m_pipeline.Enable<UIPassNode>();
 	m_pipeline.Enable<HBAOGeneratorNode>();

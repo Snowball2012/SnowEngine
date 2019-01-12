@@ -191,6 +191,9 @@
     <ClCompile Include="src\ParallelSplitShadowMapping.cpp">
       <Filter>core\Effects</Filter>
     </ClCompile>
+    <ClCompile Include="src\PSSMGenPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -345,6 +348,9 @@
     </ClInclude>
     <ClInclude Include="src\ParallelSplitShadowMapping.h">
       <Filter>core\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PSSMGenPass.h">
+      <Filter>core\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

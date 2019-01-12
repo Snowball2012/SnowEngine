@@ -12,7 +12,12 @@
 
 struct ShadowProducers
 {
-	std::vector<ShadowProducer>* arr = nullptr;
+	span<ShadowProducer> arr;
+};
+
+struct ShadowCascadeProducers
+{
+	span<ShadowCascadeProducer> arr;
 };
 
 struct ShadowMapStorage
@@ -158,7 +163,7 @@ struct ScreenConstants
 
 struct MainRenderitems
 {
-	std::vector<RenderItem>* items;
+	span<RenderItem> items;
 };
 
 struct FinalBackbuffer

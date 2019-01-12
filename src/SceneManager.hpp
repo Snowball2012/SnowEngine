@@ -80,11 +80,15 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 
 	ShadowProducers producers;
 	ShadowMapStorage sm_storage;
-	m_shadow_provider.FillPipelineStructures( m_scene.StaticMeshInstanceSpan(), producers, sm_storage );
+	ShadowCascadeProducers pssm_producers;
+	ShadowCascadeStorage pssm_storage;
+	m_shadow_provider.FillPipelineStructures( m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
 	pipeline.SetRes( producers );
 	pipeline.SetRes( sm_storage );
+	pipeline.SetRes( pssm_producers );
+	pipeline.SetRes( pssm_storage );
 
 	MainRenderitems forward_renderitems;
-	forward_renderitems.items = &m_lighting_items;
+	forward_renderitems.items = make_span( m_lighting_items.data(), m_lighting_items.data() + m_lighting_items.size() );
 	pipeline.SetRes( forward_renderitems );
 }

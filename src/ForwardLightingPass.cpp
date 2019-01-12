@@ -28,7 +28,7 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 
 	cmd_list.SetGraphicsRootConstantBufferView( 5, context.pass_cb );
 
-	for ( const auto& render_item : *context.renderitems )
+	for ( const auto& render_item : context.renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
 		cmd_list.SetGraphicsRootConstantBufferView( 1, render_item.mat_cb );

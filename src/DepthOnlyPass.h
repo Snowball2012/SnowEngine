@@ -13,7 +13,7 @@ public:
 
 	struct Context
 	{
-		const std::vector<RenderItem>* renderitems;
+		span<const RenderItem> renderitems;
 		D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
 	};

@@ -305,7 +305,6 @@ public:
 		float orthogonal_ws_height; // shadow map pass for parallel light places the light camera above the main camera.
 		                            // This parameter indicates how high will it be placed. It depends mostly on the scene as a whole
 		float ws_halfwidth; // width in world space units. Useless for CSM. Todo: remove this
-		uint32_t cascades_cnt;
 	};
 
 	const Data& GetData() const noexcept { return m_data; }

@@ -7,6 +7,7 @@
 #include "ToneMappingPass.h"
 #include "HBAOPass.h"
 #include "DepthAwareBlurPass.h"
+#include "PSSMGenPass.h"
 
 template<class Pipeline>
 class DepthPrepassNode : public BaseRenderNode
@@ -111,8 +112,7 @@ public:
 		SSNormalStorage normal_buffer;
 		m_pipeline->GetRes( normal_buffer );
 
-		if ( ! ( scene.items
-				 && hdr_color_buffer.rtv.ptr
+		if ( ! ( hdr_color_buffer.rtv.ptr
 				 && dsv.dsv.ptr
 				 && ambient_buffer.rtv.ptr
 				 && ambient_buffer.srv.ptr
@@ -257,6 +257,7 @@ private:
 	Pipeline* m_pipeline = nullptr;
 };
 
+
 template<class Pipeline>
 class ShadowPassNode : public BaseRenderNode
 {
@@ -284,11 +285,10 @@ public:
 		m_pipeline->GetRes( lights_with_shadow );
 		m_pipeline->GetRes( shadow_maps_to_fill );
 
-		if ( ! ( lights_with_shadow.arr
-				 && shadow_maps_to_fill.res ) )
+		if ( ! shadow_maps_to_fill.res )
 			throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
 
-		for ( const auto& producer : *lights_with_shadow.arr )
+		for ( const auto& producer : lights_with_shadow.arr )
 		{
 			cmd_list.RSSetViewports( 1, &producer.map_data.viewport );
 			D3D12_RECT sm_scissor;
@@ -304,7 +304,7 @@ public:
 			{
 				ctx.depth_stencil_view = shadow_maps_to_fill.dsv;
 				ctx.pass_cbv = producer.map_data.pass_cb;
-				ctx.renderitems = &producer.casters;
+				ctx.renderitems = make_span( producer.casters.data(), producer.casters.data() + producer.casters.size() );
 			}
 			cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 			m_pass->Draw( ctx, cmd_list );
@@ -312,19 +312,87 @@ public:
 
 		ShadowMaps output;
 		output.srv = shadow_maps_to_fill.srv;
+		m_pipeline->SetRes( output );
 
 		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_maps_to_fill.res,
 																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
-
-		ShadowCascade cascade;
-		cascade.srv = output.srv;
-		m_pipeline->SetRes( output );
-		m_pipeline->SetRes( cascade );
 	}
 
 private:
 	DepthOnlyPass* m_pass = nullptr;
+	Pipeline* m_pipeline = nullptr;
+};
+
+
+template<class Pipeline>
+class PSSMGenNode : public BaseRenderNode
+{
+public:
+	using InputResources = std::tuple
+		<
+		ShadowCascadeProducers,
+		ShadowCascadeStorage,
+		ForwardPassCB
+		>;
+
+	using OutputResources = std::tuple
+		<
+		ShadowCascade
+		>;
+
+	PSSMGenNode( Pipeline* pipeline, PSSMGenPass* pssm_pass )
+		: m_pass( pssm_pass ), m_pipeline( pipeline )
+	{}
+
+	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	{
+		ShadowCascadeProducers lights_with_pssm;
+		ShadowCascadeStorage shadow_cascade_to_fill;
+		ForwardPassCB pass_cb;
+
+		m_pipeline->GetRes( lights_with_pssm );
+		m_pipeline->GetRes( shadow_cascade_to_fill );
+		m_pipeline->GetRes( pass_cb );
+
+		if ( ! shadow_cascade_to_fill.res )
+			throw SnowEngineException( "PSSMGenNode: some of the input resources are missing" );
+
+		for ( const auto& producer : lights_with_pssm.arr )
+		{
+			cmd_list.RSSetViewports( 1, &producer.viewport );
+			D3D12_RECT sm_scissor;
+			{
+				sm_scissor.bottom = producer.viewport.Height + producer.viewport.TopLeftY;
+				sm_scissor.left = producer.viewport.TopLeftX;
+				sm_scissor.right = producer.viewport.Width + producer.viewport.TopLeftX; //-V537
+				sm_scissor.top = producer.viewport.TopLeftY;
+			}
+			cmd_list.RSSetScissorRects( 1, &sm_scissor );
+
+			PSSMGenPass::Context ctx;
+			{
+				ctx.depth_stencil_view = shadow_cascade_to_fill.dsv;
+				ctx.pass_cbv = pass_cb.pass_cb;
+				ctx.renderitems = make_span( producer.casters.data(), producer.casters.data() + producer.casters.size() );
+				ctx.light_idx = producer.light_idx_in_cb;
+			}
+			cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
+			m_pass->Draw( ctx, cmd_list );
+		}
+
+		ShadowCascade cascade;
+		cascade.srv = shadow_cascade_to_fill.srv;
+
+		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_cascade_to_fill.res,
+																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
+																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
+
+		m_pipeline->SetRes( cascade );
+	}
+
+private:
+	PSSMGenPass* m_pass = nullptr;
 	Pipeline* m_pipeline = nullptr;
 };
 
