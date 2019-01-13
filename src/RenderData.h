@@ -143,6 +143,12 @@ struct alignas( 16 ) PassConstants
 	int32_t _padding3 = 0;
 };
 
+struct LightInCB
+{
+	uint32_t light_idx_in_cb;
+	const SceneLight* light;
+};
+
 // scene representation for renderer
 struct RenderSceneContext
 {

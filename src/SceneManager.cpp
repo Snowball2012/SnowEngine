@@ -164,7 +164,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 	return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_VIEWPORT& main_viewport )
+void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
 {
 	SceneCopyOp cur_op = m_operation_counter++;
 
@@ -183,7 +183,7 @@ void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const D3D12_
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
 	if ( const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id ) )
-		m_shadow_provider.Update( m_scene.LightSpan(), main_cam->GetData() );
+		m_shadow_provider.Update( m_scene.LightSpan(), pssm, main_cam->GetData() );
 
 	ThrowIfFailed( m_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };

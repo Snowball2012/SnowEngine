@@ -90,14 +90,14 @@ void Renderer::Draw( const Context& ctx )
 	else
 		scene_camera = m_main_camera_id;
 
-	m_scene_manager->UpdatePipelineBindings( scene_camera, m_screen_viewport );
+	m_scene_manager->UpdatePipelineBindings( scene_camera, PSSM(), m_screen_viewport );
 
 	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
 	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetSceneView().GetROScene().LightSpan() );
 
-	m_scene_manager->BindToPipeline( m_pipeline );
+	m_scene_manager->BindToPipeline( m_pipeline, *m_forward_cb_provider );
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU

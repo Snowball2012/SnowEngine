@@ -79,12 +79,12 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, S
 }
 
 
-void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& main_camera_data )
+void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
-	m_producers.clear();
-	m_pssm_producers.clear();
+	std::array<float, MAX_CASCADE_SIZE - 1> split_positions;
 
-	bool shadow_found = false;
+	pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions.data(), split_positions.data() + split_positions.size() ) );
+
 	for ( SceneLight& light : scene_lights )
 	{
 		if ( ! light.IsEnabled() )
@@ -92,14 +92,105 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 
 		if ( const auto& shadow_desc = light.GetShadow() )
 		{
-			if ( shadow_found )
+			const bool use_csm = shadow_desc->num_cascades > 1
+				                 || light.GetData().type == SceneLight::LightType::Parallel; // right now shaders require all parallel lights to use pssm
+
+			if ( light.GetData().type != SceneLight::LightType::Parallel && use_csm )
 				NOTIMPL;
-			shadow_found = true;
+
+			if ( shadow_desc->num_cascades > MAX_CASCADE_SIZE )
+				throw SnowEngineException( "too many cascades for a light" );
+
+			auto& shadow_matrices = light.SetShadowMatrices();
+			shadow_matrices.resize( shadow_desc->num_cascades );
+
+			if ( use_csm )
+			{
+				for ( int i = 0; i < shadow_matrices.size(); ++i )
+				{
+					DirectX::XMFLOAT3 pos = main_camera_data.dir;
+					if ( i > 0 )
+						pos *= split_positions[i - 1];
+					pos += main_camera_data.pos;
+					shadow_matrices[i] = CalcShadowMatrix( light, pos, shadow_desc.value() );
+				}
+			}
+		}
+	}
+}
+
+
+void ShadowProvider::FillPipelineStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMapStorage& storage, ShadowCascadeStorage& pssm_storage )
+{
+	// todo: frustrum cull renderitems
+	CreateShadowProducers( lights );
+	FillProducersWithRenderitems( renderitems );
+
+	producers.arr = make_span( m_producers.data(), m_producers.data() + m_producers.size() );
+
+	storage.res = m_sm_res.Get();
+	storage.dsv = m_dsv->HandleCPU();
+	storage.srv = m_descriptor_tables->GetTable( m_srv )->gpu_handle;
+
+	pssm_producers.arr = make_span( m_pssm_producers.data(), m_pssm_producers.data() + m_pssm_producers.size() );
+
+	pssm_storage.res = m_pssm_res.Get();
+	pssm_storage.dsv = m_pssm_dsv->HandleCPU();
+	pssm_storage.srv = m_descriptor_tables->GetTable( m_pssm_srv )->gpu_handle;
+}
+
+
+XMMATRIX ShadowProvider::CalcShadowMatrix( const SceneLight& light, const XMFLOAT3& camera_pos,
+										   const SceneLight::Shadow& shadow_desc ) const
+{
+	if ( light.GetData().type != SceneLight::LightType::Parallel )
+		NOTIMPL;
+
+	XMVECTOR dir = XMLoadFloat3( &light.GetData().dir );
+
+	XMVECTOR target = XMLoadFloat3( &camera_pos );
+	XMVECTOR pos = dir * shadow_desc.orthogonal_ws_height + target;
+	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+
+	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
+	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth,
+											shadow_desc.ws_halfwidth,
+											shadow_desc.orthogonal_ws_height * 0.1f,
+											shadow_desc.orthogonal_ws_height * 2.0f );
+
+	return view * proj;
+}
+
+
+void ShadowProvider::CreateShadowProducers( const span<const LightInCB>& lights )
+{
+	m_pssm_producers.clear();
+	m_producers.clear();
+
+	bool pssm_light_with_shadow_found = false;
+	bool regular_light_with_shadow_found = false;
+	for ( const LightInCB& light_in_cb : lights )
+	{
+		const SceneLight& light = *light_in_cb.light;
+
+		const auto& shadow_desc = light.GetShadow();
+		if ( ! shadow_desc )
+			continue;
+
+		if ( light.GetShadowMatrices().size() > 1 || light.GetData().type == SceneLight::LightType::Parallel )
+		{
+			if ( pssm_light_with_shadow_found )
+				NOTIMPL; // pack all pssm shadow maps in one
+
+			if ( light.GetData().type != SceneLight::LightType::Parallel )
+				NOTIMPL; // only parallel lights may be pssm
+
+			pssm_light_with_shadow_found = true;
 
 			m_pssm_producers.emplace_back();
 			auto& producer = m_pssm_producers.back();
-			if ( shadow_desc->sm_size > ShadowMapSize )
-				throw SnowEngineException( "shadow map is too big" );
+			if ( light.GetShadow()->sm_size > PSSMShadowMapSize )
+				throw SnowEngineException( "pssm shadow map does not fit in texture" );
 
 			// viewport
 			producer.viewport.MaxDepth = 1.0f;
@@ -109,32 +200,18 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const Camera::Data& 
 			producer.viewport.Width = shadow_desc->sm_size;
 			producer.viewport.Height = shadow_desc->sm_size;
 
-			// cb
-			DirectX::XMMATRIX matrices[MAX_CASCADE_SIZE];
-			for ( int i = 0; i < MAX_CASCADE_SIZE; ++i )
-			{
-				DirectX::XMFLOAT3 pos = main_camera_data.dir;
-				pos *= i * 30.0f;
-				pos += main_camera_data.pos;
-				matrices[i] = CalcShadowMatrix( light, pos, shadow_desc.value() );
-			}
-			CalcLightingPassShadowMatrix( light, make_span( matrices, matrices + MAX_CASCADE_SIZE ) );
-
-			producer.light_idx_in_cb = 0; // FIXME
+			producer.light_idx_in_cb = light_in_cb.light_idx_in_cb;
+		}
+		else if ( light.GetShadowMatrices().size() == 1 )
+		{
+			NOTIMPL; // TODO: restore regular shadow mapping
 		}
 	}
 }
 
 
-void ShadowProvider::FillPipelineStructures( const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMapStorage& storage, ShadowCascadeStorage& pssm_storage )
+void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems )
 {
-	// todo: frustrum cull renderitems
-	if ( m_pssm_producers.empty() )
-		return;
-
-	for ( auto& producer : m_pssm_producers )
-		producer.casters.clear();
-
 	for ( const auto& mesh_instance : renderitems )
 	{
 		if ( ! mesh_instance.IsEnabled() )
@@ -177,58 +254,8 @@ void ShadowProvider::FillPipelineStructures( const span<const StaticMeshInstance
 
 		for ( auto& producer : m_pssm_producers )
 			producer.casters.push_back( item );
+
+		for ( auto& producer : m_producers )
+			producer.casters.push_back( item );
 	}
-
-	producers.arr = make_span( m_producers.data(), m_producers.data() + m_producers.size() );
-
-	storage.res = m_sm_res.Get();
-	storage.dsv = m_dsv->HandleCPU();
-	storage.srv = m_descriptor_tables->GetTable( m_srv )->gpu_handle;
-
-
-	pssm_producers.arr = make_span( m_pssm_producers.data(), m_pssm_producers.data() + m_pssm_producers.size() );
-
-	pssm_storage.res = m_pssm_res.Get();
-	pssm_storage.dsv = m_pssm_dsv->HandleCPU();
-	pssm_storage.srv = m_descriptor_tables->GetTable( m_pssm_srv )->gpu_handle;
-}
-
-
-void ShadowProvider::FillPassCB( const SceneLight& light,
-								 const SceneLight::Shadow& shadow_desc,
-								 const DirectX::XMFLOAT3& camera_pos,
-								 PassConstants& gpu_data )
-{
-	XMStoreFloat4x4( &gpu_data.view_proj_mat, CalcShadowMatrix( light, camera_pos, shadow_desc ) );
-	// we don't need other data, at least for now
-}
-
-
-void ShadowProvider::CalcLightingPassShadowMatrix( SceneLight& light, const span<XMMATRIX>& matrices )
-{
-	// ToDo: calc corrected matrix in case of multiple lights
-	light.SetShadowMatrices().resize( matrices.size() );
-	for ( uint32_t i = 0; i < matrices.size(); ++i )
-		light.SetShadowMatrices()[i] = matrices[i];
-}
-
-XMMATRIX ShadowProvider::CalcShadowMatrix( const SceneLight& light, const XMFLOAT3& camera_pos,
-										   const SceneLight::Shadow& shadow_desc ) const
-{
-	if ( light.GetData().type != SceneLight::LightType::Parallel )
-		NOTIMPL;
-
-	XMVECTOR dir = XMLoadFloat3( &light.GetData().dir );
-
-	XMVECTOR target = XMLoadFloat3( &camera_pos );
-	XMVECTOR pos = dir * shadow_desc.orthogonal_ws_height + target;
-	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-
-	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth,
-											shadow_desc.ws_halfwidth,
-											shadow_desc.orthogonal_ws_height * 0.1f,
-											shadow_desc.orthogonal_ws_height * 2.0f );
-
-	return view * proj;
 }

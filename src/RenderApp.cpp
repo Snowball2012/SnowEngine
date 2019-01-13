@@ -243,6 +243,7 @@ void RenderApp::UpdateLights()
 		sun_shadow.ws_halfwidth = 50.0f;
 		sun_shadow.orthogonal_ws_height = 100.0f;
 		sun_shadow.sm_size = 2048;
+		sun_shadow.num_cascades = MAX_CASCADE_SIZE;
 	}
 	light_ptr->ModifyShadow() = sun_shadow;
 }

@@ -56,6 +56,12 @@ D3D12_GPU_VIRTUAL_ADDRESS ForwardCBProvider::GetCBPointer() const noexcept
 }
 
 
+span<const LightInCB> ForwardCBProvider::GetLightsInCB() const noexcept
+{
+	return make_span( m_lights_in_cb.data(), m_lights_in_cb.data() + m_lights_in_cb.size() );
+}
+
+
 void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
 {
 	// reversed z
@@ -97,8 +103,10 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 									   const DirectX::XMMATRIX& inv_view_matrix_transposed,
 									   const DirectX::XMMATRIX& view_matrix,
-									   PassConstants& gpu_data ) const
+									   PassConstants& gpu_data )
 {
+	m_lights_in_cb.clear();
+
 	// sort lights by type
 
 	for ( const auto& light : lights )
@@ -124,16 +132,16 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 	if ( gpu_data.n_parallel_lights + gpu_data.n_point_lights + gpu_data.n_spotlight_lights > MaxLights )
 		throw SnowEngineException( "too many lights" );
 
-	size_t parallel_idx = 0;
-	size_t point_idx = 0;
-	size_t spotlight_idx = gpu_data.n_point_lights;
+	uint32_t parallel_idx = 0;
+	uint32_t point_idx = 0;
+	uint32_t spotlight_idx = gpu_data.n_point_lights;
 
 	for ( const auto& light : lights )
 	{
 		if ( ! light.IsEnabled() )
 			continue;
 
-		size_t gpu_idx = 0;
+		uint32_t gpu_idx = 0;
 		switch ( light.GetData().type )
 		{
 			case SceneLight::LightType::Parallel:
@@ -149,6 +157,8 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 				NOTIMPL;
 		};
 
+		m_lights_in_cb.push_back( LightInCB{ gpu_idx, &light } );
+
 		if ( light.GetData().type == SceneLight::LightType::Parallel )
 		{
 			ParallelLightConstants& data = gpu_data.parallel_lights[gpu_idx];
@@ -160,7 +170,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 				DirectX::XMStoreFloat4x4( &data.shadow_map_matrix[i],
 										  DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrices[i] ), inv_view_matrix_transposed ) );
 			}
-			data.csm_num_split_positions = shadow_matrices.size() - 1;
+			data.csm_num_split_positions = int32_t( shadow_matrices.size() ) - 1;
 
 			const SceneLight::Data& src_data = light.GetData();
 			DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
@@ -191,6 +201,6 @@ void ForwardCBProvider::FillCSMData( const Camera::Data& camera, const ParallelS
 {
 	// fill split positions
 	const auto& res_positions = pssm.CalcSplitPositionsVS( camera, make_span( gpu_data.csm_split_positions, gpu_data.csm_split_positions + MAX_CASCADE_SIZE - 1 ) );
-	for ( uint32_t i = res_positions.size() - 1; i > 0; --i )
+	for ( uint32_t i = uint32_t( res_positions.size() - 1 ); i > 0; --i )
 		gpu_data.csm_split_positions[4 * i] = res_positions[i];
 }

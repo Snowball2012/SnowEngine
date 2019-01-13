@@ -4,8 +4,10 @@
 
 #include "PipelineResource.h"
 
+#include "ForwardCBProvider.h"
+
 template<typename PipelineT>
-void SceneManager::BindToPipeline( PipelineT& pipeline )
+void SceneManager::BindToPipeline( PipelineT& pipeline, const ForwardCBProvider& forward_cb_provider )
 {
 	const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id );
 	if ( ! main_cam )
@@ -82,7 +84,7 @@ void SceneManager::BindToPipeline( PipelineT& pipeline )
 	ShadowMapStorage sm_storage;
 	ShadowCascadeProducers pssm_producers;
 	ShadowCascadeStorage pssm_storage;
-	m_shadow_provider.FillPipelineStructures( m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
+	m_shadow_provider.FillPipelineStructures( forward_cb_provider.GetLightsInCB(), m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
 	pipeline.SetRes( producers );
 	pipeline.SetRes( sm_storage );
 	pipeline.SetRes( pssm_producers );

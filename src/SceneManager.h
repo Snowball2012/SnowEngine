@@ -71,10 +71,10 @@ public:
 	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
 	DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-	void UpdatePipelineBindings( CameraID main_camera_id, const D3D12_VIEWPORT& main_viewport );
+	void UpdatePipelineBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
 
 	template<typename PipelineT>
-	void BindToPipeline( PipelineT& pipeline );
+	void BindToPipeline( PipelineT& pipeline, const class ForwardCBProvider& forward_cb_provider );
 
 	void FlushAllOperations();
 

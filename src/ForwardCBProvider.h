@@ -20,6 +20,7 @@ public:
 	void Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const SceneLight>& scene_lights );
 
 	D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
+	span<const LightInCB> GetLightsInCB() const noexcept;
 
 	float m_interpolator = 0.15f;
 
@@ -30,7 +31,7 @@ private:
 	void FillLightData( const span<const SceneLight>& lights,
 						const DirectX::XMMATRIX& inv_view_matrix_transposed,
 						const DirectX::XMMATRIX& view_matrix,
-						PassConstants& gpu_data ) const;
+						PassConstants& gpu_data );
 
 	void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, PassConstants& gpu_data ) const noexcept;
 
@@ -39,7 +40,10 @@ private:
 	int m_cur_res_idx = 0;
 	const int m_nbuffers;
 
-	static constexpr UINT BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
 	static constexpr size_t MaxLights = sizeof( PassConstants::lights ) / sizeof( LightConstants );
 	static constexpr size_t MaxParallelLights = sizeof( PassConstants::parallel_lights ) / sizeof( ParallelLightConstants );
+
+	bc::static_vector<LightInCB, MaxLights + MaxParallelLights> m_lights_in_cb;
+
+	static constexpr UINT BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
 };
