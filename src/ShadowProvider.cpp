@@ -81,9 +81,9 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, S
 
 void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
-	std::array<float, MAX_CASCADE_SIZE - 1> split_positions;
+	std::array<float, MAX_CASCADE_SIZE - 1> split_positions_storage;
 
-	pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions.data(), split_positions.data() + split_positions.size() ) );
+	auto split_positions = pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions_storage.data(), split_positions_storage.data() + split_positions_storage.size() ) );
 
 	for ( SceneLight& light : scene_lights )
 	{
@@ -105,16 +105,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
 			shadow_matrices.resize( shadow_desc->num_cascades );
 
 			if ( use_csm )
-			{
-				for ( int i = 0; i < shadow_matrices.size(); ++i )
-				{
-					DirectX::XMFLOAT3 pos = main_camera_data.dir;
-					if ( i > 0 )
-						pos *= split_positions[i - 1];
-					pos += main_camera_data.pos;
-					shadow_matrices[i] = CalcShadowMatrix( light, pos, shadow_desc.value() );
-				}
-			}
+				pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices.data(), shadow_matrices.data() + shadow_matrices.size() ) );
 		}
 	}
 }

@@ -4,6 +4,8 @@
 
 #include "ParallelSplitShadowMapping.h"
 
+using namespace DirectX;
+
 namespace
 {
 	// for the next 2 functions si is normalized shadow plane position (gpugems 3, chapter 10)
@@ -51,10 +53,44 @@ span<float> ParallelSplitShadowMapping::CalcSplitPositionsVS( const Camera::Data
 }
 
 
-span<DirectX::XMFLOAT4X4> ParallelSplitShadowMapping::CalcShadowMatricesWS( const Camera& camera, const SceneLight& light, const span<float>& split_positions, span<DirectX::XMFLOAT4X4> matrices_storage ) const noexcept
+span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const Camera::Data& camera, const SceneLight& light, const span<float>& split_positions, span<XMMATRIX> matrices_storage ) const
 {
-	NOTIMPL;
-	return span<DirectX::XMFLOAT4X4>();
+	assert( camera.type == Camera::Type::Perspective );
+	assert( light.GetData().type == SceneLight::LightType::Parallel );
+	assert( light.GetShadow().has_value() );
+
+	const auto& shadow_desc = *light.GetShadow();
+
+	if ( shadow_desc.num_cascades > split_positions.size() + 1 )
+		throw SnowEngineException( "light has too much cascades" );
+
+	if ( matrices_storage.size() < shadow_desc.num_cascades )
+		throw SnowEngineException( "matrices storage is too small" );
+
+	XMVECTOR camera_pos = XMLoadFloat3( &camera.pos );
+	XMVECTOR camera_dir = XMLoadFloat3( &camera.dir );
+	XMVECTOR dir = XMLoadFloat3( &light.GetData().dir );
+	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+
+	XMMATRIX view;
+	XMMATRIX proj;
+
+	for ( uint32_t i = 0; i < shadow_desc.num_cascades; ++i )
+	{
+		XMVECTOR target = camera_pos + camera_dir * ( i > 0 ? ( split_positions[i - 1]) : 0 );
+		XMVECTOR pos = dir * shadow_desc.orthogonal_ws_height + target;
+
+		view = XMMatrixLookAtLH( pos, target, up );
+
+		proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth * (i + 1),
+										shadow_desc.ws_halfwidth * (i + 1),
+										shadow_desc.orthogonal_ws_height * 0.1f,
+										shadow_desc.orthogonal_ws_height * 2.0f );
+
+		matrices_storage[i] = view * proj;
+	}
+
+	return make_span( matrices_storage.begin(), matrices_storage.begin() + shadow_desc.num_cascades );
 }
 
 

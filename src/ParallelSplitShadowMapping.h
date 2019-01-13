@@ -14,13 +14,15 @@ public:
 	// positions_storage.size() determines the number of splits (splits_num = position_starage.size() + 1)
 	static void CalcSplitPositionsVS( float near_z, float far_z, float uniform_factor, span<float> positions_storage ) noexcept;
 
+
+
 	// positions_storage and matrices_storage must have enough space to contain up to
 	// MAX_CASCADE_SIZE - 1 and MAX_CASCADE_SIZE elements respectively
 	// returns subrange of the source span
 	span<float> CalcSplitPositionsVS( const Camera::Data& camera_data, span<float> positions_storage ) const noexcept;
 
 	// light must be parallel, split_positions must be initialized
-	span<DirectX::XMFLOAT4X4> CalcShadowMatricesWS( const Camera& camera, const SceneLight& light, const span<float>& split_positions, span<DirectX::XMFLOAT4X4> matrices_storage ) const noexcept;
+	span<DirectX::XMMATRIX> CalcShadowMatricesWS( const Camera::Data& camera, const SceneLight& light, const span<float>& split_positions, span<DirectX::XMMATRIX> matrices_storage ) const;
 
 	// settings
 	void SetUniformFactor( float uniform_factor ) noexcept;
