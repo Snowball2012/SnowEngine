@@ -500,7 +500,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 	XMFloat3Normalize( light_data.dir );
 	light_data.strength = getLightIrradiance( 70.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
 	m_light = scene.AddLight( light_data );
-	scene.ModifyLight( m_light )->ModifyShadow() = SceneLight::Shadow{ 512, 3.0f, 3.0f };
+	scene.ModifyLight( m_light )->ModifyShadow() = SceneLight::Shadow{ 512, 3.0f, 3.0f, MAX_CASCADE_SIZE };
 
 	LoadCube( scene, normal_tex_id, specular_tex_id );
 }
