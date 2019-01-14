@@ -93,5 +93,5 @@ span<const uint32_t> GPUPagedAllocator::GetPages( ChunkID id ) const noexcept
 	if ( ! chunk )
 		return span<const uint32_t>();
 
-	return make_span( chunk->data(), chunk->data() + chunk->size() );
+	return make_span( *chunk );
 }

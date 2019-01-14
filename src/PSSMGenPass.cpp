@@ -138,6 +138,7 @@ void PSSMGenPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling
 		};
 
 		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
+		pso_desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON;
 		if ( bias > 0 )
 		{
 			pso_desc.RasterizerState.DepthBias = bias;

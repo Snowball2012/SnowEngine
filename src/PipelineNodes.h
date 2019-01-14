@@ -304,7 +304,7 @@ public:
 			{
 				ctx.depth_stencil_view = shadow_maps_to_fill.dsv;
 				ctx.pass_cbv = producer.map_data.pass_cb;
-				ctx.renderitems = make_span( producer.casters.data(), producer.casters.data() + producer.casters.size() );
+				ctx.renderitems = make_span( producer.casters );
 			}
 			cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 			m_pass->Draw( ctx, cmd_list );
@@ -374,7 +374,7 @@ public:
 			{
 				ctx.depth_stencil_view = shadow_cascade_to_fill.dsv;
 				ctx.pass_cbv = pass_cb.pass_cb;
-				ctx.renderitems = make_span( producer.casters.data(), producer.casters.data() + producer.casters.size() );
+				ctx.renderitems = make_span( producer.casters );
 				ctx.light_idx = producer.light_idx_in_cb;
 			}
 			cmd_list.ClearDepthStencilView( ctx.depth_stencil_view, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );

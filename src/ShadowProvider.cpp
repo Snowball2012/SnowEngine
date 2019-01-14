@@ -83,7 +83,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
 {
 	std::array<float, MAX_CASCADE_SIZE - 1> split_positions_storage;
 
-	auto split_positions = pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions_storage.data(), split_positions_storage.data() + split_positions_storage.size() ) );
+	auto split_positions = pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions_storage ) );
 
 	for ( SceneLight& light : scene_lights )
 	{
@@ -105,7 +105,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
 			shadow_matrices.resize( shadow_desc->num_cascades );
 
 			if ( use_csm )
-				pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices.data(), shadow_matrices.data() + shadow_matrices.size() ) );
+				pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
 		}
 	}
 }
@@ -117,13 +117,13 @@ void ShadowProvider::FillPipelineStructures( const span<const LightInCB>& lights
 	CreateShadowProducers( lights );
 	FillProducersWithRenderitems( renderitems );
 
-	producers.arr = make_span( m_producers.data(), m_producers.data() + m_producers.size() );
+	producers.arr = make_span( m_producers );
 
 	storage.res = m_sm_res.Get();
 	storage.dsv = m_dsv->HandleCPU();
 	storage.srv = m_descriptor_tables->GetTable( m_srv )->gpu_handle;
 
-	pssm_producers.arr = make_span( m_pssm_producers.data(), m_pssm_producers.data() + m_pssm_producers.size() );
+	pssm_producers.arr = make_span( m_pssm_producers );
 
 	pssm_storage.res = m_pssm_res.Get();
 	pssm_storage.dsv = m_pssm_dsv->HandleCPU();

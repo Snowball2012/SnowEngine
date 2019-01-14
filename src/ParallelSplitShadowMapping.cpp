@@ -156,10 +156,11 @@ span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const 
 
 	for ( uint32_t i = 0; i < shadow_desc.num_cascades; ++i )
 	{
-		float new_z = ( i < shadow_desc.num_cascades - 1 ) ? split_positions[i] : camera.far_plane;
+		const float new_z = ( i < shadow_desc.num_cascades - 1 ) ? split_positions[i] : camera.far_plane;
 
 		DirectX::XMMATRIX frustrum_matrix = DirectX::XMMatrixLookToLH( XMLoadFloat3( &camera.pos ), XMLoadFloat3( &camera.dir ), XMLoadFloat3( &camera.up ) )
 			                                * DirectX::XMMatrixPerspectiveFovLH( camera.fov_y, camera.aspect_ratio, last_z, new_z );
+		last_z = new_z;
 		DirectX::XMVECTOR det;
 		frustrum_matrix = DirectX::XMMatrixInverse( &det, frustrum_matrix );
 
@@ -176,7 +177,7 @@ span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const 
 		frustrum_vertices[6] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1, -1, 1, 1 ), frustrum_matrix ) );
 		frustrum_vertices[7] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1,  1, 1, 1 ), frustrum_matrix ) );
 
-		CalcShadowMatrixForFrustrumLH( make_span( frustrum_vertices, frustrum_vertices + 8 ),
+		CalcShadowMatrixForFrustrumLH( make_span( frustrum_vertices ),
 									   light_dir,
 									   shadow_desc.orthogonal_ws_height,
 									   matrices_storage[i] );
@@ -185,7 +186,7 @@ span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const 
 			frustrum_vertices[j] = frustrum_vertices[j + 4];
 	}
 
-	return make_span( matrices_storage.begin(), matrices_storage.begin() + shadow_desc.num_cascades );
+	return make_span( matrices_storage );
 }
 
 

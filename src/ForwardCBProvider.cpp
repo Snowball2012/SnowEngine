@@ -58,7 +58,7 @@ D3D12_GPU_VIRTUAL_ADDRESS ForwardCBProvider::GetCBPointer() const noexcept
 
 span<const LightInCB> ForwardCBProvider::GetLightsInCB() const noexcept
 {
-	return make_span( m_lights_in_cb.data(), m_lights_in_cb.data() + m_lights_in_cb.size() );
+	return make_span( m_lights_in_cb );
 }
 
 

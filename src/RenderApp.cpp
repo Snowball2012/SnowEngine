@@ -182,7 +182,7 @@ void RenderApp::UpdateCamera()
 		cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
 		cam_data.fov_y = MathHelper::Pi / 4;
 		cam_data.aspect_ratio = AspectRatio();
-		cam_data.far_plane = 500.0f;
+		cam_data.far_plane = 200.0f;
 		cam_data.near_plane = 0.1f;
 	}
 

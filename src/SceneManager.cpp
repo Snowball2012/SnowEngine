@@ -12,8 +12,8 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vert
 {
 	StaticMeshID mesh_id = m_scene->AddStaticMesh();
 	m_static_mesh_manager->LoadStaticMesh( mesh_id, std::move( name ),
-										   make_span( vertices.data(), vertices.data() + vertices.size() ),
-										   make_span( indices.data(), indices.data() + indices.size() ) );
+										   make_span( vertices ),
+										   make_span( indices ) );
 
 	auto* mesh = m_scene->TryModifyStaticMesh( mesh_id );
 	mesh->Vertices() = std::move( vertices );

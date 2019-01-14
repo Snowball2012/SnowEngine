@@ -91,6 +91,6 @@ void SceneManager::BindToPipeline( PipelineT& pipeline, const ForwardCBProvider&
 	pipeline.SetRes( pssm_storage );
 
 	MainRenderitems forward_renderitems;
-	forward_renderitems.items = make_span( m_lighting_items.data(), m_lighting_items.data() + m_lighting_items.size() );
+	forward_renderitems.items = make_span( m_lighting_items );
 	pipeline.SetRes( forward_renderitems );
 }
