@@ -50,7 +50,7 @@ public:
 
 	struct TonemapSettings
 	{
-		float max_luminance = 20000;
+		float max_luminance = 12000; // nits
 		float min_luminance = 1.e-2f;
 		bool blend_luminance = false;
 	} m_tonemap_settings;

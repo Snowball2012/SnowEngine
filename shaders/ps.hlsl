@@ -40,22 +40,19 @@ struct PixelOut
 
 float3 rendering_equation( half4 base_color, float3 to_source, float3 to_camera, float3 normal, float roughness, float metallic )
 {
-	float lambert_term = max( dot( to_source, normal ), 0 );
-	float normal_to_eye_cos = max( dot( to_camera, normal ), 0 );
+	float lambert_term = saturate( dot( to_source, normal ) );
+	float normal_to_eye_cos = saturate( dot( to_camera, normal ) );
 	float3 h = normalize( halfvector( to_source, to_camera ) );
-	float source_to_half_cos = max( dot( to_source, h ), 0 );
+	float source_to_half_cos = saturate( dot( to_source, h ) );
 
 	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
 	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
 
+    float3 fresnel_term_d = float3( 1.0f, 1.0f, 1.0f ) - fresnel_schlick( fresnel_r0, lambert_term );
+
 	return ( lambert_term )
-		    * ( diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo 
-				+ bsdf_ggx_optimized( fresnel_r0,
-							          dot( normal, h ),
-							          source_to_half_cos,
-                                      normal_to_eye_cos,
-                                      lambert_term,
-							          roughness ) );
+		    * ( fresnel_term_d * diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo +
+               bsdf_ggx_optimized( fresnel_r0, dot( normal, h ), source_to_half_cos, normal_to_eye_cos, lambert_term, roughness ) );
 }
 
 float3 ws_normal_bump_mapping( float3 ws_normal, float3 ws_tangent, float3 ws_binormal, float2 ts_normal_compressed, out float tangent_normal_z )
