@@ -26,6 +26,8 @@ void PSSMGenPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_l
 	cmd_list.SetGraphicsRoot32BitConstant( 2, context.light_idx, 0 );
 	cmd_list.SetGraphicsRootConstantBufferView( 3, context.pass_cbv );
 
+	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+
 	for ( const auto& render_item : context.renderitems )
 	{
 		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
@@ -33,7 +35,6 @@ void PSSMGenPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_l
 
 		cmd_list.IASetVertexBuffers( 0, 1, &render_item.vbv );
 		cmd_list.IASetIndexBuffer( &render_item.ibv );
-		cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 		cmd_list.DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}
 }
@@ -59,16 +60,16 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
 
 	constexpr int nparams = 4;
 
-	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
+	CD3DX12_ROOT_PARAMETER1 slot_root_parameter[nparams];
 
-	slot_root_parameter[0].InitAsConstantBufferView( 0 );
+	slot_root_parameter[0].InitAsConstantBufferView( 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX );
 
-	CD3DX12_DESCRIPTOR_RANGE desc_table;
-	desc_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
-	slot_root_parameter[1].InitAsDescriptorTable( 1, &desc_table );
+	CD3DX12_DESCRIPTOR_RANGE1 desc_table;
+	desc_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC );
+	slot_root_parameter[1].InitAsDescriptorTable( 1, &desc_table, D3D12_SHADER_VISIBILITY_PIXEL );
 
-	slot_root_parameter[2].InitAsConstants( 1, 1 );
-	slot_root_parameter[3].InitAsConstantBufferView( 2 );
+	slot_root_parameter[2].InitAsConstants( 1, 1, D3D12_SHADER_VISIBILITY_GEOMETRY );
+	slot_root_parameter[3].InitAsConstantBufferView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC );
 
 	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
 		0, // shaderRegister
@@ -79,13 +80,13 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
 		0.0f,                             // mipLODBias
 		8 );                               // maxAnisotropy
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
 											   1, &anisotropicWrap,
 											   D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1,
+	HRESULT hr = D3DX12SerializeVersionedRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1_1,
 											  serialized_root_sig.GetAddressOf(), error_blob.GetAddressOf() );
 
 	if ( error_blob )

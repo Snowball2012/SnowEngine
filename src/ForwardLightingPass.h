@@ -2,10 +2,24 @@
 
 #include "RenderData.h"
 
-class ForwardLightingPass
+#include "RenderPass.h"
+
+class ForwardLightingPass : public RenderPass
 {
 public:
-	ForwardLightingPass( ID3D12PipelineState* pso, ID3D12PipelineState* wireframe_pso, ID3D12RootSignature* rootsig );
+	ForwardLightingPass( ID3D12Device& device );
+
+	struct States
+	{
+		RenderStateID triangle_fill;
+		RenderStateID wireframe;
+	};
+
+	States CompileStates( DXGI_FORMAT direct_format,
+						  DXGI_FORMAT ambient_format,
+						  DXGI_FORMAT normal_format,
+						  DXGI_FORMAT depth_stencil_format,
+						  ID3D12Device& device );
 
 	struct Context
 	{
@@ -20,19 +34,12 @@ public:
 	};
 
 	// all descriptor heaps must be set prematurely
-	void Draw( const Context& context, bool wireframe, ID3D12GraphicsCommandList& cmd_list );
+	void Draw( const Context& context ) noexcept;
 
-	// static build methods
-	template<class StaticSamplerRange>
-	static ComPtr<ID3D12RootSignature> BuildRootSignature( const StaticSamplerRange& static_samplers, ID3D12Device& device );
+	static inline InputLayout InputLayout() noexcept;
 
-	template<class StaticSamplerRange>
-	static void BuildData( const StaticSamplerRange& static_samplers,
-						   DXGI_FORMAT rendertarget_format, DXGI_FORMAT ambient_rtv_format, DXGI_FORMAT normal_format, DXGI_FORMAT depth_stencil_format,
-						   ID3D12Device& device,
-						   ComPtr<ID3D12PipelineState>& main_pso,
-						   ComPtr<ID3D12PipelineState>& wireframe_pso,
-						   ComPtr<ID3D12RootSignature>& rootsig );
+private:
+	virtual void BeginDerived( RenderStateID state ) noexcept override;
 
 	struct Shaders
 	{
@@ -42,12 +49,10 @@ public:
 	};
 	static Shaders LoadAndCompileShaders();
 
-	static inline InputLayout InputLayout();
+	template<class StaticSamplerRange>
+	static ComPtr<ID3D12RootSignature> BuildRootSignature( const StaticSamplerRange& static_samplers, ID3D12Device& device );
 
-private:
-	ID3D12PipelineState* m_pso = nullptr;
-	ID3D12PipelineState* m_pso_wireframe = nullptr;
-	ID3D12RootSignature* m_root_signature = nullptr;
+	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
 };
 
 
@@ -80,13 +85,13 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	*/
 	constexpr int nparams = 6;
 
-	CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
+	CD3DX12_ROOT_PARAMETER1 slot_root_parameter[nparams];
 
-	for ( int i = 0; i < 2; ++i )
-		slot_root_parameter[i].InitAsConstantBufferView( i );
+	slot_root_parameter[0].InitAsConstantBufferView( 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX );
+	slot_root_parameter[1].InitAsConstantBufferView( 1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL );
 
-	CD3DX12_DESCRIPTOR_RANGE desc_table[3];
-	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0 ); // albedo, normal, specular
+	CD3DX12_DESCRIPTOR_RANGE1 desc_table[3];
+	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // albedo, normal, specular
 	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
 	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow cascade
 
@@ -94,16 +99,17 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_PIXEL );
 	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_PIXEL );
 
-	slot_root_parameter[5].InitAsConstantBufferView( 2 );
+	slot_root_parameter[5].InitAsConstantBufferView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC );
 
-	CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
-											   UINT( static_samplers.size() ), static_samplers.data(),
-											   D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
+	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
+	                                                     UINT( static_samplers.size() ), static_samplers.data(),
+	                                                     D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT );
 
 	ComPtr<ID3DBlob> serialized_root_sig = nullptr;
 	ComPtr<ID3DBlob> error_blob = nullptr;
-	HRESULT hr = D3D12SerializeRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1,
-											  serialized_root_sig.GetAddressOf(), error_blob.GetAddressOf() );
+	HRESULT hr = D3DX12SerializeVersionedRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1_1,
+													   serialized_root_sig.GetAddressOf(),
+													   error_blob.GetAddressOf() );
 
 	if ( error_blob )
 		OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
@@ -121,68 +127,8 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	return rootsig;
 }
 
-template<class StaticSamplerRange>
-inline void ForwardLightingPass::BuildData( const StaticSamplerRange& static_samplers,
-											DXGI_FORMAT direct_rtv_format, DXGI_FORMAT ambient_rtv_format, DXGI_FORMAT normal_format, DXGI_FORMAT depth_stencil_format,
-											ID3D12Device& device,
-											ComPtr<ID3D12PipelineState>& main_pso,
-											ComPtr<ID3D12PipelineState>& wireframe_pso,
-											ComPtr<ID3D12RootSignature>& rootsig )
-{
-	const ::InputLayout input_layout = InputLayout();
 
-	const Shaders shaders = LoadAndCompileShaders();
-	rootsig = BuildRootSignature( static_samplers, device );
-
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
-	ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
-
-	pso_desc.InputLayout = { input_layout.data(), UINT( input_layout.size() ) };
-	pso_desc.pRootSignature = rootsig.Get();
-
-	pso_desc.VS =
-	{
-		reinterpret_cast<BYTE*>( shaders.vs->GetBufferPointer() ),
-		shaders.vs->GetBufferSize()
-	};
-
-	pso_desc.PS =
-	{
-		reinterpret_cast<BYTE*>( shaders.ps->GetBufferPointer() ),
-		shaders.ps->GetBufferSize()
-	};
-
-	pso_desc.GS =
-	{
-		reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
-		shaders.gs->GetBufferSize()
-	};
-
-	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
-	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
-	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
-	pso_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
-	pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-	pso_desc.SampleMask = UINT_MAX;
-	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-	pso_desc.NumRenderTargets = 3;
-	pso_desc.RTVFormats[0] = direct_rtv_format;
-	pso_desc.RTVFormats[1] = ambient_rtv_format;
-	pso_desc.RTVFormats[2] = normal_format;
-	pso_desc.SampleDesc.Count = 1;
-	pso_desc.SampleDesc.Quality = 0;
-
-	pso_desc.DSVFormat = depth_stencil_format;
-
-	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &main_pso ) ) );
-
-	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &wireframe_pso ) ) );
-}
-
-inline InputLayout ForwardLightingPass::InputLayout()
+inline InputLayout ForwardLightingPass::InputLayout() noexcept
 {
 	return
 	{
@@ -191,4 +137,3 @@ inline InputLayout ForwardLightingPass::InputLayout()
 		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 	};
 }
-

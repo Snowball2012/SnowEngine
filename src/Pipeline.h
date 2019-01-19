@@ -39,6 +39,13 @@ public:
 		m_need_to_rebuild_pipeline = true;
 	}
 
+	template<template <typename> class N, typename ... Args>
+	void ConstructAndEnableNode( Args&& ... args )
+	{
+		ConstructNode<N>( args... );
+		Enable<N>();
+	}	
+
 	template<template <typename> class N>
 	void Disable()
 	{

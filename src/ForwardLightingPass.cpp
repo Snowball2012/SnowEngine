@@ -5,13 +5,80 @@
 
 #include "RenderUtils.h"
 
-ForwardLightingPass::ForwardLightingPass( ID3D12PipelineState* pso, ID3D12PipelineState* wireframe_pso, ID3D12RootSignature* rootsig )
-	: m_pso( pso ), m_pso_wireframe( wireframe_pso ), m_root_signature( rootsig ) {}
-
-void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12GraphicsCommandList& cmd_list )
+ForwardLightingPass::ForwardLightingPass( ID3D12Device& device )
 {
-	cmd_list.SetPipelineState( wireframe ? m_pso_wireframe : m_pso );
-	
+	m_root_signature = BuildRootSignature( Utils::StaticSamplers(), device );
+}
+
+
+ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rendertarget_format,
+																DXGI_FORMAT ambient_rtv_format,
+																DXGI_FORMAT normal_format,
+																DXGI_FORMAT depth_stencil_format,
+																ID3D12Device& device )
+{
+	const ::InputLayout input_layout = InputLayout();
+
+	const Shaders shaders = LoadAndCompileShaders();
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
+	ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
+
+	pso_desc.InputLayout = { input_layout.data(), UINT( input_layout.size() ) };
+	pso_desc.pRootSignature = m_root_signature.Get();
+
+	pso_desc.VS =
+	{
+		reinterpret_cast<BYTE*>( shaders.vs->GetBufferPointer() ),
+		shaders.vs->GetBufferSize()
+	};
+
+	pso_desc.PS =
+	{
+		reinterpret_cast<BYTE*>( shaders.ps->GetBufferPointer() ),
+		shaders.ps->GetBufferSize()
+	};
+
+	pso_desc.GS =
+	{
+		reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
+		shaders.gs->GetBufferSize()
+	};
+
+	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
+	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
+	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
+	pso_desc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_EQUAL;
+	pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	pso_desc.SampleMask = UINT_MAX;
+	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+	pso_desc.NumRenderTargets = 3;
+	pso_desc.RTVFormats[0] = rendertarget_format;
+	pso_desc.RTVFormats[1] = ambient_rtv_format;
+	pso_desc.RTVFormats[2] = normal_format;
+	pso_desc.SampleDesc.Count = 1;
+	pso_desc.SampleDesc.Quality = 0;
+
+	pso_desc.DSVFormat = depth_stencil_format;
+
+	ComPtr<ID3D12PipelineState> main_pso, wireframe_pso;
+	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &main_pso ) ) );
+
+	pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &wireframe_pso ) ) );
+
+	States retval;
+	retval.triangle_fill = m_pso_cache.emplace( std::move( main_pso ) );
+	retval.wireframe = m_pso_cache.emplace( std::move( wireframe_pso ) );
+
+	return retval;
+}
+
+
+void ForwardLightingPass::Draw( const Context& context ) noexcept
+{	
 	D3D12_CPU_DESCRIPTOR_HANDLE render_targets[3] =
 	{
 		context.back_buffer_rtv,
@@ -19,26 +86,28 @@ void ForwardLightingPass::Draw( const Context& context, bool wireframe, ID3D12Gr
 		context.normals_rtv
 	};
 
-	cmd_list.OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
+	m_cmd_list->OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
 
-	cmd_list.SetGraphicsRootSignature( m_root_signature );
+	m_cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
 
-	cmd_list.SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
-	cmd_list.SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
+	m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
+	m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
 
-	cmd_list.SetGraphicsRootConstantBufferView( 5, context.pass_cb );
+	m_cmd_list->SetGraphicsRootConstantBufferView( 5, context.pass_cb );
+
+	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
 	for ( const auto& render_item : context.renderitems )
 	{
-		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
-		cmd_list.SetGraphicsRootConstantBufferView( 1, render_item.mat_cb );
-		cmd_list.SetGraphicsRootDescriptorTable( 2, render_item.mat_table );
-		cmd_list.IASetVertexBuffers( 0, 1, &render_item.vbv );
-		cmd_list.IASetIndexBuffer( &render_item.ibv );
-		cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-		cmd_list.DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
+		m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
+		m_cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.mat_cb );
+		m_cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.mat_table );
+		m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
+		m_cmd_list->IASetIndexBuffer( &render_item.ibv );
+		m_cmd_list->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}
 }
+
 
 ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
 {
@@ -48,4 +117,10 @@ ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
 		Utils::LoadBinary( L"shaders/gs.cso" ),
 		Utils::LoadBinary( L"shaders/ps.cso" )
 	};
+}
+
+
+void ForwardLightingPass::BeginDerived( RenderStateID state ) noexcept
+{
+	m_cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
 }

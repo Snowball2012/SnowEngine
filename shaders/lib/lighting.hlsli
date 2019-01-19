@@ -77,7 +77,7 @@ float3 bsdf_ggx( float3 fresnel_r0, float cos_nh, float cos_lh, float cos_nv, fl
 
 float3 bsdf_ggx_optimized( float3 fresnel_r0, float cos_nh, float cos_lh, float cos_nv, float cos_nl, float roughness )
 {
-	roughness = sqr( lerp( 0.5, 1, roughness ) );
+	roughness = sqr( lerp( 0.3, 1, roughness ) );
 	float alpha2 = sqr( roughness );
     float one_minus_alpha2 = 1.0f - alpha2;
     float ndf_denom = M_PI * sqr( sqr( cos_nh ) * ( -one_minus_alpha2 ) + 1.0f );

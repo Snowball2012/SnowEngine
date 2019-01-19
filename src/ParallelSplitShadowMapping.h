@@ -35,6 +35,6 @@ public:
 	uint32_t GetSplitsNum() const noexcept { return m_splits_num; }
 
 private:
-	float m_uniform_factor = 0.5f;
+	float m_uniform_factor = 0.3f;
 	uint32_t m_splits_num = 1;
 };

@@ -105,7 +105,7 @@ void Renderer::Draw( const Context& ctx )
 		ThrowIfFailed( allocator->Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), m_forward_pso_main.Get() ) );
+	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), nullptr ) );
 
 	CD3DX12_RESOURCE_BARRIER rtv_barriers[10];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -563,13 +563,10 @@ void Renderer::BuildFrameResources( )
 
 void Renderer::BuildPasses()
 {
-	ForwardLightingPass::BuildData( BuildStaticSamplers(),
-									DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
-									DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
-									DXGI_FORMAT_R16G16_FLOAT, // normals
-									m_depth_stencil_format, *m_d3d_device.Get(),
-									m_forward_pso_main, m_forward_pso_wireframe, m_forward_root_signature );
-	m_forward_pass = std::make_unique<ForwardLightingPass>( m_forward_pso_main.Get(), m_forward_pso_wireframe.Get(), m_forward_root_signature.Get() );
+	m_pipeline.ConstructAndEnableNode<ForwardPassNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
+														DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
+														DXGI_FORMAT_R16G16_FLOAT, // normals
+														m_depth_stencil_format, *m_d3d_device.Get() );
 
 
 	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, false, true, *m_d3d_device.Get(),
@@ -594,7 +591,6 @@ void Renderer::BuildPasses()
 	m_blur_pass = std::make_unique<DepthAwareBlurPass>( m_blur_pso.Get(), m_blur_root_signature.Get() );
 
 	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
-	m_pipeline.ConstructNode<ForwardPassNode>( m_forward_pass.get() );
 	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
 	m_pipeline.ConstructNode<BlurSSAONodeHorizontal>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<BlurSSAONodeVertical>( m_blur_pass.get() );
@@ -603,7 +599,6 @@ void Renderer::BuildPasses()
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
 	m_pipeline.ConstructNode<UIPassNode>();
 	m_pipeline.Enable<DepthPrepassNode>();
-	m_pipeline.Enable<ForwardPassNode>();
 	m_pipeline.Enable<ShadowPassNode>();
 	m_pipeline.Enable<PSSMGenNode>();
 	m_pipeline.Enable<ToneMapPassNode>();
@@ -614,71 +609,6 @@ void Renderer::BuildPasses()
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
-}
-
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> Renderer::BuildStaticSamplers() const
-{
-	const CD3DX12_STATIC_SAMPLER_DESC pointWrap(
-		0, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP ); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC pointClamp(
-		1, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_POINT, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP ); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearWrap(
-		2, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP ); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC linearClamp(
-		3, // shaderRegister
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP ); // addressW
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
-		4, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP,  // addressW
-		0.0f,                             // mipLODBias
-		8 );                               // maxAnisotropy
-
-	const CD3DX12_STATIC_SAMPLER_DESC anisotropicClamp(
-		5, // shaderRegister
-		D3D12_FILTER_ANISOTROPIC, // filter
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressU
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressV
-		D3D12_TEXTURE_ADDRESS_MODE_CLAMP,  // addressW
-		0.0f,                              // mipLODBias
-		8 );                                // maxAnisotropy
-
-	const CD3DX12_STATIC_SAMPLER_DESC shadow(
-		6,
-		D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT,
-		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-		D3D12_TEXTURE_ADDRESS_MODE_BORDER,
-		0.0f,
-		16,
-		D3D12_COMPARISON_FUNC_LESS_EQUAL,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE
-	);
-	return {
-		pointWrap, pointClamp,
-		linearWrap, linearClamp,
-		anisotropicWrap, anisotropicClamp, shadow };
 }
 
 void Renderer::EndFrame()

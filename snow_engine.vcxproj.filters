@@ -66,6 +66,9 @@
     <Filter Include="shaders\pssm">
       <UniqueIdentifier>{afd82de6-ae6e-48f3-8b16-900e968d79d0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\Pipeline\Nodes">
+      <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -192,6 +195,9 @@
       <Filter>core\Effects</Filter>
     </ClCompile>
     <ClCompile Include="src\PSSMGenPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\RenderPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
   </ItemGroup>
@@ -351,6 +357,12 @@
     </ClInclude>
     <ClInclude Include="src\PSSMGenPass.h">
       <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RenderPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ForwardPassNode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

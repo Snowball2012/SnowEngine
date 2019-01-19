@@ -14,11 +14,11 @@
 
 #include "Pipeline.h"
 #include "PipelineNodes.h"
+#include "ForwardPassNode.h"
 
 #include "SceneManager.h"
 #include "ForwardCBProvider.h"
 
-class ForwardLightingPass;
 class DepthOnlyPass;
 class PSSMGenPass;
 
@@ -32,7 +32,6 @@ public:
 
 	void Init( );
 	
-	// returns draw_gui retval
 	struct Context
 	{
 		bool wireframe_mode;
@@ -61,7 +60,6 @@ public:
 
 	// for update. Todo: something smarter
 	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
-	RenderSceneContext& GetScene() { return m_scene; }
 
 	SceneClientView& GetSceneView() { return m_scene_manager->GetScene(); }
 
@@ -108,7 +106,6 @@ private:
 	D3D12_VIEWPORT m_screen_viewport;
 	D3D12_RECT m_scissor_rect;
 
-	RenderSceneContext m_scene;
 	StaticMeshID m_geom_id = StaticMeshID::nullid;
 	MaterialID m_placeholder_material = MaterialID::nullid;
 	CameraID m_main_camera_id = CameraID::nullid;
@@ -136,7 +133,6 @@ private:
 	static constexpr int PassCount = 2;
 
 	// pipeline
-	std::unique_ptr<ForwardLightingPass> m_forward_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_shadow_pass = nullptr;
 	std::unique_ptr<PSSMGenPass> m_pssm_pass = nullptr;
 	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
@@ -164,15 +160,9 @@ private:
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;
-	ComPtr<ID3D12GraphicsCommandList> m_sm_cmd_lst = nullptr;
 
 	// special cmd allocators
 	ComPtr<ID3D12CommandAllocator> m_direct_cmd_allocator = nullptr;
-
-	// forward
-	ComPtr<ID3D12RootSignature> m_forward_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_forward_pso_main = nullptr;
-	ComPtr<ID3D12PipelineState> m_forward_pso_wireframe = nullptr;
 
 	// depth only
 	ComPtr<ID3D12RootSignature> m_do_root_signature = nullptr;
@@ -214,8 +204,6 @@ private:
 
 	void BuildFrameResources();
 	void BuildPasses();
-	
-	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 7> BuildStaticSamplers() const;
 	
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
