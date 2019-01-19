@@ -2,14 +2,17 @@
 
 #include "Ptr.h"
 
+#include "RenderPass.h"
+
 // Separable Gaussian blur
 // Strictly speaking this kind of bilateral filter is not separable, but the results are passable anyway
 
-class DepthAwareBlurPass
+class DepthAwareBlurPass : public RenderPass
 {
 public:
+	DepthAwareBlurPass( ID3D12Device& device );
 
-	DepthAwareBlurPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
+	RenderStateID BuildRenderState( ID3D12Device& device );
 
 	struct Context
 	{
@@ -22,17 +25,16 @@ public:
 		bool transpose_flag;
 	};
 
-	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );
-
-	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
-	static void BuildData( ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig );
-	static ComPtr<ID3DBlob> LoadAndCompileShader();
+	void Draw( const Context& context );
 
 private:
-
 	static constexpr uint32_t GroupSizeX = 64;
 	static constexpr uint32_t GroupSizeY = 4;
 
-	ID3D12PipelineState* m_pso = nullptr;
-	ID3D12RootSignature* m_root_signature = nullptr;
+	virtual void BeginDerived( RenderStateID state ) noexcept override;
+
+	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
+	static ComPtr<ID3DBlob> LoadAndCompileShader();
+
+	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
 };

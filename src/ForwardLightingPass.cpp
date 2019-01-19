@@ -88,8 +88,6 @@ void ForwardLightingPass::Draw( const Context& context ) noexcept
 
 	m_cmd_list->OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
 
-	m_cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
-
 	m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
 	m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
 

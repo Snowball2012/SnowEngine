@@ -364,6 +364,9 @@
     <ClInclude Include="src\ForwardPassNode.h">
       <Filter>core\Pipeline\Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="src\BlurSSAONode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">

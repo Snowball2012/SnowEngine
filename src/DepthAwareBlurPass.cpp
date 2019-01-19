@@ -6,28 +6,51 @@
 #include "DepthAwareBlurPass.h"
 
 
-DepthAwareBlurPass::DepthAwareBlurPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig )
-	: m_pso( pso ), m_root_signature( rootsig )
+DepthAwareBlurPass::DepthAwareBlurPass( ID3D12Device& device )
 {
+	m_root_signature = BuildRootSignature( device );
 }
 
 
-void DepthAwareBlurPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list )
+DepthAwareBlurPass::RenderStateID DepthAwareBlurPass::BuildRenderState( ID3D12Device& device )
 {
-	cmd_list.SetPipelineState( m_pso );
-	cmd_list.SetComputeRootSignature( m_root_signature );
+	D3D12_COMPUTE_PIPELINE_STATE_DESC pso_desc;
+	ZeroMemory( &pso_desc, sizeof( D3D12_COMPUTE_PIPELINE_STATE_DESC ) );
+	pso_desc.pRootSignature = m_root_signature.Get();
 
-	cmd_list.SetComputeRootDescriptorTable( 0, context.input_srv );
-	cmd_list.SetComputeRootDescriptorTable( 1, context.depth_srv );
-	cmd_list.SetComputeRootDescriptorTable( 2, context.blurred_uav );
-	cmd_list.SetComputeRootConstantBufferView( 3, context.pass_cb );
+	const auto shader = LoadAndCompileShader();
+	pso_desc.CS =
+	{
+		reinterpret_cast<BYTE*>( shader->GetBufferPointer() ),
+		shader->GetBufferSize()
+	};
+
+	RenderStateID retval = m_pso_cache.emplace();
+	ThrowIfFailed( device.CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_cache[retval] ) ) );
+
+	return retval;
+}
+
+
+void DepthAwareBlurPass::BeginDerived( RenderStateID state ) noexcept
+{
+	m_cmd_list->SetComputeRootSignature( m_root_signature.Get() );
+}
+
+
+void DepthAwareBlurPass::Draw( const Context& context )
+{
+	m_cmd_list->SetComputeRootDescriptorTable( 0, context.input_srv );
+	m_cmd_list->SetComputeRootDescriptorTable( 1, context.depth_srv );
+	m_cmd_list->SetComputeRootDescriptorTable( 2, context.blurred_uav );
+	m_cmd_list->SetComputeRootConstantBufferView( 3, context.pass_cb );
 	uint32_t transpose_val = uint32_t( context.transpose_flag );
-	cmd_list.SetComputeRoot32BitConstant( 4, transpose_val, 0 );
+	m_cmd_list->SetComputeRoot32BitConstant( 4, transpose_val, 0 );
 	UINT group_cnt_x, group_cnt_y;
 	group_cnt_x = ceil_integer_div( context.uav_height, GroupSizeX );
 	group_cnt_y = ceil_integer_div( context.uav_width, GroupSizeY );
 	
-	cmd_list.Dispatch( group_cnt_x, group_cnt_y, 1 );
+	m_cmd_list->Dispatch( group_cnt_x, group_cnt_y, 1 );
 }
 
 
@@ -88,29 +111,6 @@ ComPtr<ID3D12RootSignature> DepthAwareBlurPass::BuildRootSignature( ID3D12Device
 		IID_PPV_ARGS( &rootsig ) ) );
 
 	return rootsig;
-}
-
-
-void DepthAwareBlurPass::BuildData( ID3D12Device & device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
-{
-	if ( ! rootsig )
-		rootsig = BuildRootSignature( device );
-
-	if ( ! pso )
-	{
-		D3D12_COMPUTE_PIPELINE_STATE_DESC pso_desc;
-		ZeroMemory( &pso_desc, sizeof( D3D12_COMPUTE_PIPELINE_STATE_DESC ) );
-		pso_desc.pRootSignature = rootsig.Get();
-
-		const auto shader = LoadAndCompileShader();
-		pso_desc.CS =
-		{
-			reinterpret_cast<BYTE*>( shader->GetBufferPointer() ),
-			shader->GetBufferSize()
-		};
-
-		ThrowIfFailed( device.CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
-	}
 }
 
 

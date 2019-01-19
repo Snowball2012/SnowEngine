@@ -237,6 +237,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\XMMath.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\BlurSSAONode.h" />
     <ClInclude Include="src\DepthAwareBlurPass.h" />
     <ClInclude Include="src\CircularUploadBuffer.h" />
     <ClInclude Include="src\D3DApp.h" />

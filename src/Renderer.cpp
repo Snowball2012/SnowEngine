@@ -568,6 +568,7 @@ void Renderer::BuildPasses()
 														DXGI_FORMAT_R16G16_FLOAT, // normals
 														m_depth_stencil_format, *m_d3d_device.Get() );
 
+	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
 
 	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, false, true, *m_d3d_device.Get(),
 							  m_do_pso, m_do_root_signature );
@@ -587,13 +588,8 @@ void Renderer::BuildPasses()
 	HBAOPass::BuildData( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
 	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
 
-	DepthAwareBlurPass::BuildData( *m_d3d_device.Get(), m_blur_pso, m_blur_root_signature );
-	m_blur_pass = std::make_unique<DepthAwareBlurPass>( m_blur_pso.Get(), m_blur_root_signature.Get() );
-
 	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
 	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
-	m_pipeline.ConstructNode<BlurSSAONodeHorizontal>( m_blur_pass.get() );
-	m_pipeline.ConstructNode<BlurSSAONodeVertical>( m_blur_pass.get() );
 	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
 	m_pipeline.ConstructNode<PSSMGenNode>( m_pssm_pass.get() );
 	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
@@ -604,8 +600,6 @@ void Renderer::BuildPasses()
 	m_pipeline.Enable<ToneMapPassNode>();
 	m_pipeline.Enable<UIPassNode>();
 	m_pipeline.Enable<HBAOGeneratorNode>();
-	m_pipeline.Enable<BlurSSAONodeHorizontal>();
-	m_pipeline.Enable<BlurSSAONodeVertical>();
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

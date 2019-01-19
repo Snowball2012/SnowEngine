@@ -15,6 +15,7 @@
 #include "Pipeline.h"
 #include "PipelineNodes.h"
 #include "ForwardPassNode.h"
+#include "BlurSSAONode.h"
 
 #include "SceneManager.h"
 #include "ForwardCBProvider.h"
@@ -138,7 +139,6 @@ private:
 	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
-	std::unique_ptr<DepthAwareBlurPass> m_blur_pass = nullptr;
 
 	ParallelSplitShadowMapping m_pssm;
 
@@ -150,8 +150,7 @@ private:
 			PSSMGenNode,
 			ForwardPassNode,
 			HBAOGeneratorNode,
-			BlurSSAONodeHorizontal,
-			BlurSSAONodeVertical,
+			BlurSSAONode,
 			ToneMapPassNode,
 			UIPassNode
 		>;
@@ -185,8 +184,6 @@ private:
 	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
 	ComPtr<ID3D12RootSignature> m_hbao_root_signature = nullptr;
 	ComPtr<ID3D12PipelineState> m_hbao_pso = nullptr;
-	ComPtr<ID3D12RootSignature> m_blur_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_blur_pso = nullptr;
 
 	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
