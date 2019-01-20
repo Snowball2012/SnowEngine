@@ -53,6 +53,9 @@ inline void BlurSSAONode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
 	m_pipeline->GetRes( storage_v );
 	m_pipeline->GetRes( pass_cb );
 
+	const auto& resource_h_desc = storage_h.resource->GetDesc();
+	const auto& resource_v_desc = storage_v.resource->GetDesc();
+
 	m_pass.Begin( m_state, cmd_list );
 
 	DepthAwareBlurPass::Context ctx;
@@ -61,10 +64,6 @@ inline void BlurSSAONode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
 	ctx.blurred_uav = storage_h.uav;
 	ctx.pass_cb = pass_cb.pass_cb;
 
-	const auto& resource_h_desc = storage_h.resource->GetDesc();
-
-	if ( resource_h_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D )
-		throw SnowEngineException( "destination resource for ssao blur is not a 2d texture" );
 
 	ctx.uav_width = resource_h_desc.Width;
 	ctx.uav_height = resource_h_desc.Height;
@@ -86,10 +85,6 @@ inline void BlurSSAONode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
 	ctx.pass_cb = pass_cb.pass_cb;
 	ctx.transpose_flag = true;
 
-	const auto& resource_v_desc = storage_v.resource->GetDesc();
-
-	if ( resource_v_desc.Dimension != D3D12_RESOURCE_DIMENSION_TEXTURE2D )
-		throw SnowEngineException( "destination resource for ssao blur is not a 2d texture" );
 
 	ctx.uav_width = resource_v_desc.Width;
 	ctx.uav_height = resource_v_desc.Height;

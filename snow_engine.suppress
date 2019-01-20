@@ -735,4 +735,28 @@
     <CodeCurrent>4110247424</CodeCurrent>
     <CodeNext>123</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>Renderer.cpp</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the constructor. Consider inspecting: m_screen_viewport, m_scissor_rect.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>698526270</CodeCurrent>
+    <CodeNext>3611432588</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>SceneItems.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: sm_size, orthogonal_ws_height, ws_halfwidth.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>195409</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>SceneItems.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: sm_size, orthogonal_ws_height.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>195409</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
 </NewDataSet>

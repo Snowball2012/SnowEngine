@@ -10,8 +10,6 @@
 
 #include "GeomGeneration.h"
 
-#include "ForwardLightingPass.h"
-#include "DepthOnlyPass.h"
 #include "TemporalBlendPass.h"
 #include "ToneMappingPass.h"
 #include "PSSMGenPass.h"
@@ -563,6 +561,11 @@ void Renderer::BuildFrameResources( )
 
 void Renderer::BuildPasses()
 {
+	m_pipeline.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, *m_d3d_device.Get() );
+
+	m_pipeline.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
+	m_pipeline.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
+
 	m_pipeline.ConstructAndEnableNode<ForwardPassNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
 														DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
 														DXGI_FORMAT_R16G16_FLOAT, // normals
@@ -570,36 +573,16 @@ void Renderer::BuildPasses()
 
 	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
 
-	DepthOnlyPass::BuildData( m_depth_stencil_format, 5000, false, true, *m_d3d_device.Get(),
-							  m_do_pso, m_do_root_signature );
-	m_shadow_pass = std::make_unique<DepthOnlyPass>( m_do_pso.Get(), m_do_root_signature.Get() );
+	m_pipeline.ConstructAndEnableNode<UIPassNode>();
 
 	ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
 	m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
 
-	PSSMGenPass::BuildData( m_depth_stencil_format, 5000, true, *m_d3d_device.Get(),
-							  m_pssm_gen_pso, m_pssm_gen_root_signature );
-	m_pssm_pass = std::make_unique<PSSMGenPass>( m_pssm_gen_pso.Get(), m_pssm_gen_root_signature.Get() );
-
-	DepthOnlyPass::BuildData( m_depth_stencil_format, 0, true, true, *m_d3d_device.Get(),
-							  m_z_prepass_pso, m_do_root_signature );
-	m_depth_prepass = std::make_unique<DepthOnlyPass>( m_z_prepass_pso.Get(), m_do_root_signature.Get() );
-
 	HBAOPass::BuildData( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
 	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
 
-	m_pipeline.ConstructNode<DepthPrepassNode>( m_depth_prepass.get() );
-	m_pipeline.ConstructNode<HBAOGeneratorNode>( m_hbao_pass.get() );
-	m_pipeline.ConstructNode<ShadowPassNode>( m_shadow_pass.get() );
-	m_pipeline.ConstructNode<PSSMGenNode>( m_pssm_pass.get() );
-	m_pipeline.ConstructNode<ToneMapPassNode>( m_tonemap_pass.get() );
-	m_pipeline.ConstructNode<UIPassNode>();
-	m_pipeline.Enable<DepthPrepassNode>();
-	m_pipeline.Enable<ShadowPassNode>();
-	m_pipeline.Enable<PSSMGenNode>();
-	m_pipeline.Enable<ToneMapPassNode>();
-	m_pipeline.Enable<UIPassNode>();
-	m_pipeline.Enable<HBAOGeneratorNode>();
+	m_pipeline.ConstructAndEnableNode<HBAOGeneratorNode>( m_hbao_pass.get() );
+	m_pipeline.ConstructAndEnableNode<ToneMapPassNode>( m_tonemap_pass.get() );
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

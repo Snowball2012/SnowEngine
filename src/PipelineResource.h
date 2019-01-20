@@ -116,11 +116,6 @@ struct SSAOTexture_Blurred
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;	
 };
 
-struct SSAOTexture_BlurredHorizontal
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
 struct TonemapNodeSettings
 {
 	ToneMappingPass::ShaderData data;

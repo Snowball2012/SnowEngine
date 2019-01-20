@@ -26,9 +26,6 @@ public:
 private:
 	using SrvID = DescriptorTableBakery::TableID;
 
-	DirectX::XMMATRIX CalcShadowMatrix( const SceneLight& light, const DirectX::XMFLOAT3& camera_pos,
-										const SceneLight::Shadow& shadow_desc ) const;
-
 	void CreateShadowProducers( const span<const LightInCB>& lights );
 	void FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems );
 

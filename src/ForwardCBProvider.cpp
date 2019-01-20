@@ -113,7 +113,10 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 	{
 		if ( ! light.IsEnabled() )
 			continue;
-		switch ( light.GetData().type )
+
+		const SceneLight::LightType light_type = light.GetData().type;
+
+		switch ( light_type )
 		{
 			case SceneLight::LightType::Parallel:
 				gpu_data.n_parallel_lights++;
@@ -141,8 +144,10 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 		if ( ! light.IsEnabled() )
 			continue;
 
+		const SceneLight::LightType light_type = light.GetData().type;
+
 		uint32_t gpu_idx = 0;
-		switch ( light.GetData().type )
+		switch ( light_type )
 		{
 			case SceneLight::LightType::Parallel:
 				gpu_idx = parallel_idx++;
@@ -159,7 +164,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 
 		m_lights_in_cb.push_back( LightInCB{ gpu_idx, &light } );
 
-		if ( light.GetData().type == SceneLight::LightType::Parallel )
+		if ( light_type == SceneLight::LightType::Parallel )
 		{
 			ParallelLightConstants& data = gpu_data.parallel_lights[gpu_idx];
 			const auto& shadow_matrices = light.GetShadowMatrices(); // here matrix is in world space, we need to convert it to view space for the shaders

@@ -134,28 +134,6 @@ void ShadowProvider::FillPipelineStructures( const span<const LightInCB>& lights
 }
 
 
-XMMATRIX ShadowProvider::CalcShadowMatrix( const SceneLight& light, const XMFLOAT3& camera_pos,
-										   const SceneLight::Shadow& shadow_desc ) const
-{
-	if ( light.GetData().type != SceneLight::LightType::Parallel )
-		NOTIMPL;
-
-	XMVECTOR dir = XMLoadFloat3( &light.GetData().dir );
-
-	XMVECTOR target = XMLoadFloat3( &camera_pos );
-	XMVECTOR pos = dir * shadow_desc.orthogonal_ws_height + target;
-	XMVECTOR up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-
-	XMMATRIX view = XMMatrixLookAtLH( pos, target, up );
-	XMMATRIX proj = XMMatrixOrthographicLH( shadow_desc.ws_halfwidth,
-											shadow_desc.ws_halfwidth,
-											shadow_desc.orthogonal_ws_height * 0.1f,
-											shadow_desc.orthogonal_ws_height * 2.0f );
-
-	return view * proj;
-}
-
-
 void ShadowProvider::CreateShadowProducers( const span<const LightInCB>& lights )
 {
 	m_pssm_producers.clear();

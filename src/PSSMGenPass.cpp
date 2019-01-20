@@ -7,35 +7,86 @@
 
 #include "ForwardLightingPass.h"
 
-PSSMGenPass::PSSMGenPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig ) noexcept
-	: m_pso( pso ), m_root_signature( rootsig )
+
+PSSMGenPass::PSSMGenPass( ID3D12Device& device )
 {
-	assert( pso );
-	assert( rootsig );
+	m_root_signature = BuildRootSignature( device );
 }
 
 
-void PSSMGenPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list ) noexcept
+PSSMGenPass::RenderStateID PSSMGenPass::BuildRenderState( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device )
 {
-	cmd_list.SetPipelineState( m_pso );
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
 
-	cmd_list.OMSetRenderTargets( 0, nullptr, false, &context.depth_stencil_view );
+	const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
+	const auto shaders = LoadAndCompileShaders();
 
-	cmd_list.SetGraphicsRootSignature( m_root_signature );
+	pso_desc.InputLayout = { input_layout.data(), UINT( input_layout.size() ) };
+	pso_desc.pRootSignature = m_root_signature.Get();
 
-	cmd_list.SetGraphicsRoot32BitConstant( 2, context.light_idx, 0 );
-	cmd_list.SetGraphicsRootConstantBufferView( 3, context.pass_cbv );
+	pso_desc.VS =
+	{
+		reinterpret_cast<BYTE*>( shaders.vs->GetBufferPointer() ),
+		shaders.vs->GetBufferSize()
+	};
 
-	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+	pso_desc.GS =
+	{
+		reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
+		shaders.gs->GetBufferSize()
+	};
+
+	pso_desc.PS =
+	{
+		reinterpret_cast<BYTE*>( shaders.ps->GetBufferPointer() ),
+		shaders.ps->GetBufferSize()
+	};
+
+	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
+	pso_desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON;
+	if ( bias > 0 )
+	{
+		pso_desc.RasterizerState.DepthBias = bias;
+		pso_desc.RasterizerState.SlopeScaledDepthBias = 1.0f;
+	}
+	pso_desc.RasterizerState.CullMode = back_culling ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_FRONT;
+	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
+	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
+
+	pso_desc.SampleMask = UINT_MAX;
+	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+	pso_desc.NumRenderTargets = 0;
+	pso_desc.SampleDesc.Count = 1;
+	pso_desc.SampleDesc.Quality = 0;
+
+	pso_desc.DSVFormat = dsv_format;
+
+	RenderStateID state = m_pso_cache.emplace();
+
+	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_cache[state] ) ) );
+
+	return state;
+}
+
+
+void PSSMGenPass::Draw( const Context& context ) noexcept
+{
+	m_cmd_list->OMSetRenderTargets( 0, nullptr, false, &context.depth_stencil_view );
+
+	m_cmd_list->SetGraphicsRoot32BitConstant( 2, context.light_idx, 0 );
+	m_cmd_list->SetGraphicsRootConstantBufferView( 3, context.pass_cbv );
+
+	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
 	for ( const auto& render_item : context.renderitems )
 	{
-		cmd_list.SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
-		cmd_list.SetGraphicsRootDescriptorTable( 1, render_item.mat_table );
+		m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
+		m_cmd_list->SetGraphicsRootDescriptorTable( 1, render_item.mat_table );
 
-		cmd_list.IASetVertexBuffers( 0, 1, &render_item.vbv );
-		cmd_list.IASetIndexBuffer( &render_item.ibv );
-		cmd_list.DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
+		m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
+		m_cmd_list->IASetIndexBuffer( &render_item.ibv );
+		m_cmd_list->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
 	}
 }
 
@@ -105,65 +156,13 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
 }
 
 
-void PSSMGenPass::BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
-{
-	if ( ! rootsig )
-		rootsig = BuildRootSignature( device );
-
-	if ( ! pso )
-	{
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc{};
-
-		const ::InputLayout input_layout = ForwardLightingPass::InputLayout();
-		const auto shaders = LoadAndCompileShaders();
-
-		pso_desc.InputLayout = { input_layout.data(), UINT( input_layout.size() ) };
-		pso_desc.pRootSignature = rootsig.Get();
-
-		pso_desc.VS =
-		{
-			reinterpret_cast<BYTE*>( shaders.vs->GetBufferPointer() ),
-			shaders.vs->GetBufferSize()
-		};
-
-		pso_desc.GS =
-		{
-			reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
-			shaders.gs->GetBufferSize()
-		};
-
-		pso_desc.PS =
-		{
-			reinterpret_cast<BYTE*>( shaders.ps->GetBufferPointer() ),
-			shaders.ps->GetBufferSize()
-		};
-
-		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
-		pso_desc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON;
-		if ( bias > 0 )
-		{
-			pso_desc.RasterizerState.DepthBias = bias;
-			pso_desc.RasterizerState.SlopeScaledDepthBias = 1.0f;
-		}
-		pso_desc.RasterizerState.CullMode = back_culling ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_FRONT;
-		pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
-		pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
-
-		pso_desc.SampleMask = UINT_MAX;
-		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-		pso_desc.NumRenderTargets = 0;
-		pso_desc.SampleDesc.Count = 1;
-		pso_desc.SampleDesc.Quality = 0;
-
-		pso_desc.DSVFormat = dsv_format;
-
-		ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
-	}
-}
-
-
 PSSMGenPass::Shaders PSSMGenPass::LoadAndCompileShaders()
 {
 	return Shaders{ Utils::LoadBinary( L"shaders/pssm_vs.cso" ), Utils::LoadBinary( L"shaders/pssm_gs.cso" ), Utils::LoadBinary( L"shaders/depth_prepass_ps.cso" ) };
+}
+
+
+void PSSMGenPass::BeginDerived( RenderStateID state ) noexcept
+{
+	m_cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
 }

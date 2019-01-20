@@ -22,7 +22,7 @@ namespace
 }
 
 
-void ParallelSplitShadowMapping::CalcSplitPositionsVS( float near_z, float far_z, float uniform_factor, span<float> positions_storage ) noexcept
+void ParallelSplitShadowMapping::CalcSplitPositionsVS( float near_z, float far_z, float uniform_factor, const span<float>& positions_storage ) noexcept
 {
 	assert( ( far_z > 0 ) && ( near_z > 0 ) );
 	assert( far_z > near_z );
@@ -117,7 +117,7 @@ void ParallelSplitShadowMapping::CalcShadowMatrixForFrustrumLH( const span<XMVEC
 }
 
 
-span<float> ParallelSplitShadowMapping::CalcSplitPositionsVS( const Camera::Data& camera, span<float> positions_storage ) const noexcept
+span<float> ParallelSplitShadowMapping::CalcSplitPositionsVS( const Camera::Data& camera, const span<float>& positions_storage ) const noexcept
 {
 	assert( positions_storage.size() >= m_splits_num - 1 );
 

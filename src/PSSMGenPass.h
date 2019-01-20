@@ -4,10 +4,14 @@
 
 #include "RenderData.h"
 
-class PSSMGenPass
+#include "RenderPass.h"
+
+class PSSMGenPass : public RenderPass
 {
 public:
-	PSSMGenPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig ) noexcept;
+	PSSMGenPass( ID3D12Device& device );
+
+	RenderStateID BuildRenderState( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device );
 
 	struct Context
 	{
@@ -17,12 +21,10 @@ public:
 		uint32_t light_idx;
 	};
 
-	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list ) noexcept;
+	void Draw( const Context& context ) noexcept;
 
-	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
-
-	static void BuildData( DXGI_FORMAT dsv_format, int bias, bool back_culling, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig );
-
+	// uses input layout from ForwardLightingPass
+private:
 	struct Shaders
 	{
 		ComPtr<ID3DBlob> vs;
@@ -30,10 +32,10 @@ public:
 		ComPtr<ID3DBlob> ps;
 	};
 
+	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
 	static Shaders LoadAndCompileShaders();
 
-	// uses input layout from ForwardLightingPass
-private:
-	ID3D12PipelineState* m_pso = nullptr;
-	ID3D12RootSignature* m_root_signature = nullptr;
+	virtual void BeginDerived( RenderStateID state ) noexcept override;
+
+	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
 };

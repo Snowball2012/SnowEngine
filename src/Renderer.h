@@ -16,12 +16,12 @@
 #include "PipelineNodes.h"
 #include "ForwardPassNode.h"
 #include "BlurSSAONode.h"
+#include "DepthPrepassNode.h"
+#include "ShadowPassNode.h"
+#include "PSSMNode.h"
 
 #include "SceneManager.h"
 #include "ForwardCBProvider.h"
-
-class DepthOnlyPass;
-class PSSMGenPass;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class Renderer
@@ -134,9 +134,6 @@ private:
 	static constexpr int PassCount = 2;
 
 	// pipeline
-	std::unique_ptr<DepthOnlyPass> m_shadow_pass = nullptr;
-	std::unique_ptr<PSSMGenPass> m_pssm_pass = nullptr;
-	std::unique_ptr<DepthOnlyPass> m_depth_prepass = nullptr;
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
 
@@ -147,7 +144,7 @@ private:
 		<
 			DepthPrepassNode,
 			ShadowPassNode,
-			PSSMGenNode,
+			PSSMNode,
 			ForwardPassNode,
 			HBAOGeneratorNode,
 			BlurSSAONode,
@@ -162,15 +159,6 @@ private:
 
 	// special cmd allocators
 	ComPtr<ID3D12CommandAllocator> m_direct_cmd_allocator = nullptr;
-
-	// depth only
-	ComPtr<ID3D12RootSignature> m_do_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_do_pso = nullptr;
-	ComPtr<ID3D12PipelineState> m_z_prepass_pso = nullptr;
-
-	// pssm
-	ComPtr<ID3D12RootSignature> m_pssm_gen_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_pssm_gen_pso = nullptr;
 
 	// postprocessing
 	std::unique_ptr<DynamicTexture> m_fp_backbuffer;

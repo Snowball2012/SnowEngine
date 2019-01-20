@@ -242,6 +242,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\CircularUploadBuffer.h" />
     <ClInclude Include="src\D3DApp.h" />
     <ClInclude Include="src\DepthOnlyPass.h" />
+    <ClInclude Include="src\DepthPrepassNode.h" />
     <ClInclude Include="src\DescriptorHeap.h" />
     <ClInclude Include="src\DescriptorTableBakery.h" />
     <ClInclude Include="src\DynamicSceneBuffers.h" />
@@ -264,6 +265,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\PipelineNodes.h" />
     <ClInclude Include="src\PipelineResource.h" />
     <ClInclude Include="src\PSSMGenPass.h" />
+    <ClInclude Include="src\PSSMNode.h" />
     <ClInclude Include="src\Ptr.h" />
     <ClInclude Include="src\Renderer.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
@@ -280,6 +282,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\SceneManager.h" />
     <ClInclude Include="src\SceneManager.hpp" />
     <ClInclude Include="src\SceneSystemData.h" />
+    <ClInclude Include="src\ShadowPassNode.h" />
     <ClInclude Include="src\ShadowProvider.h" />
     <ClInclude Include="src\StagingDescriptorHeap.h" />
     <ClInclude Include="src\StaticMeshManager.h" />
