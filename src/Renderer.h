@@ -7,18 +7,18 @@
 #include "StagingDescriptorHeap.h"
 
 #include "ParallelSplitShadowMapping.h"
-#include "ToneMappingPass.h"
-#include "HBAOPass.h"
 
 #include "GPUTaskQueue.h"
 
 #include "Pipeline.h"
-#include "PipelineNodes.h"
 #include "ForwardPassNode.h"
 #include "BlurSSAONode.h"
 #include "DepthPrepassNode.h"
 #include "ShadowPassNode.h"
 #include "PSSMNode.h"
+#include "HBAONode.h"
+#include "ToneMapNode.h"
+#include "UIPassNode.h"
 
 #include "SceneManager.h"
 #include "ForwardCBProvider.h"
@@ -59,10 +59,7 @@ public:
 	ParallelSplitShadowMapping& PSSM() noexcept { return m_pssm; }
 	const ParallelSplitShadowMapping& PSSM() const noexcept { return m_pssm; }
 
-	// for update. Todo: something smarter
-	FrameResource& GetCurFrameResources() { return *m_cur_frame_resource; }
-
-	SceneClientView& GetSceneView() { return m_scene_manager->GetScene(); }
+	SceneClientView& GetScene() { return m_scene_manager->GetScene(); }
 
 	// returns false if camera doesn't exist
 	bool SetMainCamera( CameraID id );
@@ -146,9 +143,9 @@ private:
 			ShadowPassNode,
 			PSSMNode,
 			ForwardPassNode,
-			HBAOGeneratorNode,
+			HBAONode,
 			BlurSSAONode,
-			ToneMapPassNode,
+			ToneMapNode,
 			UIPassNode
 		>;
 
@@ -167,11 +164,6 @@ private:
 	std::unique_ptr<DynamicTexture> m_ssao;
 	std::unique_ptr<DynamicTexture> m_ssao_blurred;
 	std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed;
-
-	ComPtr<ID3D12RootSignature> m_tonemap_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_tonemap_pso = nullptr;
-	ComPtr<ID3D12RootSignature> m_hbao_root_signature = nullptr;
-	ComPtr<ID3D12PipelineState> m_hbao_pso = nullptr;
 
 	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 

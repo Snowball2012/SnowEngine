@@ -12,7 +12,6 @@
 
 #include "TemporalBlendPass.h"
 #include "ToneMappingPass.h"
-#include "PSSMGenPass.h"
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
@@ -73,7 +72,6 @@ void Renderer::Init()
 	BuildPasses();
 
 	m_pssm.SetSplitsNum( MAX_CASCADE_SIZE );
-	m_pssm.SetUniformFactor( 0.15f );
 }
 
 
@@ -90,10 +88,10 @@ void Renderer::Draw( const Context& ctx )
 
 	m_scene_manager->UpdatePipelineBindings( scene_camera, PSSM(), m_screen_viewport );
 
-	const Camera* main_camera = GetSceneView().GetCamera( m_main_camera_id );
+	const Camera* main_camera = GetScene().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
-	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetSceneView().GetROScene().LightSpan() );
+	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetScene().GetROScene().LightSpan() );
 
 	m_scene_manager->BindToPipeline( m_pipeline, *m_forward_cb_provider );
 
@@ -228,7 +226,7 @@ void Renderer::Resize( uint32_t new_width, uint32_t new_height )
 
 bool Renderer::SetMainCamera( CameraID id )
 {
-	if ( ! GetSceneView().GetROScene().AllCameras().has( id ) )
+	if ( ! GetScene().GetROScene().AllCameras().has( id ) )
 		return false;
 	m_main_camera_id = id;
 	return true;
@@ -236,7 +234,7 @@ bool Renderer::SetMainCamera( CameraID id )
 
 bool Renderer::SetFrustrumCullCamera( CameraID id )
 {
-	if ( ! GetSceneView().GetROScene().AllCameras().has( id ) )
+	if ( ! GetScene().GetROScene().AllCameras().has( id ) )
 		return false;
 	m_frustrum_cull_camera_id = id;
 	return true;
@@ -571,18 +569,13 @@ void Renderer::BuildPasses()
 														DXGI_FORMAT_R16G16_FLOAT, // normals
 														m_depth_stencil_format, *m_d3d_device.Get() );
 
+	m_pipeline.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
+
 	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
 
 	m_pipeline.ConstructAndEnableNode<UIPassNode>();
 
-	ToneMappingPass::BuildData( m_back_buffer_format, *m_d3d_device.Get(), m_tonemap_pso, m_tonemap_root_signature );
-	m_tonemap_pass = std::make_unique<ToneMappingPass>( m_tonemap_pso.Get(), m_tonemap_root_signature.Get() );
-
-	HBAOPass::BuildData( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get(), m_hbao_pso, m_hbao_root_signature );
-	m_hbao_pass = std::make_unique<HBAOPass>( m_hbao_pso.Get(), m_hbao_root_signature.Get() );
-
-	m_pipeline.ConstructAndEnableNode<HBAOGeneratorNode>( m_hbao_pass.get() );
-	m_pipeline.ConstructAndEnableNode<ToneMapPassNode>( m_tonemap_pass.get() );
+	m_pipeline.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();

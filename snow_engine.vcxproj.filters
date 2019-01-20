@@ -42,9 +42,6 @@
     <Filter Include="core\Pipeline">
       <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\Pipeline\testing">
-      <UniqueIdentifier>{913a2464-78a6-44fa-a5fb-f00e4570bf96}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\lib">
       <UniqueIdentifier>{2e11566b-ae71-43bc-b79d-7a0ec78386ab}</UniqueIdentifier>
     </Filter>
@@ -68,6 +65,9 @@
     </Filter>
     <Filter Include="core\Pipeline\Nodes">
       <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\Pipeline\Nodes\testing">
+      <UniqueIdentifier>{913a2464-78a6-44fa-a5fb-f00e4570bf96}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -129,7 +129,7 @@
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\PipelineCompileTimeTests.cpp">
-      <Filter>core\Pipeline\testing</Filter>
+      <Filter>core\Pipeline\Nodes\testing</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\CompileTimeTests.cpp">
       <Filter>utils</Filter>
@@ -271,9 +271,6 @@
     <ClInclude Include="src\Pipeline.hpp">
       <Filter>core\Pipeline</Filter>
     </ClInclude>
-    <ClInclude Include="src\PipelineNodes.h">
-      <Filter>core\Pipeline</Filter>
-    </ClInclude>
     <ClInclude Include="src\HBAOPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
@@ -374,6 +371,15 @@
       <Filter>core\Pipeline\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\PSSMNode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\HBAONode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ToneMapNode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\UIPassNode.h">
       <Filter>core\Pipeline\Nodes</Filter>
     </ClInclude>
   </ItemGroup>

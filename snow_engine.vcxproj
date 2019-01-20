@@ -255,6 +255,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\GeomGeneration.hpp" />
     <ClInclude Include="src\GPUPagedAllocator.h" />
     <ClInclude Include="src\GPUTaskQueue.h" />
+    <ClInclude Include="src\HBAONode.h" />
     <ClInclude Include="src\HBAOPass.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
@@ -262,7 +263,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
     <ClInclude Include="src\Pipeline.h" />
     <ClInclude Include="src\Pipeline.hpp" />
-    <ClInclude Include="src\PipelineNodes.h" />
+    <ClInclude Include="src\UIPassNode.h" />
     <ClInclude Include="src\PipelineResource.h" />
     <ClInclude Include="src\PSSMGenPass.h" />
     <ClInclude Include="src\PSSMNode.h" />
@@ -290,6 +291,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\TemporalAA.h" />
     <ClInclude Include="src\TemporalBlendPass.h" />
     <ClInclude Include="src\TextureStreamer.h" />
+    <ClInclude Include="src\ToneMapNode.h" />
     <ClInclude Include="src\ToneMappingPass.h" />
     <ClInclude Include="src\utils\MemoryMappedFile.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />

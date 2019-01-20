@@ -4,28 +4,69 @@
 
 #include "HBAOPass.h"
 
-HBAOPass::HBAOPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig )
-	: m_pso( pso ), m_root_signature( rootsig )
+
+HBAOPass::HBAOPass( ID3D12Device& device )
 {
+	m_root_signature = BuildRootSignature( device );
 }
 
-void HBAOPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list )
+
+HBAOPass::RenderStateID HBAOPass::BuildRenderState( DXGI_FORMAT rtv_format, ID3D12Device& device )
 {
-	cmd_list.SetPipelineState( m_pso );
-	cmd_list.OMSetRenderTargets( 1, &context.ssao_rtv, false, nullptr );
-	cmd_list.SetGraphicsRootSignature( m_root_signature );
+	ComPtr<ID3D12PipelineState> pso;
 
-	cmd_list.SetGraphicsRootConstantBufferView( 0, context.pass_cb );
-	cmd_list.SetGraphicsRootDescriptorTable( 1, context.depth_srv );
-	cmd_list.SetGraphicsRootDescriptorTable( 2, context.normals_srv );
-	cmd_list.SetGraphicsRoot32BitConstants( 3, 5, &context.settings, 0 );
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
+	ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
+	pso_desc.InputLayout.NumElements = 0;
+	pso_desc.pRootSignature = m_root_signature.Get();
 
-	cmd_list.IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
-	cmd_list.IASetIndexBuffer( nullptr );
-	cmd_list.IASetVertexBuffers( 0, 0, nullptr );
+	const auto shaders = LoadAndCompileShaders();
+	pso_desc.VS =
+	{
+		reinterpret_cast<BYTE*>( shaders.first->GetBufferPointer() ),
+		shaders.first->GetBufferSize()
+	};
+	pso_desc.PS =
+	{
+		reinterpret_cast<BYTE*>( shaders.second->GetBufferPointer() ),
+		shaders.second->GetBufferSize()
+	};
+	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
+	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	pso_desc.RasterizerState.DepthClipEnable = false;
+	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
+	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
+	pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
+	pso_desc.DepthStencilState.DepthEnable = false;
+	pso_desc.NumRenderTargets = 1;
+	pso_desc.RTVFormats[0] = rtv_format;
+	pso_desc.SampleMask = UINT_MAX;
+	pso_desc.SampleDesc.Count = 1;
+	pso_desc.SampleDesc.Quality = 0;
+	pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-	cmd_list.DrawInstanced( 3, 1, 0, 0 );
+	ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
+
+	return m_pso_cache.emplace( std::move( pso ) );
 }
+
+
+void HBAOPass::Draw( const Context& context )
+{
+	m_cmd_list->OMSetRenderTargets( 1, &context.ssao_rtv, false, nullptr );
+
+	m_cmd_list->SetGraphicsRootConstantBufferView( 0, context.pass_cb );
+	m_cmd_list->SetGraphicsRootDescriptorTable( 1, context.depth_srv );
+	m_cmd_list->SetGraphicsRootDescriptorTable( 2, context.normals_srv );
+	m_cmd_list->SetGraphicsRoot32BitConstants( 3, 5, &context.settings, 0 );
+
+	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
+	m_cmd_list->IASetIndexBuffer( nullptr );
+	m_cmd_list->IASetVertexBuffers( 0, 0, nullptr );
+
+	m_cmd_list->DrawInstanced( 3, 1, 0, 0 );
+}
+
 
 ComPtr<ID3D12RootSignature> HBAOPass::BuildRootSignature( ID3D12Device& device )
 {
@@ -95,48 +136,14 @@ ComPtr<ID3D12RootSignature> HBAOPass::BuildRootSignature( ID3D12Device& device )
 	return rootsig;
 }
 
-void HBAOPass::BuildData( DXGI_FORMAT rtv_format, ID3D12Device & device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig )
-{
-	if ( ! rootsig )
-		rootsig = BuildRootSignature( device );
-
-	if ( ! pso )
-	{
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC pso_desc;
-		ZeroMemory( &pso_desc, sizeof( D3D12_GRAPHICS_PIPELINE_STATE_DESC ) );
-		pso_desc.InputLayout.NumElements = 0;
-		pso_desc.pRootSignature = rootsig.Get();
-
-		const auto shaders = LoadAndCompileShaders();
-		pso_desc.VS =
-		{
-			reinterpret_cast<BYTE*>( shaders.first->GetBufferPointer() ),
-			shaders.first->GetBufferSize()
-		};
-		pso_desc.PS =
-		{
-			reinterpret_cast<BYTE*>( shaders.second->GetBufferPointer() ),
-			shaders.second->GetBufferSize()
-		};
-		pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
-		pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-		pso_desc.RasterizerState.DepthClipEnable = false;
-		pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
-		pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
-		pso_desc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ZERO;
-		pso_desc.DepthStencilState.DepthEnable = false;
-		pso_desc.NumRenderTargets = 1;
-		pso_desc.RTVFormats[0] = rtv_format;
-		pso_desc.SampleMask = UINT_MAX;
-		pso_desc.SampleDesc.Count = 1;
-		pso_desc.SampleDesc.Quality = 0;
-		pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-		ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
-	}
-}
 
 std::pair<ComPtr<ID3DBlob>, ComPtr<ID3DBlob>> HBAOPass::LoadAndCompileShaders()
 {
 	return std::make_pair( Utils::LoadBinary( L"shaders/fullscreen_quad_vs.cso" ), Utils::LoadBinary( L"shaders/postprocess/hbao_generation.cso" ) );
+}
+
+
+void HBAOPass::BeginDerived( RenderStateID state ) noexcept
+{
+	m_cmd_list->SetGraphicsRootSignature( m_root_signature.Get() );
 }

@@ -1,15 +1,16 @@
 #pragma once
 
 #include "RenderData.h"
+#include "RenderPass.h"
 
-#include <wrl.h>
-template<typename T>
-using ComPtr = Microsoft::WRL::ComPtr<T>;
+#include "Ptr.h"
 
-class ToneMappingPass
+class ToneMappingPass : public RenderPass
 {
 public:
-	ToneMappingPass( ID3D12PipelineState* pso, ID3D12RootSignature* rootsig );
+	ToneMappingPass( ID3D12Device& device );
+
+	RenderStateID BuildRenderState( DXGI_FORMAT rtv_format, ID3D12Device& device );
 
 	struct ShaderData
 	{
@@ -27,15 +28,13 @@ public:
 		ShaderData gpu_data;
 	};
 
-	void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );
-
-	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
-
-	static void BuildData( DXGI_FORMAT rtv_format, ID3D12Device& device, ComPtr<ID3D12PipelineState>& pso, ComPtr<ID3D12RootSignature>& rootsig );
-
-	static std::pair<ComPtr<ID3DBlob>, ComPtr<ID3DBlob>> LoadAndCompileShaders();
+	void Draw( const Context& context );
 
 private:
-	ID3D12PipelineState* m_pso = nullptr;
-	ID3D12RootSignature* m_root_signature = nullptr;
+	static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
+	static std::pair<ComPtr<ID3DBlob>, ComPtr<ID3DBlob>> LoadAndCompileShaders();
+
+	virtual void BeginDerived( RenderStateID state ) noexcept override;
+
+	ComPtr<ID3D12RootSignature> m_root_signature = nullptr;
 };
