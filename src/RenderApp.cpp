@@ -43,8 +43,8 @@ bool RenderApp::Initialize()
 
 	LoadPlaceholderTextures();
 
-	m_loading_screen.Init( m_renderer->GetSceneView(), m_ph_normal_texture, m_ph_specular_texture );
-	m_loading_screen.Enable( m_renderer->GetSceneView(), *m_renderer );
+	m_loading_screen.Init( m_renderer->GetScene(), m_ph_normal_texture, m_ph_specular_texture );
+	m_loading_screen.Enable( m_renderer->GetScene(), *m_renderer );
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
 
@@ -68,14 +68,14 @@ void RenderApp::Update( const GameTimer& gt )
 		if ( m_is_scene_loaded.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready )
 		{
 			m_cur_state = State::Main;
-			m_loading_screen.Disable( m_renderer->GetSceneView(), *m_renderer );
+			m_loading_screen.Disable( m_renderer->GetScene(), *m_renderer );
 			InitScene();
 		}
 	}
 
 	if ( m_cur_state == State::Loading )
 	{
-		m_loading_screen.Update( m_renderer->GetSceneView(), mClientWidth, mClientHeight, gt );
+		m_loading_screen.Update( m_renderer->GetScene(), mClientWidth, mClientHeight, gt );
 	}
 	else
 	{
@@ -171,7 +171,7 @@ void RenderApp::UpdateCamera()
 {
 	// main camera
 	{
-		Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_camera );
+		Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_camera );
 		if ( ! cam_ptr )
 			throw SnowEngineException( "no main camera" );
 
@@ -188,7 +188,7 @@ void RenderApp::UpdateCamera()
 
 	// debug camera
 	{
-		Camera* cam_ptr = m_renderer->GetSceneView().ModifyCamera( m_dbg_frustrum_camera );
+		Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_dbg_frustrum_camera );
 		if ( ! cam_ptr )
 			throw SnowEngineException( "no debug camera" );
 
@@ -229,7 +229,7 @@ namespace
 
 void RenderApp::UpdateLights()
 {
-	SceneLight* light_ptr = m_renderer->GetSceneView().ModifyLight( m_sun );
+	SceneLight* light_ptr = m_renderer->GetScene().ModifyLight( m_sun );
 	if ( ! light_ptr )
 		throw SnowEngineException( "no sun" );
 
@@ -382,7 +382,7 @@ void RenderApp::InitScene()
 	BuildRenderItems( m_imported_scene );
 	ReleaseIntermediateSceneMemory();
 
-	auto& scene = m_renderer->GetSceneView();
+	auto& scene = m_renderer->GetScene();
 
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
@@ -400,20 +400,20 @@ void RenderApp::InitScene()
 
 void RenderApp::LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_texture )
 {
-	auto& scene = m_renderer->GetSceneView();
+	auto& scene = m_renderer->GetScene();
 	for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
 		ext_scene.textures[i].second = scene.LoadStreamedTexture( ext_scene.textures[i].first );
 }
 
 void RenderApp::LoadPlaceholderTextures()
 {
-	m_ph_normal_texture = m_renderer->GetSceneView().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
-	m_ph_specular_texture = m_renderer->GetSceneView().LoadStreamedTexture( "resources/textures/default_spec.dds" );
+	m_ph_normal_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
+	m_ph_specular_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
 }
 
 void RenderApp::BuildGeometry( ImportedScene& ext_scene )
 {
-	auto& scene = m_renderer->GetSceneView();
+	auto& scene = m_renderer->GetScene();
 
 	ext_scene.mesh_id = scene.LoadStaticMesh(
 		"main",
@@ -423,7 +423,7 @@ void RenderApp::BuildGeometry( ImportedScene& ext_scene )
 
 void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 {
-	auto& scene = m_renderer->GetSceneView();
+	auto& scene = m_renderer->GetScene();
 
 	for ( int i = 0; i < ext_scene.materials.size(); ++i )
 	{
@@ -443,7 +443,7 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 
 void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
 {
-	auto& scene = m_renderer->GetSceneView();
+	auto& scene = m_renderer->GetScene();
 
 	for ( const auto& ext_submesh : ext_scene.submeshes )
 	{

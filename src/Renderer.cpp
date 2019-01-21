@@ -11,7 +11,6 @@
 #include "GeomGeneration.h"
 
 #include "TemporalBlendPass.h"
-#include "ToneMappingPass.h"
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
@@ -570,12 +569,10 @@ void Renderer::BuildPasses()
 														m_depth_stencil_format, *m_d3d_device.Get() );
 
 	m_pipeline.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
-
 	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
-
+	m_pipeline.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
 	m_pipeline.ConstructAndEnableNode<UIPassNode>();
 
-	m_pipeline.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
 
 	if ( m_pipeline.IsRebuildNeeded() )
 		m_pipeline.RebuildPipeline();
