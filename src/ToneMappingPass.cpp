@@ -31,7 +31,6 @@ ToneMappingPass::RenderStateID ToneMappingPass::BuildRenderState( DXGI_FORMAT rt
 	};
 	pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
 	pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-	pso_desc.RasterizerState.DepthClipEnable = false;
 	pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
 	pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
 	pso_desc.DepthStencilState.DepthEnable = false;

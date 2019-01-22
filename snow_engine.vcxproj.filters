@@ -200,6 +200,9 @@
     <ClCompile Include="src\RenderPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\SkyboxPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -382,6 +385,12 @@
     <ClInclude Include="src\UIPassNode.h">
       <Filter>core\Pipeline\Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="src\SkyboxPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SkyboxNode.h">
+      <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -419,6 +428,9 @@
     </FxCompile>
     <FxCompile Include="shaders\pssm_vs.hlsl">
       <Filter>shaders\pssm</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\skybox_ps.hlsl">
+      <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

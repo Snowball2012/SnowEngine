@@ -14,7 +14,7 @@ public:
 		<
 		ShadowMaps,
 		ShadowCascade,
-		HDRColorStorage,
+		HDRDirectStorage,
 		SSAmbientLightingStorage,
 		SSNormalStorage,
 		FinalSceneDepth,
@@ -25,7 +25,7 @@ public:
 
 	using OutputResources = std::tuple
 		<
-		HDRColorOut,
+		HDRDirect,
 		SSAmbientLighting,
 		SSNormals
 		>;
@@ -58,7 +58,7 @@ inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list 
 	m_pipeline->GetRes( shadow_maps );
 	ShadowCascade shadow_cascade;
 	m_pipeline->GetRes( shadow_cascade );
-	HDRColorStorage hdr_color_buffer;
+	HDRDirectStorage hdr_color_buffer;
 	m_pipeline->GetRes( hdr_color_buffer );
 	FinalSceneDepth dsv;
 	m_pipeline->GetRes( dsv );
@@ -108,9 +108,6 @@ inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list 
 
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
-		CD3DX12_RESOURCE_BARRIER::Transition( hdr_color_buffer.resource,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
 		CD3DX12_RESOURCE_BARRIER::Transition( ambient_buffer.resource,
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
@@ -119,9 +116,9 @@ inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list 
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 	};
 
-	cmd_list.ResourceBarrier( 3, barriers );
+	cmd_list.ResourceBarrier( 2, barriers );
 
-	HDRColorOut out_color{ hdr_color_buffer.srv };
+	HDRDirect out_color{ hdr_color_buffer.resource, hdr_color_buffer.srv, hdr_color_buffer.rtv };
 	SSAmbientLighting out_ambient{ ambient_buffer.srv };
 	SSNormals out_normals{ normal_buffer.srv };
 

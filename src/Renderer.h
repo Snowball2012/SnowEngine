@@ -19,6 +19,7 @@
 #include "HBAONode.h"
 #include "ToneMapNode.h"
 #include "UIPassNode.h"
+#include "SkyboxNode.h"
 
 #include "SceneManager.h"
 #include "ForwardCBProvider.h"
@@ -143,6 +144,7 @@ private:
 			ShadowPassNode,
 			PSSMNode,
 			ForwardPassNode,
+			SkyboxNode,
 			HBAONode,
 			BlurSSAONode,
 			ToneMapNode,

@@ -123,10 +123,14 @@ void Renderer::Draw( const Context& ctx )
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
 	{
+		Skybox sb;
+		sb.srv = m_scene_manager->GetScene().GetROScene().MaterialSpan()[0].DescriptorTable();
+		m_pipeline.SetRes( sb );
+
 		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
 		m_pipeline.SetRes( pass_cb );
 
-		HDRColorStorage hdr_buffer;
+		HDRDirectStorage hdr_buffer;
 		hdr_buffer.resource = m_fp_backbuffer->Resource();
 		hdr_buffer.rtv = m_fp_backbuffer->RTV()->HandleCPU();
 		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer->SRV() );
@@ -567,6 +571,8 @@ void Renderer::BuildPasses()
 														DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
 														DXGI_FORMAT_R16G16_FLOAT, // normals
 														m_depth_stencil_format, *m_d3d_device.Get() );
+
+	m_pipeline.ConstructAndEnableNode<SkyboxNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get() );
 
 	m_pipeline.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
 	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );

@@ -49,7 +49,14 @@ struct ForwardPassCB
 	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 };
 
-struct HDRColorStorage
+struct HDRDirectStorage
+{
+	ID3D12Resource* resource;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
+struct HDRDirect
 {
 	ID3D12Resource* resource;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
@@ -69,6 +76,11 @@ struct SSAmbientLightingStorage
 };
 
 struct SSAmbientLighting
+{
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
+struct Skybox
 {
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
