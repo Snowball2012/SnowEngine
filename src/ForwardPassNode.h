@@ -5,29 +5,34 @@
 
 #include "ForwardLightingPass.h"
 
+#include "DepthPrepassNode.h"
+
 
 template<class Pipeline>
 class ForwardPassNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
+		<
+		>;
+	using WriteRes = std::tuple
+		<
+		HDRBuffer,
+		AmbientBuffer,
+		NormalBuffer,
+		DepthStencilBuffer
+		>;
+	using ReadRes = std::tuple
 		<
 		ShadowMaps,
 		ShadowCascade,
-		HDRDirectStorage,
-		SSAmbientLightingStorage,
-		SSNormalStorage,
-		FinalSceneDepth,
 		ScreenConstants,
 		MainRenderitems,
-		ForwardPassCB
+		ForwardPassCB,
+		const DepthPrepassNode<Pipeline>*
 		>;
-
-	using OutputResources = std::tuple
+	using CloseRes = std::tuple
 		<
-		HDRDirect,
-		SSAmbientLighting,
-		SSNormals
 		>;
 
 	ForwardPassNode( Pipeline* pipeline,
@@ -54,51 +59,46 @@ private:
 template<class Pipeline>
 inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
 {
-	ShadowMaps shadow_maps;
-	m_pipeline->GetRes( shadow_maps );
-	ShadowCascade shadow_cascade;
-	m_pipeline->GetRes( shadow_cascade );
-	HDRDirectStorage hdr_color_buffer;
-	m_pipeline->GetRes( hdr_color_buffer );
-	FinalSceneDepth dsv;
-	m_pipeline->GetRes( dsv );
-	ScreenConstants view;
-	m_pipeline->GetRes( view );
-	MainRenderitems scene;
-	m_pipeline->GetRes( scene );
-	ForwardPassCB pass_cb;
-	m_pipeline->GetRes( pass_cb );
-	SSAmbientLightingStorage ambient_buffer;
-	m_pipeline->GetRes( ambient_buffer );
-	SSNormalStorage normal_buffer;
-	m_pipeline->GetRes( normal_buffer );
+	auto& shadow_maps = m_pipeline->GetRes<ShadowMaps>();
+	if ( ! shadow_maps )
+		NOTIMPL;
+	auto& csm = m_pipeline->GetRes<ShadowCascade>();
+	if ( ! csm )
+		NOTIMPL;
 
-	if ( ! ( hdr_color_buffer.rtv.ptr
-			 && dsv.dsv.ptr
-			 && ambient_buffer.rtv.ptr
-			 && ambient_buffer.srv.ptr
-			 && normal_buffer.rtv.ptr
-			 && normal_buffer.srv.ptr
-			 && shadow_cascade.srv.ptr ) )
-		throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
+	auto& renderitems = m_pipeline->GetRes<MainRenderitems>();
+	if ( ! renderitems )
+		NOTIMPL;
+
+	auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+	auto& view = m_pipeline->GetRes<ScreenConstants>();
+	if ( ! pass_cb || ! view )
+		throw SnowEngineException( "missing resource" );
+
+	auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
+	auto& hdr_buffer = m_pipeline->GetRes<HDRBuffer>();
+	auto& ambient_buffer = m_pipeline->GetRes<AmbientBuffer>();
+	auto& normal_buffer = m_pipeline->GetRes<NormalBuffer>();
+	if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer )
+		throw SnowEngineException( "missing resource" );
 
 	ForwardLightingPass::Context ctx;
-	ctx.back_buffer_rtv = hdr_color_buffer.rtv;
-	ctx.depth_stencil_view = dsv.dsv;
-	ctx.renderitems = scene.items;
-	ctx.shadow_map_srv = shadow_maps.srv;
-	ctx.pass_cb = pass_cb.pass_cb;
-	ctx.ambient_rtv = ambient_buffer.rtv;
-	ctx.normals_rtv = normal_buffer.rtv;
-	ctx.shadow_cascade_srv = shadow_cascade.srv;
+	ctx.back_buffer_rtv = hdr_buffer->rtv;
+	ctx.depth_stencil_view = depth_buffer->dsv;
+	ctx.renderitems = renderitems->items;
+	ctx.shadow_map_srv = shadow_maps->srv;
+	ctx.pass_cb = pass_cb->pass_cb;
+	ctx.ambient_rtv = ambient_buffer->rtv;
+	ctx.normals_rtv = normal_buffer->rtv;
+	ctx.shadow_cascade_srv = csm->srv;
 
 	const float bgr_color[4] = { 0, 0, 0, 0 };
 	cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
 	cmd_list.ClearRenderTargetView( ctx.ambient_rtv, bgr_color, 0, nullptr );
 	cmd_list.ClearRenderTargetView( ctx.normals_rtv, bgr_color, 0, nullptr );
 
-	cmd_list.RSSetViewports( 1, &view.viewport );
-	cmd_list.RSSetScissorRects( 1, &view.scissor_rect );
+	cmd_list.RSSetViewports( 1, &view->viewport );
+	cmd_list.RSSetScissorRects( 1, &view->scissor_rect );
 
 	m_pass.Begin( m_renderstates.triangle_fill, cmd_list );
 
@@ -108,21 +108,13 @@ inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list 
 
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
-		CD3DX12_RESOURCE_BARRIER::Transition( ambient_buffer.resource,
+		CD3DX12_RESOURCE_BARRIER::Transition( ambient_buffer->res,
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
-		CD3DX12_RESOURCE_BARRIER::Transition( normal_buffer.resource,
+		CD3DX12_RESOURCE_BARRIER::Transition( normal_buffer->res,
 		D3D12_RESOURCE_STATE_RENDER_TARGET,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 	};
 
 	cmd_list.ResourceBarrier( 2, barriers );
-
-	HDRDirect out_color{ hdr_color_buffer.resource, hdr_color_buffer.srv, hdr_color_buffer.rtv };
-	SSAmbientLighting out_ambient{ ambient_buffer.srv };
-	SSNormals out_normals{ normal_buffer.srv };
-
-	m_pipeline->SetRes( out_color );
-	m_pipeline->SetRes( out_ambient );
-	m_pipeline->SetRes( out_normals );
 }

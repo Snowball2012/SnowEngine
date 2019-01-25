@@ -111,12 +111,15 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred_transposed->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	ShadowMapStorage sm_storage;
-	m_pipeline.GetRes( sm_storage );
-	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	ShadowCascadeStorage pssm_storage;
-	m_pipeline.GetRes( pssm_storage );
-	rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage.res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	auto& sm_storage = m_pipeline.GetRes<ShadowMaps>();
+	if ( ! sm_storage )
+		throw SnowEngineException( "missing resource" );
+	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	auto& pssm_storage = m_pipeline.GetRes<ShadowCascade>();
+	if ( ! pssm_storage )
+		throw SnowEngineException( "missing resource" );
+
+	rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	
 	m_cmd_list->ResourceBarrier( 10, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
@@ -130,25 +133,25 @@ void Renderer::Draw( const Context& ctx )
 		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
 		m_pipeline.SetRes( pass_cb );
 
-		HDRDirectStorage hdr_buffer;
-		hdr_buffer.resource = m_fp_backbuffer->Resource();
+		HDRBuffer hdr_buffer;
+		hdr_buffer.res = m_fp_backbuffer->Resource();
 		hdr_buffer.rtv = m_fp_backbuffer->RTV()->HandleCPU();
 		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer->SRV() );
 		m_pipeline.SetRes( hdr_buffer );
 
-		SSAmbientLightingStorage ambient_buffer;
-		ambient_buffer.resource = m_ambient_lighting->Resource();
+		AmbientBuffer ambient_buffer;
+		ambient_buffer.res = m_ambient_lighting->Resource();
 		ambient_buffer.rtv = m_ambient_lighting->RTV()->HandleCPU();
 		ambient_buffer.srv = GetGPUHandle( m_ambient_lighting->SRV() );
 		m_pipeline.SetRes( ambient_buffer );
 
-		SSNormalStorage normal_buffer;
-		normal_buffer.resource = m_normals->Resource();
+		NormalBuffer normal_buffer;
+		normal_buffer.res = m_normals->Resource();
 		normal_buffer.rtv = m_normals->RTV()->HandleCPU();
 		normal_buffer.srv = GetGPUHandle( m_normals->SRV() );
 		m_pipeline.SetRes( normal_buffer );
 
-		DepthStorage depth_buffer;
+		DepthStencilBuffer depth_buffer;
 		depth_buffer.dsv = DepthStencilView();
 		depth_buffer.srv = DescriptorTables().GetTable( m_depth_buffer_srv )->gpu_handle;
 		m_pipeline.SetRes( depth_buffer );
@@ -158,21 +161,21 @@ void Renderer::Draw( const Context& ctx )
 		screen.scissor_rect = m_scissor_rect;
 		m_pipeline.SetRes( screen );
 
-		SSAOStorage ssao_texture;
-		ssao_texture.resource = m_ssao->Resource();
+		SSAOBuffer_Noisy ssao_texture;
+		ssao_texture.res = m_ssao->Resource();
 		ssao_texture.rtv = m_ssao->RTV()->HandleCPU();
 		ssao_texture.srv = GetGPUHandle( m_ssao->SRV() );
 		m_pipeline.SetRes( ssao_texture );
 
-		SSAOStorage_Blurred ssao_blurred_texture;
-		ssao_blurred_texture.resource = m_ssao_blurred->Resource();
+		SSAOTexture_Blurred ssao_blurred_texture;
+		ssao_blurred_texture.res = m_ssao_blurred->Resource();
 		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred->UAV() );
 		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred->SRV() );
 		m_pipeline.SetRes( ssao_blurred_texture );
 
 
-		SSAOStorage_BlurredHorizontal ssao_blurred_texture_horizontal;
-		ssao_blurred_texture_horizontal.resource = m_ssao_blurred_transposed->Resource();
+		SSAOTexture_Transposed ssao_blurred_texture_horizontal;
+		ssao_blurred_texture_horizontal.res = m_ssao_blurred_transposed->Resource();
 		ssao_blurred_texture_horizontal.uav = GetGPUHandle( m_ssao_blurred_transposed->UAV() );
 		ssao_blurred_texture_horizontal.srv = GetGPUHandle( m_ssao_blurred_transposed->SRV() );
 		m_pipeline.SetRes( ssao_blurred_texture_horizontal );
@@ -188,7 +191,7 @@ void Renderer::Draw( const Context& ctx )
 		hbao_settings.data = m_hbao_settings;
 		m_pipeline.SetRes( hbao_settings );
 
-		BackbufferStorage backbuffer;
+		SDRBuffer backbuffer;
 		backbuffer.resource = CurrentBackBuffer();
 		backbuffer.rtv = CurrentBackBufferView();
 		m_pipeline.SetRes( backbuffer );
@@ -202,8 +205,8 @@ void Renderer::Draw( const Context& ctx )
 
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage.res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
-	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage.res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
+	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
+	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
 
 	m_cmd_list->ResourceBarrier( 4, rtv_barriers );
 

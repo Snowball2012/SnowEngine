@@ -66,9 +66,6 @@
     <Filter Include="core\Pipeline\Nodes">
       <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\Pipeline\Nodes\testing">
-      <UniqueIdentifier>{913a2464-78a6-44fa-a5fb-f00e4570bf96}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -127,9 +124,6 @@
     </ClCompile>
     <ClCompile Include="src\ToneMappingPass.cpp">
       <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\PipelineCompileTimeTests.cpp">
-      <Filter>core\Pipeline\Nodes\testing</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\CompileTimeTests.cpp">
       <Filter>utils</Filter>
@@ -390,6 +384,9 @@
     </ClInclude>
     <ClInclude Include="src\SkyboxNode.h">
       <Filter>core\Pipeline\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\OptionalTuple.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

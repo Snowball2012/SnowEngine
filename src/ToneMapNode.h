@@ -9,19 +9,23 @@ template<class Pipeline>
 class ToneMapNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		HDRColorOut,
+		>;
+	using WriteRes = std::tuple
+		<
+		SDRBuffer
+		>;
+	using ReadRes = std::tuple
+		<
+		HDRBuffer,
+		AmbientBuffer,
 		TonemapNodeSettings,
 		SSAOTexture_Blurred,
-		SSAmbientLighting,
-		BackbufferStorage,
 		ScreenConstants
 		>;
-
-	using OutputResources = std::tuple
+	using CloseRes = std::tuple
 		<
-		TonemappedBackbuffer
 		>;
 
 	ToneMapNode( Pipeline* pipeline, DXGI_FORMAT rtv_format, ID3D12Device& device )
@@ -32,36 +36,31 @@ public:
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		HDRColorOut hdr_buffer;
-		m_pipeline->GetRes( hdr_buffer );
-		SSAmbientLighting ambient;
-		m_pipeline->GetRes( ambient );
-		SSAOTexture_Blurred ssao;
-		m_pipeline->GetRes( ssao );
-		TonemapNodeSettings settings;
-		m_pipeline->GetRes( settings );
-		BackbufferStorage ldr_buffer;
-		m_pipeline->GetRes( ldr_buffer );
-		ScreenConstants screen_constants;
-		m_pipeline->GetRes( screen_constants );
+		auto& sdr_buffer = m_pipeline->GetRes<SDRBuffer>();
+		auto& hdr_buffer = m_pipeline->GetRes<HDRBuffer>();
+		auto& ambient_buffer = m_pipeline->GetRes<AmbientBuffer>();
+		auto& settings = m_pipeline->GetRes<TonemapNodeSettings>();
+		auto& ssao = m_pipeline->GetRes<SSAOTexture_Blurred>();
+		auto& screen_constants = m_pipeline->GetRes<ScreenConstants>();
+
+		if ( ! sdr_buffer || ! hdr_buffer || ! ambient_buffer
+			 || ! settings || ! ssao || ! screen_constants )
+			throw SnowEngineException( "missing resource" );
 
 		m_pass.Begin( m_state, cmd_list );
 
 		ToneMappingPass::Context ctx;
-		ctx.gpu_data = settings.data;
-		ctx.frame_rtv = ldr_buffer.rtv;
-		ctx.frame_srv = hdr_buffer.srv;
-		ctx.ambient_srv = ambient.srv;
-		ctx.ssao_srv = ssao.srv;
+		ctx.gpu_data = settings->data;
+		ctx.frame_rtv = sdr_buffer->rtv;
+		ctx.frame_srv = hdr_buffer->srv;
+		ctx.ambient_srv = ambient_buffer->srv;
+		ctx.ssao_srv = ssao->srv;
 
-		cmd_list.RSSetViewports( 1, &screen_constants.viewport );
-		cmd_list.RSSetScissorRects( 1, &screen_constants.scissor_rect );
+		cmd_list.RSSetViewports( 1, &screen_constants->viewport );
+		cmd_list.RSSetScissorRects( 1, &screen_constants->scissor_rect );
 		m_pass.Draw( ctx );
 
 		m_pass.End();
-
-		TonemappedBackbuffer out{ ldr_buffer.resource, ldr_buffer.rtv };
-		m_pipeline->SetRes( out );
 	}
 
 private:

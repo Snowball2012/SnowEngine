@@ -5,6 +5,8 @@
 #include <map>
 #include <string_view>
 
+#include <boost/range/algorithm.hpp>
+
 namespace
 {
 	template<typename T>
@@ -34,52 +36,63 @@ void Pipeline<Node...>::RebuildPipeline()
 {
 	/*
 		general scheme:
-			1. make typeid -> input, output, rendernode_ptr
-			2. find input resources and fill layers one by one
+			1. make typeid -> open, write, read, close, rendernode_ptr
+			2. sort nodes for every resource
+			3. build directed render graph
+			4. make layers
 
-		not optimal performance-wise, but it doesn't matter, pipeline rebuild occurs very rarely and typical frame graph is rather small
+		terrible performance-wise, but it doesn't matter, pipeline rebuild occurs very rarely and typical frame graph is rather small
 	*/
 
 	auto active_node_info = CollectActiveNodes();
 	for ( auto& [node_id, info] : active_node_info )
 	{
-		boost::sort( info.input_ids );
-		boost::sort( info.output_ids );
+		boost::sort( info.open_ids );
+		boost::sort( info.write_ids );
+		boost::sort( info.read_ids );
+		boost::sort( info.close_ids );
 	}
 
-	auto available_resources = FindInputResources( active_node_info );
+	auto edges = BuildFrameGraphEdges( active_node_info );
 
 	m_node_layers.clear();
 	for ( bool layer_created = true; layer_created; )
 	{
 		layer_created = false;
 		std::vector<BaseRenderNode*> new_layer;
-		std::set<TypeIdWithName> layer_output_resources;
-		for ( auto node_iter = active_node_info.begin(); node_iter != active_node_info.end(); )
+
+		std::set<size_t> nodes_with_outcoming_edges;
+		for ( const auto& edge : edges )
+			nodes_with_outcoming_edges.insert( edge.first->node_id );
+
+		std::set<size_t> nodes_to_remove;
+		for ( auto&[node_id, info] : active_node_info )
+			if ( nodes_with_outcoming_edges.count( node_id ) == 0 )
+			{
+				nodes_to_remove.insert( node_id );
+				new_layer.push_back( info.node_ptr );
+			}
+
+		edges.erase( boost::remove_if( edges, [&nodes_to_remove]( const auto& edge )
 		{
-			const auto& node_info = node_iter->second;
-			if ( boost::range::includes( available_resources, node_info.input_ids ) )
-			{
-				new_layer.push_back( node_info.node_ptr );
-				layer_output_resources.insert( node_info.output_ids.begin(), node_info.output_ids.end() );
-				node_iter = active_node_info.erase( node_iter );
-			}
-			else
-			{
-				node_iter++;
-			}
-		}
+			return nodes_to_remove.count( edge.first->node_id ) > 0
+				|| nodes_to_remove.count( edge.second->node_id ) > 0;
+		} ), edges.end() );
+
+		for ( size_t node_hash : nodes_to_remove )
+			active_node_info.erase( node_hash );
 
 		if ( ! new_layer.empty() )
 		{
-			m_node_layers.push_back( std::move( new_layer ) );
-			available_resources.merge( layer_output_resources );
+			m_node_layers.emplace_back( std::move( new_layer ) );
 			layer_created = true;
 		}
 	}
 
 	if ( ! active_node_info.empty() )
 		throw SnowEngineException( "pipeline can't be created, resource dependency cycle has been found" );
+
+	boost::reverse( m_node_layers );
 
 	m_need_to_rebuild_pipeline = false;
 }
@@ -112,8 +125,11 @@ std::map<size_t, typename Pipeline<Node...>::RuntimeNodeInfo> Pipeline<Node...>:
 				node_info.node_id = node_id;
 				node_info.node_ptr = &*node.node;
 				node_info.node_name = typeid( NodeType ).name();
-				typeid_filler<typename NodeType::InputResources>::fill_typeids( node_info.input_ids );
-				typeid_filler<typename NodeType::OutputResources>::fill_typeids( node_info.output_ids );
+				typeid_filler<std::tuple<const NodeType*>>::fill_typeids( node_info.open_ids );
+				typeid_filler<typename NodeType::OpenRes>::fill_typeids( node_info.open_ids );
+				typeid_filler<typename NodeType::WriteRes>::fill_typeids( node_info.write_ids );
+				typeid_filler<typename NodeType::ReadRes>::fill_typeids( node_info.read_ids );
+				typeid_filler<typename NodeType::CloseRes>::fill_typeids( node_info.close_ids );
 			}
 			if constexpr ( sizeof...( rest ) > 0 )
 				self( self, rest... );
@@ -129,28 +145,55 @@ std::map<size_t, typename Pipeline<Node...>::RuntimeNodeInfo> Pipeline<Node...>:
 }
 
 template<template <typename> class ...Node>
-std::set<typename Pipeline<Node...>::TypeIdWithName> Pipeline<Node...>::FindInputResources( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
+std::map<typename Pipeline<Node...>::TypeIdWithName,
+	     typename Pipeline<Node...>::ResourceUsers> Pipeline<Node...>::FindResourceUsers( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
 {
-	std::set<TypeIdWithName> input_resources;
-	for ( const auto&[node_id, info] : active_nodes )
-		for ( const auto& input_res : info.input_ids )
-			input_resources.insert( input_res );
+	std::map<TypeIdWithName, ResourceUsers> resource_users;
 
 	for ( const auto&[node_id, info] : active_nodes )
-		for ( const auto& output_res : info.output_ids )
-			input_resources.erase( output_res );
+	{
+		for ( const auto& res_id : info.open_ids )
+			resource_users[res_id].open_nodes.push_back( &info );
+		for ( const auto& res_id : info.write_ids )
+			resource_users[res_id].write_nodes.push_back( &info );
+		for ( const auto& res_id : info.read_ids )
+			resource_users[res_id].read_nodes.push_back( &info );
+		for ( const auto& res_id : info.close_ids )
+			resource_users[res_id].close_nodes.push_back( &info );
+	}
 
-	return std::move( input_resources );
+	return std::move( resource_users );
 }
+
+
+template<template <typename> class ...Node>
+inline std::vector<std::pair<const typename Pipeline<Node...>::RuntimeNodeInfo*,
+	                         const typename Pipeline<Node...>::RuntimeNodeInfo*>> Pipeline<Node...>::BuildFrameGraphEdges( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
+{
+	const auto& resource_users = FindResourceUsers( active_nodes );
+
+	std::vector<std::pair<const RuntimeNodeInfo*, const RuntimeNodeInfo*>> edges;
+	for ( const auto&[res_id, nodes] : resource_users )
+	{
+		for ( const RuntimeNodeInfo* dst_node : nodes.write_nodes )
+			for ( const RuntimeNodeInfo* src_node : nodes.open_nodes )
+				edges.emplace_back( src_node, dst_node );
+
+		for ( const RuntimeNodeInfo* dst_node : nodes.read_nodes )
+			for ( const RuntimeNodeInfo* src_node : boost::join( nodes.open_nodes, nodes.write_nodes ) )
+				edges.emplace_back( src_node, dst_node );
+
+		for ( const RuntimeNodeInfo* dst_node : nodes.close_nodes )
+			for ( const RuntimeNodeInfo* src_node : boost::join( boost::join( nodes.open_nodes, nodes.write_nodes ), nodes.read_nodes ) )
+				edges.emplace_back( src_node, dst_node );
+	}
+	return std::move( edges );
+}
+
 
 template<template <typename> class ...Node>
 template<template <typename> class N>
 N<Pipeline<Node...>>* Pipeline<Node...>::GetNode()
 {
 	return std::get<NStorage<N<Pipeline>>>( m_node_storage ).node.get_ptr();
-}
-
-namespace Testing
-{
-	void create_pipeline();
 }

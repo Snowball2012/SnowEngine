@@ -21,7 +21,7 @@ public:
 
 	
 	void FillPipelineStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
-								 ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMapStorage& storage, ShadowCascadeStorage& pssm_storage );
+								 ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage );
 
 private:
 	using SrvID = DescriptorTableBakery::TableID;

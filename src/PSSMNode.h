@@ -11,16 +11,20 @@ template<class Pipeline>
 class PSSMNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		ShadowCascadeProducers,
-		ShadowCascadeStorage,
-		ForwardPassCB
 		>;
-
-	using OutputResources = std::tuple
+	using WriteRes = std::tuple
 		<
 		ShadowCascade
+		>;
+	using ReadRes = std::tuple
+		<
+		ShadowCascadeProducers,
+		ForwardPassCB
+		>;
+	using CloseRes = std::tuple
+		<
 		>;
 
 	PSSMNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
@@ -31,22 +35,23 @@ public:
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		ShadowCascadeProducers lights_with_pssm;
-		ShadowCascadeStorage shadow_cascade_to_fill;
-		ForwardPassCB pass_cb;
+		auto& lights_with_pssm = m_pipeline->GetRes<ShadowCascadeProducers>();
+		if ( ! lights_with_pssm )
+			return;
 
-		m_pipeline->GetRes( lights_with_pssm );
-		m_pipeline->GetRes( shadow_cascade_to_fill );
-		m_pipeline->GetRes( pass_cb );
+		auto& shadow_cascade = m_pipeline->GetRes<ShadowCascade>();
+		if ( ! shadow_cascade )
+			throw SnowEngineException( "missing resource" );
 
-		if ( ! shadow_cascade_to_fill.res )
-			throw SnowEngineException( "PSSMGenNode: some of the input resources are missing" );
+		auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+		if ( ! pass_cb )
+			throw SnowEngineException( "missing resource" );
 
 		m_pass.Begin( m_state, cmd_list );
 
-		cmd_list.ClearDepthStencilView( shadow_cascade_to_fill.dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
+		cmd_list.ClearDepthStencilView( shadow_cascade->dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 
-		for ( const auto& producer : lights_with_pssm.arr )
+		for ( const auto& producer : lights_with_pssm->arr )
 		{
 			cmd_list.RSSetViewports( 1, &producer.viewport );
 			D3D12_RECT sm_scissor;
@@ -60,8 +65,8 @@ public:
 
 			PSSMGenPass::Context ctx;
 			{
-				ctx.depth_stencil_view = shadow_cascade_to_fill.dsv;
-				ctx.pass_cbv = pass_cb.pass_cb;
+				ctx.depth_stencil_view = shadow_cascade->dsv;
+				ctx.pass_cbv = pass_cb->pass_cb;
 				ctx.renderitems = make_span( producer.casters );
 				ctx.light_idx = producer.light_idx_in_cb;
 			}
@@ -70,14 +75,9 @@ public:
 
 		m_pass.End();
 
-		ShadowCascade cascade;
-		cascade.srv = shadow_cascade_to_fill.srv;
-
-		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_cascade_to_fill.res,
+		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_cascade->res,
 																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
-
-		m_pipeline->SetRes( cascade );
 	}
 
 private:

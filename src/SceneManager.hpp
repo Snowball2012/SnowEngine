@@ -81,9 +81,9 @@ void SceneManager::BindToPipeline( PipelineT& pipeline, const ForwardCBProvider&
 	}
 
 	ShadowProducers producers;
-	ShadowMapStorage sm_storage;
+	ShadowMaps sm_storage;
 	ShadowCascadeProducers pssm_producers;
-	ShadowCascadeStorage pssm_storage;
+	ShadowCascade pssm_storage;
 	m_shadow_provider.FillPipelineStructures( forward_cb_provider.GetLightsInCB(), m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
 	pipeline.SetRes( producers );
 	pipeline.SetRes( sm_storage );

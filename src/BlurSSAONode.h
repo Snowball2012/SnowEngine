@@ -10,18 +10,22 @@ template<class Pipeline>
 class BlurSSAONode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		SSAOTexture_Noisy,
-		FinalSceneDepth,
-		SSAOStorage_BlurredHorizontal,
-		SSAOStorage_Blurred,
+		>;
+	using WriteRes = std::tuple
+		<
+		SSAOTexture_Blurred,
+		SSAOTexture_Transposed
+		>;
+	using ReadRes = std::tuple
+		<
+		SSAOBuffer_Noisy,
+		DepthStencilBuffer,
 		ForwardPassCB
 		>;
-
-	using OutputResources = std::tuple
+	using CloseRes = std::tuple
 		<
-		SSAOTexture_Blurred
 		>;
 
 	BlurSSAONode( Pipeline* pipeline, ID3D12Device& device )
@@ -42,63 +46,57 @@ private:
 template<class Pipeline>
 inline void BlurSSAONode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
 {
-	SSAOTexture_Noisy input;
-	FinalSceneDepth depth;
-	SSAOStorage_BlurredHorizontal storage_h;
-	SSAOStorage_Blurred storage_v;
-	ForwardPassCB pass_cb;
-	m_pipeline->GetRes( input );
-	m_pipeline->GetRes( depth );
-	m_pipeline->GetRes( storage_h );
-	m_pipeline->GetRes( storage_v );
-	m_pipeline->GetRes( pass_cb );
+	auto& blurred_ssao = m_pipeline->GetRes<SSAOTexture_Blurred>();
+	auto& transposed_ssao = m_pipeline->GetRes<SSAOTexture_Transposed>();
+	auto& noisy_ssao = m_pipeline->GetRes<SSAOBuffer_Noisy>();
+	auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
+	auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
 
-	const auto& resource_h_desc = storage_h.resource->GetDesc();
-	const auto& resource_v_desc = storage_v.resource->GetDesc();
+	if ( ! blurred_ssao || ! transposed_ssao || ! noisy_ssao
+		 || ! depth_buffer || ! pass_cb )
+		throw SnowEngineException( "missing resource" );
+
+	const auto& transposed_desc = transposed_ssao->res->GetDesc();
+	const auto& blurred_desc = blurred_ssao->res->GetDesc();
 
 	m_pass.Begin( m_state, cmd_list );
 
 	DepthAwareBlurPass::Context ctx;
-	ctx.depth_srv = depth.srv;
-	ctx.input_srv = input.srv;
-	ctx.blurred_uav = storage_h.uav;
-	ctx.pass_cb = pass_cb.pass_cb;
+	ctx.depth_srv = depth_buffer->srv;
+	ctx.input_srv = noisy_ssao->srv;
+	ctx.blurred_uav = transposed_ssao->uav;
+	ctx.pass_cb = pass_cb->pass_cb;
 
 
-	ctx.uav_width = resource_h_desc.Width;
-	ctx.uav_height = resource_h_desc.Height;
+	ctx.uav_width = transposed_desc.Width;
+	ctx.uav_height = transposed_desc.Height;
 	ctx.transpose_flag = false;
 
 	m_pass.Draw( ctx );
 
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
-		CD3DX12_RESOURCE_BARRIER::Transition( storage_h.resource,
+		CD3DX12_RESOURCE_BARRIER::Transition( transposed_ssao->res,
 		D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
 	};
 
 	cmd_list.ResourceBarrier( 1, barriers );
 
-	ctx.input_srv = storage_h.srv;
-	ctx.blurred_uav = storage_v.uav;
-	ctx.pass_cb = pass_cb.pass_cb;
+	ctx.input_srv = transposed_ssao->srv;
+	ctx.blurred_uav = blurred_ssao->uav;
 	ctx.transpose_flag = true;
 
-
-	ctx.uav_width = resource_v_desc.Width;
-	ctx.uav_height = resource_v_desc.Height;
+	ctx.uav_width = blurred_desc.Width;
+	ctx.uav_height = blurred_desc.Height;
 
 	m_pass.Draw( ctx );
 
-	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( storage_v.resource,
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( blurred_ssao->res,
 														D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 														D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
 
 	cmd_list.ResourceBarrier( 1, barriers );
-
-	SSAOTexture_Blurred out{ storage_v.srv };
-	m_pipeline->SetRes( out );
 
 	m_pass.End();
 }

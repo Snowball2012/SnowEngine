@@ -11,15 +11,19 @@ template<class Pipeline>
 class ShadowPassNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		ShadowProducers,
-		ShadowMapStorage
 		>;
-
-	using OutputResources = std::tuple
+	using WriteRes = std::tuple
 		<
 		ShadowMaps
+		>;
+	using ReadRes = std::tuple
+		<
+		ShadowProducers
+		>;
+	using CloseRes = std::tuple
+		<
 		>;
 
 	ShadowPassNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
@@ -30,20 +34,19 @@ public:
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		ShadowProducers lights_with_shadow;
-		ShadowMapStorage shadow_maps_to_fill;
+		auto& lights_with_shadow = m_pipeline->GetRes<ShadowProducers>();
+		if ( ! lights_with_shadow )
+			return;
 
-		m_pipeline->GetRes( lights_with_shadow );
-		m_pipeline->GetRes( shadow_maps_to_fill );
-
-		if ( ! shadow_maps_to_fill.res )
-			throw SnowEngineException( "ShadowPass: some of the input resources are missing" );
+		auto& shadow_maps = m_pipeline->GetRes<ShadowMaps>();
+		if ( ! shadow_maps )
+			throw SnowEngineException( "missing resource" );
 
 		m_pass.Begin( m_state, cmd_list );
 
-		cmd_list.ClearDepthStencilView( shadow_maps_to_fill.dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
+		cmd_list.ClearDepthStencilView( shadow_maps->dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 
-		for ( const auto& producer : lights_with_shadow.arr )
+		for ( const auto& producer : lights_with_shadow->arr )
 		{
 			cmd_list.RSSetViewports( 1, &producer.map_data.viewport );
 			D3D12_RECT sm_scissor;
@@ -57,7 +60,7 @@ public:
 
 			DepthOnlyPass::Context ctx;
 			{
-				ctx.depth_stencil_view = shadow_maps_to_fill.dsv;
+				ctx.depth_stencil_view = shadow_maps->dsv;
 				ctx.pass_cbv = producer.map_data.pass_cb;
 				ctx.renderitems = make_span( producer.casters );
 			}
@@ -66,11 +69,7 @@ public:
 
 		m_pass.End();
 
-		ShadowMaps output;
-		output.srv = shadow_maps_to_fill.srv;
-		m_pipeline->SetRes( output );
-
-		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_maps_to_fill.res,
+		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_maps->res,
 																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
 																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
 	}

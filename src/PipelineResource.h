@@ -20,27 +20,17 @@ struct ShadowCascadeProducers
 	span<ShadowCascadeProducer> arr;
 };
 
-struct ShadowMapStorage
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-	ID3D12Resource* res;
-};
-
 struct ShadowMaps
 {
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
-struct ShadowCascadeStorage
-{
+	ID3D12Resource* res;
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-	ID3D12Resource* res;
 };
 
 struct ShadowCascade
 {
+	ID3D12Resource* res;
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
@@ -49,35 +39,25 @@ struct ForwardPassCB
 	D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 };
 
-struct HDRDirectStorage
+struct HDRBuffer
 {
-	ID3D12Resource* resource;
+	ID3D12Resource* res;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 };
 
-struct HDRDirect
+struct AmbientBuffer
 {
-	ID3D12Resource* resource;
+	ID3D12Resource* res;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 };
 
-struct HDRColorOut
+struct NormalBuffer
 {
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
-struct SSAmbientLightingStorage
-{
-	ID3D12Resource* resource;
+	ID3D12Resource* res;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-};
-
-struct SSAmbientLighting
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct Skybox
@@ -85,48 +65,27 @@ struct Skybox
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
-struct SSNormalStorage
+struct SSAOBuffer_Noisy
 {
-	ID3D12Resource* resource;
+	ID3D12Resource* res;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-};
-
-struct SSNormals
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
-struct SSAOStorage
-{
-	ID3D12Resource* resource;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-};
-
-struct SSAOTexture_Noisy
-{
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
-struct SSAOStorage_Blurred
-{
-	ID3D12Resource* resource;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-	D3D12_GPU_DESCRIPTOR_HANDLE uav;
-};
-
-struct SSAOStorage_BlurredHorizontal
-{
-	ID3D12Resource* resource;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-	D3D12_GPU_DESCRIPTOR_HANDLE uav;
 };
 
 struct SSAOTexture_Blurred
 {
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;	
+	ID3D12Resource* res;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_GPU_DESCRIPTOR_HANDLE uav;
 };
+
+struct SSAOTexture_Transposed
+{
+	ID3D12Resource* res;
+	D3D12_GPU_DESCRIPTOR_HANDLE srv;
+	D3D12_GPU_DESCRIPTOR_HANDLE uav;
+};
+
 
 struct TonemapNodeSettings
 {
@@ -138,25 +97,13 @@ struct HBAOSettings
 	HBAOPass::Settings data;
 };
 
-struct BackbufferStorage
+struct SDRBuffer
 {
 	ID3D12Resource* resource;
 	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 };
 
-struct TonemappedBackbuffer
-{
-	ID3D12Resource* resource;
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-};
-
-struct DepthStorage
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv;
-};
-
-struct FinalSceneDepth
+struct DepthStencilBuffer
 {
 	D3D12_CPU_DESCRIPTOR_HANDLE dsv;
 	D3D12_GPU_DESCRIPTOR_HANDLE srv;
@@ -171,11 +118,6 @@ struct ScreenConstants
 struct MainRenderitems
 {
 	span<RenderItem> items;
-};
-
-struct FinalBackbuffer
-{
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 };
 
 struct ImGuiFontHeap

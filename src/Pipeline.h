@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utils/OptionalTuple.h"
 #include "utils/UniqueTuple.h"
 
 #include <map>
@@ -63,17 +64,16 @@ public:
 	N<Pipeline>* GetNode();
 
 	template<typename Res>
-	void GetRes( Res& res )
+	std::optional<Res>& GetRes( )
 	{
-		res = std::get<Res>( m_resources );
+		return std::get<std::optional<Res>>( m_resources );
 	}
 
 	template<typename Res>
 	void SetRes( const Res& res )
 	{
-		std::get<Res>( m_resources ) = res;
+		std::get<std::optional<Res>>( m_resources ) = res;
 	}
-
 
 	void RebuildPipeline();
 	void Run( ID3D12GraphicsCommandList& cmd_list );
@@ -98,14 +98,17 @@ private:
 	bool m_need_to_rebuild_pipeline = true;
 
 	template<typename Node>
-	using NodeResources = UniqueTuple<decltype( std::tuple_cat( std::declval<typename Node::InputResources>(),
-																std::declval<typename Node::OutputResources>() ) )>;
+	using NodeResources = UniqueTuple<decltype( std::tuple_cat( std::declval<typename Node::OpenRes>(),
+																std::declval<typename Node::WriteRes>(),
+																std::declval<typename Node::ReadRes>(),
+																std::declval<typename Node::CloseRes>(),
+																std::tuple<const Node*>() ) )>;
 
 	using PipelineResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Pipeline>>>()... ) )>;
 
-	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime pipeline
+	OptionalTuple<PipelineResources> m_resources;
 
-	PipelineResources m_resources;
+	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime pipeline
 
 	// impl details
 	struct TypeIdWithName
@@ -122,12 +125,23 @@ private:
 		size_t node_id;
 		std::string_view node_name; // debug info
 		BaseRenderNode* node_ptr;
-		std::vector<TypeIdWithName> input_ids;
-		std::vector<TypeIdWithName> output_ids;
+		std::vector<TypeIdWithName> open_ids;
+		std::vector<TypeIdWithName> write_ids;
+		std::vector<TypeIdWithName> read_ids;
+		std::vector<TypeIdWithName> close_ids;
 	};
 
 	std::map<size_t, RuntimeNodeInfo> CollectActiveNodes();
-	std::set<TypeIdWithName> FindInputResources( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
+
+	struct ResourceUsers
+	{
+		std::vector<const RuntimeNodeInfo*> open_nodes;
+		std::vector<const RuntimeNodeInfo*> write_nodes;
+		std::vector<const RuntimeNodeInfo*> read_nodes;
+		std::vector<const RuntimeNodeInfo*> close_nodes;
+	};
+	std::map<TypeIdWithName, ResourceUsers> FindResourceUsers( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
+	std::vector<std::pair<const RuntimeNodeInfo*, const RuntimeNodeInfo*>> BuildFrameGraphEdges( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
 };
 
 

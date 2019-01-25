@@ -10,16 +10,21 @@ template<class Pipeline>
 class DepthPrepassNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		DepthStorage,
+		>;
+	using WriteRes = std::tuple
+		<
+		DepthStencilBuffer
+		>;
+	using ReadRes = std::tuple
+		<
 		ScreenConstants,
 		MainRenderitems,
 		ForwardPassCB
 		>;
-	using OutputResources = std::tuple
+	using CloseRes = std::tuple
 		<
-		FinalSceneDepth
 		>;
 
 	DepthPrepassNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, ID3D12Device& device )
@@ -30,33 +35,37 @@ public:
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		DepthStorage dsv;
-		m_pipeline->GetRes( dsv );
-		ScreenConstants view;
-		m_pipeline->GetRes( view );
-		MainRenderitems scene;
-		m_pipeline->GetRes( scene );
-		ForwardPassCB pass_cb;
-		m_pipeline->GetRes( pass_cb );
+		auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
+		if ( ! depth_buffer )
+			throw SnowEngineException( "missing resource" );
+
+		auto& view = m_pipeline->GetRes<ScreenConstants>();
+		if ( ! view )
+			throw SnowEngineException( "missing resource" );
+
+		auto& renderitems = m_pipeline->GetRes<MainRenderitems>();
+		if ( ! renderitems )
+			return;
+
+		auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+		if ( ! pass_cb )
+			throw SnowEngineException( "missing resource" );
 
 		m_pass.Begin( m_state, cmd_list );
 
-		cmd_list.ClearDepthStencilView( dsv.dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr );
+		cmd_list.ClearDepthStencilView( depth_buffer->dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr );
 
-		cmd_list.RSSetViewports( 1, &view.viewport );
-		cmd_list.RSSetScissorRects( 1, &view.scissor_rect );
+		cmd_list.RSSetViewports( 1, &view->viewport );
+		cmd_list.RSSetScissorRects( 1, &view->scissor_rect );
 
 		DepthOnlyPass::Context ctx;
 		{
-			ctx.depth_stencil_view = dsv.dsv;
-			ctx.pass_cbv = pass_cb.pass_cb;
-			ctx.renderitems = scene.items;
+			ctx.depth_stencil_view = depth_buffer->dsv;
+			ctx.pass_cbv = pass_cb->pass_cb;
+			ctx.renderitems = renderitems->items;
 		}
 		m_pass.Draw( ctx );
 		m_pass.End();
-
-		FinalSceneDepth out_depth{ dsv.dsv, dsv.srv };
-		m_pipeline->SetRes( out_depth );
 	}
 
 private:

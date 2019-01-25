@@ -6,9 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snow_engine", "snow_engine.vcxproj", "{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{770175B2-6AEE-4AF3-A018-DDDD8240245E}"
-	ProjectSection(ProjectDependencies) = postProject
-		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E} = {EB59A200-985F-4FE9-B1CB-AA4C528CD62E}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

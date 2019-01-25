@@ -7,15 +7,19 @@ template<class Pipeline>
 class UIPassNode : public BaseRenderNode
 {
 public:
-	using InputResources = std::tuple
+	using OpenRes = std::tuple
 		<
-		TonemappedBackbuffer,
+		>;
+	using WriteRes = std::tuple
+		<
+		>;
+	using ReadRes = std::tuple
+		<
 		ImGuiFontHeap
 		>;
-
-	using OutputResources = std::tuple
+	using CloseRes = std::tuple
 		<
-		FinalBackbuffer
+		SDRBuffer
 		>;
 
 	UIPassNode( Pipeline* pipeline )
@@ -24,18 +28,17 @@ public:
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		TonemappedBackbuffer backbuffer;
-		m_pipeline->GetRes( backbuffer );
+		auto& backbuffer = m_pipeline->GetRes<SDRBuffer>();
+		if ( ! backbuffer )
+			throw SnowEngineException( "missing resource" );
 
-		ImGuiFontHeap heap;
-		m_pipeline->GetRes( heap );
+		auto& heap = m_pipeline->GetRes<ImGuiFontHeap>();
+		if ( ! heap )
+			throw SnowEngineException( "missing resource" );
 
 		ImGui_ImplDX12_NewFrame( &cmd_list );
-		cmd_list.SetDescriptorHeaps( 1, &heap.heap );
+		cmd_list.SetDescriptorHeaps( 1, &heap->heap );
 		ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
-
-		FinalBackbuffer out{ backbuffer.rtv };
-		m_pipeline->SetRes( out );
 	}
 
 private:
