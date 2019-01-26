@@ -6,8 +6,8 @@
 #include <map>
 #include <set>
 
-// generic cpu-gpu rendering pipeline
-// TODO: 2 different pipelines ( cpu and gpu ) for cpu resources and gpu resources instead of fused one
+// generic cpu-gpu rendering framegraph
+// TODO: 2 different framegraphs ( cpu and gpu ) for cpu resources and gpu resources instead of fused one
 
 struct ID3D12GraphicsCommandList;
 
@@ -18,26 +18,26 @@ public:
 };
 
 template<template <typename> class ... Node>
-class Pipeline
+class Framegraph
 {
 public:
 	template<template <typename> class N, typename ... Args>
 	void ConstructNode( Args&& ... args )
 	{
-		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
+		auto& node_storage = std::get<NStorage<N<Framegraph>>>( m_node_storage );
 		node_storage.node.emplace( this, std::forward<Args>( args )... );
 	}
 
 	template<template <typename> class N>
 	void Enable()
 	{
-		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
+		auto& node_storage = std::get<NStorage<N<Framegraph>>>( m_node_storage );
 
 		if ( ! node_storage.node.has_value() )
 			throw SnowEngineException( "node is not constructed yet" );
 		node_storage.enabled = true;
 
-		m_need_to_rebuild_pipeline = true;
+		m_need_to_rebuild_framegraph = true;
 	}
 
 	template<template <typename> class N, typename ... Args>
@@ -50,18 +50,18 @@ public:
 	template<template <typename> class N>
 	void Disable()
 	{
-		auto& node_storage = std::get<NStorage<N<Pipeline>>>( m_node_storage );
+		auto& node_storage = std::get<NStorage<N<Framegraph>>>( m_node_storage );
 
 		if ( ! node_storage.node.has_value() )
 			throw SnowEngineException( "node is not constructed yet" );
 
 		node_storage.enabled = false;
 
-		m_need_to_rebuild_pipeline = true;
+		m_need_to_rebuild_framegraph = true;
 	}
 
 	template<template <typename> class N>
-	N<Pipeline>* GetNode();
+	N<Framegraph>* GetNode();
 
 	template<typename Res>
 	std::optional<Res>& GetRes( )
@@ -75,12 +75,13 @@ public:
 		std::get<std::optional<Res>>( m_resources ) = res;
 	}
 
-	void RebuildPipeline();
+	void Rebuild();
+	void ClearResources();
 	void Run( ID3D12GraphicsCommandList& cmd_list );
 
 	bool IsRebuildNeeded() const
 	{
-		return m_need_to_rebuild_pipeline;
+		return m_need_to_rebuild_framegraph;
 	}
 
 private:
@@ -93,9 +94,9 @@ private:
 		bool enabled = false;
 	};
 
-	std::tuple<NStorage<Node<Pipeline>>...> m_node_storage;
+	std::tuple<NStorage<Node<Framegraph>>...> m_node_storage;
 
-	bool m_need_to_rebuild_pipeline = true;
+	bool m_need_to_rebuild_framegraph = true;
 
 	template<typename Node>
 	using NodeResources = UniqueTuple<decltype( std::tuple_cat( std::declval<typename Node::OpenRes>(),
@@ -104,11 +105,11 @@ private:
 																std::declval<typename Node::CloseRes>(),
 																std::tuple<const Node*>() ) )>;
 
-	using PipelineResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Pipeline>>>()... ) )>;
+	using FramegraphResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Framegraph>>>()... ) )>;
 
-	OptionalTuple<PipelineResources> m_resources;
+	OptionalTuple<FramegraphResources> m_resources;
 
-	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime pipeline
+	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime framegraph
 
 	// impl details
 	struct TypeIdWithName
@@ -145,5 +146,5 @@ private:
 };
 
 
-#include "Pipeline.hpp"
+#include "Framegraph.hpp"
 

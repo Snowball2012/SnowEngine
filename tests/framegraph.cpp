@@ -1,16 +1,12 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-#define BOOST_TEST_MODULE main
-#include <boost/test/included/unit_test.hpp>
 
-//#include <boost/test/unit_test.hpp>
+#include <boost/test/unit_test.hpp>
 
 #include "../src/stdafx.h"
-#include "../src/Pipeline.h"
+#include "../src/Framegraph.h"
 
-#include <iostream>
-
-// Specify resource handlers for pipeline to use
+// Specify resource handlers for framegraph to use
 // resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors
 struct ZBuffer
 {};
@@ -44,7 +40,7 @@ struct SSAOBufferBlurred
 
 // Render nodes
 //
-// About pipeline node typedefs:
+// About framegraph node typedefs:
 // OpenRes : node creates a resource and opens it for everyone to use. Only one active node may open a specific resource per frame
 // WriteRes : node modifies a resource. It may not be the first writer and it may not be the last
 // ReadRes : node reads a resource after all writers have used it. Multiple nodes may read it simultaneously
@@ -52,7 +48,7 @@ struct SSAOBufferBlurred
 //
 // Each Node opens <const Node*> resource automatically when scheduled, it may be used for "Node A must be scheduled before Node B" barriers
 
-template<class Pipeline>
+template<class Framegraph>
 class ZPrepass : public BaseRenderNode
 {
 public:
@@ -73,13 +69,13 @@ public:
 		<
 		>;
 
-	ZPrepass( Pipeline* pipeline )
+	ZPrepass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Z prepass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class ShadowPass : public BaseRenderNode
 {
 public:
@@ -100,13 +96,13 @@ public:
 		<
 		>;
 
-	ShadowPass( Pipeline* pipeline )
+	ShadowPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "shadow pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class PSSMPass : public BaseRenderNode
 {
 public:
@@ -127,14 +123,14 @@ public:
 		<
 		>;
 
-	PSSMPass( Pipeline* pipeline )
+	PSSMPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "PSSM pass"; }
 };
 
 
-template<class Pipeline>
+template<class Framegraph>
 class ForwardPass : public BaseRenderNode
 {
 public:
@@ -154,20 +150,20 @@ public:
 		<
 		PSSMShadowMaps,
 		ShadowMaps,
-		const ZPrepass<Pipeline>* // Forward pass must happen after ZPrepass if ZPrepass exists
+		const ZPrepass<Framegraph>* // Forward pass must happen after ZPrepass if ZPrepass exists
 		>;
 
 	using CloseRes = std::tuple
 		<
 		>;
 
-	ForwardPass( Pipeline* pipeline )
+	ForwardPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class SkyboxPass : public BaseRenderNode
 {
 public:
@@ -190,13 +186,13 @@ public:
 		<
 		>;
 
-	SkyboxPass( Pipeline* pipeline )
+	SkyboxPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Skybox Pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class HBAOPass : public BaseRenderNode
 {
 public:
@@ -219,13 +215,13 @@ public:
 		<
 		>;
 
-	HBAOPass( Pipeline* pipeline )
+	HBAOPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "HBAO Pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class SSAOBlurPass : public BaseRenderNode
 {
 public:
@@ -248,13 +244,13 @@ public:
 		<
 		>;
 
-	SSAOBlurPass( Pipeline* pipeline )
+	SSAOBlurPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "SSAO blur pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class TonemapPass : public BaseRenderNode
 {
 public:
@@ -279,13 +275,13 @@ public:
 		<
 		>;
 
-	TonemapPass( Pipeline* pipeline )
+	TonemapPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "tonemap pass"; }
 };
 
-template<class Pipeline>
+template<class Framegraph>
 class UIPass : public BaseRenderNode
 {
 public:
@@ -306,17 +302,17 @@ public:
 		SDRFramebuffer
 		>;
 
-	UIPass( Pipeline* pipeline )
+	UIPass( Framegraph* pipeline )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "ui pass"; }
 };
 
-BOOST_AUTO_TEST_SUITE( pipeline )
+BOOST_AUTO_TEST_SUITE( framegraph )
 
 BOOST_AUTO_TEST_CASE( create )
 {
-	Pipeline
+	Framegraph
 	<
 		ZPrepass,
 		ShadowPass,
@@ -327,45 +323,45 @@ BOOST_AUTO_TEST_CASE( create )
 		SSAOBlurPass,
 		TonemapPass,
 		UIPass
-	> pipeline;
+	> framegraph;
 
-	// pipeline setup
-	pipeline.ConstructAndEnableNode<ZPrepass>();
-	pipeline.ConstructAndEnableNode<ShadowPass>();
-	pipeline.ConstructAndEnableNode<PSSMPass>();
-	pipeline.ConstructAndEnableNode<ForwardPass>();
-	pipeline.ConstructAndEnableNode<SkyboxPass>();
-	pipeline.ConstructAndEnableNode<HBAOPass>();
-	pipeline.ConstructAndEnableNode<SSAOBlurPass>();
-	pipeline.ConstructAndEnableNode<TonemapPass>();
-	pipeline.ConstructAndEnableNode<UIPass>();
+	// framegraph setup
+	framegraph.ConstructAndEnableNode<ZPrepass>();
+	framegraph.ConstructAndEnableNode<ShadowPass>();
+	framegraph.ConstructAndEnableNode<PSSMPass>();
+	framegraph.ConstructAndEnableNode<ForwardPass>();
+	framegraph.ConstructAndEnableNode<SkyboxPass>();
+	framegraph.ConstructAndEnableNode<HBAOPass>();
+	framegraph.ConstructAndEnableNode<SSAOBlurPass>();
+	framegraph.ConstructAndEnableNode<TonemapPass>();
+	framegraph.ConstructAndEnableNode<UIPass>();
 
-	if ( pipeline.IsRebuildNeeded() )
-		pipeline.RebuildPipeline();
+	if ( framegraph.IsRebuildNeeded() )
+		framegraph.Rebuild();
 
 	// resource binding
-	pipeline.SetRes( ZBuffer() );
-	pipeline.SetRes( ShadowMaps() );
-	pipeline.SetRes( PSSMShadowMaps() );
-	pipeline.SetRes( HDRFramebuffer() );
-	pipeline.SetRes( SDRFramebuffer() );
-	pipeline.SetRes( Skybox() );
+	framegraph.SetRes( ZBuffer() );
+	framegraph.SetRes( ShadowMaps() );
+	framegraph.SetRes( PSSMShadowMaps() );
+	framegraph.SetRes( HDRFramebuffer() );
+	framegraph.SetRes( SDRFramebuffer() );
+	framegraph.SetRes( Skybox() );
 
 	ID3D12GraphicsCommandList* cmd_lst = nullptr;
-	// run pipeline
-	pipeline.Run( *cmd_lst );
+	// run framegraph
+	framegraph.Run( *cmd_lst );
 
 	// retrieve results
-	auto& framebuffer = pipeline.GetRes<SDRFramebuffer>();
+	auto& framebuffer = framegraph.GetRes<SDRFramebuffer>();
 
-	// change pipeline
-	pipeline.Disable<ZPrepass>();
-	pipeline.Disable<SSAOBlurPass>();
+	// change framegraph
+	framegraph.Disable<ZPrepass>();
+	framegraph.Disable<SSAOBlurPass>();
 
-	if ( pipeline.IsRebuildNeeded() )
-		pipeline.RebuildPipeline();
+	if ( framegraph.IsRebuildNeeded() )
+		framegraph.Rebuild();
 
-	pipeline.Run( *cmd_lst ); // should work just fine
+	framegraph.Run( *cmd_lst ); // should work just fine
 }
 
 BOOST_AUTO_TEST_SUITE_END()

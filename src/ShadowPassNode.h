@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Pipeline.h"
+#include "Framegraph.h"
 
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 #include "DepthOnlyPass.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class ShadowPassNode : public BaseRenderNode
 {
 public:
@@ -26,19 +26,19 @@ public:
 		<
 		>;
 
-	ShadowPassNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	ShadowPassNode( Framegraph* framegraph, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( dsv_format, bias, false, true, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& lights_with_shadow = m_pipeline->GetRes<ShadowProducers>();
+		auto& lights_with_shadow = m_framegraph->GetRes<ShadowProducers>();
 		if ( ! lights_with_shadow )
 			return;
 
-		auto& shadow_maps = m_pipeline->GetRes<ShadowMaps>();
+		auto& shadow_maps = m_framegraph->GetRes<ShadowMaps>();
 		if ( ! shadow_maps )
 			throw SnowEngineException( "missing resource" );
 
@@ -77,5 +77,5 @@ public:
 private:
 	DepthOnlyPass m_pass;
 	DepthOnlyPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };

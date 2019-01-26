@@ -1,11 +1,11 @@
 #pragma once
 
-#include "PipelineResource.h"
-#include "Pipeline.h"
+#include "FramegraphResource.h"
+#include "Framegraph.h"
 
 #include "SkyboxPass.h"
 
-template<class Pipeline>
+template<class Framegraph>
 class SkyboxNode : public BaseRenderNode
 {
 public:
@@ -27,19 +27,19 @@ public:
 		<
 		>;
 
-	SkyboxNode( Pipeline* pipeline, DXGI_FORMAT rtv_format, DXGI_FORMAT dsv_format, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	SkyboxNode( Framegraph* framegraph, DXGI_FORMAT rtv_format, DXGI_FORMAT dsv_format, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( rtv_format, dsv_format, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& hdr_buffer = m_pipeline->GetRes<HDRBuffer>();
-		auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
-		auto& skybox = m_pipeline->GetRes<Skybox>();
-		auto& forward_cb = m_pipeline->GetRes<ForwardPassCB>();
-		auto& screen_constants = m_pipeline->GetRes<ScreenConstants>();
+		auto& hdr_buffer = m_framegraph->GetRes<HDRBuffer>();
+		auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
+		auto& skybox = m_framegraph->GetRes<Skybox>();
+		auto& forward_cb = m_framegraph->GetRes<ForwardPassCB>();
+		auto& screen_constants = m_framegraph->GetRes<ScreenConstants>();
 
 		if ( ! hdr_buffer || ! depth_buffer || ! skybox
 			 || ! forward_cb || ! screen_constants )
@@ -72,5 +72,5 @@ public:
 private:
 	SkyboxPass m_pass;
 	SkyboxPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };

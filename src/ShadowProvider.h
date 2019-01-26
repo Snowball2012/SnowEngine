@@ -4,13 +4,13 @@
 
 #include "StagingDescriptorHeap.h"
 #include "DescriptorTableBakery.h"
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 #include "Scene.h"
 #include "ParallelSplitShadowMapping.h"
 
 // This class manages a storage for all shadow maps used in a frame.
-// It packs all shadow maps into one texture and fills relevant pipeline structures
+// It packs all shadow maps into one texture and fills relevant framegraph structures
 
 class ShadowProvider
 {
@@ -20,7 +20,7 @@ public:
 	void Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
 	
-	void FillPipelineStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
+	void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
 								 ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage );
 
 private:

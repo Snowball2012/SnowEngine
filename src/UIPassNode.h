@@ -1,9 +1,9 @@
 #pragma once
 
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class UIPassNode : public BaseRenderNode
 {
 public:
@@ -22,17 +22,17 @@ public:
 		SDRBuffer
 		>;
 
-	UIPassNode( Pipeline* pipeline )
-		: m_pipeline( pipeline )
+	UIPassNode( Framegraph* framegraph )
+		: m_framegraph( framegraph )
 	{}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& backbuffer = m_pipeline->GetRes<SDRBuffer>();
+		auto& backbuffer = m_framegraph->GetRes<SDRBuffer>();
 		if ( ! backbuffer )
 			throw SnowEngineException( "missing resource" );
 
-		auto& heap = m_pipeline->GetRes<ImGuiFontHeap>();
+		auto& heap = m_framegraph->GetRes<ImGuiFontHeap>();
 		if ( ! heap )
 			throw SnowEngineException( "missing resource" );
 
@@ -42,6 +42,6 @@ public:
 	}
 
 private:
-	Pipeline* m_pipeline;
+	Framegraph* m_framegraph;
 };
 

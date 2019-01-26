@@ -27,7 +27,7 @@
     <ClCompile Include="pssm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pipeline.cpp">
+    <ClCompile Include="framegraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

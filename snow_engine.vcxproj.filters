@@ -39,9 +39,6 @@
     <Filter Include="shaders\postprocess">
       <UniqueIdentifier>{a54c8838-c78e-4721-b789-8c3c30ddc5cc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\Pipeline">
-      <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\lib">
       <UniqueIdentifier>{2e11566b-ae71-43bc-b79d-7a0ec78386ab}</UniqueIdentifier>
     </Filter>
@@ -57,14 +54,17 @@
     <Filter Include="core\DescriptorUtils">
       <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\PipelineDataProviders">
-      <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\pssm">
       <UniqueIdentifier>{afd82de6-ae6e-48f3-8b16-900e968d79d0}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\Pipeline\Nodes">
+    <Filter Include="core\Framegraph">
+      <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\Framegraph\Nodes">
       <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\FramegraphDataProviders">
+      <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -162,10 +162,10 @@
       <Filter>core\SceneSystems</Filter>
     </ClCompile>
     <ClCompile Include="src\ForwardCBProvider.cpp">
-      <Filter>core\PipelineDataProviders</Filter>
+      <Filter>core\FramegraphDataProviders</Filter>
     </ClCompile>
     <ClCompile Include="src\ShadowProvider.cpp">
-      <Filter>core\PipelineDataProviders</Filter>
+      <Filter>core\FramegraphDataProviders</Filter>
     </ClCompile>
     <ClCompile Include="src\GPUPagedAllocator.cpp">
       <Filter>core</Filter>
@@ -256,17 +256,8 @@
     <ClInclude Include="src\ToneMappingPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="src\PipelineResource.h">
-      <Filter>core\Pipeline</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pipeline.h">
-      <Filter>core\Pipeline</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\UniqueTuple.h">
       <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pipeline.hpp">
-      <Filter>core\Pipeline</Filter>
     </ClInclude>
     <ClInclude Include="src\HBAOPass.h">
       <Filter>core\RenderPasses</Filter>
@@ -317,13 +308,13 @@
       <Filter>core\SceneSystems</Filter>
     </ClInclude>
     <ClInclude Include="src\ForwardCBProvider.h">
-      <Filter>core\PipelineDataProviders</Filter>
+      <Filter>core\FramegraphDataProviders</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\span.h">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\ShadowProvider.h">
-      <Filter>core\PipelineDataProviders</Filter>
+      <Filter>core\FramegraphDataProviders</Filter>
     </ClInclude>
     <ClInclude Include="src\GPUPagedAllocator.h">
       <Filter>core</Filter>
@@ -356,37 +347,46 @@
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\ForwardPassNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\BlurSSAONode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\DepthPrepassNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\ShadowPassNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\PSSMNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\HBAONode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\ToneMapNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\UIPassNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\SkyboxPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\SkyboxNode.h">
-      <Filter>core\Pipeline\Nodes</Filter>
+      <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\OptionalTuple.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Framegraph.h">
+      <Filter>core\Framegraph</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Framegraph.hpp">
+      <Filter>core\Framegraph</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FramegraphResource.h">
+      <Filter>core\Framegraph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

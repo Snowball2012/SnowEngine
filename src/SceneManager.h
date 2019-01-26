@@ -59,7 +59,7 @@ private:
 };
 
 
-// Manages scene lifetime, binds the scene to a render pipeline
+// Manages scene lifetime, binds the scene to a render framegraph
 class SceneManager
 {
 public:
@@ -71,10 +71,10 @@ public:
 	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
 	DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-	void UpdatePipelineBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
+	void UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
 
-	template<typename PipelineT>
-	void BindToPipeline( PipelineT& pipeline, const class ForwardCBProvider& forward_cb_provider );
+	template<typename FramegraphT>
+	void BindToFramegraph( FramegraphT& framegraph, const class ForwardCBProvider& forward_cb_provider );
 
 	void FlushAllOperations();
 

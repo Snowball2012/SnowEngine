@@ -44,7 +44,7 @@ private:
 	std::string m_msg;
 };
 
-std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex )
+inline std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex )
 {
 	stream << ex.m_msg;
 	return stream;

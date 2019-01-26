@@ -137,7 +137,7 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 		0,
 		D3D12_COMMAND_LIST_TYPE_COPY,
 		m_cmd_allocators[0].first.Get(), // Associated command allocator
-		nullptr,                   // Initial PipelineStateObject
+		nullptr,                   // Initial FramegraphStateObject
 		IID_PPV_ARGS( m_cmd_list.GetAddressOf() ) ) );
 
 	// Later we will call Reset on cmd_list, which demands for the list to be closed
@@ -164,7 +164,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 	return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdatePipelineBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
+void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
 {
 	SceneCopyOp cur_op = m_operation_counter++;
 

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "Pipeline.h"
+#include "Framegraph.h"
 
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 #include "PSSMGenPass.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class PSSMNode : public BaseRenderNode
 {
 public:
@@ -27,23 +27,23 @@ public:
 		<
 		>;
 
-	PSSMNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	PSSMNode( Framegraph* framegraph, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( dsv_format, bias, true, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& lights_with_pssm = m_pipeline->GetRes<ShadowCascadeProducers>();
+		auto& lights_with_pssm = m_framegraph->GetRes<ShadowCascadeProducers>();
 		if ( ! lights_with_pssm )
 			return;
 
-		auto& shadow_cascade = m_pipeline->GetRes<ShadowCascade>();
+		auto& shadow_cascade = m_framegraph->GetRes<ShadowCascade>();
 		if ( ! shadow_cascade )
 			throw SnowEngineException( "missing resource" );
 
-		auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+		auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
 		if ( ! pass_cb )
 			throw SnowEngineException( "missing resource" );
 
@@ -83,5 +83,5 @@ public:
 private:
 	PSSMGenPass m_pass;
 	PSSMGenPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };

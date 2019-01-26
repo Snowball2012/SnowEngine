@@ -1,4 +1,4 @@
-#include "Pipeline.h"
+#include "Framegraph.h"
 
 #include <typeinfo>
 
@@ -32,7 +32,7 @@ namespace
 }
 
 template<template <typename> class ... Node>
-void Pipeline<Node...>::RebuildPipeline()
+void Framegraph<Node...>::Rebuild()
 {
 	/*
 		general scheme:
@@ -41,7 +41,7 @@ void Pipeline<Node...>::RebuildPipeline()
 			3. build directed render graph
 			4. make layers
 
-		terrible performance-wise, but it doesn't matter, pipeline rebuild occurs very rarely and typical frame graph is rather small
+		terrible performance-wise, but it doesn't matter, framegraph rebuild occurs very rarely and typical frame graph is rather small
 	*/
 
 	auto active_node_info = CollectActiveNodes();
@@ -90,18 +90,24 @@ void Pipeline<Node...>::RebuildPipeline()
 	}
 
 	if ( ! active_node_info.empty() )
-		throw SnowEngineException( "pipeline can't be created, resource dependency cycle has been found" );
+		throw SnowEngineException( "framegraph can't be created, resource dependency cycle has been found" );
 
 	boost::reverse( m_node_layers );
 
-	m_need_to_rebuild_pipeline = false;
+	m_need_to_rebuild_framegraph = false;
 }
 
 template<template <typename> class ...Node>
-void Pipeline<Node...>::Run( ID3D12GraphicsCommandList& cmd_list )
+void Framegraph<Node...>::ClearResources()
 {
-	if ( m_need_to_rebuild_pipeline )
-		throw SnowEngineException( "pipeline rebuild is needed" );
+	std::apply( []( auto& ...res ) { ( ( res = std::nullopt ), ... ); }, m_resources );
+}
+
+template<template <typename> class ...Node>
+void Framegraph<Node...>::Run( ID3D12GraphicsCommandList& cmd_list )
+{
+	if ( m_need_to_rebuild_framegraph )
+		throw SnowEngineException( "framegraph rebuild is needed" );
 
 	for ( auto& layer : m_node_layers )
 		for ( auto& node : layer )
@@ -109,7 +115,7 @@ void Pipeline<Node...>::Run( ID3D12GraphicsCommandList& cmd_list )
 }
 
 template<template <typename> class ...Node>
-std::map<size_t, typename Pipeline<Node...>::RuntimeNodeInfo> Pipeline<Node...>::CollectActiveNodes()
+std::map<size_t, typename Framegraph<Node...>::RuntimeNodeInfo> Framegraph<Node...>::CollectActiveNodes()
 {
 	std::map<size_t, RuntimeNodeInfo> active_node_info;
 
@@ -145,8 +151,8 @@ std::map<size_t, typename Pipeline<Node...>::RuntimeNodeInfo> Pipeline<Node...>:
 }
 
 template<template <typename> class ...Node>
-std::map<typename Pipeline<Node...>::TypeIdWithName,
-	     typename Pipeline<Node...>::ResourceUsers> Pipeline<Node...>::FindResourceUsers( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
+std::map<typename Framegraph<Node...>::TypeIdWithName,
+	     typename Framegraph<Node...>::ResourceUsers> Framegraph<Node...>::FindResourceUsers( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
 {
 	std::map<TypeIdWithName, ResourceUsers> resource_users;
 
@@ -167,8 +173,8 @@ std::map<typename Pipeline<Node...>::TypeIdWithName,
 
 
 template<template <typename> class ...Node>
-inline std::vector<std::pair<const typename Pipeline<Node...>::RuntimeNodeInfo*,
-	                         const typename Pipeline<Node...>::RuntimeNodeInfo*>> Pipeline<Node...>::BuildFrameGraphEdges( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
+inline std::vector<std::pair<const typename Framegraph<Node...>::RuntimeNodeInfo*,
+	                         const typename Framegraph<Node...>::RuntimeNodeInfo*>> Framegraph<Node...>::BuildFrameGraphEdges( const std::map<size_t, RuntimeNodeInfo>& active_nodes )
 {
 	const auto& resource_users = FindResourceUsers( active_nodes );
 
@@ -193,7 +199,7 @@ inline std::vector<std::pair<const typename Pipeline<Node...>::RuntimeNodeInfo*,
 
 template<template <typename> class ...Node>
 template<template <typename> class N>
-N<Pipeline<Node...>>* Pipeline<Node...>::GetNode()
+N<Framegraph<Node...>>* Framegraph<Node...>::GetNode()
 {
-	return std::get<NStorage<N<Pipeline>>>( m_node_storage ).node.get_ptr();
+	return std::get<NStorage<N<Framegraph>>>( m_node_storage ).node.get_ptr();
 }

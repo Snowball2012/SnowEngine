@@ -1,12 +1,12 @@
 #pragma once
 
-#include "PipelineResource.h"
-#include "Pipeline.h"
+#include "FramegraphResource.h"
+#include "Framegraph.h"
 
 #include "DepthAwareBlurPass.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class BlurSSAONode : public BaseRenderNode
 {
 public:
@@ -28,8 +28,8 @@ public:
 		<
 		>;
 
-	BlurSSAONode( Pipeline* pipeline, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	BlurSSAONode( Framegraph* framegraph, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( device );
 	}
@@ -39,18 +39,18 @@ public:
 private:
 	DepthAwareBlurPass m_pass;
 	DepthAwareBlurPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };
 
 
-template<class Pipeline>
-inline void BlurSSAONode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
+template<class Framegraph>
+inline void BlurSSAONode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_list )
 {
-	auto& blurred_ssao = m_pipeline->GetRes<SSAOTexture_Blurred>();
-	auto& transposed_ssao = m_pipeline->GetRes<SSAOTexture_Transposed>();
-	auto& noisy_ssao = m_pipeline->GetRes<SSAOBuffer_Noisy>();
-	auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
-	auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+	auto& blurred_ssao = m_framegraph->GetRes<SSAOTexture_Blurred>();
+	auto& transposed_ssao = m_framegraph->GetRes<SSAOTexture_Transposed>();
+	auto& noisy_ssao = m_framegraph->GetRes<SSAOBuffer_Noisy>();
+	auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
+	auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
 
 	if ( ! blurred_ssao || ! transposed_ssao || ! noisy_ssao
 		 || ! depth_buffer || ! pass_cb )

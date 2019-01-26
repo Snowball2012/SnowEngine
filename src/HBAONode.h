@@ -1,12 +1,12 @@
 #pragma once
 
-#include "PipelineResource.h"
-#include "Pipeline.h"
+#include "FramegraphResource.h"
+#include "Framegraph.h"
 
 #include "HBAOPass.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class HBAONode : public BaseRenderNode
 {
 public:
@@ -29,22 +29,22 @@ public:
 		<
 		>;
 
-	HBAONode( Pipeline* pipeline, DXGI_FORMAT rtv_format, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	HBAONode( Framegraph* framegraph, DXGI_FORMAT rtv_format, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( rtv_format, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& ssao_buffer = m_pipeline->GetRes<SSAOBuffer_Noisy>();
+		auto& ssao_buffer = m_framegraph->GetRes<SSAOBuffer_Noisy>();
 		if ( ! ssao_buffer )
 			throw SnowEngineException( "missing resource" );
 
-		auto& normal_buffer = m_pipeline->GetRes<NormalBuffer>();
-		auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
-		auto& forward_cb = m_pipeline->GetRes<ForwardPassCB>();
-		auto& settings = m_pipeline->GetRes<HBAOSettings>();
+		auto& normal_buffer = m_framegraph->GetRes<NormalBuffer>();
+		auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
+		auto& forward_cb = m_framegraph->GetRes<ForwardPassCB>();
+		auto& settings = m_framegraph->GetRes<HBAOSettings>();
 		if ( ! normal_buffer || ! depth_buffer
 			 || ! forward_cb || ! settings )
 			throw SnowEngineException( "missing resource" );
@@ -98,5 +98,5 @@ public:
 private:
 	HBAOPass m_pass;
 	HBAOPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "PipelineResource.h"
-#include "Pipeline.h"
+#include "FramegraphResource.h"
+#include "Framegraph.h"
 
 #include "ForwardLightingPass.h"
 
 #include "DepthPrepassNode.h"
 
 
-template<class Pipeline>
+template<class Framegraph>
 class ForwardPassNode : public BaseRenderNode
 {
 public:
@@ -19,8 +19,7 @@ public:
 		<
 		HDRBuffer,
 		AmbientBuffer,
-		NormalBuffer,
-		DepthStencilBuffer
+		NormalBuffer
 		>;
 	using ReadRes = std::tuple
 		<
@@ -29,19 +28,19 @@ public:
 		ScreenConstants,
 		MainRenderitems,
 		ForwardPassCB,
-		const DepthPrepassNode<Pipeline>*
+		DepthStencilBuffer
 		>;
 	using CloseRes = std::tuple
 		<
 		>;
 
-	ForwardPassNode( Pipeline* pipeline,
+	ForwardPassNode( Framegraph* framegraph,
 					 DXGI_FORMAT direct_format,
 					 DXGI_FORMAT ambient_rtv_format,
 					 DXGI_FORMAT normal_format,
 					 DXGI_FORMAT depth_stencil_format,
 					 ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_renderstates = m_pass.CompileStates( direct_format, ambient_rtv_format, normal_format, depth_stencil_format, device );
 	}
@@ -50,35 +49,35 @@ public:
 
 private:
 	ForwardLightingPass m_pass;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 
 	ForwardLightingPass::States m_renderstates;
 };
 
 
-template<class Pipeline>
-inline void ForwardPassNode<Pipeline>::Run( ID3D12GraphicsCommandList& cmd_list )
+template<class Framegraph>
+inline void ForwardPassNode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_list )
 {
-	auto& shadow_maps = m_pipeline->GetRes<ShadowMaps>();
+	auto& shadow_maps = m_framegraph->GetRes<ShadowMaps>();
 	if ( ! shadow_maps )
 		NOTIMPL;
-	auto& csm = m_pipeline->GetRes<ShadowCascade>();
+	auto& csm = m_framegraph->GetRes<ShadowCascade>();
 	if ( ! csm )
 		NOTIMPL;
 
-	auto& renderitems = m_pipeline->GetRes<MainRenderitems>();
+	auto& renderitems = m_framegraph->GetRes<MainRenderitems>();
 	if ( ! renderitems )
 		NOTIMPL;
 
-	auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
-	auto& view = m_pipeline->GetRes<ScreenConstants>();
+	auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
+	auto& view = m_framegraph->GetRes<ScreenConstants>();
 	if ( ! pass_cb || ! view )
 		throw SnowEngineException( "missing resource" );
 
-	auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
-	auto& hdr_buffer = m_pipeline->GetRes<HDRBuffer>();
-	auto& ambient_buffer = m_pipeline->GetRes<AmbientBuffer>();
-	auto& normal_buffer = m_pipeline->GetRes<NormalBuffer>();
+	auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
+	auto& hdr_buffer = m_framegraph->GetRes<HDRBuffer>();
+	auto& ambient_buffer = m_framegraph->GetRes<AmbientBuffer>();
+	auto& normal_buffer = m_framegraph->GetRes<NormalBuffer>();
 	if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer )
 		throw SnowEngineException( "missing resource" );
 

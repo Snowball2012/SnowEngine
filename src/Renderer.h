@@ -10,7 +10,7 @@
 
 #include "GPUTaskQueue.h"
 
-#include "Pipeline.h"
+#include "Framegraph.h"
 #include "ForwardPassNode.h"
 #include "BlurSSAONode.h"
 #include "DepthPrepassNode.h"
@@ -131,14 +131,14 @@ private:
 	int m_cur_fr_idx = 0;
 	static constexpr int PassCount = 2;
 
-	// pipeline
+	// framegraph
 	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
 	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
 
 	ParallelSplitShadowMapping m_pssm;
 
-	using PipelineInstance =
-		Pipeline
+	using FramegraphInstance =
+		Framegraph
 		<
 			DepthPrepassNode,
 			ShadowPassNode,
@@ -151,7 +151,7 @@ private:
 			UIPassNode
 		>;
 
-	PipelineInstance m_pipeline;
+	FramegraphInstance m_framegraph;
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;

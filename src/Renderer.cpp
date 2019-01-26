@@ -76,8 +76,10 @@ void Renderer::Init()
 
 void Renderer::Draw( const Context& ctx )
 {
-	if ( m_pipeline.IsRebuildNeeded() )
-		m_pipeline.RebuildPipeline();
+	m_framegraph.ClearResources();
+
+	if ( m_framegraph.IsRebuildNeeded() )
+		m_framegraph.Rebuild();
 
 	CameraID scene_camera;
 	if ( ! ( m_frustrum_cull_camera_id == CameraID::nullid ) )
@@ -85,14 +87,14 @@ void Renderer::Draw( const Context& ctx )
 	else
 		scene_camera = m_main_camera_id;
 
-	m_scene_manager->UpdatePipelineBindings( scene_camera, PSSM(), m_screen_viewport );
+	m_scene_manager->UpdateFramegraphBindings( scene_camera, PSSM(), m_screen_viewport );
 
 	const Camera* main_camera = GetScene().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
 	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetScene().GetROScene().LightSpan() );
 
-	m_scene_manager->BindToPipeline( m_pipeline, *m_forward_cb_provider );
+	m_scene_manager->BindToFramegraph( m_framegraph, *m_forward_cb_provider );
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
@@ -111,11 +113,11 @@ void Renderer::Draw( const Context& ctx )
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred_transposed->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	auto& sm_storage = m_pipeline.GetRes<ShadowMaps>();
+	auto& sm_storage = m_framegraph.GetRes<ShadowMaps>();
 	if ( ! sm_storage )
 		throw SnowEngineException( "missing resource" );
 	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	auto& pssm_storage = m_pipeline.GetRes<ShadowCascade>();
+	auto& pssm_storage = m_framegraph.GetRes<ShadowCascade>();
 	if ( ! pssm_storage )
 		throw SnowEngineException( "missing resource" );
 
@@ -128,80 +130,80 @@ void Renderer::Draw( const Context& ctx )
 	{
 		Skybox sb;
 		sb.srv = m_scene_manager->GetScene().GetROScene().MaterialSpan()[0].DescriptorTable();
-		m_pipeline.SetRes( sb );
+		m_framegraph.SetRes( sb );
 
 		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
-		m_pipeline.SetRes( pass_cb );
+		m_framegraph.SetRes( pass_cb );
 
 		HDRBuffer hdr_buffer;
 		hdr_buffer.res = m_fp_backbuffer->Resource();
 		hdr_buffer.rtv = m_fp_backbuffer->RTV()->HandleCPU();
 		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer->SRV() );
-		m_pipeline.SetRes( hdr_buffer );
+		m_framegraph.SetRes( hdr_buffer );
 
 		AmbientBuffer ambient_buffer;
 		ambient_buffer.res = m_ambient_lighting->Resource();
 		ambient_buffer.rtv = m_ambient_lighting->RTV()->HandleCPU();
 		ambient_buffer.srv = GetGPUHandle( m_ambient_lighting->SRV() );
-		m_pipeline.SetRes( ambient_buffer );
+		m_framegraph.SetRes( ambient_buffer );
 
 		NormalBuffer normal_buffer;
 		normal_buffer.res = m_normals->Resource();
 		normal_buffer.rtv = m_normals->RTV()->HandleCPU();
 		normal_buffer.srv = GetGPUHandle( m_normals->SRV() );
-		m_pipeline.SetRes( normal_buffer );
+		m_framegraph.SetRes( normal_buffer );
 
 		DepthStencilBuffer depth_buffer;
 		depth_buffer.dsv = DepthStencilView();
 		depth_buffer.srv = DescriptorTables().GetTable( m_depth_buffer_srv )->gpu_handle;
-		m_pipeline.SetRes( depth_buffer );
+		m_framegraph.SetRes( depth_buffer );
 
 		ScreenConstants screen;
 		screen.viewport = m_screen_viewport;
 		screen.scissor_rect = m_scissor_rect;
-		m_pipeline.SetRes( screen );
+		m_framegraph.SetRes( screen );
 
 		SSAOBuffer_Noisy ssao_texture;
 		ssao_texture.res = m_ssao->Resource();
 		ssao_texture.rtv = m_ssao->RTV()->HandleCPU();
 		ssao_texture.srv = GetGPUHandle( m_ssao->SRV() );
-		m_pipeline.SetRes( ssao_texture );
+		m_framegraph.SetRes( ssao_texture );
 
 		SSAOTexture_Blurred ssao_blurred_texture;
 		ssao_blurred_texture.res = m_ssao_blurred->Resource();
 		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred->UAV() );
 		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred->SRV() );
-		m_pipeline.SetRes( ssao_blurred_texture );
+		m_framegraph.SetRes( ssao_blurred_texture );
 
 
 		SSAOTexture_Transposed ssao_blurred_texture_horizontal;
 		ssao_blurred_texture_horizontal.res = m_ssao_blurred_transposed->Resource();
 		ssao_blurred_texture_horizontal.uav = GetGPUHandle( m_ssao_blurred_transposed->UAV() );
 		ssao_blurred_texture_horizontal.srv = GetGPUHandle( m_ssao_blurred_transposed->SRV() );
-		m_pipeline.SetRes( ssao_blurred_texture_horizontal );
+		m_framegraph.SetRes( ssao_blurred_texture_horizontal );
 
 
 		TonemapNodeSettings tm_settings;
 		tm_settings.data.blend_luminance = m_tonemap_settings.blend_luminance;
 		tm_settings.data.lower_luminance_bound = m_tonemap_settings.min_luminance;
 		tm_settings.data.upper_luminance_bound = m_tonemap_settings.max_luminance;
-		m_pipeline.SetRes( tm_settings );
+		m_framegraph.SetRes( tm_settings );
 
 		HBAOSettings hbao_settings;
 		hbao_settings.data = m_hbao_settings;
-		m_pipeline.SetRes( hbao_settings );
+		m_framegraph.SetRes( hbao_settings );
 
 		SDRBuffer backbuffer;
 		backbuffer.resource = CurrentBackBuffer();
 		backbuffer.rtv = CurrentBackBufferView();
-		m_pipeline.SetRes( backbuffer );
+		m_framegraph.SetRes( backbuffer );
 
 		ImGuiFontHeap font_srv_heap;
 		font_srv_heap.heap = m_srv_ui_heap->GetInterface();
-		m_pipeline.SetRes( font_srv_heap );
+		m_framegraph.SetRes( font_srv_heap );
 	}
 
-	m_pipeline.Run( *m_cmd_list.Get() );
+	m_framegraph.Run( *m_cmd_list.Get() );
 
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
@@ -296,7 +298,7 @@ void Renderer::CreateBaseCommandObjects()
 		0,
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		m_direct_cmd_allocator.Get(), // Associated command allocator
-		nullptr,                   // Initial PipelineStateObject
+		nullptr,                   // Initial FramegraphStateObject
 		IID_PPV_ARGS( m_cmd_list.GetAddressOf() ) ) );
 
 	// Start off in a closed state.  This is because the first time we refer 
@@ -565,26 +567,26 @@ void Renderer::BuildFrameResources( )
 
 void Renderer::BuildPasses()
 {
-	m_pipeline.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, *m_d3d_device.Get() );
 
-	m_pipeline.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
-	m_pipeline.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
 
-	m_pipeline.ConstructAndEnableNode<ForwardPassNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
+	m_framegraph.ConstructAndEnableNode<ForwardPassNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
 														DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
 														DXGI_FORMAT_R16G16_FLOAT, // normals
 														m_depth_stencil_format, *m_d3d_device.Get() );
 
-	m_pipeline.ConstructAndEnableNode<SkyboxNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<SkyboxNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get() );
 
-	m_pipeline.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
-	m_pipeline.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
-	m_pipeline.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
-	m_pipeline.ConstructAndEnableNode<UIPassNode>();
+	m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
+	m_framegraph.ConstructAndEnableNode<UIPassNode>();
 
 
-	if ( m_pipeline.IsRebuildNeeded() )
-		m_pipeline.RebuildPipeline();
+	if ( m_framegraph.IsRebuildNeeded() )
+		m_framegraph.Rebuild();
 }
 
 void Renderer::EndFrame()

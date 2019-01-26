@@ -1,11 +1,11 @@
 #pragma once
 
-#include "PipelineResource.h"
-#include "Pipeline.h"
+#include "FramegraphResource.h"
+#include "Framegraph.h"
 
 #include "ToneMappingPass.h"
 
-template<class Pipeline>
+template<class Framegraph>
 class ToneMapNode : public BaseRenderNode
 {
 public:
@@ -28,20 +28,20 @@ public:
 		<
 		>;
 
-	ToneMapNode( Pipeline* pipeline, DXGI_FORMAT rtv_format, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	ToneMapNode( Framegraph* framegraph, DXGI_FORMAT rtv_format, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( rtv_format, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& sdr_buffer = m_pipeline->GetRes<SDRBuffer>();
-		auto& hdr_buffer = m_pipeline->GetRes<HDRBuffer>();
-		auto& ambient_buffer = m_pipeline->GetRes<AmbientBuffer>();
-		auto& settings = m_pipeline->GetRes<TonemapNodeSettings>();
-		auto& ssao = m_pipeline->GetRes<SSAOTexture_Blurred>();
-		auto& screen_constants = m_pipeline->GetRes<ScreenConstants>();
+		auto& sdr_buffer = m_framegraph->GetRes<SDRBuffer>();
+		auto& hdr_buffer = m_framegraph->GetRes<HDRBuffer>();
+		auto& ambient_buffer = m_framegraph->GetRes<AmbientBuffer>();
+		auto& settings = m_framegraph->GetRes<TonemapNodeSettings>();
+		auto& ssao = m_framegraph->GetRes<SSAOTexture_Blurred>();
+		auto& screen_constants = m_framegraph->GetRes<ScreenConstants>();
 
 		if ( ! sdr_buffer || ! hdr_buffer || ! ambient_buffer
 			 || ! settings || ! ssao || ! screen_constants )
@@ -66,5 +66,5 @@ public:
 private:
 	ToneMappingPass m_pass;
 	ToneMappingPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };

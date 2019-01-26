@@ -29,7 +29,7 @@ static ID3D12GraphicsCommandList*   g_pd3dCommandList = NULL;
 static ID3D10Blob*                  g_pVertexShaderBlob = NULL;
 static ID3D10Blob*                  g_pPixelShaderBlob = NULL;
 static ID3D12RootSignature*         g_pRootSignature = NULL;
-static ID3D12PipelineState*         g_pPipelineState = NULL;
+static ID3D12PipelineState*         g_pFramegraphState = NULL;
 static DXGI_FORMAT                  g_RTVFormat = DXGI_FORMAT_UNKNOWN;
 static ID3D12Resource*              g_pFontTextureResource = NULL;
 static D3D12_CPU_DESCRIPTOR_HANDLE  g_hFontSrvCpuDescHandle = {};
@@ -183,7 +183,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
     ctx->IASetIndexBuffer(&ibv);
     ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    ctx->SetPipelineState(g_pPipelineState);
+    ctx->SetPipelineState(g_pFramegraphState);
     ctx->SetGraphicsRootSignature(g_pRootSignature);
     ctx->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
@@ -372,7 +372,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return false;
-    if (g_pPipelineState)
+    if (g_pFramegraphState)
         ImGui_ImplDX12_InvalidateDeviceObjects();
 
     // Create the root signature
@@ -558,7 +558,7 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         desc.BackFace = desc.FrontFace;
     }
 
-    if (g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pPipelineState)) != S_OK)
+    if (g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pFramegraphState)) != S_OK)
         return false;
 
     ImGui_ImplDX12_CreateFontsTexture();
@@ -574,7 +574,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     if (g_pVertexShaderBlob) { g_pVertexShaderBlob->Release(); g_pVertexShaderBlob = NULL; }
     if (g_pPixelShaderBlob) { g_pPixelShaderBlob->Release(); g_pPixelShaderBlob = NULL; }
     if (g_pRootSignature) { g_pRootSignature->Release(); g_pRootSignature = NULL; }
-    if (g_pPipelineState) { g_pPipelineState->Release(); g_pPipelineState = NULL; }
+    if (g_pFramegraphState) { g_pFramegraphState->Release(); g_pFramegraphState = NULL; }
     if (g_pFontTextureResource) { g_pFontTextureResource->Release(); g_pFontTextureResource = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     for (UINT i = 0; i < g_numFramesInFlight; i++)
     {
@@ -620,7 +620,7 @@ void ImGui_ImplDX12_Shutdown()
 
 void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
 {
-    if (!g_pPipelineState)
+    if (!g_pFramegraphState)
         ImGui_ImplDX12_CreateDeviceObjects();
 
     g_pd3dCommandList = command_list;

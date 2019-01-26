@@ -2,12 +2,12 @@
 
 #include "SceneManager.h"
 
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 #include "ForwardCBProvider.h"
 
-template<typename PipelineT>
-void SceneManager::BindToPipeline( PipelineT& pipeline, const ForwardCBProvider& forward_cb_provider )
+template<typename FramegraphT>
+void SceneManager::BindToFramegraph( FramegraphT& framegraph, const ForwardCBProvider& forward_cb_provider )
 {
 	const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id );
 	if ( ! main_cam )
@@ -84,13 +84,13 @@ void SceneManager::BindToPipeline( PipelineT& pipeline, const ForwardCBProvider&
 	ShadowMaps sm_storage;
 	ShadowCascadeProducers pssm_producers;
 	ShadowCascade pssm_storage;
-	m_shadow_provider.FillPipelineStructures( forward_cb_provider.GetLightsInCB(), m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
-	pipeline.SetRes( producers );
-	pipeline.SetRes( sm_storage );
-	pipeline.SetRes( pssm_producers );
-	pipeline.SetRes( pssm_storage );
+	m_shadow_provider.FillFramegraphStructures( forward_cb_provider.GetLightsInCB(), m_scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
+	framegraph.SetRes( producers );
+	framegraph.SetRes( sm_storage );
+	framegraph.SetRes( pssm_producers );
+	framegraph.SetRes( pssm_storage );
 
 	MainRenderitems forward_renderitems;
 	forward_renderitems.items = make_span( m_lighting_items );
-	pipeline.SetRes( forward_renderitems );
+	framegraph.SetRes( forward_renderitems );
 }

@@ -114,7 +114,7 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
 }
 
 
-void ShadowProvider::FillPipelineStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
+void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
 {
 	// todo: frustrum cull renderitems
 	CreateShadowProducers( lights );

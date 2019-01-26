@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Pipeline.h"
+#include "Framegraph.h"
 
-#include "PipelineResource.h"
+#include "FramegraphResource.h"
 
 #include "DepthOnlyPass.h"
 
-template<class Pipeline>
+template<class Framegraph>
 class DepthPrepassNode : public BaseRenderNode
 {
 public:
@@ -27,27 +27,27 @@ public:
 		<
 		>;
 
-	DepthPrepassNode( Pipeline* pipeline, DXGI_FORMAT dsv_format, ID3D12Device& device )
-		: m_pass( device ), m_pipeline( pipeline )
+	DepthPrepassNode( Framegraph* framegraph, DXGI_FORMAT dsv_format, ID3D12Device& device )
+		: m_pass( device ), m_framegraph( framegraph )
 	{
 		m_state = m_pass.BuildRenderState( dsv_format, 0, true, true, device );
 	}
 
 	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& depth_buffer = m_pipeline->GetRes<DepthStencilBuffer>();
+		auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
 		if ( ! depth_buffer )
 			throw SnowEngineException( "missing resource" );
 
-		auto& view = m_pipeline->GetRes<ScreenConstants>();
+		auto& view = m_framegraph->GetRes<ScreenConstants>();
 		if ( ! view )
 			throw SnowEngineException( "missing resource" );
 
-		auto& renderitems = m_pipeline->GetRes<MainRenderitems>();
+		auto& renderitems = m_framegraph->GetRes<MainRenderitems>();
 		if ( ! renderitems )
 			return;
 
-		auto& pass_cb = m_pipeline->GetRes<ForwardPassCB>();
+		auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
 		if ( ! pass_cb )
 			throw SnowEngineException( "missing resource" );
 
@@ -71,5 +71,5 @@ public:
 private:
 	DepthOnlyPass m_pass;
 	DepthOnlyPass::RenderStateID m_state;
-	Pipeline* m_pipeline = nullptr;
+	Framegraph* m_framegraph = nullptr;
 };
