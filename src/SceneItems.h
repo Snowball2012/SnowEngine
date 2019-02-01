@@ -246,6 +246,34 @@ private:
 using MeshInstanceID = typename packed_freelist<StaticMeshInstance>::id;
 
 
+class EnviromentMap : public RefCounter
+{
+public:
+	const std::variant<TextureID>& GetMap() const noexcept { return m_texture; }
+
+	TransformID GetTransform() const noexcept { return m_tf; }
+
+	float GetRadianceFactor() const noexcept { return m_radiance_factor; }
+	float& SetRadianceFactor() noexcept { return m_radiance_factor; }
+
+	D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const noexcept { return m_srv; }
+	D3D12_GPU_DESCRIPTOR_HANDLE& SetSRV() noexcept { return m_srv; }
+
+private:
+	friend class Scene;
+	EnviromentMap() {}
+
+	std::variant<TextureID>& Map() noexcept { return m_texture; }
+	TransformID& Transform() noexcept { return m_tf; }
+
+	std::variant<TextureID> m_texture;
+	TransformID m_tf;
+	D3D12_GPU_DESCRIPTOR_HANDLE m_srv;
+	float m_radiance_factor = 1.0f;
+};
+using EnvMapID = typename packed_freelist<EnviromentMap>::id;
+
+
 class Camera
 {
 public:
@@ -272,8 +300,12 @@ public:
 	const Data& GetData() const noexcept { return m_data; }
 	Data& ModifyData() noexcept { return m_data; }
 
+	EnvMapID GetSkybox() const noexcept { return m_skybox; }
+	EnvMapID& SetSkybox() noexcept { return m_skybox; }
+
 private:
 	Data m_data;
+	EnvMapID m_skybox = EnvMapID::nullid;
 };
 using CameraID = typename packed_freelist<Camera>::id;
 
@@ -330,3 +362,5 @@ private:
 	bool m_is_enabled = true;
 };
 using LightID = typename packed_freelist<SceneLight>::id;
+
+

@@ -43,7 +43,7 @@ bool RenderApp::Initialize()
 
 	LoadPlaceholderTextures();
 
-	m_loading_screen.Init( m_renderer->GetScene(), m_ph_normal_texture, m_ph_specular_texture );
+	m_loading_screen.Init( m_renderer->GetScene(), m_ph_normal_texture, m_ph_specular_texture, m_ph_skybox );
 	m_loading_screen.Enable( m_renderer->GetScene(), *m_renderer );
 
 	m_keyboard = std::make_unique<DirectX::Keyboard>();
@@ -132,8 +132,8 @@ void RenderApp::UpdateGUI()
 			ImGui::BeginChild( "Tonemap settings" );
 
 			ImGui::PushItemWidth( 150 );
-			ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 100000.0f, "%.2f" ); //-V807
-			ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 100000.0f, "%.2f" );
+			ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 20000.0f, "%.2f" ); //-V807
+			ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 20000.0f, "%.2f" );
 			ImGui::Checkbox( "Blur ref luminance 3x3", &m_renderer->m_tonemap_settings.blend_luminance );
 			ImGui::EndChild();
 		}
@@ -223,7 +223,7 @@ namespace
 		// therefore  x * 683.0f * (0.2973f * color.r + 1.0f * color.g + 0.1010f * color.b)  == illuminance_lux, radiance = linear_color * x;
 		float x = illuminance_lux / ( 683.0f * ( 0.2973f * color.x + 1.0f * color.y + 0.1010f * color.z ) );
 
-		return color * x;
+		return color * 5.0f;//x;
 	}
 }
 
@@ -387,6 +387,7 @@ void RenderApp::InitScene()
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
 	m_camera = scene.AddCamera( camera_data );
+	scene.ModifyCamera( m_camera )->SetSkybox() = m_ph_skybox;
 	m_renderer->SetMainCamera( m_camera );
 	SceneLight::Data sun_data;
 	sun_data.type = SceneLight::LightType::Parallel;
@@ -409,6 +410,9 @@ void RenderApp::LoadPlaceholderTextures()
 {
 	m_ph_normal_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
 	m_ph_specular_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
+	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
+	TransformID skybox_tf = m_renderer->GetScene().AddTransform();
+	m_ph_skybox = m_renderer->GetScene().AddEnviromentMap( skybox_tex, skybox_tf );
 }
 
 void RenderApp::BuildGeometry( ImportedScene& ext_scene )
@@ -480,7 +484,7 @@ void RenderApp::ReleaseIntermediateSceneMemory()
 	m_imported_scene.vertices.shrink_to_fit();
 }
 
-void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
+void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id, EnvMapID skybox_id )
 {
 	Camera::Data camera_data;
 	camera_data.type = Camera::Type::Perspective;
@@ -492,6 +496,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 	camera_data.far_plane = 10000.0f;
 	camera_data.near_plane = 0.1f;
 	m_camera = scene.AddCamera( camera_data );
+	scene.ModifyCamera( m_camera )->SetSkybox() = skybox_id;
 
 	SceneLight::Data light_data;
 	light_data.type = SceneLight::LightType::Parallel;

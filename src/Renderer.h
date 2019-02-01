@@ -77,6 +77,9 @@ private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
 
 	// data
+	ComPtr<ID3D12Resource> SKYBOX;
+	DescriptorTableID SKYBOX_SRV;
+
 
 	// windows stuff
 	HWND m_main_hwnd = nullptr;
@@ -184,6 +187,8 @@ private:
 	void BuildFrameResources();
 	void BuildPasses();
 	
+	void BindSkybox( EnvMapID skybox );
+
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
 	ID3D12Resource* CurrentBackBuffer();

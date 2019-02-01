@@ -74,7 +74,7 @@ public:
 
 	
 	// Cameras
-	CameraID AddCamera( );
+	CameraID AddCamera( ) noexcept;
 	bool RemoveCamera( CameraID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
 	// read-only
 	const auto& AllCameras() const noexcept { return m_cameras; }
@@ -85,7 +85,7 @@ public:
 
 
 	// Lights
-	LightID AddLight();
+	LightID AddLight() noexcept;
 	bool RemoveLight( LightID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
 	// read-only
 	const auto& AllLights() const noexcept { return m_lights; }
@@ -94,6 +94,16 @@ public:
 	auto LightSpan() noexcept { return m_lights.get_elems(); }
 	SceneLight* TryModifyLight( LightID id ) noexcept; // returns nullptr if object no longer exists
 
+
+	// Enviriment maps
+	EnvMapID AddEnviromentMap( TextureID texture_id, TransformID tf_id );
+	bool RemoveEnviromentMap( EnvMapID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
+	// read-only
+	const auto& AllEnviromentMaps() const noexcept { return m_env_maps; }
+	auto EnviromentMapSpan() const noexcept { return m_env_maps.get_elems(); }
+	// for element modification
+	auto EnviromentMapSpan() noexcept { return m_env_maps.get_elems(); }
+	EnviromentMap* TryModifyEnvMap( EnvMapID id ) noexcept; // returns nullptr if object no longer exists
 
 private:
 	template<typename ID>
@@ -118,4 +128,5 @@ private:
 	packed_freelist<StaticMeshInstance> m_static_mesh_instances;
 	packed_freelist<Camera> m_cameras;
 	packed_freelist<SceneLight> m_lights;
+	packed_freelist<EnviromentMap> m_env_maps;
 };

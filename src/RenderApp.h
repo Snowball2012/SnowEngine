@@ -75,11 +75,12 @@ private:
 	// Placeholders and loading state scene objects
 	TextureID m_ph_normal_texture = TextureID::nullid;
 	TextureID m_ph_specular_texture = TextureID::nullid;
+	EnvMapID m_ph_skybox = EnvMapID::nullid;
 
 	class LoadingScreen
 	{
 	public:
-		void Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id );
+		void Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id, EnvMapID skybox_id );
 		void Enable( SceneClientView& scene, Renderer& renderer );
 		void Disable( SceneClientView& scene, Renderer& renderer );
 		void Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt );

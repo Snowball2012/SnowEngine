@@ -29,6 +29,13 @@ TextureID SceneClientView::LoadStreamedTexture( std::string path )
 	return tex_id;
 }
 
+TextureID SceneClientView::LoadStaticTexture( std::string path )
+{
+	TextureID tex_id = m_scene->AddTexture();
+	m_static_texture_manager->LoadTexture( tex_id, std::move( path ) );
+	return tex_id;
+}
+
 TransformID SceneClientView::AddTransform( const DirectX::XMFLOAT4X4& obj2world )
 {
 	TransformID tf_id = m_scene->AddTransform();
@@ -63,6 +70,25 @@ StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticS
 MeshInstanceID SceneClientView::AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id )
 {
 	return m_scene->AddStaticMeshInstance( tf_id, submesh_id, mat_id );
+}
+
+EnvMapID SceneClientView::AddEnviromentMap( TextureID texture_id, TransformID transform_id )
+{
+	EnvMapID id = m_scene->AddEnviromentMap( texture_id, transform_id );
+
+	m_material_table_baker->RegisterEnvMap( id );
+
+	return id;
+}
+
+EnviromentMap* SceneClientView::ModifyEnviromentMap( EnvMapID envmap_id ) noexcept
+{
+	return m_scene->TryModifyEnvMap( envmap_id );
+}
+
+const EnviromentMap* SceneClientView::GetEnviromentMap( EnvMapID envmap_id ) const noexcept
+{
+	return m_scene->AllEnviromentMaps().try_get( envmap_id );
 }
 
 CameraID SceneClientView::AddCamera( const Camera::Data& data ) noexcept
@@ -114,8 +140,9 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
 	: m_static_mesh_mgr( device, &m_scene )
 	, m_tex_streamer( device, 700*1024*1024ul, 128*1024*1024ul, nframes_to_buffer, &m_scene )
+	, m_static_texture_mgr( device, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
-	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
+	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_static_texture_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
@@ -180,6 +207,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 	ProcessSubmeshes();
 	m_uv_density_calculator.Update( main_camera_id, main_viewport );
 	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_cmd_list.Get() );
+	m_static_texture_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
 	if ( const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id ) )
@@ -193,6 +221,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 	m_cmd_allocators[cur_op % m_nframes_to_buffer].second = m_last_copy_timestamp;
 
 	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
+	m_static_texture_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )

@@ -42,6 +42,7 @@ Renderer::~Renderer()
 	m_scene_manager.reset();
 }
 
+#include <dxtk12/ResourceUploadBatch.h>
 void Renderer::Init()
 {
 	CreateDevice();
@@ -128,9 +129,7 @@ void Renderer::Draw( const Context& ctx )
 	m_cmd_list->SetDescriptorHeaps( 1, heaps );
 
 	{
-		Skybox sb;
-		sb.srv = m_scene_manager->GetScene().GetROScene().MaterialSpan()[0].DescriptorTable();
-		m_framegraph.SetRes( sb );
+		BindSkybox( main_camera->GetSkybox() );
 
 		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
 		m_framegraph.SetRes( pass_cb );
@@ -587,6 +586,39 @@ void Renderer::BuildPasses()
 
 	if ( m_framegraph.IsRebuildNeeded() )
 		m_framegraph.Rebuild();
+}
+
+void Renderer::BindSkybox( EnvMapID skybox_id )
+{
+	assert( m_scene_manager->GetScene().GetROScene().AllEnviromentMaps().has( skybox_id ) );
+
+	const auto& scene = m_scene_manager->GetScene().GetROScene();
+
+	const EnviromentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
+
+	Skybox framegraph_res;
+	const TextureID* cylindrical_tex_id = std::get_if<TextureID>( &skybox.GetMap() );
+	if ( ! cylindrical_tex_id )
+		NOTIMPL; // cubemap?
+
+	const Texture* tex = scene.AllTextures().try_get( *cylindrical_tex_id );
+	if ( ! tex )
+		throw SnowEngineException( "skybox does not have a texture attached" );
+
+	if ( tex->IsLoaded() )
+		framegraph_res.srv = skybox.GetSRV();
+	else
+		framegraph_res.srv.ptr = 0;
+
+	const ObjectTransform* tf = scene.AllTransforms().try_get( skybox.GetTransform() );
+	if ( ! tf )
+		throw SnowEngineException( "skybox does not have a transform attached" );
+
+	framegraph_res.tf_cbv = tf->GPUView();
+
+	framegraph_res.radiance_factor = skybox.GetRadianceFactor();
+
+	m_framegraph.SetRes( framegraph_res );
 }
 
 void Renderer::EndFrame()

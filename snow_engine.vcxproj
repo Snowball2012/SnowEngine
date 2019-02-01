@@ -217,6 +217,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\SkyboxPass.cpp" />
     <ClCompile Include="src\StagingDescriptorHeap.cpp" />
     <ClCompile Include="src\StaticMeshManager.cpp" />
+    <ClCompile Include="src\StaticTextureManager.cpp" />
     <ClCompile Include="src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
@@ -265,6 +266,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\Framegraph.hpp" />
     <ClInclude Include="src\SkyboxNode.h" />
     <ClInclude Include="src\SkyboxPass.h" />
+    <ClInclude Include="src\StaticTextureManager.h" />
     <ClInclude Include="src\UIPassNode.h" />
     <ClInclude Include="src\FramegraphResource.h" />
     <ClInclude Include="src\PSSMGenPass.h" />

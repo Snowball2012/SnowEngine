@@ -41,6 +41,11 @@ template<> struct Scene::ID2Obj<MaterialID>
 	using type = MaterialPBR;
 };
 
+template<> struct Scene::ID2Obj<EnvMapID>
+{
+	using type = EnviromentMap;
+};
+
 template<> Scene::freelist_from_id<TransformID>& Scene::GetStorage<TransformID>() noexcept
 {
 	return m_obj_tfs;
@@ -64,6 +69,11 @@ template<> Scene::freelist_from_id<TextureID>& Scene::GetStorage<TextureID>() no
 template<> Scene::freelist_from_id<MaterialID>& Scene::GetStorage<MaterialID>() noexcept
 {
 	return m_materials;
+}
+
+template<> Scene::freelist_from_id<EnvMapID>& Scene::GetStorage<EnvMapID>() noexcept
+{
+	return m_env_maps;
 }
 
 // generic methods
@@ -271,7 +281,7 @@ StaticMeshInstance* Scene::TryModifyStaticMeshInstance( MeshInstanceID id ) noex
 
 // Cameras
 
-CameraID Scene::AddCamera()
+CameraID Scene::AddCamera() noexcept
 {
 	return m_cameras.emplace();
 }
@@ -291,19 +301,68 @@ Camera* Scene::TryModifyCamera( CameraID id ) noexcept
 
 // Lights
 
-LightID Scene::AddLight()
+LightID Scene::AddLight() noexcept
 {
 	return m_lights.emplace();
 }
 
 bool Scene::RemoveLight( LightID id ) noexcept
 {
-	bool has_camera = m_lights.has( id );
+	bool has_light = m_lights.has( id );
 	m_lights.erase( id );
-	return has_camera;
+	return has_light;
 }
 
 SceneLight* Scene::TryModifyLight( LightID id ) noexcept
 {
 	return m_lights.try_get( id );
+}
+
+// Enviroment maps
+
+EnvMapID Scene::AddEnviromentMap( TextureID texture_id, TransformID tf_id )
+{
+	Texture* tex = m_textures.try_get( texture_id );
+	if ( ! tex )
+		throw SnowEngineException( "referenced texture does not exist" );
+	tex->AddRef();
+
+	ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
+	if ( ! tf )
+		throw SnowEngineException( "referenced transform does not exist" );
+	tf->AddRef();
+
+	EnviromentMap envmap;
+
+	envmap.Map() = texture_id;
+	envmap.Transform() = tf_id;
+
+	return m_env_maps.insert( std::move( envmap ) );
+}
+
+bool Scene::RemoveEnviromentMap( EnvMapID id ) noexcept
+{
+	EnviromentMap* envmap = m_env_maps.try_get( id );
+	if ( ! envmap )
+		return true;
+
+	if ( auto* tex_id = std::get_if<TextureID>( &envmap->GetMap() ) )
+	{
+		Texture* tex = m_textures.try_get( *tex_id );
+		assert( tex != nullptr );
+		if ( tex )
+			tex->ReleaseRef();
+	}
+
+	ObjectTransform* tf = m_obj_tfs.try_get( envmap->GetTransform() );
+	assert( tf != nullptr );
+	if ( tf )
+		tf->ReleaseRef();
+
+	return Remove( id );
+}
+
+EnviromentMap* Scene::TryModifyEnvMap( EnvMapID id ) noexcept
+{
+	return m_env_maps.try_get( id );
 }

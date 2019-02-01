@@ -22,6 +22,16 @@ void MaterialTableBaker::RegisterMaterial( MaterialID id )
 	UpdateMaterialTextures( m_scene->AllMaterials()[id], material_data.table_id, true );
 }
 
+void MaterialTableBaker::RegisterEnvMap( EnvMapID id )
+{
+	m_envmaps.emplace_back();
+	auto& envmap_data = m_envmaps.back();
+	envmap_data.table_id = m_tables->AllocateTable( 1 );
+	envmap_data.env_map_id = id;
+	assert( m_scene->AllEnviromentMaps().has( id ) );
+	UpdateEnvmapTextures( m_scene->AllEnviromentMaps()[id], envmap_data.table_id, true );
+}
+
 
 void MaterialTableBaker::UpdateStagingDescriptors()
 {
@@ -42,6 +52,24 @@ void MaterialTableBaker::UpdateStagingDescriptors()
 			UpdateMaterialTextures( *mat, material_data.table_id, false );
 		}
 	}
+
+	for ( size_t i = 0; i < m_envmaps.size(); )
+	{
+		auto& material_data = m_envmaps[i];
+		EnviromentMap* mat = m_scene->TryModifyEnvMap( material_data.env_map_id );
+		if ( ! mat )
+		{
+			m_tables->EraseTable( material_data.table_id );
+			if ( ( i + 1 ) != m_envmaps.size() )
+				material_data = std::move( m_envmaps.back() );
+			m_envmaps.pop_back();
+		}
+		else
+		{
+			i++;
+			UpdateEnvmapTextures( *mat, material_data.table_id, false );
+		}
+	}
 }
 
 
@@ -55,6 +83,15 @@ void MaterialTableBaker::UpdateGPUDescriptors()
 		assert( table.has_value() );
 
 		m_scene->TryModifyMaterial( material_data.material_id )->DescriptorTable() = table->gpu_handle;
+	}
+
+	for ( const auto& material_data : m_envmaps )
+	{
+		assert( m_scene->AllEnviromentMaps().has( material_data.env_map_id ) );
+		auto table = m_tables->GetTable( material_data.table_id );
+		assert( table.has_value() );
+
+		m_scene->TryModifyEnvMap( material_data.env_map_id )->SetSRV() = table->gpu_handle;
 	}
 }
 
@@ -81,4 +118,31 @@ void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, Ta
 	update_texture( textures.base_color, 0 );
 	update_texture( textures.normal, 1 );
 	update_texture( textures.specular, 2 );
+}
+
+void MaterialTableBaker::UpdateEnvmapTextures( const EnviromentMap& envmap, TableID envmap_table_id, bool first_load )
+{
+	auto update_texture = [&]( TextureID tex_id ) -> void
+	{
+		assert( m_scene->AllTextures().has( tex_id ) );
+
+		const Texture& tex = m_scene->AllTextures()[tex_id];
+		if ( tex.IsLoaded() && ( tex.IsDirty() || first_load ) )
+		{
+			std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> dest_table = m_tables->ModifyTable( envmap_table_id );
+			assert( dest_table.has_value() );
+			m_device->CopyDescriptorsSimple( 1,
+											 CD3DX12_CPU_DESCRIPTOR_HANDLE( *dest_table, 0, UINT( m_tables->GetDescriptorIncrementSize() ) ),
+											 tex.StagingSRV(),
+											 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+		}
+	};
+
+
+	const TextureID* texture_id = std::get_if<TextureID>( &envmap.GetMap() );
+
+	if ( ! texture_id )
+		throw SnowEngineException( "envmap does not have a texture attached" );
+
+	update_texture( *texture_id );
 }

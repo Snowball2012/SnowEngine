@@ -197,6 +197,9 @@
     <ClCompile Include="src\SkyboxPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\StaticTextureManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -387,6 +390,9 @@
     </ClInclude>
     <ClInclude Include="src\FramegraphResource.h">
       <Filter>core\Framegraph</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StaticTextureManager.h">
+      <Filter>core\SceneSystems</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
