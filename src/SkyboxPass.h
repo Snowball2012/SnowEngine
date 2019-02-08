@@ -18,6 +18,7 @@ public:
 		D3D12_GPU_DESCRIPTOR_HANDLE skybox_srv;
 		D3D12_CPU_DESCRIPTOR_HANDLE frame_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE frame_dsv;
+		float radiance_multiplier;
 	};
 
 	void Draw( const Context& context );

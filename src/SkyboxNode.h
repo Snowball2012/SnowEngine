@@ -65,6 +65,7 @@ public:
 		ctx.frame_rtv = hdr_buffer->rtv;
 		ctx.skybox_srv = skybox->srv;
 		ctx.pass_cb = forward_cb->pass_cb;
+		ctx.radiance_multiplier = skybox->radiance_factor;
 
 		cmd_list.RSSetViewports( 1, &screen_constants->viewport );
 		cmd_list.RSSetScissorRects( 1, &screen_constants->scissor_rect );

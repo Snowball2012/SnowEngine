@@ -36,6 +36,11 @@ template<> struct Scene::ID2Obj<TextureID>
 	using type = Texture;
 };
 
+template<> struct Scene::ID2Obj<CubemapID>
+{
+	using type = Cubemap;
+};
+
 template<> struct Scene::ID2Obj<MaterialID>
 {
 	using type = MaterialPBR;
@@ -64,6 +69,11 @@ template<> Scene::freelist_from_id<StaticSubmeshID>& Scene::GetStorage<StaticSub
 template<> Scene::freelist_from_id<TextureID>& Scene::GetStorage<TextureID>() noexcept
 {
 	return m_textures;
+}
+
+template<> Scene::freelist_from_id<CubemapID>& Scene::GetStorage<CubemapID>() noexcept
+{
+	return m_cubemaps;
 }
 
 template<> Scene::freelist_from_id<MaterialID>& Scene::GetStorage<MaterialID>() noexcept
@@ -179,6 +189,25 @@ bool Scene::RemoveTexture( TextureID id ) noexcept
 Texture* Scene::TryModifyTexture( TextureID id ) noexcept
 {
 	return m_textures.try_get( id );
+}
+
+
+// Cubemaps
+
+CubemapID Scene::AddCubemap() noexcept
+{
+	Cubemap cubemap;
+	return m_cubemaps.insert( std::move( cubemap ) );
+}
+
+bool Scene::RemoveCubemap( CubemapID id ) noexcept
+{
+	return Remove( id );
+}
+
+Cubemap* Scene::TryModifyCubemap( CubemapID id ) noexcept
+{
+	return m_cubemaps.try_get( id );
 }
 
 

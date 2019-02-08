@@ -51,6 +51,17 @@ public:
 	Texture* TryModifyTexture( TextureID id ) noexcept; // returns nullptr if object no longer exists
 
 
+	// Cubemaps
+	CubemapID AddCubemap() noexcept;
+	bool RemoveCubemap( CubemapID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
+	// read-only
+	const auto& AllCubemaps() const noexcept { return m_cubemaps; }
+	auto CubemapSpan() const noexcept { return m_cubemaps.get_elems(); }
+	// for element modification
+	auto CubemapSpan() noexcept { return m_cubemaps.get_elems(); }
+	Cubemap* TryModifyCubemap( CubemapID id ) noexcept; // returns nullptr if object no longer exists
+
+
 	// Materials
 	MaterialID AddMaterial( const MaterialPBR::TextureIds& textures );
 	bool RemoveMaterial( MaterialID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
@@ -124,6 +135,7 @@ private:
 	packed_freelist<StaticMesh> m_static_meshes;
 	packed_freelist<StaticSubmesh> m_static_submeshes;
 	packed_freelist<Texture> m_textures;
+	packed_freelist<Cubemap> m_cubemaps;
 	packed_freelist<MaterialPBR> m_materials;
 	packed_freelist<StaticMeshInstance> m_static_mesh_instances;
 	packed_freelist<Camera> m_cameras;

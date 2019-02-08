@@ -60,6 +60,7 @@ void SkyboxPass::Draw( const Context& context )
 
 	m_cmd_list->SetGraphicsRootConstantBufferView( 0, context.pass_cb );
 	m_cmd_list->SetGraphicsRootDescriptorTable( 1, context.skybox_srv );
+	m_cmd_list->SetGraphicsRoot32BitConstants( 2, 1, &context.radiance_multiplier, 0 );
 	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
 	m_cmd_list->IASetIndexBuffer( nullptr );
 	m_cmd_list->IASetVertexBuffers( 0, 0, nullptr );
@@ -73,6 +74,7 @@ ComPtr<ID3D12RootSignature> SkyboxPass::BuildRootSignature( ID3D12Device & devic
 	Skybox pass root sig
 	0 - pass cb
 	1 - skybox srv
+	2 - skybox radiance multiplier
 
 	Shader register bindings
 	b0 - pass cb
@@ -80,7 +82,7 @@ ComPtr<ID3D12RootSignature> SkyboxPass::BuildRootSignature( ID3D12Device & devic
 	s0 - wrap sampler
 	*/
 
-	constexpr int nparams = 2;
+	constexpr int nparams = 3;
 
 	CD3DX12_ROOT_PARAMETER1 slot_root_parameter[nparams];
 
@@ -88,6 +90,7 @@ ComPtr<ID3D12RootSignature> SkyboxPass::BuildRootSignature( ID3D12Device & devic
 	CD3DX12_DESCRIPTOR_RANGE1 desc_table[1];
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
 	slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table, D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[2].InitAsConstants( 1, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL );
 
 	CD3DX12_STATIC_SAMPLER_DESC linear_wrap_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT );
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,

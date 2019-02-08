@@ -60,7 +60,7 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 	ThrowIfFailed( DirectX::LoadDDSTextureFromMemoryEx( m_device.Get(),
 														tex_data.file.GetData().cbegin(), tex_data.file.GetData().size(), 0,
 														D3D12_RESOURCE_FLAG_NONE,
-														DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_RESERVED_RESOURCE,
+														DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_RESERVED_RESOURCE | DirectX::DDS_LOADER_CREATE_IN_COMMON_STATE,
 														tex_data.gpu_res.GetAddressOf(), tex_data.file_layout ) );
 
 	size_t subresource_num = tex_data.file_layout.size();

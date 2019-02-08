@@ -66,6 +66,12 @@
     <Filter Include="core\FramegraphDataProviders">
       <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\Tools">
+      <UniqueIdentifier>{ce71357a-f0df-4769-a97a-5f73f048c0fb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\cubemap_gen">
+      <UniqueIdentifier>{ce817180-18b7-4ffc-8503-62fe1a2cf561}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -199,6 +205,9 @@
     </ClCompile>
     <ClCompile Include="src\StaticTextureManager.cpp">
       <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CubemapConverter.cpp">
+      <Filter>core\Tools</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -394,6 +403,9 @@
     <ClInclude Include="src\StaticTextureManager.h">
       <Filter>core\SceneSystems</Filter>
     </ClInclude>
+    <ClInclude Include="src\CubemapConverter.h">
+      <Filter>core\Tools</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\ps.hlsl">
@@ -434,6 +446,12 @@
     </FxCompile>
     <FxCompile Include="shaders\skybox_ps.hlsl">
       <Filter>shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\cubemap_gen_vs.hlsl">
+      <Filter>shaders\cubemap_gen</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\cubemap_gen_ps.hlsl">
+      <Filter>shaders\cubemap_gen</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

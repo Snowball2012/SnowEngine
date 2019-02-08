@@ -166,6 +166,31 @@ private:
 using TextureID = typename packed_freelist<Texture>::id;
 
 
+class Cubemap : public RefCounter
+{
+public:
+	// main data
+	D3D12_CPU_DESCRIPTOR_HANDLE& ModifyStagingSRV() noexcept { m_is_dirty = true; return m_staging_srv; }
+	D3D12_CPU_DESCRIPTOR_HANDLE StagingSRV() const noexcept { return m_staging_srv; }
+
+	// properties
+	bool IsDirty() const noexcept { return m_is_dirty; }
+	void Clean() noexcept { m_is_dirty = false; }
+
+	bool IsLoaded() const noexcept { return m_is_loaded; }
+	void Load( D3D12_CPU_DESCRIPTOR_HANDLE descriptor ) noexcept { ModifyStagingSRV() = descriptor; m_is_loaded = true; }
+
+private:
+	friend class Scene;
+	Cubemap() {}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE m_staging_srv;
+	bool m_is_dirty = false;
+	bool m_is_loaded = false;
+};
+using CubemapID = typename packed_freelist<Cubemap>::id;
+
+
 class MaterialPBR : public RefCounter
 {
 public:

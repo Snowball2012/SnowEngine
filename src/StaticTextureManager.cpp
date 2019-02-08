@@ -32,9 +32,11 @@ void StaticTextureManager::LoadTexture( TextureID id, std::string path )
 
 	std::unique_ptr<uint8_t[]> dds_data;
 	std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-	ThrowIfFailed( DirectX::LoadDDSTextureFromFile( m_device.Get(),
-													std::wstring( path.cbegin(), path.cend() ).c_str(),
-													tex_data.gpu_res.GetAddressOf(), dds_data, subresources ) );
+	ThrowIfFailed( DirectX::LoadDDSTextureFromFileEx( m_device.Get(),
+													  std::wstring( path.cbegin(), path.cend() ).c_str(), 0,
+													  D3D12_RESOURCE_FLAG_NONE,
+													  DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_IN_COMMON_STATE,
+													  tex_data.gpu_res.GetAddressOf(), dds_data, subresources ) );
 
 	tex_data.path = std::move( path );
 

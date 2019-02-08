@@ -36,6 +36,13 @@ TextureID SceneClientView::LoadStaticTexture( std::string path )
 	return tex_id;
 }
 
+CubemapID SceneClientView::AddCubemapFromTexture( TextureID tex_id )
+{
+	CubemapID cm_id = m_scene->AddCubemap();
+	m_cubemap_manager->CreateCubemapFromTexture( cm_id, tex_id );
+	return cm_id;
+}
+
 TransformID SceneClientView::AddTransform( const DirectX::XMFLOAT4X4& obj2world )
 {
 	TransformID tf_id = m_scene->AddTransform();
@@ -137,38 +144,56 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 
 
 
-SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue )
+SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap,
+							size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue )
 	: m_static_mesh_mgr( device, &m_scene )
 	, m_tex_streamer( device, 700*1024*1024ul, 128*1024*1024ul, nframes_to_buffer, &m_scene )
 	, m_static_texture_mgr( device, &m_scene )
 	, m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
-	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_static_texture_mgr, &m_tex_streamer, &m_dynamic_buffers, &m_material_table_baker )
+	, m_scene_view( &m_scene, &m_static_mesh_mgr, &m_static_texture_mgr, &m_tex_streamer, &m_cubemap_mgr, &m_dynamic_buffers, &m_material_table_baker )
 	, m_copy_queue( copy_queue )
 	, m_nframes_to_buffer( nframes_to_buffer )
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
+	, m_cubemap_mgr( device, &m_gpu_descriptor_tables, &m_scene )
 	, m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
 	, m_shadow_provider( device.Get(), int( nframes_to_buffer ), dsv_heap, &m_gpu_descriptor_tables, &m_scene )
 	, m_uv_density_calculator( &m_scene )
+	, m_graphics_queue( graphics_queue )
 {
 	for ( size_t i = 0; i < size_t( m_nframes_to_buffer ); ++i )
 	{
-		m_cmd_allocators.emplace_back();
-		auto& allocator = m_cmd_allocators.back();
+		m_copy_cmd_allocators.emplace_back();
+		auto& allocator = m_copy_cmd_allocators.back();
 		ThrowIfFailed( device->CreateCommandAllocator(
 			D3D12_COMMAND_LIST_TYPE_COPY,
 			IID_PPV_ARGS( allocator.first.GetAddressOf() ) ) );
 		allocator.second = 0;
+
+		m_graphics_cmd_allocators.emplace_back();
+		auto& graphics_allocator = m_graphics_cmd_allocators.back();
+		ThrowIfFailed( device->CreateCommandAllocator(
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			IID_PPV_ARGS( graphics_allocator.first.GetAddressOf() ) ) );
+		graphics_allocator.second = 0;
 	}
 
 	ThrowIfFailed( device->CreateCommandList(
 		0,
 		D3D12_COMMAND_LIST_TYPE_COPY,
-		m_cmd_allocators[0].first.Get(), // Associated command allocator
+		m_copy_cmd_allocators[0].first.Get(), // Associated command allocator
+		nullptr,                 
+		IID_PPV_ARGS( m_copy_cmd_list.GetAddressOf() ) ) );
+
+	ThrowIfFailed( device->CreateCommandList(
+		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		m_graphics_cmd_allocators[0].first.Get(), // Associated command allocator
 		nullptr,                   // Initial FramegraphStateObject
-		IID_PPV_ARGS( m_cmd_list.GetAddressOf() ) ) );
+		IID_PPV_ARGS( m_graphics_cmd_list.GetAddressOf() ) ) );
 
 	// Later we will call Reset on cmd_list, which demands for the list to be closed
-	m_cmd_list->Close();
+	m_copy_cmd_list->Close();
+	m_graphics_cmd_list->Close();
 }
 
 const SceneClientView& SceneManager::GetScene() const noexcept
@@ -195,37 +220,53 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 {
 	SceneCopyOp cur_op = m_operation_counter++;
 
-	m_copy_queue->WaitForTimestamp( m_cmd_allocators[cur_op % m_nframes_to_buffer].second );
-	ThrowIfFailed( m_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
-	m_cmd_list->Reset( m_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
+	m_copy_queue->WaitForTimestamp( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].second );
+	ThrowIfFailed( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
+	m_copy_cmd_list->Reset( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
+
+	m_graphics_queue->WaitForTimestamp( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].second );
+	ThrowIfFailed( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
+	m_graphics_cmd_list->Reset( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
 
 	m_main_camera_id = main_camera_id;
 
 	GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
-	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
+	m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
 	ProcessSubmeshes();
 	m_uv_density_calculator.Update( main_camera_id, main_viewport );
-	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_cmd_list.Get() );
-	m_static_texture_mgr.Update( cur_op, current_copy_time, *m_cmd_list.Get() );
+	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );
+	m_static_texture_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
+	m_cubemap_mgr.Update();
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
 	if ( const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id ) )
 		m_shadow_provider.Update( m_scene.LightSpan(), pssm, main_cam->GetData() );
 
-	ThrowIfFailed( m_cmd_list->Close() );
-	ID3D12CommandList* lists_to_exec[]{ m_cmd_list.Get() };
+	ThrowIfFailed( m_copy_cmd_list->Close() );
+	ID3D12CommandList* lists_to_exec[]{ m_copy_cmd_list.Get() };
 	m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 	
 	m_last_copy_timestamp = m_copy_queue->CreateTimestamp();
-	m_cmd_allocators[cur_op % m_nframes_to_buffer].second = m_last_copy_timestamp;
+	m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].second = m_last_copy_timestamp;
 
 	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_static_texture_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
+	{
+		ID3D12DescriptorHeap* heaps[] = { m_gpu_descriptor_tables.CurrentGPUHeap().Get() };
+		m_graphics_cmd_list->SetDescriptorHeaps( 1, heaps );
+
 		m_material_table_baker.UpdateGPUDescriptors();
+		m_cubemap_mgr.OnBakeDescriptors( *m_graphics_cmd_list.Get() );
+
+	}
+
+	ThrowIfFailed( m_graphics_cmd_list->Close() );
+	lists_to_exec[0] = m_graphics_cmd_list.Get();
+	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 
 	CleanModifiedItemsStatus();
 }

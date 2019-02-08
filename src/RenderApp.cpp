@@ -11,6 +11,8 @@
 #include "DepthOnlyPass.h"
 #include "TemporalBlendPass.h"
 
+#include "SceneItems.h"
+
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
 
@@ -100,10 +102,22 @@ void RenderApp::UpdateGUI()
 		ImGui::NewLine();
 		ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
 		ImGui::NewLine();
+
+		EnviromentMap* skybox = m_renderer->GetScene().ModifyEnviromentMap( m_ph_skybox );
+		if ( skybox )
+		{
+			float radiance_factor = skybox->GetRadianceFactor();
+			ImGui::SliderFloat( "Skybox luminance multiplier", &radiance_factor, 0, 1.e2, "%.3f" );
+			skybox->SetRadianceFactor() = radiance_factor;
+			ImGui::NewLine();
+		}
+
 		ImGui::Text( "Sun Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_sun_phi, m_sun_theta );
 		ImGui::NewLine();
+
 		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0, "%.3f" );
-		ImGui::NewLine();
+		ImGui::NewLine();		
+
 		ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
 		ImGui::End();		
 	}
@@ -223,7 +237,7 @@ namespace
 		// therefore  x * 683.0f * (0.2973f * color.r + 1.0f * color.g + 0.1010f * color.b)  == illuminance_lux, radiance = linear_color * x;
 		float x = illuminance_lux / ( 683.0f * ( 0.2973f * color.x + 1.0f * color.y + 0.1010f * color.z ) );
 
-		return color * 5.0f;//x;
+		return color * x;
 	}
 }
 
@@ -412,6 +426,7 @@ void RenderApp::LoadPlaceholderTextures()
 	m_ph_specular_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
 	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
 	TransformID skybox_tf = m_renderer->GetScene().AddTransform();
+	CubemapID cubemap = m_renderer->GetScene().AddCubemapFromTexture( skybox_tex );
 	m_ph_skybox = m_renderer->GetScene().AddEnviromentMap( skybox_tex, skybox_tf );
 }
 

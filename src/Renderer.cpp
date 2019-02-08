@@ -61,7 +61,7 @@ void Renderer::Init()
 	InitImgui();
 	BuildRtvAndDsvDescriptorHeaps();
 
-	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, m_dsv_heap.get(), FrameResourceCount, m_copy_queue.get() );
+	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, m_dsv_heap.get(), FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
 	m_forward_cb_provider = std::make_unique<ForwardCBProvider>( *m_d3d_device.Get(), FrameResourceCount );
 
 	RecreateSwapChainAndDepthBuffers( m_client_width, m_client_height );
@@ -256,12 +256,12 @@ void Renderer::CreateDevice()
 {
 
 #if defined(DEBUG) || defined(_DEBUG) 
-	// Enable the D3D12 debug layer.
-	{
-		ComPtr<ID3D12Debug> debugController;
-		ThrowIfFailed( D3D12GetDebugInterface( IID_PPV_ARGS( &debugController ) ) );
-		debugController->EnableDebugLayer();
-	}
+	ComPtr<ID3D12Debug> spDebugController0;
+	ComPtr<ID3D12Debug1> spDebugController1;
+	ThrowIfFailed( D3D12GetDebugInterface( IID_PPV_ARGS( &spDebugController0 ) ) );
+	spDebugController0->EnableDebugLayer();
+	ThrowIfFailed( spDebugController0->QueryInterface( IID_PPV_ARGS( &spDebugController1 ) ) );
+	//spDebugController1->SetEnableGPUBasedValidation( true );
 #endif
 
 	ThrowIfFailed( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );

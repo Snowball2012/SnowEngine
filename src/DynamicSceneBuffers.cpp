@@ -79,7 +79,7 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
 		buffer.gpu_res.Reset();
 
 		constexpr float extra_buffer_space = 1.2f; // to avoid buffer recreation for every new transform/material
-		buffer.capacity = m_buffer_size * 1.2;
+		buffer.capacity = m_buffer_size * extra_buffer_space;
 		
 		ThrowIfFailed( m_device->CreateCommittedResource(
 			&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),

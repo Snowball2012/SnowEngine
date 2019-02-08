@@ -1,6 +1,11 @@
 #define PER_PASS_CB_BINDING b0
 #include "bindings/pass_cb.hlsli"
 
+cbuffer SkyboxParamsCB : register( b1 )
+{
+    float radiance_multiplier;
+}
+
 // parabolic hdr skybox
 Texture2D skybox : register( t0 );
 
@@ -28,5 +33,5 @@ float4 main( PixelIn pin ) : SV_TARGET
     uv.y = 0.5f - asin( ray_ws.y ) / M_PI;
     uv.x = ( atan2( ray_ws.x, ray_ws.z ) + M_PI ) / (2 * M_PI);
 
-    return float4( skybox.Sample( linear_wrap_sampler, uv ).rgb, 1.0f );
+    return float4( skybox.Sample( linear_wrap_sampler, uv ).rgb * radiance_multiplier, 1.0f );
 }
