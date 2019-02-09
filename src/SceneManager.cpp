@@ -79,9 +79,9 @@ MeshInstanceID SceneClientView::AddMeshInstance( StaticSubmeshID submesh_id, Tra
 	return m_scene->AddStaticMeshInstance( tf_id, submesh_id, mat_id );
 }
 
-EnvMapID SceneClientView::AddEnviromentMap( TextureID texture_id, TransformID transform_id )
+EnvMapID SceneClientView::AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id )
 {
-	EnvMapID id = m_scene->AddEnviromentMap( texture_id, transform_id );
+	EnvMapID id = m_scene->AddEnviromentMap( cubemap_id, transform_id );
 
 	m_material_table_baker->RegisterEnvMap( id );
 

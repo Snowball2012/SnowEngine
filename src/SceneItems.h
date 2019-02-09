@@ -274,7 +274,7 @@ using MeshInstanceID = typename packed_freelist<StaticMeshInstance>::id;
 class EnviromentMap : public RefCounter
 {
 public:
-	const std::variant<TextureID>& GetMap() const noexcept { return m_texture; }
+	CubemapID GetMap() const noexcept { return m_cubemap; }
 
 	TransformID GetTransform() const noexcept { return m_tf; }
 
@@ -288,10 +288,10 @@ private:
 	friend class Scene;
 	EnviromentMap() {}
 
-	std::variant<TextureID>& Map() noexcept { return m_texture; }
+	CubemapID& Map() noexcept { return m_cubemap; }
 	TransformID& Transform() noexcept { return m_tf; }
 
-	std::variant<TextureID> m_texture;
+	CubemapID m_cubemap = CubemapID::nullid;
 	TransformID m_tf;
 	D3D12_GPU_DESCRIPTOR_HANDLE m_srv;
 	float m_radiance_factor = 1.0f;

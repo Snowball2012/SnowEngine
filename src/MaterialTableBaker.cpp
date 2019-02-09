@@ -122,27 +122,27 @@ void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, Ta
 
 void MaterialTableBaker::UpdateEnvmapTextures( const EnviromentMap& envmap, TableID envmap_table_id, bool first_load )
 {
-	auto update_texture = [&]( TextureID tex_id ) -> void
+	auto update_cubemap = [&]( CubemapID cubemap_id ) -> void
 	{
-		assert( m_scene->AllTextures().has( tex_id ) );
+		assert( m_scene->AllCubemaps().has( cubemap_id ) );
 
-		const Texture& tex = m_scene->AllTextures()[tex_id];
-		if ( tex.IsLoaded() && ( tex.IsDirty() || first_load ) )
+		const Cubemap& cubemap = m_scene->AllCubemaps()[cubemap_id];
+		if ( cubemap.IsLoaded() && ( cubemap.IsDirty() || first_load ) )
 		{
 			std::optional<D3D12_CPU_DESCRIPTOR_HANDLE> dest_table = m_tables->ModifyTable( envmap_table_id );
 			assert( dest_table.has_value() );
 			m_device->CopyDescriptorsSimple( 1,
 											 CD3DX12_CPU_DESCRIPTOR_HANDLE( *dest_table, 0, UINT( m_tables->GetDescriptorIncrementSize() ) ),
-											 tex.StagingSRV(),
+											 cubemap.StagingSRV(),
 											 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 		}
 	};
 
 
-	const TextureID* texture_id = std::get_if<TextureID>( &envmap.GetMap() );
+	CubemapID cubemap_id = envmap.GetMap();
 
-	if ( ! texture_id )
-		throw SnowEngineException( "envmap does not have a texture attached" );
+	if ( ! m_scene->AllCubemaps().has( cubemap_id ) )
+		throw SnowEngineException( "envmap does not have a cubemap attached" );
 
-	update_texture( *texture_id );
+	update_cubemap( cubemap_id );
 }

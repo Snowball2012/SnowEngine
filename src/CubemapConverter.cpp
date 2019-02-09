@@ -202,8 +202,8 @@ ComPtr<ID3D12Resource> CubemapConverter::BuildGPUMatrices() const
 	{
 		XMMatrixRotationY( -XM_PIDIV2 ),		// Look: +x Index: 0
 		XMMatrixRotationY( XM_PIDIV2 ),	// Look: -x Index: 1
-		XMMatrixRotationX( -XM_PIDIV2 ),	// Look: +y Index: 2
-		XMMatrixRotationX( XM_PIDIV2 ),		// Look: -y Index: 3
+		XMMatrixRotationX( XM_PIDIV2 ),	// Look: +y Index: 2
+		XMMatrixRotationX( -XM_PIDIV2 ),		// Look: -y Index: 3
 		XMMatrixIdentity(),					// Look: +z Index: 4
 		XMMatrixRotationY( XM_PI )			// Look: -z Index: 5
 	};

@@ -349,12 +349,12 @@ SceneLight* Scene::TryModifyLight( LightID id ) noexcept
 
 // Enviroment maps
 
-EnvMapID Scene::AddEnviromentMap( TextureID texture_id, TransformID tf_id )
+EnvMapID Scene::AddEnviromentMap( CubemapID cubemap_id, TransformID tf_id )
 {
-	Texture* tex = m_textures.try_get( texture_id );
-	if ( ! tex )
-		throw SnowEngineException( "referenced texture does not exist" );
-	tex->AddRef();
+	Cubemap* cubemap = m_cubemaps.try_get( cubemap_id );
+	if ( ! cubemap )
+		throw SnowEngineException( "referenced cubemap does not exist" );
+	cubemap->AddRef();
 
 	ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
 	if ( ! tf )
@@ -363,7 +363,7 @@ EnvMapID Scene::AddEnviromentMap( TextureID texture_id, TransformID tf_id )
 
 	EnviromentMap envmap;
 
-	envmap.Map() = texture_id;
+	envmap.Map() = cubemap_id;
 	envmap.Transform() = tf_id;
 
 	return m_env_maps.insert( std::move( envmap ) );
@@ -375,13 +375,10 @@ bool Scene::RemoveEnviromentMap( EnvMapID id ) noexcept
 	if ( ! envmap )
 		return true;
 
-	if ( auto* tex_id = std::get_if<TextureID>( &envmap->GetMap() ) )
-	{
-		Texture* tex = m_textures.try_get( *tex_id );
-		assert( tex != nullptr );
-		if ( tex )
-			tex->ReleaseRef();
-	}
+	Cubemap* cubemap = m_cubemaps.try_get( envmap->GetMap() );
+	assert( cubemap != nullptr );
+	if ( cubemap )
+		cubemap->ReleaseRef();
 
 	ObjectTransform* tf = m_obj_tfs.try_get( envmap->GetTransform() );
 	assert( tf != nullptr );

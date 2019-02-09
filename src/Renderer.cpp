@@ -597,15 +597,14 @@ void Renderer::BindSkybox( EnvMapID skybox_id )
 	const EnviromentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
 
 	Skybox framegraph_res;
-	const TextureID* cylindrical_tex_id = std::get_if<TextureID>( &skybox.GetMap() );
-	if ( ! cylindrical_tex_id )
-		NOTIMPL; // cubemap?
 
-	const Texture* tex = scene.AllTextures().try_get( *cylindrical_tex_id );
-	if ( ! tex )
-		throw SnowEngineException( "skybox does not have a texture attached" );
+	CubemapID cubemap_id = skybox.GetMap();
 
-	if ( tex->IsLoaded() )
+	const Cubemap* cubemap = scene.AllCubemaps().try_get( cubemap_id );
+	if ( ! cubemap )
+		throw SnowEngineException( "skybox does not have a cubemap attached" );
+
+	if ( cubemap->IsLoaded() )
 		framegraph_res.srv = skybox.GetSRV();
 	else
 		framegraph_res.srv.ptr = 0;

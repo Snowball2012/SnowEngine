@@ -42,8 +42,10 @@ void CubemapManager::Update( )
 {
 	// Todo: remove missing cubemaps
 
-	for ( auto& cubemap : m_conversion_in_progress )
+	for ( auto i = m_conversion_in_progress.begin(); i != m_conversion_in_progress.end(); )
 	{
+		auto& cubemap = *i;
+
 		const auto& texture = m_scene->AllTextures()[cubemap.texture_id];
 		if ( texture.IsLoaded() )
 		{
@@ -52,13 +54,23 @@ void CubemapManager::Update( )
 											 texture.StagingSRV(),
 											 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 		}
+		if ( cubemap.cubemap.staging_srv )
+		{
+			m_scene->TryModifyCubemap( i->cubemap.id )->Load( i->cubemap.staging_srv->HandleCPU() );
+			m_loaded_cubemaps.emplace_back( std::move( i->cubemap ) );
+			i = m_conversion_in_progress.erase( i ); // TODO: change to swap-erase, check for cubemap existance
+		}
+		else
+		{
+			i++;
+		}
 	}
 }
 
 
 void CubemapManager::OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_graphics_queue )
 {
-	for ( auto i = m_conversion_in_progress.begin(); i != m_conversion_in_progress.end(); )
+	for ( auto i = m_conversion_in_progress.begin(); i != m_conversion_in_progress.end(); i++ )
 	{
 		if ( ! ( i->texture_srv == DescriptorTableBakery::TableID::nullid ) )
 		{
@@ -74,17 +86,8 @@ void CubemapManager::OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_grap
 			if ( ! i->cubemap.gpu_res )
 				throw SnowEngineException( "convertation failed" );
 
-			// TODO: finish
 			i->cubemap.staging_srv = std::make_unique<Descriptor>( std::move( m_srv_heap.AllocateDescriptor() ) );
 			DirectX::CreateShaderResourceView( m_device.Get(), i->cubemap.gpu_res.Get(), i->cubemap.staging_srv->HandleCPU(), true );
-
-			m_scene->TryModifyCubemap( i->cubemap.id )->Load( i->cubemap.staging_srv->HandleCPU() );
-			m_loaded_cubemaps.emplace_back( std::move( i->cubemap ) );
-			i = m_conversion_in_progress.erase( i ); // TODO: change to swap-erase, check for cubemap existance
-		}
-		else
-		{
-			i++;
 		}
 	}
 }

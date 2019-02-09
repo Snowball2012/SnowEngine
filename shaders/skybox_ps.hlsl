@@ -7,7 +7,7 @@ cbuffer SkyboxParamsCB : register( b1 )
 }
 
 // parabolic hdr skybox
-Texture2D skybox : register( t0 );
+TextureCube skybox : register( t0 );
 
 SamplerState linear_wrap_sampler : register(s0);
 
@@ -29,9 +29,6 @@ float4 main( PixelIn pin ) : SV_TARGET
     ray_ws.w = 0;
     ray_ws.xyz =normalize( mul( ray_ws, pass_params.view_inv_mat ).xyz );
     //ray_ws.xyz = normalize( mul( ray_ws, pass_params.view_inv_mat ).xyz );
-    float2 uv;
-    uv.y = 0.5f - asin( ray_ws.y ) / M_PI;
-    uv.x = ( atan2( ray_ws.x, ray_ws.z ) + M_PI ) / (2 * M_PI);
 
-    return float4( skybox.Sample( linear_wrap_sampler, uv ).rgb * radiance_multiplier, 1.0f );
+    return float4( skybox.Sample( linear_wrap_sampler, ray_ws.xyz ).rgb * radiance_multiplier, 1.0f );
 }

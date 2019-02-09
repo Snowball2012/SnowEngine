@@ -107,7 +107,7 @@ public:
 
 
 	// Enviriment maps
-	EnvMapID AddEnviromentMap( TextureID texture_id, TransformID tf_id );
+	EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID tf_id );
 	bool RemoveEnviromentMap( EnvMapID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
 	// read-only
 	const auto& AllEnviromentMaps() const noexcept { return m_env_maps; }

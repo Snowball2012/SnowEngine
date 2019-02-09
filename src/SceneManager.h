@@ -47,7 +47,7 @@ public:
 	StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
 	MeshInstanceID AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id );
 
-	EnvMapID AddEnviromentMap( TextureID texture_id, TransformID transform_id );
+	EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id );
 	EnviromentMap* ModifyEnviromentMap( EnvMapID envmap_id ) noexcept;
 	const EnviromentMap* GetEnviromentMap( EnvMapID envmap_id ) const noexcept;
 	
