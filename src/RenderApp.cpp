@@ -106,16 +106,25 @@ void RenderApp::UpdateGUI()
 		EnviromentMap* skybox = m_renderer->GetScene().ModifyEnviromentMap( m_ph_skybox );
 		if ( skybox )
 		{
-			float radiance_factor = skybox->GetRadianceFactor();
-			ImGui::SliderFloat( "Skybox luminance multiplier", &radiance_factor, 0, 1.e2, "%.3f" );
-			skybox->SetRadianceFactor() = radiance_factor;
+			ImGui::SliderFloat( "Skybox luminance multiplier", &m_sky_radiance_factor, 0, 1.e2 );
+			skybox->SetRadianceFactor() = m_sky_radiance_factor;
+
+			ImGui::SliderFloat( "Skybox phi", &m_sky_phi, 0, DirectX::XM_2PI );
+
+			ObjectTransform* tf = m_renderer->GetScene().ModifyTransform( m_skybox_tf );
+			if ( tf )
+			{
+				DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY( m_sky_phi );
+				DirectX::XMStoreFloat4x4( &tf->ModifyMat(), rotation );
+			}
+
 			ImGui::NewLine();
 		}
 
 		ImGui::Text( "Sun Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_sun_phi, m_sun_theta );
 		ImGui::NewLine();
 
-		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0, "%.3f" );
+		ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0 );
 		ImGui::NewLine();		
 
 		ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
@@ -424,10 +433,10 @@ void RenderApp::LoadPlaceholderTextures()
 {
 	m_ph_normal_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
 	m_ph_specular_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
-	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
-	TransformID skybox_tf = m_renderer->GetScene().AddTransform();
+	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/irradiance_map.DDS" );
+	m_skybox_tf = m_renderer->GetScene().AddTransform();
 	CubemapID skybox_cubemap = m_renderer->GetScene().AddCubemapFromTexture( skybox_tex );
-	m_ph_skybox = m_renderer->GetScene().AddEnviromentMap( skybox_cubemap, skybox_tf );
+	m_ph_skybox = m_renderer->GetScene().AddEnviromentMap( skybox_cubemap, m_skybox_tf );
 }
 
 void RenderApp::BuildGeometry( ImportedScene& ext_scene )

@@ -76,6 +76,7 @@ private:
 	TextureID m_ph_normal_texture = TextureID::nullid;
 	TextureID m_ph_specular_texture = TextureID::nullid;
 	EnvMapID m_ph_skybox = EnvMapID::nullid;
+	TransformID m_skybox_tf = TransformID::nullid;
 
 	class LoadingScreen
 	{
@@ -110,9 +111,11 @@ private:
 	DirectX::XMFLOAT3 m_camera_pos = DirectX::XMFLOAT3( 13.5f, 4.13f, -2.73f );
 	float m_camera_speed = 5.0f;
 
-	float m_sun_theta = 0.75f * DirectX::XM_PI;
-	float m_sun_phi = 1.6f * DirectX::XM_PIDIV2;
-	float m_sun_illuminance = 110.0e3f; // lux
+	float m_sun_theta = -1.852f;
+	float m_sun_phi = 2.496f;
+	float m_sun_illuminance = 90.0e3f; // lux
+	float m_sky_phi = DirectX::XM_PI;
+	float m_sky_radiance_factor = 10.0f;
 	DirectX::XMFLOAT3 m_sun_color_corrected = DirectX::XMFLOAT3( 1.0f, 232.0f /255.0f, 213.0f /255.0f ); // gamma == 2.2
 
 	bool m_wireframe_mode = false;

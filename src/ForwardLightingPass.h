@@ -30,6 +30,12 @@ public:
 		D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_cascade_srv;
+		struct IBL
+		{
+			D3D12_GPU_DESCRIPTOR_HANDLE irradiance_map_srv;
+			float radiance_multiplier;
+			D3D12_GPU_VIRTUAL_ADDRESS transform;
+		} ibl;
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
 	};
 
@@ -69,37 +75,47 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 		3 - shadow
 		4 - shadow cascade
 		5 - cbv per pass
+		6 - irradince map
+		7 - ibl transform
+		8 - ibl radiance multiplier
 
 		Shader register bindings
 		b0 - cbv per obj
 		b1 - cbv per material
 		b2 - cbv per pass
+		b3 - cbv per enviroment map
+		b4 - ibl radiance multiplier
 
 		t0 - albedo
 		t1 - normal
 		t2 - specular
 		t3 - shadow
 		t4 - shadow cascade
+		t5 - irradiance map
 
-		To optimize state changes keep material textures together when possible. Descriptor duplication?
 	*/
-	constexpr int nparams = 6;
+	constexpr int nparams = 9;
 
 	CD3DX12_ROOT_PARAMETER1 slot_root_parameter[nparams];
 
 	slot_root_parameter[0].InitAsConstantBufferView( 0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX );
 	slot_root_parameter[1].InitAsConstantBufferView( 1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL );
 
-	CD3DX12_DESCRIPTOR_RANGE1 desc_table[3];
+	CD3DX12_DESCRIPTOR_RANGE1 desc_table[4];
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // albedo, normal, specular
 	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
 	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow cascade
+	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // irradiance map
 
 	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_PIXEL );
 	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_PIXEL );
 	slot_root_parameter[4].InitAsDescriptorTable( 1, &desc_table[2], D3D12_SHADER_VISIBILITY_PIXEL );
 
 	slot_root_parameter[5].InitAsConstantBufferView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC );
+
+	slot_root_parameter[6].InitAsDescriptorTable( 1, &desc_table[3], D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[7].InitAsConstantBufferView( 3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[8].InitAsConstants( 1, 4, 0, D3D12_SHADER_VISIBILITY_PIXEL );
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
 	                                                     UINT( static_samplers.size() ), static_samplers.data(),

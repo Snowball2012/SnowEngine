@@ -15,6 +15,7 @@ public:
 	struct Context
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
+		D3D12_GPU_VIRTUAL_ADDRESS skybox_cb;
 		D3D12_GPU_DESCRIPTOR_HANDLE skybox_srv;
 		D3D12_CPU_DESCRIPTOR_HANDLE frame_rtv;
 		D3D12_CPU_DESCRIPTOR_HANDLE frame_dsv;

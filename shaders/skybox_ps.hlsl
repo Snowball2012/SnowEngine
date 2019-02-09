@@ -6,6 +6,13 @@ cbuffer SkyboxParamsCB : register( b1 )
     float radiance_multiplier;
 }
 
+cbuffer SkyboxTF : register( b2 )
+{
+    
+    float4x4 model_mat;
+    float4x4 model_inv_transpose_mat;
+}
+
 // parabolic hdr skybox
 TextureCube skybox : register( t0 );
 
@@ -27,8 +34,9 @@ float4 main( PixelIn pin ) : SV_TARGET
     float4 ray_ws = mul( pos, pass_params.proj_inv_mat );
 
     ray_ws.w = 0;
-    ray_ws.xyz =normalize( mul( ray_ws, pass_params.view_inv_mat ).xyz );
+    ray_ws.xyz =normalize( mul( mul( ray_ws, pass_params.view_inv_mat ), model_mat ).xyz );
     //ray_ws.xyz = normalize( mul( ray_ws, pass_params.view_inv_mat ).xyz );
+
 
     return float4( skybox.Sample( linear_wrap_sampler, ray_ws.xyz ).rgb * radiance_multiplier, 1.0f );
 }

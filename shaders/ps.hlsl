@@ -7,6 +7,22 @@
 #define PER_PASS_CB_BINDING b2
 #include "bindings/pass_cb.hlsli"
 
+struct IBLTransform
+{
+    float4x4 world2env_mat;
+    float4x4 world2env_inv_transposed_mat;
+};
+
+cbuffer cbIBLTransform : register(b3)
+{
+    IBLTransform ibl;
+}
+
+cbuffer cbIBLParams : register(b4)
+{
+    float ibl_radiance_multiplier;
+}
+
 SamplerState point_wrap_sampler : register(s0);
 SamplerState point_clamp_sampler : register(s1);
 SamplerState linear_wrap_sampler : register(s2);
@@ -20,6 +36,7 @@ Texture2D normal_map : register(t1);
 Texture2D specular_map : register(t2);
 Texture2D shadow_map : register(t3);
 Texture2DArray shadow_cascade : register(t4);
+TextureCube irradiance_map : register(t5);
 
 struct PixelIn
 {
@@ -117,10 +134,14 @@ PixelOut main(PixelIn pin)
 
     // ambient for sky, remove after skybox gen
     const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
-
+  
+    float4 irradiance_dir = mul( mul( float4( normal, 0.0f ), pass_params.view_inv_mat ), ibl.world2env_mat );
     PixelOut res;
     res.color = float4(res_color, 1.0f);
-    res.ambient_color = float4( percieved_brightness( pass_params.parallel_lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
+    
+    //res.ambient_color = float4( percieved_brightness( pass_params.parallel_lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
+    res.ambient_color = float4( ibl_radiance_multiplier * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz * base_color.rgb, 1.0f);
+
     res.screen_space_normal = normal.xy;
 	return res;
 }

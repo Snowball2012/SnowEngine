@@ -64,6 +64,7 @@ public:
 		ctx.frame_dsv = depth_buffer->dsv;
 		ctx.frame_rtv = hdr_buffer->rtv;
 		ctx.skybox_srv = skybox->srv;
+		ctx.skybox_cb = skybox->tf_cbv;
 		ctx.pass_cb = forward_cb->pass_cb;
 		ctx.radiance_multiplier = skybox->radiance_factor;
 

@@ -28,7 +28,8 @@ public:
 		ScreenConstants,
 		MainRenderitems,
 		ForwardPassCB,
-		DepthStencilBuffer
+		DepthStencilBuffer,
+		Skybox
 		>;
 	using CloseRes = std::tuple
 		<
@@ -81,6 +82,8 @@ inline void ForwardPassNode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_lis
 	if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer )
 		throw SnowEngineException( "missing resource" );
 
+	auto& skybox = m_framegraph->GetRes<Skybox>();
+
 	ForwardLightingPass::Context ctx;
 	ctx.back_buffer_rtv = hdr_buffer->rtv;
 	ctx.depth_stencil_view = depth_buffer->dsv;
@@ -90,6 +93,9 @@ inline void ForwardPassNode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_lis
 	ctx.ambient_rtv = ambient_buffer->rtv;
 	ctx.normals_rtv = normal_buffer->rtv;
 	ctx.shadow_cascade_srv = csm->srv;
+	ctx.ibl.irradiance_map_srv = skybox->srv;
+	ctx.ibl.radiance_multiplier = skybox->radiance_factor;
+	ctx.ibl.transform = skybox->tf_cbv;
 
 	const float bgr_color[4] = { 0, 0, 0, 0 };
 	cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
