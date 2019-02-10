@@ -111,13 +111,16 @@ PixelOut main(PixelIn pin)
 	float3 res_color = float3( 0.0f, 0.0f, 0.0f );
 
     float tangent_normal_z;
+    pin.normal = normalize( pin.normal );
+    pin.tangent = normalize( pin.tangent - dot( pin.tangent, pin.normal ) * pin.normal );
+    pin.binormal = cross( pin.normal, pin.tangent );
 	float3 normal = ws_normal_bump_mapping( normalize( pin.normal ),
-											normalize( pin.tangent ),
-											normalize( pin.binormal ),
+											pin.tangent,
+											pin.binormal,
 											normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
                                             tangent_normal_z );
 
-	float3 specular = specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb; // r - occlusion, g - roughness, b - metallic
+	float3 specular = specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb; // r - occlusion, g - smoothness, b - metallic
 
 	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
 	{
@@ -126,7 +129,7 @@ PixelOut main(PixelIn pin)
 		float3 light_radiance = rendering_equation( base_color, light.dir,
 												 normalize( -pin.pos_v ),
 												 normal,
-												 specular.g, specular.b );
+												 1.0f - specular.g, specular.b );
 
         res_color += light.strength
                      * light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade, pass_params.csm_split_positions, shadow_map_sampler );
