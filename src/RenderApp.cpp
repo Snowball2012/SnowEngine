@@ -433,7 +433,7 @@ void RenderApp::LoadPlaceholderTextures()
 {
 	m_ph_normal_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
 	m_ph_specular_texture = m_renderer->GetScene().LoadStreamedTexture( "resources/textures/default_spec.dds" );
-	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/irradiance_map.DDS" );
+	TextureID skybox_tex = m_renderer->GetScene().LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
 	m_skybox_tf = m_renderer->GetScene().AddTransform();
 	CubemapID skybox_cubemap = m_renderer->GetScene().AddCubemapFromTexture( skybox_tex );
 	m_ph_skybox = m_renderer->GetScene().AddEnviromentMap( skybox_cubemap, m_skybox_tf );

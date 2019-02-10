@@ -72,6 +72,27 @@ void Renderer::Init()
 	BuildPasses();
 
 	m_pssm.SetSplitsNum( MAX_CASCADE_SIZE );
+
+
+	m_brdf_lut = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/brdf_lut.DDS" );
+	TextureID irradiance_map_tex = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
+	m_irradiance_map = GetScene().AddCubemapFromTexture( irradiance_map_tex );
+	m_ibl_table = DescriptorTables().AllocateTable( 3 );
+
+	{
+		ResourceUploadBatch upload( m_d3d_device.Get() );
+
+		upload.Begin();
+
+		ThrowIfFailed(
+			CreateDDSTextureFromFile( m_d3d_device.Get(), upload, L"D:/scenes/bistro/ibl/reflection_probe_cm.dds",
+									  m_reflection_probe_res.ReleaseAndGetAddressOf() ) );
+
+		upload.End( m_graphics_queue->GetCmdQueue() ).wait();
+
+		CreateShaderResourceView( m_d3d_device.Get(), m_reflection_probe_res.Get(),
+								  CD3DX12_CPU_DESCRIPTOR_HANDLE( *DescriptorTables().ModifyTable( m_ibl_table ), 2, m_cbv_srv_uav_size ), true );
+	}
 }
 
 
@@ -87,6 +108,25 @@ void Renderer::Draw( const Context& ctx )
 		scene_camera = m_frustrum_cull_camera_id;
 	else
 		scene_camera = m_main_camera_id;
+
+	{
+		D3D12_CPU_DESCRIPTOR_HANDLE desc_table = *DescriptorTables().ModifyTable( m_ibl_table );
+		if ( auto* tex = GetScene().GetROScene().AllTextures().try_get( m_brdf_lut ) )
+		{
+			if ( tex->IsLoaded() )
+			{
+				m_d3d_device->CopyDescriptorsSimple( 1, desc_table, tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+			}
+		}
+		if ( auto* tex = GetScene().GetROScene().AllCubemaps().try_get( m_irradiance_map ) )
+		{
+			if ( tex->IsLoaded() )
+			{
+				m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, m_cbv_srv_uav_size ),
+													 tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+			}
+		}
+	}
 
 	m_scene_manager->UpdateFramegraphBindings( scene_camera, PSSM(), m_screen_viewport );
 
@@ -605,9 +645,14 @@ void Renderer::BindSkybox( EnvMapID skybox_id )
 		throw SnowEngineException( "skybox does not have a cubemap attached" );
 
 	if ( cubemap->IsLoaded() )
-		framegraph_res.srv = skybox.GetSRV();
+		framegraph_res.srv_skybox = skybox.GetSRV();
 	else
-		framegraph_res.srv.ptr = 0;
+		framegraph_res.srv_skybox.ptr = 0;
+
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE desc_table = DescriptorTables().GetTable( m_ibl_table )->gpu_handle;
+		framegraph_res.srv_table = desc_table;
+	}
 
 	const ObjectTransform* tf = scene.AllTransforms().try_get( skybox.GetTransform() );
 	if ( ! tf )

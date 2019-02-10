@@ -93,7 +93,7 @@ inline void ForwardPassNode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_lis
 	ctx.ambient_rtv = ambient_buffer->rtv;
 	ctx.normals_rtv = normal_buffer->rtv;
 	ctx.shadow_cascade_srv = csm->srv;
-	ctx.ibl.irradiance_map_srv = skybox->srv;
+	ctx.ibl.desc_table_srv = skybox->srv_table;
 	ctx.ibl.radiance_multiplier = skybox->radiance_factor;
 	ctx.ibl.transform = skybox->tf_cbv;
 

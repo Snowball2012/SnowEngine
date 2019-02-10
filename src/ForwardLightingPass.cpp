@@ -92,7 +92,7 @@ void ForwardLightingPass::Draw( const Context& context ) noexcept
 	m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
 
 	m_cmd_list->SetGraphicsRootConstantBufferView( 5, context.pass_cb );
-	m_cmd_list->SetGraphicsRootDescriptorTable( 6, context.ibl.irradiance_map_srv );
+	m_cmd_list->SetGraphicsRootDescriptorTable( 6, context.ibl.desc_table_srv );
 	m_cmd_list->SetGraphicsRootConstantBufferView( 7, context.ibl.transform );
 	m_cmd_list->SetGraphicsRoot32BitConstants( 8, 1, &context.ibl.radiance_multiplier, 0 );
 

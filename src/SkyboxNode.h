@@ -45,7 +45,7 @@ public:
 			 || ! forward_cb || ! screen_constants )
 			throw SnowEngineException( "missing resource" );
 
-		if ( skybox->srv.ptr == 0 )
+		if ( skybox->srv_skybox.ptr == 0 )
 		{
 			CD3DX12_RESOURCE_BARRIER barriers[] =
 			{
@@ -63,7 +63,7 @@ public:
 		SkyboxPass::Context ctx;
 		ctx.frame_dsv = depth_buffer->dsv;
 		ctx.frame_rtv = hdr_buffer->rtv;
-		ctx.skybox_srv = skybox->srv;
+		ctx.skybox_srv = skybox->srv_skybox;
 		ctx.skybox_cb = skybox->tf_cbv;
 		ctx.pass_cb = forward_cb->pass_cb;
 		ctx.radiance_multiplier = skybox->radiance_factor;

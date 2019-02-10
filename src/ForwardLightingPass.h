@@ -32,7 +32,7 @@ public:
 		D3D12_GPU_DESCRIPTOR_HANDLE shadow_cascade_srv;
 		struct IBL
 		{
-			D3D12_GPU_DESCRIPTOR_HANDLE irradiance_map_srv;
+			D3D12_GPU_DESCRIPTOR_HANDLE desc_table_srv;
 			float radiance_multiplier;
 			D3D12_GPU_VIRTUAL_ADDRESS transform;
 		} ibl;
@@ -105,7 +105,7 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // albedo, normal, specular
 	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
 	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow cascade
-	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // irradiance map
+	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // irradiance map
 
 	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_PIXEL );
 	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_PIXEL );

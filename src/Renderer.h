@@ -113,6 +113,11 @@ private:
 	CameraID m_main_camera_id = CameraID::nullid;
 	CameraID m_frustrum_cull_camera_id = CameraID::nullid;
 
+	CubemapID m_irradiance_map = CubemapID::nullid;
+	ComPtr<ID3D12Resource> m_reflection_probe_res;
+	TextureID m_brdf_lut = TextureID::nullid;
+	DescriptorTableID m_ibl_table = DescriptorTableID::nullid;
+
 	std::unique_ptr<SceneManager> m_scene_manager;
 
 	// descriptor heaps

@@ -103,6 +103,11 @@ private:
 	bool m_dbg_use_separate_camera = false;
 	LightID m_sun = LightID::nullid;
 
+
+	CubemapID m_reflection_probe = CubemapID::nullid;
+	CubemapID m_irradiance_map = CubemapID::nullid;
+	TextureID m_brdf_lut = TextureID::nullid;
+
 	// external geometry
 	ImportedScene m_imported_scene;
 	

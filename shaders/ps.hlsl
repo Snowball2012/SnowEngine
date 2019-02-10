@@ -36,7 +36,9 @@ Texture2D normal_map : register(t1);
 Texture2D specular_map : register(t2);
 Texture2D shadow_map : register(t3);
 Texture2DArray shadow_cascade : register(t4);
-TextureCube irradiance_map : register(t5);
+Texture2D brdf_lut : register(t5);
+TextureCube irradiance_map : register(t6);
+TextureCube reflection_probe : register(t7);
 
 struct PixelIn
 {
@@ -82,6 +84,11 @@ float3 ws_normal_bump_mapping( float3 ws_normal, float3 ws_tangent, float3 ws_bi
 float percieved_brightness(float3 color)
 {
     return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
+}
+
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+    return F0 + (max(float3(1,1,1) * (1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 PixelOut main(PixelIn pin)
@@ -139,11 +146,25 @@ PixelOut main(PixelIn pin)
     const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
   
     float4 irradiance_dir = mul( mul( float4( normal, 0.0f ), pass_params.view_inv_mat ), ibl.world2env_mat );
+    float4 reflection_dir = mul( mul( float4( reflect( pin.pos_v, normal ), 0.0f ), pass_params.view_inv_mat ), ibl.world2env_mat );
     PixelOut res;
     res.color = float4(res_color, 1.0f);
     
     //res.ambient_color = float4( percieved_brightness( pass_params.parallel_lights[0].strength ) * base_color.rgb * ambient_color_linear, 1.0f);
-    res.ambient_color = float4( ibl_radiance_multiplier * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz * base_color.rgb, 1.0f);
+    res.ambient_color = float4( (1.0f - specular.b) * ibl_radiance_multiplier * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz * base_color.rgb, 1.0f);
+
+    float metallic = specular.b;
+	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
+	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
+    float cos_nv = saturate( dot( normalize( -pin.pos_v ), normal ) );
+    float roughness = 1.0f - specular.g;
+    //fresnel_r0 = fresnelSchlickRoughness( cos_nv, fresnel_r0, roughness );
+    float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, roughness ) * 6.0f );
+    float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( saturate( dot( normalize( -pin.pos_v ), normal ) ), roughness ) ).xy;
+
+    float3 specular_ambient = ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + float3( 1, 1, 1 ) * env_brdf.y );
+
+    res.ambient_color += float4( specular_ambient, 0.0f );
 
     res.screen_space_normal = normal.xy;
 	return res;
