@@ -387,8 +387,6 @@ void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t ne
 	m_client_width = new_width;
 	m_client_height = new_height;
 
-	ThrowIfFailed( m_cmd_list->Reset( m_direct_cmd_allocator.Get(), nullptr ) );
-
 	// Release the previous resources we will be recreating.
 	for ( int i = 0; i < SwapChainBufferCount; ++i )
 		m_swap_chain_buffer[i].Reset();
@@ -436,7 +434,7 @@ void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t ne
 		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
 		D3D12_HEAP_FLAG_NONE,
 		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&optClear,
 		IID_PPV_ARGS( m_depth_stencil_buffer.GetAddressOf() ) ) );
 
@@ -450,18 +448,6 @@ void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t ne
 	m_back_buffer_dsv.reset();
 	m_back_buffer_dsv.emplace( std::move( m_dsv_heap->AllocateDescriptor() ) );
 	m_d3d_device->CreateDepthStencilView( m_depth_stencil_buffer.Get(), &dsvDesc, m_back_buffer_dsv->HandleCPU() );
-
-	// Transition the resource from its initial state to be used as a depth buffer.
-	m_cmd_list->ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(),
-																		   D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE ) );
-
-   // Execute the resize commands.
-	ThrowIfFailed( m_cmd_list->Close() );
-	ID3D12CommandList* cmdsLists[] = { m_cmd_list.Get() };
-	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmdsLists ), cmdsLists );
-
-	// Wait until resize is complete.
-	m_graphics_queue->Flush();
 
 	// Update the viewport transform to cover the client area.
 	m_screen_viewport.TopLeftX = 0;

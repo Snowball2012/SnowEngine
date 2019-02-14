@@ -57,7 +57,7 @@ void StaticTextureManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Time
 	if ( m_pending_transaction.textures_to_upload.empty() && m_pending_transaction.textures_to_remove.empty() )
 		return; // nothing to do
 
-	if ( m_pending_transaction.textures_to_upload.size() != m_pending_transaction.textures_to_upload.size() )
+	if ( m_pending_transaction.textures_to_upload.size() != m_pending_transaction.uploaders.size() )
 		throw SnowEngineException( "number of textures must match the number of uploaders" );
 
 	for ( size_t tex_idx = 0; tex_idx < m_pending_transaction.textures_to_upload.size(); tex_idx++ )
@@ -179,13 +179,15 @@ StaticTextureManager::UploadData StaticTextureManager::CreateAndFillUploader( co
 
 	D3D12_RESOURCE_DESC res_desc = gpu_res->GetDesc();
 
-	uploader.footprints.resize( subresources.size() );
+	const size_t nsubres = subresources.size();
+
+	uploader.footprints.resize( nsubres );
 	auto& footprints = uploader.footprints;
 
-	std::vector<UINT> nrows( subresources.size() );
-	std::vector<UINT64> row_size( subresources.size() );
+	std::vector<UINT> nrows( nsubres );
+	std::vector<UINT64> row_size( nsubres );
 	UINT64 required_size = 0;
-	m_device->GetCopyableFootprints( &res_desc, 0, UINT( subresources.size() ), 0, footprints.data(), nrows.data(), row_size.data(), &required_size );
+	m_device->GetCopyableFootprints( &res_desc, 0, UINT( nsubres ), 0, footprints.data(), nrows.data(), row_size.data(), &required_size );
 
 	ThrowIfFailed( m_device->CreateCommittedResource(
 		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
@@ -198,16 +200,17 @@ StaticTextureManager::UploadData StaticTextureManager::CreateAndFillUploader( co
 	uint8_t* mapped_uploader;
 	ThrowIfFailed( uploader.resource->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
 
-	for ( size_t i = 0; i < subresources.size(); ++i )
+	for ( size_t i = 0; i < nsubres; ++i )
 	{
+		const auto& subres_footprint = footprints[i].Footprint;
 		D3D12_MEMCPY_DEST dest_data =
 		{
 			mapped_uploader + footprints[i].Offset,
-			footprints[i].Footprint.RowPitch,
-			footprints[i].Footprint.RowPitch * nrows[i]
+			subres_footprint.RowPitch,
+			subres_footprint.RowPitch * nrows[i]
 		};
 
-		MemcpySubresource( &dest_data, &subresources[i], SIZE_T( row_size[i] ), nrows[i], footprints[i].Footprint.Depth );
+		MemcpySubresource( &dest_data, &subresources[i], SIZE_T( row_size[i] ), nrows[i], subres_footprint.Depth );
 	}
 
 	uploader.resource->Unmap( 0, nullptr );

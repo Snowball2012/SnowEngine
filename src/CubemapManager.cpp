@@ -62,7 +62,7 @@ void CubemapManager::Update( )
 		}
 		else
 		{
-			i++;
+			++i;
 		}
 	}
 }
@@ -70,7 +70,7 @@ void CubemapManager::Update( )
 
 void CubemapManager::OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_graphics_queue )
 {
-	for ( auto i = m_conversion_in_progress.begin(); i != m_conversion_in_progress.end(); i++ )
+	for ( auto i = m_conversion_in_progress.begin(); i != m_conversion_in_progress.end(); ++i )
 	{
 		if ( ! ( i->texture_srv == DescriptorTableBakery::TableID::nullid ) )
 		{
@@ -78,13 +78,13 @@ void CubemapManager::OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_grap
 																			  m_desc_tables->GetTable( i->texture_srv )->gpu_handle,
 																			  DXGI_FORMAT_R16G16B16A16_FLOAT, cmd_list_graphics_queue );
 
+			if ( ! i->cubemap.gpu_res )
+				throw SnowEngineException( "convertation failed" );
+
 			cmd_list_graphics_queue.ResourceBarrier( 1,
 													 &CD3DX12_RESOURCE_BARRIER::Transition( i->cubemap.gpu_res.Get(),
 																							D3D12_RESOURCE_STATE_RENDER_TARGET,
 																							D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
-
-			if ( ! i->cubemap.gpu_res )
-				throw SnowEngineException( "convertation failed" );
 
 			i->cubemap.staging_srv = std::make_unique<Descriptor>( std::move( m_srv_heap.AllocateDescriptor() ) );
 			DirectX::CreateShaderResourceView( m_device.Get(), i->cubemap.gpu_res.Get(), i->cubemap.staging_srv->HandleCPU(), true );

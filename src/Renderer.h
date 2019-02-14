@@ -76,11 +76,6 @@ public:
 private:
 	using DescriptorTableID = DescriptorTableBakery::TableID;
 
-	// data
-	ComPtr<ID3D12Resource> SKYBOX;
-	DescriptorTableID SKYBOX_SRV;
-
-
 	// windows stuff
 	HWND m_main_hwnd = nullptr;
 	uint32_t m_client_width = 800;
@@ -140,9 +135,6 @@ private:
 	static constexpr int PassCount = 2;
 
 	// framegraph
-	std::unique_ptr<ToneMappingPass> m_tonemap_pass = nullptr;
-	std::unique_ptr<HBAOPass> m_hbao_pass = nullptr;
-
 	ParallelSplitShadowMapping m_pssm;
 
 	using FramegraphInstance =

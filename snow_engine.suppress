@@ -759,4 +759,36 @@
     <CodeCurrent>195409</CodeCurrent>
     <CodeNext>123</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>Renderer.cpp</FileName>
+    <ErrorCode>V1020</ErrorCode>
+    <Message>The function exited without calling the 'upload.End' function. Check lines: _, _.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>958756</CodeCurrent>
+    <CodeNext>86499344</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>Renderer.cpp</FileName>
+    <ErrorCode>V807</ErrorCode>
+    <Message>Decreased performance. Consider creating a reference to avoid using the 'GetScene().GetROScene()' expression repeatedly.</Message>
+    <CodePrev>239911323</CodePrev>
+    <CodeCurrent>3401720475</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>SceneItems.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: m_data.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>72777</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>CubemapManager.cpp</FileName>
+    <ErrorCode>V807</ErrorCode>
+    <Message>Decreased performance. Consider creating a reference to avoid using the 'i-&gt;cubemap' expression repeatedly.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>737704107</CodeCurrent>
+    <CodeNext>4046215760</CodeNext>
+  </snow_engine>
 </NewDataSet>
