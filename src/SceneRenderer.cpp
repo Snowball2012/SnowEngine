@@ -18,21 +18,29 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 	if ( m_framegraph.IsRebuildNeeded() )
 		m_framegraph.Rebuild();
 
-	CameraID scene_camera;
-	if (  ctx.frustrum_cull_camera != CameraID::nullid )
-		scene_camera = ctx.frustrum_cull_camera;
-	else
-		scene_camera = ctx.main_camera;
-
 	const Scene& scene = *ctx.scene;
 
 	const Camera* main_camera = scene.AllCameras().try_get( ctx.main_camera );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
 
+	std::vector<RenderItem> lighting_items = BuildRenderitems( main_camera->GetData(), scene );
+
 	m_forward_cb_provider.Update( main_camera->GetData(), m_pssm, scene.LightSpan() );
 
-	m_scene_manager->BindToFramegraph( m_framegraph, *m_forward_cb_provider );
+	ShadowProducers producers;
+	ShadowMaps sm_storage;
+	ShadowCascadeProducers pssm_producers;
+	ShadowCascade pssm_storage;
+	m_shadow_provider.FillFramegraphStructures( m_forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
+	m_framegraph.SetRes( producers );
+	m_framegraph.SetRes( sm_storage );
+	m_framegraph.SetRes( pssm_producers );
+	m_framegraph.SetRes( pssm_storage );
+
+	MainRenderitems forward_renderitems;
+	forward_renderitems.items = make_span( lighting_items );
+	m_framegraph.SetRes( forward_renderitems );
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
@@ -155,4 +163,78 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 
 	EndFrame();
 
+}
+
+
+std::vector<RenderItem> SceneRenderer::BuildRenderitems( const Camera::Data& camera, const Scene& scene )
+{
+	if ( camera.type != Camera::Type::Perspective )
+		NOTIMPL;
+
+	DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
+																camera.aspect_ratio,
+																camera.near_plane,
+																camera.far_plane );
+
+	DirectX::BoundingFrustum main_bf( proj );
+
+	DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
+														DirectX::XMLoadFloat3( &camera.dir ),
+														DirectX::XMLoadFloat3( &camera.up ) );
+	DirectX::XMVECTOR det;
+	main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
+
+	std::vector<RenderItem> items;
+	items.reserve( scene.StaticMeshInstanceSpan().size() );
+	for ( const auto& mesh_instance : scene.StaticMeshInstanceSpan() )
+	{
+		if ( ! mesh_instance.IsEnabled() )
+			continue;
+
+		const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
+		const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
+		if ( ! geom.IsLoaded() )
+			continue;
+
+		RenderItem item;
+		item.ibv = geom.IndexBufferView();
+		item.vbv = geom.VertexBufferView();
+
+		const auto& submesh_draw_args = submesh.DrawArgs();
+
+		item.index_count = submesh_draw_args.idx_cnt;
+		item.index_offset = submesh_draw_args.start_index_loc;
+		item.vertex_offset = submesh_draw_args.base_vertex_loc;
+
+		const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
+		item.mat_cb = material.GPUConstantBuffer();
+		item.mat_table = material.DescriptorTable();
+
+		bool has_unloaded_texture = false;
+		const auto& textures = material.Textures();
+		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
+		{
+			if ( ! scene.AllTextures()[tex_id].IsLoaded() )
+			{
+				has_unloaded_texture = true;
+				break;
+			}
+		}
+
+		if ( has_unloaded_texture )
+			continue;
+
+		const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
+		item.tf_addr = tf.GPUView();
+
+		DirectX::BoundingOrientedBox item_box;
+		DirectX::BoundingOrientedBox::CreateFromBoundingBox( item_box, submesh.Box() );
+
+		item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
+
+		if ( item_box.Intersects( main_bf ) )
+			items.push_back( item );
+
+		return std::move( items );
+	}
 }

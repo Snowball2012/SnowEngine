@@ -24,15 +24,18 @@ public:
 	DescriptorTableBakery::TableID SRV() const { return m_srv; }
 	DescriptorTableBakery::TableID UAV() const { return m_uav; }
 	const Descriptor* RTV() const { return m_rtv.get(); }
+	const Descriptor* DSV() const { return m_dsv.get(); }
 
 	DescriptorTableBakery::TableID& SRV() { return m_srv; }
 	DescriptorTableBakery::TableID& UAV() { return m_uav; }
 	std::unique_ptr<Descriptor>& RTV() { return m_rtv; }
+	std::unique_ptr<Descriptor>& DSV() { return m_dsv; }
 
 private:
 	DescriptorTableBakery::TableID m_srv = DescriptorTableBakery::TableID::nullid;
 	DescriptorTableBakery::TableID m_uav = DescriptorTableBakery::TableID::nullid;
 	std::unique_ptr<Descriptor> m_rtv = nullptr;
+	std::unique_ptr<Descriptor> m_dsv = nullptr;
 };
 
 struct RenderItem

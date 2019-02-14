@@ -132,24 +132,6 @@ private:
 	int m_cur_fr_idx = 0;
 	static constexpr int PassCount = 2;
 
-	// framegraph
-	ParallelSplitShadowMapping m_pssm;
-
-	using FramegraphInstance =
-		Framegraph
-		<
-			DepthPrepassNode,
-			ShadowPassNode,
-			PSSMNode,
-			ForwardPassNode,
-			SkyboxNode,
-			HBAONode,
-			BlurSSAONode,
-			ToneMapNode,
-			UIPassNode
-		>;
-
-	FramegraphInstance m_framegraph;
 
 	// cmd lists
 	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;

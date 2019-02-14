@@ -16,6 +16,7 @@
 #include "Scene.h"
 
 #include "ForwardCBProvider.h"
+#include "ShadowProvider.h"
 
 #include "ParallelSplitShadowMapping.h"
 
@@ -53,7 +54,6 @@ public:
 	{
 		Scene* scene = nullptr;
 		CameraID main_camera = CameraID::nullid;
-		CameraID frustrum_cull_camera = CameraID::nullid; // if this is set to nullid, use main camera for frustrum culling
 
 		// temporary
 		DescriptorTableID ibl_table = DescriptorTableID::nullid;
@@ -127,9 +127,10 @@ private:
 		>;
 	FramegraphInstance m_framegraph;
 	ForwardCBProvider m_forward_cb_provider;
+	ShadowProvider m_shadow_provider;
 
 	// transient resources
-	ComPtr<ID3D12Resource> m_depth_stencil_buffer = nullptr;
+	std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
 	std::unique_ptr<DynamicTexture> m_fp_backbuffer = nullptr;
 	std::unique_ptr<DynamicTexture> m_ambient_lighting = nullptr;
 	std::unique_ptr<DynamicTexture> m_normals = nullptr;
@@ -148,4 +149,6 @@ private:
 	void InitTransientResourceDescriptors();
 	void CreateTransientResources();
 	void DestroyTransientResources();
+
+	std::vector<RenderItem> BuildRenderitems( const Camera::Data& camera, const Scene& scene );
 };

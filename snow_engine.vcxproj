@@ -205,6 +205,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\SceneRenderer.cpp" />
     <ClCompile Include="src\RenderPass.cpp" />
     <ClCompile Include="src\ResizableTexture.cpp" />
     <ClCompile Include="src\Scene.cpp" />
@@ -237,7 +238,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="src\UVScreenDensityCalculator.cpp" />
-    <ClCompile Include="src\XMMath.cpp" />
+    <ClCompile Include="src\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\BlurSSAONode.h" />
@@ -268,6 +269,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
     <ClInclude Include="src\Framegraph.h" />
     <ClInclude Include="src\Framegraph.hpp" />
+    <ClInclude Include="src\SceneRenderer.h" />
     <ClInclude Include="src\SkyboxNode.h" />
     <ClInclude Include="src\SkyboxPass.h" />
     <ClInclude Include="src\StaticTextureManager.h" />
@@ -308,7 +310,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\utils\span.h" />
     <ClInclude Include="src\utils\UniqueTuple.h" />
     <ClInclude Include="src\UVScreenDensityCalculator.h" />
-    <ClInclude Include="src\XMMath.h" />
+    <ClInclude Include="src\MathUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\cubemap_gen_ps.hlsl">

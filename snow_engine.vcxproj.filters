@@ -89,9 +89,6 @@
     <ClCompile Include="src\GeomGeneration.cpp">
       <Filter>content_generation</Filter>
     </ClCompile>
-    <ClCompile Include="src\XMMath.cpp">
-      <Filter>utils</Filter>
-    </ClCompile>
     <ClCompile Include="src\RenderUtils.cpp">
       <Filter>core</Filter>
     </ClCompile>
@@ -212,6 +209,12 @@
     <ClCompile Include="src\OldRenderer.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\SceneRenderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\MathUtils.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -225,9 +228,6 @@
     </ClInclude>
     <ClInclude Include="src\GeomGeneration.h">
       <Filter>content_generation</Filter>
-    </ClInclude>
-    <ClInclude Include="src\XMMath.h">
-      <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\GeomGeneration.hpp">
       <Filter>content_generation</Filter>
@@ -409,6 +409,12 @@
     <ClInclude Include="src\CubemapManager.h" />
     <ClInclude Include="src\OldRenderer.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\SceneRenderer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\MathUtils.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
