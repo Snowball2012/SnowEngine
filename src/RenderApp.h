@@ -18,7 +18,7 @@
 
 #include "TemporalAA.h"
 
-#include "Renderer.h"
+#include "OldRenderer.h"
 
 class RenderApp: public D3DApp
 {
@@ -82,8 +82,8 @@ private:
 	{
 	public:
 		void Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id, EnvMapID skybox_id );
-		void Enable( SceneClientView& scene, Renderer& renderer );
-		void Disable( SceneClientView& scene, Renderer& renderer );
+		void Enable( SceneClientView& scene, OldRenderer& renderer );
+		void Disable( SceneClientView& scene, OldRenderer& renderer );
 		void Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt );
 
 	private:
@@ -97,7 +97,7 @@ private:
 
 	std::future<void> m_is_scene_loaded;
 
-	std::unique_ptr<Renderer> m_renderer = nullptr;
+	std::unique_ptr<OldRenderer> m_renderer = nullptr;
 	CameraID m_camera = CameraID::nullid;
 	CameraID m_dbg_frustrum_camera = CameraID::nullid;
 	bool m_dbg_use_separate_camera = false;

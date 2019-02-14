@@ -37,7 +37,7 @@ bool RenderApp::Initialize()
 	if ( ! D3DApp::Initialize() )
 		return false;
 
-	m_renderer = std::make_unique<Renderer>( mhMainWnd, mClientWidth, mClientHeight );
+	m_renderer = std::make_unique<OldRenderer>( mhMainWnd, mClientWidth, mClientHeight );
 	m_renderer->Init();
 
 	if ( strlen( m_cmd_line ) != 0 ) //-V805
@@ -177,7 +177,7 @@ void RenderApp::UpdateGUI()
 	{
 		ImGui::Begin( "Performance", nullptr );
 
-		Renderer::PerformanceStats stats = m_renderer->GetPerformanceStats();
+		OldRenderer::PerformanceStats stats = m_renderer->GetPerformanceStats();
 
 		ImGui::Text( "TextureStreamer vidmem:\n\tIn use: %u MB\n\tTotal:  %u MB", stats.tex_streamer.vidmem_in_use / ( 1024 * 1024 ), stats.tex_streamer.vidmem_allocated / (1024*1024) );
 		ImGui::NewLine();
@@ -306,7 +306,7 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 void RenderApp::Draw( const GameTimer& gt )
 {
-	Renderer::Context ctx;
+	OldRenderer::Context ctx;
 	{
 		ctx.taa_enabled = m_taa_enabled;
 		ctx.wireframe_mode = m_wireframe_mode;
@@ -534,7 +534,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 	LoadCube( scene, normal_tex_id, specular_tex_id );
 }
 
-void RenderApp::LoadingScreen::Enable( SceneClientView& scene, Renderer& renderer )
+void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& renderer )
 {
 	renderer.SetFrustrumCullCamera( CameraID::nullid );
 	renderer.SetMainCamera( m_camera );
@@ -549,7 +549,7 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, Renderer& rendere
 	cube->IsEnabled() = true;
 }
 
-void RenderApp::LoadingScreen::Disable( SceneClientView& scene, Renderer& renderer )
+void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& renderer )
 {
 	renderer.SetMainCamera( CameraID::nullid );
 	SceneLight* light = scene.ModifyLight( m_light );

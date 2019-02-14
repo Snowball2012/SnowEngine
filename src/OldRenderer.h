@@ -25,12 +25,12 @@
 #include "ForwardCBProvider.h"
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
-class Renderer
+class OldRenderer
 {
 public:
 	
-	Renderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height );
-	~Renderer();
+	OldRenderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height );
+	~OldRenderer();
 
 	void Init( );
 	

@@ -201,7 +201,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\MaterialTableBaker.cpp" />
     <ClCompile Include="src\ParallelSplitShadowMapping.cpp" />
     <ClCompile Include="src\PSSMGenPass.cpp" />
-    <ClCompile Include="src\Renderer.cpp">
+    <ClCompile Include="src\OldRenderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -276,7 +276,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\PSSMGenPass.h" />
     <ClInclude Include="src\PSSMNode.h" />
     <ClInclude Include="src\Ptr.h" />
-    <ClInclude Include="src\Renderer.h">
+    <ClInclude Include="src\OldRenderer.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClInclude>

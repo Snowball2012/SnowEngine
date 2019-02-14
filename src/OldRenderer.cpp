@@ -2,7 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
-#include "Renderer.h"
+#include "OldRenderer.h"
 
 #include <imgui/imgui.h>
 #include "imgui_impl/imgui_impl_win32.h"
@@ -22,11 +22,11 @@
 
 using namespace DirectX;
 
-Renderer::Renderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height )
+OldRenderer::OldRenderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height )
 	: m_main_hwnd( main_hwnd ), m_client_width( screen_width ), m_client_height( screen_height )
 {}
 
-Renderer::~Renderer()
+OldRenderer::~OldRenderer()
 {
 	for ( auto& desc : m_back_buffer_rtv )
 		desc.reset();
@@ -43,7 +43,7 @@ Renderer::~Renderer()
 }
 
 #include <dxtk12/ResourceUploadBatch.h>
-void Renderer::Init()
+void OldRenderer::Init()
 {
 	CreateDevice();
 
@@ -96,7 +96,7 @@ void Renderer::Init()
 }
 
 
-void Renderer::Draw( const Context& ctx )
+void OldRenderer::Draw( const Context& ctx )
 {
 	m_framegraph.ClearResources();
 
@@ -259,19 +259,19 @@ void Renderer::Draw( const Context& ctx )
 	EndFrame();	
 }
 
-void Renderer::NewGUIFrame()
+void OldRenderer::NewGUIFrame()
 {
 	ImGui_ImplWin32_NewFrame();
 }
 
-void Renderer::Resize( uint32_t new_width, uint32_t new_height )
+void OldRenderer::Resize( uint32_t new_width, uint32_t new_height )
 {
 	RecreateSwapChainAndDepthBuffers( new_width, new_height );
 
 	ResizeTransientTextures( );
 }
 
-bool Renderer::SetMainCamera( CameraID id )
+bool OldRenderer::SetMainCamera( CameraID id )
 {
 	if ( ! GetScene().GetROScene().AllCameras().has( id ) )
 		return false;
@@ -279,7 +279,7 @@ bool Renderer::SetMainCamera( CameraID id )
 	return true;
 }
 
-bool Renderer::SetFrustrumCullCamera( CameraID id )
+bool OldRenderer::SetFrustrumCullCamera( CameraID id )
 {
 	if ( ! GetScene().GetROScene().AllCameras().has( id ) )
 		return false;
@@ -287,12 +287,12 @@ bool Renderer::SetFrustrumCullCamera( CameraID id )
 	return true;
 }
 
-Renderer::PerformanceStats Renderer::GetPerformanceStats() const noexcept
+OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
 {
 	return { m_scene_manager->GetTexStreamer().GetPerformanceStats() };
 }
 
-void Renderer::CreateDevice()
+void OldRenderer::CreateDevice()
 {
 
 #if defined(DEBUG) || defined(_DEBUG) 
@@ -327,7 +327,7 @@ void Renderer::CreateDevice()
 	}
 }
 
-void Renderer::CreateBaseCommandObjects()
+void OldRenderer::CreateBaseCommandObjects()
 {
 	ThrowIfFailed( m_d3d_device->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -346,7 +346,7 @@ void Renderer::CreateBaseCommandObjects()
 	m_cmd_list->Close();
 }
 
-void Renderer::CreateSwapChain()
+void OldRenderer::CreateSwapChain()
 {
 	m_swap_chain.Reset();
 
@@ -374,7 +374,7 @@ void Renderer::CreateSwapChain()
 		m_swap_chain.GetAddressOf() ) );
 }
 
-void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height )
+void OldRenderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height )
 {
 	assert( m_swap_chain );
 	assert( m_direct_cmd_allocator );
@@ -462,13 +462,13 @@ void Renderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t ne
 	ImGui_ImplDX12_CreateDeviceObjects();
 }
 
-void Renderer::BuildRtvAndDsvDescriptorHeaps()
+void OldRenderer::BuildRtvAndDsvDescriptorHeaps()
 {
 	m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device );
 	m_dsv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_d3d_device );
 }
 
-void Renderer::BuildUIDescriptorHeap( )
+void OldRenderer::BuildUIDescriptorHeap( )
 {
 	// srv heap
 	{
@@ -483,7 +483,7 @@ void Renderer::BuildUIDescriptorHeap( )
 	}
 }
 
-void Renderer::CreateTransientTextures()
+void OldRenderer::CreateTransientTextures()
 {
 	// little hack here, create 1x1 textures and resize them right after
 	
@@ -540,7 +540,7 @@ void Renderer::CreateTransientTextures()
 	ResizeTransientTextures();
 }
 
-void Renderer::ResizeTransientTextures( )
+void OldRenderer::ResizeTransientTextures( )
 {
 	auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
 	{
@@ -570,7 +570,7 @@ void Renderer::ResizeTransientTextures( )
 	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, DescriptorTables().ModifyTable( m_depth_buffer_srv ).value() );
 }
 
-void Renderer::InitImgui()
+void OldRenderer::InitImgui()
 {
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -582,7 +582,7 @@ void Renderer::InitImgui()
 	ImGui::StyleColorsDark();
 }
 
-void Renderer::BuildFrameResources( )
+void OldRenderer::BuildFrameResources( )
 {
 	for ( int i = 0; i < FrameResourceCount; ++i )
 		m_frame_resources.emplace_back( m_d3d_device.Get(), 2 );
@@ -590,7 +590,7 @@ void Renderer::BuildFrameResources( )
 	m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
 }
 
-void Renderer::BuildPasses()
+void OldRenderer::BuildPasses()
 {
 	m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, *m_d3d_device.Get() );
 
@@ -614,7 +614,7 @@ void Renderer::BuildPasses()
 		m_framegraph.Rebuild();
 }
 
-void Renderer::BindSkybox( EnvMapID skybox_id )
+void OldRenderer::BindSkybox( EnvMapID skybox_id )
 {
 	assert( m_scene_manager->GetScene().GetROScene().AllEnviromentMaps().has( skybox_id ) );
 
@@ -651,7 +651,7 @@ void Renderer::BindSkybox( EnvMapID skybox_id )
 	m_framegraph.SetRes( framegraph_res );
 }
 
-void Renderer::EndFrame()
+void OldRenderer::EndFrame()
 {
 	// GPU timeline
 
@@ -670,17 +670,17 @@ void Renderer::EndFrame()
 		m_graphics_queue->WaitForTimestamp( m_cur_frame_resource->available_timestamp );
 }
 
-ID3D12Resource* Renderer::CurrentBackBuffer()
+ID3D12Resource* OldRenderer::CurrentBackBuffer()
 {
 	return m_swap_chain_buffer[m_curr_back_buff].Get();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Renderer::CurrentBackBufferView() const
+D3D12_CPU_DESCRIPTOR_HANDLE OldRenderer::CurrentBackBufferView() const
 {
 	return m_back_buffer_rtv[m_curr_back_buff].value().HandleCPU();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE Renderer::DepthStencilView() const
+D3D12_CPU_DESCRIPTOR_HANDLE OldRenderer::DepthStencilView() const
 {
 	return m_back_buffer_dsv.value().HandleCPU();
 }

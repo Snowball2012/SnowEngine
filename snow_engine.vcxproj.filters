@@ -125,9 +125,6 @@
     <ClCompile Include="src\TemporalAA.cpp">
       <Filter>core\Effects</Filter>
     </ClCompile>
-    <ClCompile Include="src\Renderer.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
     <ClCompile Include="src\ToneMappingPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
@@ -209,6 +206,12 @@
     <ClCompile Include="src\CubemapConverter.cpp">
       <Filter>core\Tools</Filter>
     </ClCompile>
+    <ClCompile Include="src\CubemapManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\OldRenderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -261,9 +264,6 @@
     </ClInclude>
     <ClInclude Include="src\TemporalAA.h">
       <Filter>core\Effects</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Renderer.h">
-      <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\ToneMappingPass.h">
       <Filter>core\RenderPasses</Filter>
@@ -405,6 +405,10 @@
     </ClInclude>
     <ClInclude Include="src\CubemapConverter.h">
       <Filter>core\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CubemapManager.h" />
+    <ClInclude Include="src\OldRenderer.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
