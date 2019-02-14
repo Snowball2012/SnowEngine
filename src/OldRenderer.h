@@ -78,8 +78,6 @@ private:
 
 	// windows stuff
 	HWND m_main_hwnd = nullptr;
-	uint32_t m_client_width = 800;
-	uint32_t m_client_height = 600;
 
 	// d3d stuff
 	ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
@@ -159,15 +157,6 @@ private:
 	// special cmd allocators
 	ComPtr<ID3D12CommandAllocator> m_direct_cmd_allocator = nullptr;
 
-	// postprocessing
-	std::unique_ptr<DynamicTexture> m_fp_backbuffer;
-	std::unique_ptr<DynamicTexture> m_ambient_lighting;
-	std::unique_ptr<DynamicTexture> m_normals;
-	std::unique_ptr<DynamicTexture> m_ssao;
-	std::unique_ptr<DynamicTexture> m_ssao_blurred;
-	std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed;
-
-	std::unique_ptr<ForwardCBProvider> m_forward_cb_provider;
 
 	// methods
 	void CreateDevice();

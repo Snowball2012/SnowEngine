@@ -2,7 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
-#include "XMMath.h"
+#include "MathUtils.h"
 
 #include <DirectXCollision.h>
 
@@ -29,7 +29,7 @@ XMFLOAT3 operator*( const  XMFLOAT3& lhs, float mod )
 	return  XMFLOAT3( lhs.x * mod, lhs.y * mod, lhs.z * mod );
 }
 
- XMFLOAT3 operator*( float mod, const  XMFLOAT3& op )
+XMFLOAT3 operator*( float mod, const  XMFLOAT3& op )
 {
 	return op*mod;
 }

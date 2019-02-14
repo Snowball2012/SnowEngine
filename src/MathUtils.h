@@ -1,7 +1,6 @@
 #pragma once
 
-#include <DirectXMath.h>
-#include <DirectXCollision.h>
+#include <dxtk12/SimpleMath.h>
 
 template<class T>
 constexpr T squared( T val ) { return val * val; }

@@ -67,3 +67,5 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 };
+
+using DescriptorTableID = DescriptorTableBakery::TableID;

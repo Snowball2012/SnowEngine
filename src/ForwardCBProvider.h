@@ -22,8 +22,6 @@ public:
 	D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
 	span<const LightInCB> GetLightsInCB() const noexcept;
 
-	float m_interpolator = 0.15f;
-
 private:
 	void FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
 
