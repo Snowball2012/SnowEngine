@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <deque>
 #include <iostream>
 #include <numeric>
 #include <string>
@@ -20,7 +21,7 @@
 
 namespace bc = boost::container;
 
-#include "XMMath.h"
+#include "MathUtils.h"
 
 #include <dxgi1_5.h>
 

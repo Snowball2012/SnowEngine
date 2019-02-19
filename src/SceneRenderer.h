@@ -2,6 +2,7 @@
 
 #include "GPUTaskQueue.h"
 #include "StagingDescriptorHeap.h"
+#include "CommandAllocatorPool.h"
 
 #include "DepthPrepassNode.h"
 #include "ShadowPassNode.h"
@@ -48,6 +49,7 @@ public:
 		ID3D12Device* device = nullptr;
 		DescriptorTableBakery* srv_cbv_uav_tables = nullptr;
 		GPUTaskQueue* graphics_queue = nullptr;
+		CommandAllocatorPool* allocator_pool = nullptr;
 	};
 
 	struct SceneContext
@@ -61,6 +63,7 @@ public:
 
 	struct Target
 	{
+		ID3D12Resource* resource;
 		D3D12_CPU_DESCRIPTOR_HANDLE rtv;
 		D3D12_VIEWPORT viewport;
 		D3D12_RECT scissor_rect;
@@ -140,15 +143,22 @@ private:
 
 	StagingDescriptorHeap m_dsv_heap;
 	StagingDescriptorHeap m_rtv_heap;
+	std::vector<CommandAllocator> m_frame_allocators;
+	uint32_t m_frame_idx = 0;
 
 	// permanent context
 	ID3D12Device* m_device = nullptr;
 	DescriptorTableBakery* m_descriptor_tables = nullptr;
 	GPUTaskQueue* m_graphics_queue = nullptr;
+	CommandAllocatorPool* m_allocator_pool = nullptr;
+	const uint32_t m_n_frames_in_flight = 0;
+
 
 	void InitTransientResourceDescriptors();
 	void CreateTransientResources();
 	void DestroyTransientResources();
 
 	std::vector<RenderItem> BuildRenderitems( const Camera::Data& camera, const Scene& scene );
+
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
 };

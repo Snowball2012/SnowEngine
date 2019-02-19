@@ -168,6 +168,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\CommandAllocatorPool.cpp" />
     <ClCompile Include="src\CubemapConverter.cpp" />
     <ClCompile Include="src\CubemapManager.cpp" />
     <ClCompile Include="src\DepthAwareBlurPass.cpp" />
@@ -242,6 +243,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\BlurSSAONode.h" />
+    <ClInclude Include="src\CommandAllocatorPool.h" />
     <ClInclude Include="src\CubemapConverter.h" />
     <ClInclude Include="src\CubemapManager.h" />
     <ClInclude Include="src\DepthAwareBlurPass.h" />

@@ -51,9 +51,6 @@
     <Filter Include="core\SceneSystems">
       <UniqueIdentifier>{77a1d5de-257c-40cc-94b7-f24a940275ad}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\DescriptorUtils">
-      <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\pssm">
       <UniqueIdentifier>{afd82de6-ae6e-48f3-8b16-900e968d79d0}</UniqueIdentifier>
     </Filter>
@@ -71,6 +68,12 @@
     </Filter>
     <Filter Include="shaders\cubemap_gen">
       <UniqueIdentifier>{ce817180-18b7-4ffc-8503-62fe1a2cf561}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\APILayer">
+      <UniqueIdentifier>{3e2ee7e0-ab53-4020-9e13-f8f64b64f9b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\APILayer\DescriptorUtils">
+      <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -132,13 +135,10 @@
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\DescriptorHeap.cpp">
-      <Filter>core\DescriptorUtils</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\StagingDescriptorHeap.cpp">
-      <Filter>core\DescriptorUtils</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUTaskQueue.cpp">
-      <Filter>core</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\Scene.cpp">
       <Filter>core</Filter>
@@ -147,7 +147,7 @@
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\DescriptorTableBakery.cpp">
-      <Filter>core\DescriptorUtils</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClCompile>
     <ClCompile Include="src\DynamicSceneBuffers.cpp">
       <Filter>core\SceneSystems</Filter>
@@ -166,12 +166,6 @@
     </ClCompile>
     <ClCompile Include="src\ShadowProvider.cpp">
       <Filter>core\FramegraphDataProviders</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUPagedAllocator.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\CircularUploadBuffer.cpp">
-      <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\UVScreenDensityCalculator.cpp">
       <Filter>core\SceneSystems</Filter>
@@ -203,9 +197,6 @@
     <ClCompile Include="src\CubemapConverter.cpp">
       <Filter>core\Tools</Filter>
     </ClCompile>
-    <ClCompile Include="src\CubemapManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\OldRenderer.cpp">
       <Filter>core</Filter>
     </ClCompile>
@@ -214,6 +205,21 @@
     </ClCompile>
     <ClCompile Include="src\MathUtils.cpp">
       <Filter>utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CommandAllocatorPool.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CircularUploadBuffer.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GPUPagedAllocator.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GPUTaskQueue.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\CubemapManager.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -275,13 +281,10 @@
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\StagingDescriptorHeap.h">
-      <Filter>core\DescriptorUtils</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\DescriptorHeap.h">
-      <Filter>core\DescriptorUtils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GPUTaskQueue.h">
-      <Filter>core</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\packed_freelist.h">
       <Filter>utils</Filter>
@@ -302,7 +305,7 @@
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\DescriptorTableBakery.h">
-      <Filter>core\DescriptorUtils</Filter>
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClInclude>
     <ClInclude Include="src\DynamicSceneBuffers.h">
       <Filter>core\SceneSystems</Filter>
@@ -327,12 +330,6 @@
     </ClInclude>
     <ClInclude Include="src\ShadowProvider.h">
       <Filter>core\FramegraphDataProviders</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GPUPagedAllocator.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CircularUploadBuffer.h">
-      <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\UVScreenDensityCalculator.h">
       <Filter>core\SceneSystems</Filter>
@@ -406,7 +403,6 @@
     <ClInclude Include="src\CubemapConverter.h">
       <Filter>core\Tools</Filter>
     </ClInclude>
-    <ClInclude Include="src\CubemapManager.h" />
     <ClInclude Include="src\OldRenderer.h">
       <Filter>core</Filter>
     </ClInclude>
@@ -415,6 +411,21 @@
     </ClInclude>
     <ClInclude Include="src\MathUtils.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CommandAllocatorPool.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CircularUploadBuffer.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GPUPagedAllocator.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GPUTaskQueue.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CubemapManager.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
