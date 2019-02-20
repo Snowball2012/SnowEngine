@@ -1,5 +1,6 @@
 #pragma once
 
+#include <d3d12.h>
 #include <dxtk12/SimpleMath.h>
 
 template<class T>

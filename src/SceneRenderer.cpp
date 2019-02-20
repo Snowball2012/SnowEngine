@@ -4,6 +4,9 @@
 
 #include "SceneRenderer.h"
 
+#include "FramegraphResource.h"
+#include "Framegraph.h"
+
 
 void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target& target )
 {
@@ -29,27 +32,30 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 	m_shadow_provider.Update( scene.LightSpan(), m_pssm, main_camera->GetData() );
 	m_forward_cb_provider.Update( main_camera->GetData(), m_pssm, scene.LightSpan() );
 
-	ShadowProducers producers;
-	ShadowMaps sm_storage;
-	ShadowCascadeProducers pssm_producers;
-	ShadowCascade pssm_storage;
-	m_shadow_provider.FillFramegraphStructures( m_forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
-	m_framegraph.SetRes( producers );
-	m_framegraph.SetRes( sm_storage );
-	m_framegraph.SetRes( pssm_producers );
-	m_framegraph.SetRes( pssm_storage );
+	{
+		ShadowProducers producers;
+		ShadowMaps sm_storage;
+		ShadowCascadeProducers pssm_producers;
+		ShadowCascade pssm_storage;
+		m_shadow_provider.FillFramegraphStructures( m_forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
+		m_framegraph.SetRes( producers );
+		m_framegraph.SetRes( sm_storage );
+		m_framegraph.SetRes( pssm_producers );
+		m_framegraph.SetRes( pssm_storage );
+	}
 
-	MainRenderitems forward_renderitems;
-	forward_renderitems.items = make_span( lighting_items );
-	m_framegraph.SetRes( forward_renderitems );
+	{
+		MainRenderitems forward_renderitems;
+		forward_renderitems.items = make_span( lighting_items );
+		m_framegraph.SetRes( forward_renderitems );
+	}
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
-	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
-		ThrowIfFailed( allocator->Reset() );
+	ThrowIfFailed( m_frame_allocators[m_frame_idx].Reset() );
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), nullptr ) );
+	ThrowIfFailed( m_cmd_list->Reset( m_frame_allocators[m_frame_idx].GetAllocator(), nullptr ) );
 
 	CD3DX12_RESOURCE_BARRIER rtv_barriers[9];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -58,15 +64,17 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred_transposed->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
-	auto& sm_storage = m_framegraph.GetRes<ShadowMaps>();
-	if ( ! sm_storage )
-		throw SnowEngineException( "missing resource" );
-	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	auto& pssm_storage = m_framegraph.GetRes<ShadowCascade>();
-	if ( ! pssm_storage )
-		throw SnowEngineException( "missing resource" );
-
-	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	
+	{
+		auto& sm_storage = m_framegraph.GetRes<ShadowMaps>();
+		if ( ! sm_storage )
+			throw SnowEngineException( "missing resource" );
+		rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+		auto& pssm_storage = m_framegraph.GetRes<ShadowCascade>();
+		if ( ! pssm_storage )
+			throw SnowEngineException( "missing resource" );
+		rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	}
 
 	m_cmd_list->ResourceBarrier( 9, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_descriptor_tables->CurrentGPUHeap().Get() };

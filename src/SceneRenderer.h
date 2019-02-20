@@ -144,6 +144,7 @@ private:
 	StagingDescriptorHeap m_dsv_heap;
 	StagingDescriptorHeap m_rtv_heap;
 	std::vector<CommandAllocator> m_frame_allocators;
+	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;
 	uint32_t m_frame_idx = 0;
 
 	// permanent context
@@ -152,7 +153,6 @@ private:
 	GPUTaskQueue* m_graphics_queue = nullptr;
 	CommandAllocatorPool* m_allocator_pool = nullptr;
 	const uint32_t m_n_frames_in_flight = 0;
-
 
 	void InitTransientResourceDescriptors();
 	void CreateTransientResources();
