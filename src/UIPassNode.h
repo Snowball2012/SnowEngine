@@ -2,6 +2,8 @@
 
 #include "FramegraphResource.h"
 
+#include <imgui/imgui.h>
+#include "imgui_impl/imgui_impl_dx12.h"
 
 template<class Framegraph>
 class UIPassNode : public BaseRenderNode

@@ -2,7 +2,7 @@
 
 #include "GPUTaskQueue.h"
 #include "StagingDescriptorHeap.h"
-#include "CommandAllocatorPool.h"
+#include "CommandListPool.h"
 
 #include "DepthPrepassNode.h"
 #include "ShadowPassNode.h"
@@ -49,7 +49,21 @@ public:
 		ID3D12Device* device = nullptr;
 		DescriptorTableBakery* srv_cbv_uav_tables = nullptr;
 		GPUTaskQueue* graphics_queue = nullptr;
-		CommandAllocatorPool* allocator_pool = nullptr;
+		CommandListPool* cmd_list_pool = nullptr;
+	};
+
+	struct Target
+	{
+		ID3D12Resource* resource;
+		D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+		D3D12_VIEWPORT viewport;
+		D3D12_RECT scissor_rect;
+	};
+
+	struct FrameContext
+	{
+		Target render_target;
+		CommandListPool* cmd_list_pool;
 	};
 
 	struct SceneContext
@@ -61,13 +75,7 @@ public:
 		DescriptorTableID ibl_table = DescriptorTableID::nullid;
 	};
 
-	struct Target
-	{
-		ID3D12Resource* resource;
-		D3D12_CPU_DESCRIPTOR_HANDLE rtv;
-		D3D12_VIEWPORT viewport;
-		D3D12_RECT scissor_rect;
-	};
+	
 
 	SceneRenderer( DeviceContext& ctx, uint32_t n_frames_in_flight );
 	~SceneRenderer();
@@ -78,7 +86,9 @@ public:
 	SceneRenderer& operator=( SceneRenderer&& ) = default;
 
 	// Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
-	void Draw( const SceneContext& ctx, RenderMode mode, const Target& target );
+	// Returned lists must be submitted to graphics queue
+	void Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
+			   std::vector<CommandList> graphics_cmd_lists );
 
 	void SetTonemapSettings( const TonemapSettings& settings ) noexcept { m_tonemap_settings = settings; }
 	TonemapSettings GetTonemapSettings() const noexcept { return m_tonemap_settings; }
@@ -89,7 +99,7 @@ public:
 	void SetPSSMUniformFactor( float factor ) noexcept { m_pssm.SetUniformFactor( factor ); }
 	float GetPSSMUniformFactor() const noexcept { return m_pssm.GetUniformFactor(); }
 
-	// Requires a complete rebuild of almost all transient resources and flushes the graphics queue
+	// All queues used in Draw must be flushed before calling this method
 	void SetInternalResolution( uint32_t width, uint32_t height );
 	std::pair<uint32_t, uint32_t> GetInternalResolution() const noexcept { return std::make_pair( m_resolution_width, m_resolution_height ); }
 
@@ -143,22 +153,19 @@ private:
 
 	StagingDescriptorHeap m_dsv_heap;
 	StagingDescriptorHeap m_rtv_heap;
-	std::vector<CommandAllocator> m_frame_allocators;
-	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;
-	uint32_t m_frame_idx = 0;
 
 	// permanent context
 	ID3D12Device* m_device = nullptr;
 	DescriptorTableBakery* m_descriptor_tables = nullptr;
 	GPUTaskQueue* m_graphics_queue = nullptr;
-	CommandAllocatorPool* m_allocator_pool = nullptr;
 	const uint32_t m_n_frames_in_flight = 0;
 
 	void InitTransientResourceDescriptors();
 	void CreateTransientResources();
 	void DestroyTransientResources();
 
-	std::vector<RenderItem> BuildRenderitems( const Camera::Data& camera, const Scene& scene );
+	std::vector<RenderItem> CreateRenderitems( const Camera::Data& camera, const Scene& scene ) const;
+	Skybox CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const;
 
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
 };

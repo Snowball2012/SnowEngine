@@ -8,10 +8,11 @@
 #include "Framegraph.h"
 
 
-void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target& target )
+void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
+						  std::vector<CommandList> graphics_cmd_lists )
 {
-	assert( ctx.main_camera != CameraID::nullid );
-	assert( ctx.scene != nullptr );
+	assert( scene_ctx.main_camera != CameraID::nullid );
+	assert( scene_ctx.scene != nullptr );
 
 	if ( mode != RenderMode::FullTonemapped )
 		NOTIMPL;
@@ -21,13 +22,13 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 	if ( m_framegraph.IsRebuildNeeded() )
 		m_framegraph.Rebuild();
 
-	Scene& scene = *ctx.scene;
+	Scene& scene = *scene_ctx.scene;
 
-	const Camera* main_camera = scene.AllCameras().try_get( ctx.main_camera );
+	const Camera* main_camera = scene.AllCameras().try_get( scene_ctx.main_camera );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
 
-	std::vector<RenderItem> lighting_items = BuildRenderitems( main_camera->GetData(), scene );
+	std::vector<RenderItem> lighting_items = CreateRenderitems( main_camera->GetData(), scene );
 
 	m_shadow_provider.Update( scene.LightSpan(), m_pssm, main_camera->GetData() );
 	m_forward_cb_provider.Update( main_camera->GetData(), m_pssm, scene.LightSpan() );
@@ -52,10 +53,10 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 
 	// Reuse memory associated with command recording
 	// We can only reset when the associated command lists have finished execution on GPU
-	ThrowIfFailed( m_frame_allocators[m_frame_idx].Reset() );
+	CommandList cmd_list = frame_ctx.cmd_list_pool->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT );
+	cmd_list.Reset();
 
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_frame_allocators[m_frame_idx].GetAllocator(), nullptr ) );
+	ID3D12GraphicsCommandList* list_iface = cmd_list.GetInterface();
 
 	CD3DX12_RESOURCE_BARRIER rtv_barriers[9];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -76,12 +77,12 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 		rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	}
 
-	m_cmd_list->ResourceBarrier( 9, rtv_barriers );
+	list_iface->ResourceBarrier( 9, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_descriptor_tables->CurrentGPUHeap().Get() };
-	m_cmd_list->SetDescriptorHeaps( 1, heaps );
+	list_iface->SetDescriptorHeaps( 1, heaps );
 
 	{
-		BindSkybox( main_camera->GetSkybox() );
+		m_framegraph.SetRes( CreateSkybox( main_camera->GetSkybox(), scene_ctx.ibl_table, scene ) );
 
 		ForwardPassCB pass_cb{ m_forward_cb_provider.GetCBPointer() };
 		m_framegraph.SetRes( pass_cb );
@@ -148,25 +149,27 @@ void SceneRenderer::Draw( const SceneContext& ctx, RenderMode mode, const Target
 		m_framegraph.SetRes( hbao_settings );
 
 		SDRBuffer backbuffer;
-		backbuffer.resource = target.resource;
-		backbuffer.rtv = target.rtv;
-		backbuffer.viewport = target.viewport;
-		backbuffer.scissor_rect = target.scissor_rect;
+		{
+			const auto& target = frame_ctx.render_target;
+			backbuffer.resource = target.resource;
+			backbuffer.rtv = target.rtv;
+			backbuffer.viewport = target.viewport;
+			backbuffer.scissor_rect = target.scissor_rect;
+		}
 		m_framegraph.SetRes( backbuffer );
 	}
 
-	m_framegraph.Run( *m_cmd_list.Get() );
+	m_framegraph.Run( *list_iface );
 
-	m_cmd_list->ResourceBarrier( 3, rtv_barriers );
+	list_iface->ResourceBarrier( 3, rtv_barriers );
 
-	ThrowIfFailed( m_cmd_list->Close() );
+	ThrowIfFailed( list_iface->Close() );
 
-	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+	graphics_cmd_lists.emplace_back( std::move( cmd_list ) );
 }
 
 
-std::vector<RenderItem> SceneRenderer::BuildRenderitems( const Camera::Data& camera, const Scene& scene )
+std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& camera, const Scene& scene ) const
 {
 	if ( camera.type != Camera::Type::Perspective )
 		NOTIMPL;
@@ -237,4 +240,39 @@ std::vector<RenderItem> SceneRenderer::BuildRenderitems( const Camera::Data& cam
 
 		return std::move( items );
 	}
+}
+
+Skybox SceneRenderer::CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const
+{
+	assert( scene.AllEnviromentMaps().has( skybox_id ) );
+
+	const EnviromentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
+
+	Skybox framegraph_res;
+
+	CubemapID cubemap_id = skybox.GetMap();
+
+	const Cubemap* cubemap = scene.AllCubemaps().try_get( cubemap_id );
+	if ( ! cubemap )
+		throw SnowEngineException( "skybox does not have a cubemap attached" );
+
+	if ( cubemap->IsLoaded() )
+		framegraph_res.srv_skybox = skybox.GetSRV();
+	else
+		framegraph_res.srv_skybox.ptr = 0;
+
+	{
+		D3D12_GPU_DESCRIPTOR_HANDLE desc_table = m_descriptor_tables->GetTable( ibl_table )->gpu_handle;
+		framegraph_res.srv_table = desc_table;
+	}
+
+	const ObjectTransform* tf = scene.AllTransforms().try_get( skybox.GetTransform() );
+	if ( ! tf )
+		throw SnowEngineException( "skybox does not have a transform attached" );
+
+	framegraph_res.tf_cbv = tf->GPUView();
+
+	framegraph_res.radiance_factor = skybox.GetRadianceFactor();
+
+	return framegraph_res;
 }
