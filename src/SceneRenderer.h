@@ -48,8 +48,6 @@ public:
 	{
 		ID3D12Device* device = nullptr;
 		DescriptorTableBakery* srv_cbv_uav_tables = nullptr;
-		GPUTaskQueue* graphics_queue = nullptr;
-		CommandListPool* cmd_list_pool = nullptr;
 	};
 
 	struct Target
@@ -75,9 +73,9 @@ public:
 		DescriptorTableID ibl_table = DescriptorTableID::nullid;
 	};
 
+	// factory
+	static SceneRenderer Create( const DeviceContext& ctx, uint32_t width, uint32_t height, uint32_t n_frames_in_flight );
 	
-
-	SceneRenderer( DeviceContext& ctx, uint32_t n_frames_in_flight );
 	~SceneRenderer();
 
 	SceneRenderer( const SceneRenderer& ) = delete;
@@ -107,18 +105,15 @@ public:
 	// May involve PSO recompilation
 	void SetTargetFormat( RenderMode mode, DXGI_FORMAT format );
 
-	// Flushes previously set graphics queue
-	void SetGraphicsQueue( GPUTaskQueue* queue );
-	GPUTaskQueue* GetGraphicsQueue() const noexcept { return m_graphics_queue; }
-
 private:
 	// settings
 
 	// internal resolution
-	uint32_t m_resolution_width;
-	uint32_t m_resolution_height;
+	uint32_t m_resolution_width = std::numeric_limits<uint32_t>::max();
+	uint32_t m_resolution_height = std::numeric_limits<uint32_t>::max();
 
-	DXGI_FORMAT m_back_buffer_format;
+	static constexpr DXGI_FORMAT DefaultBackbufferFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+	DXGI_FORMAT m_back_buffer_format = DefaultBackbufferFormat;
 
 	HBAOSettings m_hbao_settings;
 	TonemapSettings m_tonemap_settings;
@@ -135,17 +130,22 @@ private:
 			SkyboxNode,
 			HBAONode,
 			BlurSSAONode,
-			ToneMapNode,
-			UIPassNode
+			ToneMapNode
 		>;
 	FramegraphInstance m_framegraph;
 	ForwardCBProvider m_forward_cb_provider;
 	ShadowProvider m_shadow_provider;
 
 	// transient resources
+	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	DXGI_FORMAT m_hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	DXGI_FORMAT m_normals_format = DXGI_FORMAT_R16G16_FLOAT;
+	DXGI_FORMAT m_ssao_format = DXGI_FORMAT_R16_FLOAT;
+	int32_t m_shadow_bias = 5000;
+
 	std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
-	std::unique_ptr<DynamicTexture> m_fp_backbuffer = nullptr;
-	std::unique_ptr<DynamicTexture> m_ambient_lighting = nullptr;
+	std::unique_ptr<DynamicTexture> m_hdr_backbuffer = nullptr;
+	std::unique_ptr<DynamicTexture> m_hdr_ambient = nullptr;
 	std::unique_ptr<DynamicTexture> m_normals = nullptr;
 	std::unique_ptr<DynamicTexture> m_ssao = nullptr;
 	std::unique_ptr<DynamicTexture> m_ssao_blurred = nullptr;
@@ -157,12 +157,20 @@ private:
 	// permanent context
 	ID3D12Device* m_device = nullptr;
 	DescriptorTableBakery* m_descriptor_tables = nullptr;
-	GPUTaskQueue* m_graphics_queue = nullptr;
 	const uint32_t m_n_frames_in_flight = 0;
 
-	void InitTransientResourceDescriptors();
+	SceneRenderer( const DeviceContext& ctx,
+				   uint32_t width, uint32_t height,
+				   uint32_t n_frames_in_flight,
+				   StagingDescriptorHeap&& dsv_heap,
+				   StagingDescriptorHeap&& rtv_heap,
+				   ForwardCBProvider&& forward_cb_provider,
+				   ShadowProvider&& shadow_provider ) noexcept;
+
+
+	void InitFramegraph();
 	void CreateTransientResources();
-	void DestroyTransientResources();
+	void ResizeTransientResources();
 
 	std::vector<RenderItem> CreateRenderitems( const Camera::Data& camera, const Scene& scene ) const;
 	Skybox CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const;
