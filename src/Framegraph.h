@@ -11,21 +11,27 @@
 
 struct ID3D12GraphicsCommandList;
 
+template<typename Framegraph>
 class BaseRenderNode
 {
 public:
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) = 0;
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) = 0;
 };
 
 template<template <typename> class ... Node>
 class Framegraph
 {
 public:
+	Framegraph() noexcept = default;
+	Framegraph( Framegraph&& rhs ) noexcept;
+	Framegraph& operator=( Framegraph&& rhs ) noexcept;
+
+
 	template<template <typename> class N, typename ... Args>
 	void ConstructNode( Args&& ... args )
 	{
 		auto& node_storage = std::get<NStorage<N<Framegraph>>>( m_node_storage );
-		node_storage.node.emplace( this, std::forward<Args>( args )... );
+		node_storage.node.emplace( std::forward<Args>( args )... );
 	}
 
 	template<template <typename> class N>
@@ -107,9 +113,11 @@ private:
 
 	using FramegraphResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Framegraph>>>()... ) )>;
 
+	using BaseNode = BaseRenderNode<Framegraph<Node...>>;
+
 	OptionalTuple<FramegraphResources> m_resources;
 
-	std::vector<std::vector<BaseRenderNode*>> m_node_layers; // runtime framegraph
+	std::vector<std::vector<BaseNode*>> m_node_layers; // runtime framegraph
 
 	// impl details
 	struct TypeIdWithName
@@ -125,7 +133,7 @@ private:
 	{
 		size_t node_id;
 		std::string_view node_name; // debug info
-		BaseRenderNode* node_ptr;
+		BaseNode* node_ptr;
 		std::vector<TypeIdWithName> open_ids;
 		std::vector<TypeIdWithName> write_ids;
 		std::vector<TypeIdWithName> read_ids;

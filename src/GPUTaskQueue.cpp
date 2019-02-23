@@ -108,7 +108,7 @@ void GPUTaskQueue::Flush()
 
 void GPUTaskQueue::ReleaseProcessedLists( Timestamp ts )
 {
-	while ( m_scheduled_lists.empty() )
+	while ( !m_scheduled_lists.empty() )
 	{
 		auto& scheduled_list = m_scheduled_lists.front();
 		if ( scheduled_list.finish_time > ts )

@@ -11,7 +11,6 @@
 #include "SkyboxNode.h"
 #include "BlurSSAONode.h"
 #include "ToneMapNode.h"
-#include "UIPassNode.h"
 #include "HBAONode.h"
 
 #include "Scene.h"
@@ -86,7 +85,7 @@ public:
 	// Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
 	// Returned lists must be submitted to graphics queue
 	void Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-			   std::vector<CommandList> graphics_cmd_lists );
+			   std::vector<CommandList>& graphics_cmd_lists );
 
 	void SetTonemapSettings( const TonemapSettings& settings ) noexcept { m_tonemap_settings = settings; }
 	TonemapSettings GetTonemapSettings() const noexcept { return m_tonemap_settings; }
@@ -96,6 +95,8 @@ public:
 
 	void SetPSSMUniformFactor( float factor ) noexcept { m_pssm.SetUniformFactor( factor ); }
 	float GetPSSMUniformFactor() const noexcept { return m_pssm.GetUniformFactor(); }
+
+	ParallelSplitShadowMapping& GetPSSM() noexcept { return m_pssm; }
 
 	// All queues used in Draw must be flushed before calling this method
 	void SetInternalResolution( uint32_t width, uint32_t height );
@@ -137,7 +138,9 @@ private:
 	ShadowProvider m_shadow_provider;
 
 	// transient resources
-	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
+	DXGI_FORMAT m_depth_stencil_format_resource = DXGI_FORMAT_R32_TYPELESS;
+	DXGI_FORMAT m_depth_stencil_format_dsv = DXGI_FORMAT_D32_FLOAT;
+	DXGI_FORMAT m_depth_stencil_format_srv = DXGI_FORMAT_R32_FLOAT;
 	DXGI_FORMAT m_hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 	DXGI_FORMAT m_normals_format = DXGI_FORMAT_R16G16_FLOAT;
 	DXGI_FORMAT m_ssao_format = DXGI_FORMAT_R16_FLOAT;

@@ -4,9 +4,7 @@
 
 #include "OldRenderer.h"
 
-#include <imgui/imgui.h>
-#include "imgui_impl/imgui_impl_win32.h"
-#include "imgui_impl/imgui_impl_dx12.h"
+#include "SceneRenderer.h"
 
 #include "GeomGeneration.h"
 
@@ -14,9 +12,14 @@
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
+#include <dxtk12/ResourceUploadBatch.h>
 
 #include <d3dcompiler.h>
 #include <d3d12sdklayers.h>
+
+#include <imgui/imgui.h>
+#include "imgui_impl/imgui_impl_win32.h"
+#include "imgui_impl/imgui_impl_dx12.h"
 
 #include <future>
 
@@ -30,49 +33,46 @@ OldRenderer::~OldRenderer()
 {
 	for ( auto& desc : m_back_buffer_rtv )
 		desc.reset();
-	m_back_buffer_dsv.reset();
 	ImGui_ImplDX12_Shutdown();
 	ImGui_ImplWin32_Shutdown();
 	ImGui::DestroyContext();
 	m_ui_font_desc.reset();
-	m_fp_backbuffer->RTV().reset();
-	m_ambient_lighting->RTV().reset();
-	m_normals->RTV().reset();
-	m_ssao->RTV().reset();
+	m_renderer.reset();
 	m_scene_manager.reset();
 }
 
-#include <dxtk12/ResourceUploadBatch.h>
+
 void OldRenderer::Init()
 {
 	CreateDevice();
 
-	m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT );
-	m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY );
-	m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE );
+	m_cmd_lists = std::make_shared<CommandListPool>( m_d3d_device.Get() );
+
+	m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
+	m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
+	m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
 
 	m_rtv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
 	m_dsv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
 	m_cbv_srv_uav_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 
-	CreateBaseCommandObjects();
 	CreateSwapChain();
 
 	InitImgui();
-	BuildRtvAndDsvDescriptorHeaps();
+	BuildRtvDescriptorHeaps();
 
-	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, m_dsv_heap.get(), FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
-	m_forward_cb_provider = std::make_unique<ForwardCBProvider>( *m_d3d_device.Get(), FrameResourceCount );
+	m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
 
-	RecreateSwapChainAndDepthBuffers( m_client_width, m_client_height );
-	CreateTransientTextures();
+	RecreateSwapChain( m_client_width, m_client_height );
 
 	BuildFrameResources();
 
-	BuildPasses();
+	SceneRenderer::DeviceContext device_ctx;
+	device_ctx.device = m_d3d_device.Get();
+	device_ctx.srv_cbv_uav_tables = &DescriptorTables();
+	m_renderer = std::make_unique<SceneRenderer>( SceneRenderer::Create( device_ctx, m_client_width, m_client_height, FrameResourceCount ) );
 
-	m_pssm.SetSplitsNum( MAX_CASCADE_SIZE );
-
+	m_renderer->GetPSSM().SetSplitsNum( MAX_CASCADE_SIZE );
 
 	m_brdf_lut = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/brdf_lut.DDS" );
 	TextureID irradiance_map_tex = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
@@ -93,16 +93,14 @@ void OldRenderer::Init()
 		CreateShaderResourceView( m_d3d_device.Get(), m_reflection_probe_res.Get(),
 								  CD3DX12_CPU_DESCRIPTOR_HANDLE( *DescriptorTables().ModifyTable( m_ibl_table ), 2, m_cbv_srv_uav_size ), true );
 	}
+
+
 }
 
 
-void OldRenderer::Draw( const Context& ctx )
+void OldRenderer::Draw()
 {
-	m_framegraph.ClearResources();
-
-	if ( m_framegraph.IsRebuildNeeded() )
-		m_framegraph.Rebuild();
-
+	// Update rendergraph
 	CameraID scene_camera;
 	if ( ! ( m_frustrum_cull_camera_id == CameraID::nullid ) )
 		scene_camera = m_frustrum_cull_camera_id;
@@ -128,133 +126,62 @@ void OldRenderer::Draw( const Context& ctx )
 		}
 	}
 
-	m_scene_manager->UpdateFramegraphBindings( scene_camera, PSSM(), m_screen_viewport );
+	m_scene_manager->UpdateFramegraphBindings( scene_camera, m_renderer->GetPSSM(), m_screen_viewport );
 
+	// Draw scene
 	const Camera* main_camera = GetScene().GetCamera( m_main_camera_id );
 	if ( ! main_camera )
 		throw SnowEngineException( "no main camera" );
-	m_forward_cb_provider->Update( main_camera->GetData(), PSSM(), GetScene().GetROScene().LightSpan() );
 
-	m_scene_manager->BindToFramegraph( m_framegraph, *m_forward_cb_provider );
+	std::vector<CommandList> lists_to_execute;
 
-	// Reuse memory associated with command recording
-	// We can only reset when the associated command lists have finished execution on GPU
-	for ( auto& allocator : m_cur_frame_resource->cmd_list_allocs )
-		ThrowIfFailed( allocator->Reset() );
+	lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
+	lists_to_execute.back().Reset();
 
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList. Reusing the command list reuses memory
-	ThrowIfFailed( m_cmd_list->Reset( m_cur_frame_resource->cmd_list_allocs[0].Get(), nullptr ) );
+	ID3D12GraphicsCommandList* cmd_list = lists_to_execute.back().GetInterface();
 
-	CD3DX12_RESOURCE_BARRIER rtv_barriers[10];
-	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_fp_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( m_ambient_lighting->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( m_normals->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[4] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
-	rtv_barriers[5] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
-	rtv_barriers[6] = CD3DX12_RESOURCE_BARRIER::Transition( m_ssao_blurred_transposed->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
-	rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	auto& sm_storage = m_framegraph.GetRes<ShadowMaps>();
-	if ( ! sm_storage )
-		throw SnowEngineException( "missing resource" );
-	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
-	auto& pssm_storage = m_framegraph.GetRes<ShadowCascade>();
-	if ( ! pssm_storage )
-		throw SnowEngineException( "missing resource" );
-
-	rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+	CD3DX12_RESOURCE_BARRIER barriers[1];
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	
-	m_cmd_list->ResourceBarrier( 10, rtv_barriers );
+	cmd_list->ResourceBarrier( 1, barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
-	m_cmd_list->SetDescriptorHeaps( 1, heaps );
+	cmd_list->SetDescriptorHeaps( 1, heaps );
 
-	{
-		BindSkybox( main_camera->GetSkybox() );
+	ThrowIfFailed( cmd_list->Close() );
 
-		ForwardPassCB pass_cb{ m_forward_cb_provider->GetCBPointer() };
-		m_framegraph.SetRes( pass_cb );
+	SceneRenderer::SceneContext scene_ctx;
+	scene_ctx.ibl_table = m_ibl_table;
+	scene_ctx.main_camera = m_main_camera_id;
+	scene_ctx.scene = &m_scene_manager->GetScene_Unsafe();
 
-		HDRBuffer hdr_buffer;
-		hdr_buffer.res = m_fp_backbuffer->Resource();
-		hdr_buffer.rtv = m_fp_backbuffer->RTV()->HandleCPU();
-		hdr_buffer.srv = GetGPUHandle( m_fp_backbuffer->SRV() );
-		m_framegraph.SetRes( hdr_buffer );
+	SceneRenderer::FrameContext frame_ctx;
+	frame_ctx.cmd_list_pool = m_cmd_lists.get();
+	frame_ctx.render_target.resource = CurrentBackBuffer();
+	frame_ctx.render_target.rtv = CurrentBackBufferView();
+	frame_ctx.render_target.viewport = m_screen_viewport;
+	frame_ctx.render_target.scissor_rect = m_scissor_rect;
 
-		AmbientBuffer ambient_buffer;
-		ambient_buffer.res = m_ambient_lighting->Resource();
-		ambient_buffer.rtv = m_ambient_lighting->RTV()->HandleCPU();
-		ambient_buffer.srv = GetGPUHandle( m_ambient_lighting->SRV() );
-		m_framegraph.SetRes( ambient_buffer );
+	m_renderer->SetHBAOSettings( SceneRenderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
 
-		NormalBuffer normal_buffer;
-		normal_buffer.res = m_normals->Resource();
-		normal_buffer.rtv = m_normals->RTV()->HandleCPU();
-		normal_buffer.srv = GetGPUHandle( m_normals->SRV() );
-		m_framegraph.SetRes( normal_buffer );
+	m_renderer->Draw( scene_ctx, frame_ctx, SceneRenderer::RenderMode::FullTonemapped, lists_to_execute );
 
-		DepthStencilBuffer depth_buffer;
-		depth_buffer.dsv = DepthStencilView();
-		depth_buffer.srv = DescriptorTables().GetTable( m_depth_buffer_srv )->gpu_handle;
-		m_framegraph.SetRes( depth_buffer );
+	// Draw UI
+	lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
+	lists_to_execute.back().Reset();
+	cmd_list = lists_to_execute.back().GetInterface();
+	ImGui_ImplDX12_NewFrame( cmd_list );
+	heaps[0] = m_srv_ui_heap->GetInterface();
+	cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, nullptr );
+	cmd_list->SetDescriptorHeaps( 1, heaps );
+	ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
 
-		ScreenConstants screen;
-		screen.viewport = m_screen_viewport;
-		screen.scissor_rect = m_scissor_rect;
-		m_framegraph.SetRes( screen );
+	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
+	
+	cmd_list->ResourceBarrier( 1, barriers );
 
-		SSAOBuffer_Noisy ssao_texture;
-		ssao_texture.res = m_ssao->Resource();
-		ssao_texture.rtv = m_ssao->RTV()->HandleCPU();
-		ssao_texture.srv = GetGPUHandle( m_ssao->SRV() );
-		m_framegraph.SetRes( ssao_texture );
+	ThrowIfFailed( cmd_list->Close() );
 
-		SSAOTexture_Blurred ssao_blurred_texture;
-		ssao_blurred_texture.res = m_ssao_blurred->Resource();
-		ssao_blurred_texture.uav = GetGPUHandle( m_ssao_blurred->UAV() );
-		ssao_blurred_texture.srv = GetGPUHandle( m_ssao_blurred->SRV() );
-		m_framegraph.SetRes( ssao_blurred_texture );
-
-
-		SSAOTexture_Transposed ssao_blurred_texture_horizontal;
-		ssao_blurred_texture_horizontal.res = m_ssao_blurred_transposed->Resource();
-		ssao_blurred_texture_horizontal.uav = GetGPUHandle( m_ssao_blurred_transposed->UAV() );
-		ssao_blurred_texture_horizontal.srv = GetGPUHandle( m_ssao_blurred_transposed->SRV() );
-		m_framegraph.SetRes( ssao_blurred_texture_horizontal );
-
-
-		TonemapNodeSettings tm_settings;
-		tm_settings.data.blend_luminance = m_tonemap_settings.blend_luminance;
-		tm_settings.data.lower_luminance_bound = m_tonemap_settings.min_luminance;
-		tm_settings.data.upper_luminance_bound = m_tonemap_settings.max_luminance;
-		m_framegraph.SetRes( tm_settings );
-
-		HBAOSettings hbao_settings;
-		hbao_settings.data = m_hbao_settings;
-		m_framegraph.SetRes( hbao_settings );
-
-		SDRBuffer backbuffer;
-		backbuffer.resource = CurrentBackBuffer();
-		backbuffer.rtv = CurrentBackBufferView();
-		m_framegraph.SetRes( backbuffer );
-
-		ImGuiFontHeap font_srv_heap;
-		font_srv_heap.heap = m_srv_ui_heap->GetInterface();
-		m_framegraph.SetRes( font_srv_heap );
-	}
-
-	m_framegraph.Run( *m_cmd_list.Get() );
-
-	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
-	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer.Get(), D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_COMMON );
-	rtv_barriers[2] = CD3DX12_RESOURCE_BARRIER::Transition( sm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
-	rtv_barriers[3] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_COMMON );
-
-	m_cmd_list->ResourceBarrier( 4, rtv_barriers );
-
-	ThrowIfFailed( m_cmd_list->Close() );
-
-	ID3D12CommandList* cmd_lists[] = { m_cmd_list.Get() };
-	m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( _countof( cmd_lists ), cmd_lists );
+	m_graphics_queue->SubmitLists( make_span( lists_to_execute ) );
 
 	EndFrame();	
 }
@@ -266,10 +193,12 @@ void OldRenderer::NewGUIFrame()
 
 void OldRenderer::Resize( uint32_t new_width, uint32_t new_height )
 {
-	RecreateSwapChainAndDepthBuffers( new_width, new_height );
-
-	ResizeTransientTextures( );
+	m_graphics_queue->Flush();
+	RecreateSwapChain( new_width, new_height );
+	m_renderer->SetInternalResolution( new_width, new_height );
 }
+
+ParallelSplitShadowMapping& OldRenderer::PSSM() noexcept { return m_renderer->GetPSSM(); }
 
 bool OldRenderer::SetMainCamera( CameraID id )
 {
@@ -327,24 +256,6 @@ void OldRenderer::CreateDevice()
 	}
 }
 
-void OldRenderer::CreateBaseCommandObjects()
-{
-	ThrowIfFailed( m_d3d_device->CreateCommandAllocator(
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		IID_PPV_ARGS( m_direct_cmd_allocator.GetAddressOf() ) ) );
-
-	ThrowIfFailed( m_d3d_device->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		m_direct_cmd_allocator.Get(), // Associated command allocator
-		nullptr,                   // Initial FramegraphStateObject
-		IID_PPV_ARGS( m_cmd_list.GetAddressOf() ) ) );
-
-	// Start off in a closed state.  This is because the first time we refer 
-	// to the command list we will Reset it, and it needs to be closed before
-	// calling Reset.
-	m_cmd_list->Close();
-}
 
 void OldRenderer::CreateSwapChain()
 {
@@ -374,10 +285,9 @@ void OldRenderer::CreateSwapChain()
 		m_swap_chain.GetAddressOf() ) );
 }
 
-void OldRenderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height )
+void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
 {
 	assert( m_swap_chain );
-	assert( m_direct_cmd_allocator );
 
 	// Flush before changing any resources.
 	m_graphics_queue->Flush();
@@ -390,7 +300,6 @@ void OldRenderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t
 	// Release the previous resources we will be recreating.
 	for ( int i = 0; i < SwapChainBufferCount; ++i )
 		m_swap_chain_buffer[i].Reset();
-	m_depth_stencil_buffer.Reset();
 
 	// Resize the swap chain.
 	ThrowIfFailed( m_swap_chain->ResizeBuffers(
@@ -410,45 +319,6 @@ void OldRenderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t
 		m_d3d_device->CreateRenderTargetView( m_swap_chain_buffer[i].Get(), nullptr, m_back_buffer_rtv[i]->HandleCPU() );
 	}
 
-	// Create the depth/stencil buffer and view.
-	D3D12_RESOURCE_DESC depthStencilDesc;
-	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	depthStencilDesc.Alignment = 0;
-	depthStencilDesc.Width = m_client_width;
-	depthStencilDesc.Height = UINT( m_client_height );
-	depthStencilDesc.DepthOrArraySize = 1;
-	depthStencilDesc.MipLevels = 1;
-
-	depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-
-	depthStencilDesc.SampleDesc.Count = 1;
-	depthStencilDesc.SampleDesc.Quality = 0;
-	depthStencilDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-	D3D12_CLEAR_VALUE optClear;
-	optClear.Format = m_depth_stencil_format;
-	optClear.DepthStencil.Depth = 0.0f;
-	optClear.DepthStencil.Stencil = 0;
-	ThrowIfFailed( m_d3d_device->CreateCommittedResource(
-		&CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
-		D3D12_HEAP_FLAG_NONE,
-		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&optClear,
-		IID_PPV_ARGS( m_depth_stencil_buffer.GetAddressOf() ) ) );
-
-	// Create descriptor to mip level 0 of entire resource using the format of the resource.
-	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
-	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-	dsvDesc.Format = m_depth_stencil_format;
-	dsvDesc.Texture2D.MipSlice = 0;
-
-	m_back_buffer_dsv.reset();
-	m_back_buffer_dsv.emplace( std::move( m_dsv_heap->AllocateDescriptor() ) );
-	m_d3d_device->CreateDepthStencilView( m_depth_stencil_buffer.Get(), &dsvDesc, m_back_buffer_dsv->HandleCPU() );
-
 	// Update the viewport transform to cover the client area.
 	m_screen_viewport.TopLeftX = 0;
 	m_screen_viewport.TopLeftY = 0;
@@ -462,10 +332,9 @@ void OldRenderer::RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t
 	ImGui_ImplDX12_CreateDeviceObjects();
 }
 
-void OldRenderer::BuildRtvAndDsvDescriptorHeaps()
+void OldRenderer::BuildRtvDescriptorHeaps()
 {
-	m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device );
-	m_dsv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, m_d3d_device );
+	m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device.Get() );
 }
 
 void OldRenderer::BuildUIDescriptorHeap( )
@@ -483,92 +352,6 @@ void OldRenderer::BuildUIDescriptorHeap( )
 	}
 }
 
-void OldRenderer::CreateTransientTextures()
-{
-	// little hack here, create 1x1 textures and resize them right after
-	
-	auto create_tex = [&]( std::unique_ptr<DynamicTexture>& tex, DXGI_FORMAT texture_format,
-						   bool create_srv_table, bool create_uav_table, bool create_rtv_desc )
-	{
-		CD3DX12_RESOURCE_DESC desc( CD3DX12_RESOURCE_DESC::Tex2D( texture_format,
-																  /*width=*/1, /*height=*/1,
-																  /*depth=*/1, /*mip_levels=*/1 ) );
-
-		D3D12_CLEAR_VALUE clear_value;
-		clear_value.Color[0] = 0;
-		clear_value.Color[1] = 0;
-		clear_value.Color[2] = 0;
-		clear_value.Color[3] = 0;
-		clear_value.Format = texture_format;
-
-		if ( create_uav_table )
-			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-		if ( create_rtv_desc )
-			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-
-		// create resource (maybe create it in DynamicTexture?)
-		{
-			const D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON;
-
-			const auto* opt_clear_ptr = create_rtv_desc ? &clear_value : nullptr;
-			ComPtr<ID3D12Resource> res;
-			ThrowIfFailed( m_d3d_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-																  &desc, initial_state,
-																  opt_clear_ptr,
-																  IID_PPV_ARGS( res.GetAddressOf() ) ) );
-
-			tex = std::make_unique<DynamicTexture>( std::move( res ), m_d3d_device.Get(), initial_state, opt_clear_ptr );
-		}
-
-		if ( create_srv_table )
-			tex->SRV() = DescriptorTables().AllocateTable( 1 );
-		if ( create_uav_table )
-			tex->UAV() = DescriptorTables().AllocateTable( 1 );
-		if ( create_rtv_desc )
-			tex->RTV() = std::make_unique<Descriptor>( std::move( m_rtv_heap->AllocateDescriptor() ) );
-	};
-
-	create_tex( m_fp_backbuffer, DXGI_FORMAT_R16G16B16A16_FLOAT, true, false, true );
-	create_tex( m_ambient_lighting, DXGI_FORMAT_R16G16B16A16_FLOAT, true, false, true );
-	create_tex( m_normals, DXGI_FORMAT_R16G16_FLOAT, true, false, true );
-	create_tex( m_ssao, DXGI_FORMAT_R16_FLOAT, true, false, true );
-	create_tex( m_ssao_blurred, DXGI_FORMAT_R16_FLOAT, true, true, false );
-	create_tex( m_ssao_blurred_transposed, DXGI_FORMAT_R16_FLOAT, true, true, false );
-
-	m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
-
-	ResizeTransientTextures();
-}
-
-void OldRenderer::ResizeTransientTextures( )
-{
-	auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
-	{
-		tex.Resize( width, height );
-		if ( make_srv )
-			m_d3d_device->CreateShaderResourceView( tex.Resource(), nullptr, *DescriptorTables().ModifyTable( tex.SRV() ) );
-		if ( make_uav )
-			m_d3d_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *DescriptorTables().ModifyTable( tex.UAV() ) );
-		if ( make_rtv )
-			m_d3d_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
-	};
-
-	resize_tex( *m_fp_backbuffer, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_ambient_lighting, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_normals, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_ssao, m_client_width / 2, m_client_height / 2, true, false, true );
-	resize_tex( *m_ssao_blurred, m_client_width, m_client_height, true, true, false );
-	resize_tex( *m_ssao_blurred_transposed, m_client_height, m_client_width, true, true, false );
-
-	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
-	{
-		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Texture2D.MipLevels = 1;
-	}
-	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, DescriptorTables().ModifyTable( m_depth_buffer_srv ).value() );
-}
 
 void OldRenderer::InitImgui()
 {
@@ -584,82 +367,19 @@ void OldRenderer::InitImgui()
 
 void OldRenderer::BuildFrameResources( )
 {
-	for ( int i = 0; i < FrameResourceCount; ++i )
-		m_frame_resources.emplace_back( m_d3d_device.Get(), 2 );
+	m_frame_resources.resize( FrameResourceCount );
 	m_cur_fr_idx = 0;
 	m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
-}
-
-void OldRenderer::BuildPasses()
-{
-	m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, *m_d3d_device.Get() );
-
-	m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
-	m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format, 5000, *m_d3d_device.Get() );
-
-	m_framegraph.ConstructAndEnableNode<ForwardPassNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, // rendertarget
-														DXGI_FORMAT_R16G16B16A16_FLOAT, // ambient lighting
-														DXGI_FORMAT_R16G16_FLOAT, // normals
-														m_depth_stencil_format, *m_d3d_device.Get() );
-
-	m_framegraph.ConstructAndEnableNode<SkyboxNode>( DXGI_FORMAT_R16G16B16A16_FLOAT, m_depth_stencil_format, *m_d3d_device.Get() );
-
-	m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_d3d_device.Get() );
-	m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_d3d_device.Get() );
-	m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_d3d_device.Get() );
-	m_framegraph.ConstructAndEnableNode<UIPassNode>();
-
-
-	if ( m_framegraph.IsRebuildNeeded() )
-		m_framegraph.Rebuild();
-}
-
-void OldRenderer::BindSkybox( EnvMapID skybox_id )
-{
-	assert( m_scene_manager->GetScene().GetROScene().AllEnviromentMaps().has( skybox_id ) );
-
-	const auto& scene = m_scene_manager->GetScene().GetROScene();
-
-	const EnviromentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
-
-	Skybox framegraph_res;
-
-	CubemapID cubemap_id = skybox.GetMap();
-
-	const Cubemap* cubemap = scene.AllCubemaps().try_get( cubemap_id );
-	if ( ! cubemap )
-		throw SnowEngineException( "skybox does not have a cubemap attached" );
-
-	if ( cubemap->IsLoaded() )
-		framegraph_res.srv_skybox = skybox.GetSRV();
-	else
-		framegraph_res.srv_skybox.ptr = 0;
-
-	{
-		D3D12_GPU_DESCRIPTOR_HANDLE desc_table = DescriptorTables().GetTable( m_ibl_table )->gpu_handle;
-		framegraph_res.srv_table = desc_table;
-	}
-
-	const ObjectTransform* tf = scene.AllTransforms().try_get( skybox.GetTransform() );
-	if ( ! tf )
-		throw SnowEngineException( "skybox does not have a transform attached" );
-
-	framegraph_res.tf_cbv = tf->GPUView();
-
-	framegraph_res.radiance_factor = skybox.GetRadianceFactor();
-
-	m_framegraph.SetRes( framegraph_res );
 }
 
 void OldRenderer::EndFrame()
 {
 	// GPU timeline
 
+	m_cur_frame_resource->available_timestamp = m_graphics_queue->ExecuteSubmitted();
 	// swap buffers
 	ThrowIfFailed( m_swap_chain->Present( 0, 0 ) );
 	m_curr_back_buff = ( m_curr_back_buff + 1 ) % SwapChainBufferCount;
-
-	m_cur_frame_resource->available_timestamp = m_graphics_queue->CreateTimestamp();
 
 	// CPU timeline
 	m_cur_fr_idx = ( m_cur_fr_idx + 1 ) % FrameResourceCount;
@@ -678,9 +398,4 @@ ID3D12Resource* OldRenderer::CurrentBackBuffer()
 D3D12_CPU_DESCRIPTOR_HANDLE OldRenderer::CurrentBackBufferView() const
 {
 	return m_back_buffer_rtv[m_curr_back_buff].value().HandleCPU();
-}
-
-D3D12_CPU_DESCRIPTOR_HANDLE OldRenderer::DepthStencilView() const
-{
-	return m_back_buffer_dsv.value().HandleCPU();
 }

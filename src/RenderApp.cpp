@@ -306,12 +306,7 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 void RenderApp::Draw( const GameTimer& gt )
 {
-	OldRenderer::Context ctx;
-	{
-		ctx.taa_enabled = m_taa_enabled;
-		ctx.wireframe_mode = m_wireframe_mode;
-	}
-	m_renderer->Draw( ctx );
+	m_renderer->Draw( );
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )

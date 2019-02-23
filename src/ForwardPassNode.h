@@ -9,7 +9,7 @@
 
 
 template<class Framegraph>
-class ForwardPassNode : public BaseRenderNode
+class ForwardPassNode : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -35,54 +35,52 @@ public:
 		<
 		>;
 
-	ForwardPassNode( Framegraph* framegraph,
-					 DXGI_FORMAT direct_format,
+	ForwardPassNode( DXGI_FORMAT direct_format,
 					 DXGI_FORMAT ambient_rtv_format,
 					 DXGI_FORMAT normal_format,
 					 DXGI_FORMAT depth_stencil_format,
 					 ID3D12Device& device )
-		: m_pass( device ), m_framegraph( framegraph )
+		: m_pass( device )
 	{
 		m_renderstates = m_pass.CompileStates( direct_format, ambient_rtv_format, normal_format, depth_stencil_format, device );
 	}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override;
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override;
 
 private:
 	ForwardLightingPass m_pass;
-	Framegraph* m_framegraph = nullptr;
 
 	ForwardLightingPass::States m_renderstates;
 };
 
 
 template<class Framegraph>
-inline void ForwardPassNode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_list )
+inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
 {
-	auto& shadow_maps = m_framegraph->GetRes<ShadowMaps>();
+	auto& shadow_maps = framegraph.GetRes<ShadowMaps>();
 	if ( ! shadow_maps )
 		NOTIMPL;
-	auto& csm = m_framegraph->GetRes<ShadowCascade>();
+	auto& csm = framegraph.GetRes<ShadowCascade>();
 	if ( ! csm )
 		NOTIMPL;
 
-	auto& renderitems = m_framegraph->GetRes<MainRenderitems>();
+	auto& renderitems = framegraph.GetRes<MainRenderitems>();
 	if ( ! renderitems )
 		NOTIMPL;
 
-	auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
-	auto& view = m_framegraph->GetRes<ScreenConstants>();
+	auto& pass_cb = framegraph.GetRes<ForwardPassCB>();
+	auto& view = framegraph.GetRes<ScreenConstants>();
 	if ( ! pass_cb || ! view )
 		throw SnowEngineException( "missing resource" );
 
-	auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
-	auto& hdr_buffer = m_framegraph->GetRes<HDRBuffer>();
-	auto& ambient_buffer = m_framegraph->GetRes<AmbientBuffer>();
-	auto& normal_buffer = m_framegraph->GetRes<NormalBuffer>();
+	auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
+	auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
+	auto& ambient_buffer = framegraph.GetRes<AmbientBuffer>();
+	auto& normal_buffer = framegraph.GetRes<NormalBuffer>();
 	if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer )
 		throw SnowEngineException( "missing resource" );
 
-	auto& skybox = m_framegraph->GetRes<Skybox>();
+	auto& skybox = framegraph.GetRes<Skybox>();
 
 	ForwardLightingPass::Context ctx;
 	ctx.back_buffer_rtv = hdr_buffer->rtv;

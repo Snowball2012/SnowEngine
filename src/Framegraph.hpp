@@ -31,6 +31,27 @@ namespace
 	};
 }
 
+
+template<template <typename> class ... Node>
+Framegraph<Node...>::Framegraph( Framegraph<Node...>&& rhs ) noexcept
+{
+	m_node_storage = std::move( rhs.m_node_storage );
+	m_resources = std::move( rhs.m_resources );
+	m_need_to_rebuild_framegraph = true;
+}
+
+
+template<template <typename> class ... Node>
+Framegraph<Node...>& Framegraph<Node...>::operator=( Framegraph<Node...>&& rhs ) noexcept
+{
+	m_node_storage = std::move( rhs.m_node_storage );
+	m_resources = std::move( rhs.m_resources );
+	m_need_to_rebuild_framegraph = true;
+
+	return *this;
+}
+
+
 template<template <typename> class ... Node>
 void Framegraph<Node...>::Rebuild()
 {
@@ -59,7 +80,7 @@ void Framegraph<Node...>::Rebuild()
 	for ( bool layer_created = true; layer_created; )
 	{
 		layer_created = false;
-		std::vector<BaseRenderNode*> new_layer;
+		std::vector<BaseNode*> new_layer;
 
 		std::set<size_t> nodes_with_outcoming_edges;
 		for ( const auto& edge : edges )
@@ -111,7 +132,7 @@ void Framegraph<Node...>::Run( ID3D12GraphicsCommandList& cmd_list )
 
 	for ( auto& layer : m_node_layers )
 		for ( auto& node : layer )
-			node->Run( cmd_list );
+			node->Run( *this, cmd_list );
 }
 
 template<template <typename> class ...Node>

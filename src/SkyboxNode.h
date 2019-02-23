@@ -6,7 +6,7 @@
 #include "SkyboxPass.h"
 
 template<class Framegraph>
-class SkyboxNode : public BaseRenderNode
+class SkyboxNode : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -27,19 +27,19 @@ public:
 		<
 		>;
 
-	SkyboxNode( Framegraph* framegraph, DXGI_FORMAT rtv_format, DXGI_FORMAT dsv_format, ID3D12Device& device )
-		: m_pass( device ), m_framegraph( framegraph )
+	SkyboxNode( DXGI_FORMAT rtv_format, DXGI_FORMAT dsv_format, ID3D12Device& device )
+		: m_pass( device )
 	{
 		m_state = m_pass.BuildRenderState( rtv_format, dsv_format, device );
 	}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& hdr_buffer = m_framegraph->GetRes<HDRBuffer>();
-		auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
-		auto& skybox = m_framegraph->GetRes<Skybox>();
-		auto& forward_cb = m_framegraph->GetRes<ForwardPassCB>();
-		auto& screen_constants = m_framegraph->GetRes<ScreenConstants>();
+		auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
+		auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
+		auto& skybox = framegraph.GetRes<Skybox>();
+		auto& forward_cb = framegraph.GetRes<ForwardPassCB>();
+		auto& screen_constants = framegraph.GetRes<ScreenConstants>();
 
 		if ( ! hdr_buffer || ! depth_buffer || ! skybox
 			 || ! forward_cb || ! screen_constants )
@@ -87,5 +87,5 @@ public:
 private:
 	SkyboxPass m_pass;
 	SkyboxPass::RenderStateID m_state;
-	Framegraph* m_framegraph = nullptr;
+	
 };

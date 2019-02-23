@@ -77,18 +77,17 @@ private:
 class SceneManager
 {
 public:
-	SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap, size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue );
+	SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue );
 
 	const SceneClientView& GetScene() const noexcept;
 	SceneClientView& GetScene() noexcept;
+
+	Scene& GetScene_Unsafe() noexcept { return m_scene; } // hack
 
 	const DescriptorTableBakery& GetDescriptorTables() const noexcept;
 	DescriptorTableBakery& GetDescriptorTables() noexcept;
 
 	void UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
-
-	template<typename FramegraphT>
-	void BindToFramegraph( FramegraphT& framegraph, const class ForwardCBProvider& forward_cb_provider );
 
 	void FlushAllOperations();
 
@@ -110,7 +109,6 @@ private:
 	SceneClientView m_scene_view;
 	DynamicSceneBuffers m_dynamic_buffers;
 	MaterialTableBaker m_material_table_baker;
-	ShadowProvider m_shadow_provider;
 	UVScreenDensityCalculator m_uv_density_calculator;
 	GPUTaskQueue* m_copy_queue;
 	GPUTaskQueue* m_graphics_queue;
@@ -128,8 +126,5 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_graphics_cmd_list;
 
 	// temporary
-	std::vector<RenderItem> m_lighting_items;
 	CameraID m_main_camera_id = CameraID::nullid;
 };
-
-#include "SceneManager.hpp"

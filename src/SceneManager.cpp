@@ -144,7 +144,7 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 
 
 
-SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, StagingDescriptorHeap* dsv_heap,
+SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device,
 							size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue )
 	: m_static_mesh_mgr( device, &m_scene )
 	, m_tex_streamer( device, 700*1024*1024ul, 128*1024*1024ul, nframes_to_buffer, &m_scene )
@@ -156,7 +156,6 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, Staging
 	, m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
 	, m_cubemap_mgr( device, &m_gpu_descriptor_tables, &m_scene )
 	, m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
-	, m_shadow_provider( device.Get(), int( nframes_to_buffer ), dsv_heap, &m_gpu_descriptor_tables, &m_scene )
 	, m_uv_density_calculator( &m_scene )
 	, m_graphics_queue( graphics_queue )
 {
@@ -240,8 +239,6 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 	m_cubemap_mgr.Update();
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
-	if ( const Camera* main_cam = m_scene.AllCameras().try_get( m_main_camera_id ) )
-		m_shadow_provider.Update( m_scene.LightSpan(), pssm, main_cam->GetData() );
 
 	ThrowIfFailed( m_copy_cmd_list->Close() );
 	ID3D12CommandList* lists_to_exec[]{ m_copy_cmd_list.Get() };

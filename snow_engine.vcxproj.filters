@@ -86,9 +86,6 @@
     <ClCompile Include="src\stdafx.cpp">
       <Filter>precompiled_header</Filter>
     </ClCompile>
-    <ClCompile Include="src\FrameResource.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
     <ClCompile Include="src\GeomGeneration.cpp">
       <Filter>content_generation</Filter>
     </ClCompile>
@@ -301,9 +298,6 @@
     <ClInclude Include="src\SceneManager.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\SceneManager.hpp">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="src\DescriptorTableBakery.h">
       <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClInclude>
@@ -374,9 +368,6 @@
       <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\ToneMapNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\UIPassNode.h">
       <Filter>core\Framegraph\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\SkyboxPass.h">

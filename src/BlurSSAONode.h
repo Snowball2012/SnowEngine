@@ -7,7 +7,7 @@
 
 
 template<class Framegraph>
-class BlurSSAONode : public BaseRenderNode
+class BlurSSAONode : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -28,29 +28,28 @@ public:
 		<
 		>;
 
-	BlurSSAONode( Framegraph* framegraph, ID3D12Device& device )
-		: m_pass( device ), m_framegraph( framegraph )
+	BlurSSAONode( ID3D12Device& device )
+		: m_pass( device )
 	{
 		m_state = m_pass.BuildRenderState( device );
 	}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override;
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override;
 
 private:
 	DepthAwareBlurPass m_pass;
 	DepthAwareBlurPass::RenderStateID m_state;
-	Framegraph* m_framegraph = nullptr;
 };
 
 
 template<class Framegraph>
-inline void BlurSSAONode<Framegraph>::Run( ID3D12GraphicsCommandList& cmd_list )
+inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
 {
-	auto& blurred_ssao = m_framegraph->GetRes<SSAOTexture_Blurred>();
-	auto& transposed_ssao = m_framegraph->GetRes<SSAOTexture_Transposed>();
-	auto& noisy_ssao = m_framegraph->GetRes<SSAOBuffer_Noisy>();
-	auto& depth_buffer = m_framegraph->GetRes<DepthStencilBuffer>();
-	auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
+	auto& blurred_ssao = framegraph.GetRes<SSAOTexture_Blurred>();
+	auto& transposed_ssao = framegraph.GetRes<SSAOTexture_Transposed>();
+	auto& noisy_ssao = framegraph.GetRes<SSAOBuffer_Noisy>();
+	auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
+	auto& pass_cb = framegraph.GetRes<ForwardPassCB>();
 
 	if ( ! blurred_ssao || ! transposed_ssao || ! noisy_ssao
 		 || ! depth_buffer || ! pass_cb )

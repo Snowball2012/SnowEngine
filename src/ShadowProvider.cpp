@@ -8,9 +8,12 @@ using namespace DirectX;
 
 // temporary implementation, only one shadow map 4kx4k max
 
-ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, StagingDescriptorHeap* dsv_heap, DescriptorTableBakery* srv_tables, Scene* scene )
-	: m_device( device ), m_scene( scene ), m_dsv_heap( dsv_heap ), m_descriptor_tables( srv_tables )
+ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, DescriptorTableBakery* srv_tables )
+	: m_device( device ), m_dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, device ), m_descriptor_tables( srv_tables )
 {
+	assert( device );
+	assert( srv_tables );
+
 	constexpr UINT width = ShadowMapSize;
 	constexpr UINT height = ShadowMapSize;
 
@@ -38,7 +41,7 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, S
 		}
 		m_device->CreateShaderResourceView( m_sm_res.Get(), &srv_desc, *m_descriptor_tables->ModifyTable( m_srv ) );
 
-		m_dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
+		m_dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc{};
 		{
 			dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
@@ -69,7 +72,7 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, S
 		}
 		m_device->CreateShaderResourceView( m_pssm_res.Get(), &srv_desc, *m_descriptor_tables->ModifyTable( m_pssm_srv ) );
 
-		m_pssm_dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap->AllocateDescriptor() ) );
+		m_pssm_dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc{};
 		{
 			dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
@@ -114,11 +117,11 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
 }
 
 
-void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
+void ShadowProvider::FillFramegraphStructures( const Scene& scene, const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
 {
 	// todo: frustrum cull renderitems
 	CreateShadowProducers( lights );
-	FillProducersWithRenderitems( renderitems );
+	FillProducersWithRenderitems( renderitems, scene );
 
 	producers.arr = make_span( m_producers );
 
@@ -182,15 +185,15 @@ void ShadowProvider::CreateShadowProducers( const span<const LightInCB>& lights 
 }
 
 
-void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems )
+void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems, const Scene& scene )
 {
 	for ( const auto& mesh_instance : renderitems )
 	{
 		if ( ! mesh_instance.IsEnabled() )
 			continue;
 
-		const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[mesh_instance.Submesh()];
-		const StaticMesh& geom = m_scene->AllStaticMeshes()[submesh.GetMesh()];
+		const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
+		const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
 		if ( ! geom.IsLoaded() )
 			continue;
 
@@ -203,7 +206,7 @@ void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshIn
 		item.index_offset = submesh_draw_args.start_index_loc;
 		item.vertex_offset = submesh_draw_args.base_vertex_loc;
 
-		const MaterialPBR& material = m_scene->AllMaterials()[mesh_instance.Material()];
+		const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
 		item.mat_cb = material.GPUConstantBuffer();
 		item.mat_table = material.DescriptorTable();
 
@@ -211,7 +214,7 @@ void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshIn
 		const auto& textures = material.Textures();
 		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
 		{
-			if ( ! m_scene->AllTextures()[tex_id].IsLoaded() )
+			if ( ! scene.AllTextures()[tex_id].IsLoaded() )
 			{
 				has_unloaded_texture = true;
 				break;
@@ -221,7 +224,7 @@ void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshIn
 		if ( has_unloaded_texture )
 			continue;
 
-		const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.GetTransform()];
+		const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
 		item.tf_addr = tf.GPUView();
 
 		for ( auto& producer : m_pssm_producers )

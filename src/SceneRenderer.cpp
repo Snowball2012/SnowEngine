@@ -10,7 +10,26 @@
 
 SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height, uint32_t n_frames_in_flight )
 {
-	NOTIMPL;
+	assert( ctx.device );
+
+	StagingDescriptorHeap dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, ctx.device );
+	StagingDescriptorHeap rtv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, ctx.device );
+	ForwardCBProvider forward_cb_provider( *ctx.device, n_frames_in_flight );
+	ShadowProvider shadow_provider( ctx.device, n_frames_in_flight, ctx.srv_cbv_uav_tables );
+
+	return SceneRenderer( ctx, width, height, n_frames_in_flight,
+						  std::move( dsv_heap ), std::move( rtv_heap ),
+						  std::move( forward_cb_provider ), std::move( shadow_provider ) );
+}
+
+
+SceneRenderer::~SceneRenderer()
+{
+	if ( m_depth_stencil_buffer ) m_depth_stencil_buffer->DSV().reset();
+	if ( m_hdr_backbuffer ) m_hdr_backbuffer->RTV().reset();
+	if ( m_hdr_ambient ) m_hdr_ambient->RTV().reset();
+	if ( m_normals ) m_normals->RTV().reset();
+	if ( m_ssao ) m_ssao->RTV().reset();
 }
 
 
@@ -46,21 +65,21 @@ SceneRenderer::SceneRenderer( const DeviceContext& ctx,
 
 void SceneRenderer::InitFramegraph()
 {
-	m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format, m_device );
+	m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format_dsv, *m_device );
 
-	m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format, m_shadow_bias, m_device );
-	m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format, m_shadow_bias, m_device );
+	m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device );
+	m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device );
 
 	m_framegraph.ConstructAndEnableNode<ForwardPassNode>( m_hdr_format, // rendertarget
 														  m_hdr_format, // ambient lighting
 														  m_normals_format, // normals
-														  m_depth_stencil_format, m_device );
+														  m_depth_stencil_format_dsv, *m_device );
 
-	m_framegraph.ConstructAndEnableNode<SkyboxNode>( m_hdr_format, m_depth_stencil_format, m_device );
+	m_framegraph.ConstructAndEnableNode<SkyboxNode>( m_hdr_format, m_depth_stencil_format_dsv, *m_device );
 
-	m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, m_device );
-	m_framegraph.ConstructAndEnableNode<BlurSSAONode>( m_device );
-	m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, m_device );
+	m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_device );
+	m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
+	m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_device );
 
 	if ( m_framegraph.IsRebuildNeeded() )
 		m_framegraph.Rebuild();
@@ -72,29 +91,39 @@ void SceneRenderer::CreateTransientResources()
 	// little hack here, create 1x1 textures and resize them right after
 
 	auto create_tex = [&]( std::unique_ptr<DynamicTexture>& tex, DXGI_FORMAT texture_format,
-						   bool create_srv_table, bool create_uav_table, bool create_rtv_desc )
+						   bool create_srv_table, bool create_uav_table, bool create_rtv_desc, bool create_dsv_desc )
 	{
 		CD3DX12_RESOURCE_DESC desc( CD3DX12_RESOURCE_DESC::Tex2D( texture_format,
 																  /*width=*/1, /*height=*/1,
 																  /*depth=*/1, /*mip_levels=*/1 ) );
 
 		D3D12_CLEAR_VALUE clear_value;
-		clear_value.Color[0] = 0;
-		clear_value.Color[1] = 0;
-		clear_value.Color[2] = 0;
-		clear_value.Color[3] = 0;
-		clear_value.Format = texture_format;
+		clear_value.Format = create_dsv_desc ? m_depth_stencil_format_dsv : texture_format;
+		if ( create_dsv_desc )
+		{
+			clear_value.DepthStencil.Depth = 0.0f;
+			clear_value.DepthStencil.Stencil = 0;
+		}
+		else
+		{
+			clear_value.Color[0] = 0;
+			clear_value.Color[1] = 0;
+			clear_value.Color[2] = 0;
+			clear_value.Color[3] = 0;
+		}
 
 		if ( create_uav_table )
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 		if ( create_rtv_desc )
 			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		if ( create_dsv_desc )
+			desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
 		// create resource (maybe create it in DynamicTexture?)
 		{
-			const D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COMMON;
+			const D3D12_RESOURCE_STATES initial_state = create_dsv_desc ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_COMMON;
 
-			const auto* opt_clear_ptr = create_rtv_desc ? &clear_value : nullptr;
+			const auto* opt_clear_ptr = (create_rtv_desc || create_dsv_desc) ? &clear_value : nullptr;
 			ComPtr<ID3D12Resource> res;
 			ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
 															  &desc, initial_state,
@@ -110,17 +139,17 @@ void SceneRenderer::CreateTransientResources()
 			tex->UAV() = m_descriptor_tables->AllocateTable( 1 );
 		if ( create_rtv_desc )
 			tex->RTV() = std::make_unique<Descriptor>( std::move( m_rtv_heap.AllocateDescriptor() ) );
+		if ( create_dsv_desc )
+			tex->DSV() = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
 	};
 
-	create_tex( m_hdr_backbuffer, m_hdr_format, true, false, true );
-	create_tex( m_hdr_ambient, m_hdr_format, true, false, true );
-	create_tex( m_normals, m_normals_format, true, false, true );
-	create_tex( m_ssao, m_ssao_format, true, false, true );
-	create_tex( m_ssao_blurred, m_ssao_format, true, true, false );
-	create_tex( m_ssao_blurred_transposed, m_ssao_format, true, true, false );
-
-	NOTIMPL; // depth_stencil buffer
-	m_depth_buffer_srv = DescriptorTables().AllocateTable( 1 );
+	create_tex( m_hdr_backbuffer, m_hdr_format, true, false, true, false );
+	create_tex( m_hdr_ambient, m_hdr_format, true, false, true, false );
+	create_tex( m_normals, m_normals_format, true, false, true, false );
+	create_tex( m_ssao, m_ssao_format, true, false, true, false );
+	create_tex( m_ssao_blurred, m_ssao_format, true, true, false, false );
+	create_tex( m_ssao_blurred_transposed, m_ssao_format, true, true, false, false );
+	create_tex( m_depth_stencil_buffer, m_depth_stencil_format_resource, true, false, false, true );
 
 	ResizeTransientResources();
 }
@@ -132,34 +161,53 @@ void SceneRenderer::ResizeTransientResources()
 	{
 		tex.Resize( width, height );
 		if ( make_srv )
-			m_d3d_device->CreateShaderResourceView( tex.Resource(), nullptr, *DescriptorTables().ModifyTable( tex.SRV() ) );
+			m_device->CreateShaderResourceView( tex.Resource(), nullptr, *m_descriptor_tables->ModifyTable( tex.SRV() ) );
 		if ( make_uav )
-			m_d3d_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *DescriptorTables().ModifyTable( tex.UAV() ) );
+			m_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *m_descriptor_tables->ModifyTable( tex.UAV() ) );
 		if ( make_rtv )
-			m_d3d_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
+			m_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
 	};
 
-	resize_tex( *m_fp_backbuffer, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_ambient_lighting, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_normals, m_client_width, m_client_height, true, false, true );
-	resize_tex( *m_ssao, m_client_width / 2, m_client_height / 2, true, false, true );
-	resize_tex( *m_ssao_blurred, m_client_width, m_client_height, true, true, false );
-	resize_tex( *m_ssao_blurred_transposed, m_client_height, m_client_width, true, true, false );
+	resize_tex( *m_hdr_backbuffer, m_resolution_width, m_resolution_height, true, false, true );
+	m_hdr_backbuffer->Resource()->SetName( L"hdr buffer" );
+	resize_tex( *m_hdr_ambient, m_resolution_width, m_resolution_height, true, false, true );
+	m_hdr_ambient->Resource()->SetName( L"ambient buffer" );
+	resize_tex( *m_normals, m_resolution_width, m_resolution_height, true, false, true );
+	m_normals->Resource()->SetName( L"normal buffer" );
+	resize_tex( *m_ssao, m_resolution_width / 2, m_resolution_height / 2, true, false, true );
+	m_ssao->Resource()->SetName( L"ssao" );
+	resize_tex( *m_ssao_blurred, m_resolution_width, m_resolution_height, true, true, false );
+	m_ssao_blurred->Resource()->SetName( L"m_ssao_blurred" );
+	resize_tex( *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width, true, true, false );
+	m_ssao_blurred_transposed->Resource()->SetName( L"m_ssao_blurred_transposed" );
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc{};
+	resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height, false, false, false );
+	m_depth_stencil_buffer->Resource()->SetName( L"m_depth_stencil_buffer" );
 	{
-		srv_desc.Format = DXGI_FORMAT_R32_FLOAT;
-		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srv_desc.Texture2D.MipLevels = 1;
-	}
-	m_d3d_device->CreateShaderResourceView( m_depth_stencil_buffer.Get(), &srv_desc, DescriptorTables().ModifyTable( m_depth_buffer_srv ).value() );
+		auto& tex = *m_depth_stencil_buffer;
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
+		dsv_desc.Format = m_depth_stencil_format_dsv;
+		dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsv_desc.Texture2D.MipSlice = 0;
+		dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
 
+		m_device->CreateDepthStencilView( tex.Resource(), &dsv_desc, tex.DSV()->HandleCPU() );
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
+		srv_desc.Format = m_depth_stencil_format_srv;
+		srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srv_desc.Texture2D.MostDetailedMip = 0;
+		srv_desc.Texture2D.MipLevels = 1;
+		srv_desc.Texture2D.PlaneSlice = 0;
+		srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
+		m_device->CreateShaderResourceView( tex.Resource(), &srv_desc, *m_descriptor_tables->ModifyTable( tex.SRV() ) );
+	}
 }
 
 
 void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-						  std::vector<CommandList> graphics_cmd_lists )
+						  std::vector<CommandList>& graphics_cmd_lists )
 {
 	assert( scene_ctx.main_camera != CameraID::nullid );
 	assert( scene_ctx.scene != nullptr );
@@ -188,7 +236,8 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 		ShadowMaps sm_storage;
 		ShadowCascadeProducers pssm_producers;
 		ShadowCascade pssm_storage;
-		m_shadow_provider.FillFramegraphStructures( m_forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(), producers, pssm_producers, sm_storage, pssm_storage );
+		m_shadow_provider.FillFramegraphStructures( scene, m_forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(),
+													producers, pssm_producers, sm_storage, pssm_storage );
 		m_framegraph.SetRes( producers );
 		m_framegraph.SetRes( sm_storage );
 		m_framegraph.SetRes( pssm_producers );
@@ -312,11 +361,17 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 
 	m_framegraph.Run( *list_iface );
 
-	list_iface->ResourceBarrier( 3, rtv_barriers );
-
 	ThrowIfFailed( list_iface->Close() );
 
 	graphics_cmd_lists.emplace_back( std::move( cmd_list ) );
+}
+
+
+void SceneRenderer::SetInternalResolution( uint32_t width, uint32_t height )
+{
+	m_resolution_width = width;
+	m_resolution_height = height;
+	ResizeTransientResources();
 }
 
 
@@ -336,7 +391,7 @@ void SceneRenderer::SetTargetFormat( RenderMode mode, DXGI_FORMAT format )
 	if ( m_back_buffer_format != DefaultBackbufferFormat )
 		throw SnowEngineException( "unsupported rtv format" );
 
-	m_framegraph.ConstructNode<ToneMapNode>( &m_framegraph, m_back_buffer_format, *m_device );
+	m_framegraph.ConstructNode<ToneMapNode>( m_back_buffer_format, *m_device );
 }
 
 
@@ -409,8 +464,8 @@ std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& ca
 		if ( item_box.Intersects( main_bf ) )
 			items.push_back( item );
 
-		return std::move( items );
 	}
+	return std::move( items );
 }
 
 Skybox SceneRenderer::CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const

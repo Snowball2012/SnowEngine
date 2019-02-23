@@ -4,8 +4,8 @@
 
 #include "StagingDescriptorHeap.h"
 
-StagingDescriptorHeap::StagingDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE type, Microsoft::WRL::ComPtr<ID3D12Device> device )
-	: m_device( std::move( device ) ), m_type( type )
+StagingDescriptorHeap::StagingDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12Device* device )
+	: m_device( device ), m_type( type )
 {
 	AddChunk();
 }

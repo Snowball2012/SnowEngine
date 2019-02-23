@@ -11,7 +11,7 @@
 
 CubemapManager::CubemapManager( Microsoft::WRL::ComPtr<ID3D12Device> device, DescriptorTableBakery* descriptor_tables, Scene* scene ) noexcept
 	: m_device( std::move( device ) ), m_scene( scene )
-	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device )
+	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device.Get() )
 	, m_desc_tables( descriptor_tables )
 	, m_converter( m_device )
 {

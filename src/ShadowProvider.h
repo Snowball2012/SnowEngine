@@ -15,19 +15,19 @@
 class ShadowProvider
 {
 public:
-	ShadowProvider( ID3D12Device* device, int n_bufferized_frames, StagingDescriptorHeap* dsv_heap, DescriptorTableBakery* srv_tables, Scene* scene );
+	ShadowProvider( ID3D12Device* device, int n_bufferized_frames, DescriptorTableBakery* srv_tables );
 
 	void Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
-	
-	void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
-								 ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage );
+	void FillFramegraphStructures( const Scene& scene, const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
+	                               ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,
+								   ShadowMaps& storage, ShadowCascade& pssm_storage );
 
 private:
 	using SrvID = DescriptorTableBakery::TableID;
 
 	void CreateShadowProducers( const span<const LightInCB>& lights );
-	void FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems );
+	void FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems, const Scene& scene );
 
 	std::vector<ShadowProducer> m_producers;
 	std::unique_ptr<Descriptor> m_dsv = nullptr;
@@ -39,9 +39,9 @@ private:
 	SrvID m_pssm_srv = SrvID::nullid;
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_pssm_res;
 
+	StagingDescriptorHeap m_dsv_heap;
+
 	DescriptorTableBakery* m_descriptor_tables;
-	Scene* m_scene;
-	StagingDescriptorHeap* m_dsv_heap;
 	ID3D12Device* m_device;
 
 	static constexpr UINT ShadowMapSize = 2048;

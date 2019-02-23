@@ -8,7 +8,7 @@
 
 
 template<class Framegraph>
-class PSSMNode : public BaseRenderNode
+class PSSMNode : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -27,23 +27,23 @@ public:
 		<
 		>;
 
-	PSSMNode( Framegraph* framegraph, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
-		: m_pass( device ), m_framegraph( framegraph )
+	PSSMNode( DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
+		: m_pass( device )
 	{
 		m_state = m_pass.BuildRenderState( dsv_format, bias, true, device );
 	}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& lights_with_pssm = m_framegraph->GetRes<ShadowCascadeProducers>();
+		auto& lights_with_pssm = framegraph.GetRes<ShadowCascadeProducers>();
 		if ( ! lights_with_pssm )
 			return;
 
-		auto& shadow_cascade = m_framegraph->GetRes<ShadowCascade>();
+		auto& shadow_cascade = framegraph.GetRes<ShadowCascade>();
 		if ( ! shadow_cascade )
 			throw SnowEngineException( "missing resource" );
 
-		auto& pass_cb = m_framegraph->GetRes<ForwardPassCB>();
+		auto& pass_cb = framegraph.GetRes<ForwardPassCB>();
 		if ( ! pass_cb )
 			throw SnowEngineException( "missing resource" );
 
@@ -83,5 +83,5 @@ public:
 private:
 	PSSMGenPass m_pass;
 	PSSMGenPass::RenderStateID m_state;
-	Framegraph* m_framegraph = nullptr;
+	
 };

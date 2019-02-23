@@ -8,7 +8,7 @@
 
 
 template<class Framegraph>
-class ShadowPassNode : public BaseRenderNode
+class ShadowPassNode : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -26,19 +26,19 @@ public:
 		<
 		>;
 
-	ShadowPassNode( Framegraph* framegraph, DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
-		: m_pass( device ), m_framegraph( framegraph )
+	ShadowPassNode( DXGI_FORMAT dsv_format, int bias, ID3D12Device& device )
+		: m_pass( device )
 	{
 		m_state = m_pass.BuildRenderState( dsv_format, bias, false, true, device );
 	}
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
 	{
-		auto& lights_with_shadow = m_framegraph->GetRes<ShadowProducers>();
+		auto& lights_with_shadow = framegraph.GetRes<ShadowProducers>();
 		if ( ! lights_with_shadow )
 			return;
 
-		auto& shadow_maps = m_framegraph->GetRes<ShadowMaps>();
+		auto& shadow_maps = framegraph.GetRes<ShadowMaps>();
 		if ( ! shadow_maps )
 			throw SnowEngineException( "missing resource" );
 
@@ -77,5 +77,5 @@ public:
 private:
 	DepthOnlyPass m_pass;
 	DepthOnlyPass::RenderStateID m_state;
-	Framegraph* m_framegraph = nullptr;
+	
 };

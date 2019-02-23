@@ -10,19 +10,9 @@
 
 #include "GPUTaskQueue.h"
 
-#include "Framegraph.h"
-#include "ForwardPassNode.h"
-#include "BlurSSAONode.h"
-#include "DepthPrepassNode.h"
-#include "ShadowPassNode.h"
-#include "PSSMNode.h"
-#include "HBAONode.h"
-#include "ToneMapNode.h"
-#include "UIPassNode.h"
-#include "SkyboxNode.h"
-
 #include "SceneManager.h"
-#include "ForwardCBProvider.h"
+
+class SceneRenderer;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class OldRenderer
@@ -39,7 +29,7 @@ public:
 		bool wireframe_mode;
 		bool taa_enabled;
 	};
-	void Draw( const Context& ctx );
+	void Draw();
 	void NewGUIFrame();
 	void Resize( uint32_t new_width, uint32_t new_height );
 
@@ -57,8 +47,7 @@ public:
 	} m_tonemap_settings;
 
 	HBAOPass::Settings m_hbao_settings;
-	ParallelSplitShadowMapping& PSSM() noexcept { return m_pssm; }
-	const ParallelSplitShadowMapping& PSSM() const noexcept { return m_pssm; }
+	ParallelSplitShadowMapping& PSSM() noexcept;
 
 	SceneClientView& GetScene() { return m_scene_manager->GetScene(); }
 
@@ -83,21 +72,22 @@ private:
 	ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
 	ComPtr<ID3D12Device> m_d3d_device = nullptr;
 
+	std::shared_ptr<CommandListPool> m_cmd_lists = nullptr;
+
 	std::unique_ptr<GPUTaskQueue> m_graphics_queue = nullptr;
 	std::unique_ptr<GPUTaskQueue> m_copy_queue = nullptr;
 	std::unique_ptr<GPUTaskQueue> m_compute_queue = nullptr;
+
+	uint32_t m_client_width;
+	uint32_t m_client_height;
 
 	ComPtr<IDXGISwapChain> m_swap_chain = nullptr;
 	static constexpr int SwapChainBufferCount = 2;
 	int m_curr_back_buff = 0;
 	ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount] = { nullptr };
 	std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount] = { std::nullopt };
-	ComPtr<ID3D12Resource> m_depth_stencil_buffer;
-	std::optional<Descriptor> m_back_buffer_dsv;
-	DescriptorTableID m_depth_buffer_srv = DescriptorTableID::nullid;
-
+	
 	DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	DXGI_FORMAT m_depth_stencil_format = DXGI_FORMAT_D32_FLOAT;
 	D3D12_VIEWPORT m_screen_viewport;
 	D3D12_RECT m_scissor_rect;
 
@@ -115,7 +105,6 @@ private:
 
 	// descriptor heaps
 	std::unique_ptr<DescriptorHeap> m_srv_ui_heap = nullptr;
-	std::unique_ptr<StagingDescriptorHeap> m_dsv_heap = nullptr;
 	std::unique_ptr<StagingDescriptorHeap> m_rtv_heap = nullptr;
 
 	size_t m_cbv_srv_uav_size = 0;
@@ -130,38 +119,24 @@ private:
 	std::vector<FrameResource> m_frame_resources;
 	FrameResource* m_cur_frame_resource = nullptr;
 	int m_cur_fr_idx = 0;
-	static constexpr int PassCount = 2;
 
-
-	// cmd lists
-	ComPtr<ID3D12GraphicsCommandList> m_cmd_list = nullptr;
-
-	// special cmd allocators
-	ComPtr<ID3D12CommandAllocator> m_direct_cmd_allocator = nullptr;
-
+	std::unique_ptr<SceneRenderer> m_renderer = nullptr;
 
 	// methods
 	void CreateDevice();
-	void CreateBaseCommandObjects();
 	void CreateSwapChain();
-	void RecreateSwapChainAndDepthBuffers( uint32_t new_width, uint32_t new_height );
-	void CreateTransientTextures();
-	void ResizeTransientTextures();
+	void RecreateSwapChain( uint32_t new_width, uint32_t new_height );
 
-	void BuildRtvAndDsvDescriptorHeaps();
+	void BuildRtvDescriptorHeaps();
 	void BuildUIDescriptorHeap( );
 	void InitImgui();
 
 	void BuildFrameResources();
-	void BuildPasses();
-	
-	void BindSkybox( EnvMapID skybox );
 
 	void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
 	ID3D12Resource* CurrentBackBuffer();
 	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
-	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const;
 	const DescriptorTableBakery& DescriptorTables() const { return m_scene_manager->GetDescriptorTables(); }
 	DescriptorTableBakery& DescriptorTables() { return m_scene_manager->GetDescriptorTables(); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return DescriptorTables().GetTable( id )->gpu_handle; }

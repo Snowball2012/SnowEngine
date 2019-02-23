@@ -12,7 +12,7 @@
 TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
 								  uint8_t n_bufferized_frames, Scene* scene )
 	: m_device( std::move( device ) ), m_scene( scene )
-	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device )
+	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device.Get() )
 	, m_n_bufferized_frames( n_bufferized_frames )
 {
 	constexpr uint64_t basic_budget = 32 * 1024 * 1024;

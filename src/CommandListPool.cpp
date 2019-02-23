@@ -58,7 +58,9 @@ CommandList CommandListPool::GetList( D3D12_COMMAND_LIST_TYPE type )
 		return std::move( list );
 	}
 
-	return CommandList( *m_device, type );
+	auto new_list = CommandList( *m_device, type );
+	ThrowIfFailed( new_list.GetInterface()->Close() );
+	return new_list;
 }
 
 
