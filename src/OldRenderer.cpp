@@ -162,7 +162,7 @@ void OldRenderer::Draw()
 	frame_ctx.render_target.scissor_rect = m_scissor_rect;
 
 	m_renderer->SetHBAOSettings( SceneRenderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
-
+	m_renderer->SetTonemapSettings( SceneRenderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
 	m_renderer->Draw( scene_ctx, frame_ctx, SceneRenderer::RenderMode::FullTonemapped, lists_to_execute );
 
 	// Draw UI

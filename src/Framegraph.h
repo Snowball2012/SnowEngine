@@ -18,6 +18,11 @@ public:
 	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) = 0;
 };
 
+struct TrackedResource
+{
+	ID3D12Resource* res;
+};
+
 template<template <typename> class ... Node>
 class Framegraph
 {

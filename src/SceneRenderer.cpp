@@ -351,7 +351,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 		SDRBuffer backbuffer;
 		{
 			const auto& target = frame_ctx.render_target;
-			backbuffer.resource = target.resource;
+			backbuffer.res = target.resource;
 			backbuffer.rtv = target.rtv;
 			backbuffer.viewport = target.viewport;
 			backbuffer.scissor_rect = target.scissor_rect;
@@ -465,6 +465,9 @@ std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& ca
 			items.push_back( item );
 
 	}
+
+	boost::sort( items, []( const auto& lhs, const auto& rhs ) { return lhs.mat_table.ptr < rhs.mat_table.ptr; } );
+
 	return std::move( items );
 }
 

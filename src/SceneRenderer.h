@@ -93,9 +93,6 @@ public:
 	void SetHBAOSettings( const HBAOSettings& settings ) noexcept { m_hbao_settings = settings; }
 	HBAOSettings GetHBAOSettings() const noexcept { return m_hbao_settings; }
 
-	void SetPSSMUniformFactor( float factor ) noexcept { m_pssm.SetUniformFactor( factor ); }
-	float GetPSSMUniformFactor() const noexcept { return m_pssm.GetUniformFactor(); }
-
 	ParallelSplitShadowMapping& GetPSSM() noexcept { return m_pssm; }
 
 	// All queues used in Draw must be flushed before calling this method
