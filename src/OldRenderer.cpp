@@ -93,8 +93,6 @@ void OldRenderer::Init()
 		CreateShaderResourceView( m_d3d_device.Get(), m_reflection_probe_res.Get(),
 								  CD3DX12_CPU_DESCRIPTOR_HANDLE( *DescriptorTables().ModifyTable( m_ibl_table ), 2, m_cbv_srv_uav_size ), true );
 	}
-
-
 }
 
 

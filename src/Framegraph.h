@@ -23,6 +23,17 @@ struct TrackedResource
 	ID3D12Resource* res;
 };
 
+template<typename Resource, D3D12_RESOURCE_STATES State,
+	     typename Enabler = std::enable_if_t<
+	                            std::is_base_of_v<TrackedResource, Resource>,
+	                            void
+	                        >>
+struct ResourceWithState
+{
+	using resource = Resource;
+	static constexpr D3D12_RESOURCE_STATES state = State;
+};
+
 template<template <typename> class ... Node>
 class Framegraph
 {
@@ -107,7 +118,29 @@ private:
 
 	std::tuple<NStorage<Node<Framegraph>>...> m_node_storage;
 
+
 	bool m_need_to_rebuild_framegraph = true;
+
+	template<typename T>
+	struct StrippedResource
+	{
+		using type = T;
+	};
+
+	template<typename Resource, D3D12_RESOURCE_STATES State>
+	struct StrippedResource<ResourceWithState<Resource, State>>
+	{
+		using type = typename ResourceWithState<Resource, State>::resource;
+	};
+
+	template<typename T>
+	struct StrippedResourceTuple;
+
+	template<typename ... Args>
+	struct StrippedResourceTuple<std::tuple<Args...>>
+	{
+		using type = std::tuple<typename StrippedResource<Args>::type ...>;
+	}; 
 
 	template<typename Node>
 	using NodeResources = UniqueTuple<decltype( std::tuple_cat( std::declval<typename Node::OpenRes>(),
@@ -116,7 +149,11 @@ private:
 																std::declval<typename Node::CloseRes>(),
 																std::tuple<const Node*>() ) )>;
 
-	using FramegraphResources = UniqueTuple<decltype( std::tuple_cat( std::declval<NodeResources<Node<Framegraph>>>()... ) )>;
+	using FramegraphResources = UniqueTuple<
+		                            typename StrippedResourceTuple<
+		                                decltype( std::tuple_cat( std::declval<NodeResources<Node<Framegraph>>>()... ) )
+		                            >::type
+	                            >;
 
 	using BaseNode = BaseRenderNode<Framegraph<Node...>>;
 

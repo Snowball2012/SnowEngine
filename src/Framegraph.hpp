@@ -7,7 +7,7 @@
 
 #include <boost/range/algorithm.hpp>
 
-namespace
+namespace details
 {
 	template<typename T>
 	struct typeid_filler;
@@ -152,11 +152,11 @@ std::map<size_t, typename Framegraph<Node...>::RuntimeNodeInfo> Framegraph<Node.
 				node_info.node_id = node_id;
 				node_info.node_ptr = &*node.node;
 				node_info.node_name = typeid( NodeType ).name();
-				typeid_filler<std::tuple<const NodeType*>>::fill_typeids( node_info.open_ids );
-				typeid_filler<typename NodeType::OpenRes>::fill_typeids( node_info.open_ids );
-				typeid_filler<typename NodeType::WriteRes>::fill_typeids( node_info.write_ids );
-				typeid_filler<typename NodeType::ReadRes>::fill_typeids( node_info.read_ids );
-				typeid_filler<typename NodeType::CloseRes>::fill_typeids( node_info.close_ids );
+				details::typeid_filler<std::tuple<const NodeType*>>::fill_typeids( node_info.open_ids );
+				details::typeid_filler<typename StrippedResourceTuple<typename NodeType::OpenRes>::type>::fill_typeids( node_info.open_ids );
+				details::typeid_filler<typename StrippedResourceTuple<typename NodeType::WriteRes>::type>::fill_typeids( node_info.write_ids );
+				details::typeid_filler<typename StrippedResourceTuple<typename NodeType::ReadRes>::type>::fill_typeids( node_info.read_ids );
+				details::typeid_filler<typename StrippedResourceTuple<typename NodeType::CloseRes>::type>::fill_typeids( node_info.close_ids );
 			}
 			if constexpr ( sizeof...( rest ) > 0 )
 				self( self, rest... );

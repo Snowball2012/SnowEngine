@@ -17,18 +17,18 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		HDRBuffer,
-		AmbientBuffer,
-		NormalBuffer
+		ResourceWithState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+		ResourceWithState<AmbientBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+		ResourceWithState<NormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
 		>;
 	using ReadRes = std::tuple
 		<
-		ShadowMaps,
-		ShadowCascade,
+		ResourceWithState<ShadowMaps, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceWithState<ShadowCascade, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceWithState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE>,
 		ScreenConstants,
 		MainRenderitems,
 		ForwardPassCB,
-		DepthStencilBuffer,
 		Skybox
 		>;
 	using CloseRes = std::tuple
