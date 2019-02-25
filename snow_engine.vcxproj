@@ -256,6 +256,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\ForwardCBProvider.h" />
     <ClInclude Include="src\ForwardLightingPass.h" />
     <ClInclude Include="src\ForwardPassNode.h" />
+    <ClInclude Include="src\FramegraphImpl.h" />
     <ClInclude Include="src\FrameResource.h" />
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
@@ -269,7 +270,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\MaterialTableBaker.h" />
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
     <ClInclude Include="src\Framegraph.h" />
-    <ClInclude Include="src\Framegraph.hpp" />
     <ClInclude Include="src\SceneRenderer.h" />
     <ClInclude Include="src\SkyboxNode.h" />
     <ClInclude Include="src\SkyboxPass.h" />

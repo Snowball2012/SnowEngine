@@ -14,13 +14,13 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<SDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
+		ResourceInState<SDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
 		>;
 	using ReadRes = std::tuple
 		<
-		ResourceWithState<HDRBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-		ResourceWithState<AmbientBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-		ResourceWithState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<AmbientBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
 		TonemapNodeSettings,
 		ScreenConstants
 		>;

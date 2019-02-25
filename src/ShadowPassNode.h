@@ -16,7 +16,7 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<ShadowMaps, D3D12_RESOURCE_STATE_DEPTH_WRITE>
+		ResourceInState<ShadowMaps, D3D12_RESOURCE_STATE_DEPTH_WRITE>
 		>;
 	using ReadRes = std::tuple
 		<

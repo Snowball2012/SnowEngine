@@ -15,7 +15,7 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE>
+		ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE>
 		>;
 	using ReadRes = std::tuple
 		<

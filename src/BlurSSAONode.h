@@ -15,13 +15,13 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>,
-		ResourceWithState<SSAOTexture_Transposed, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>
+		ResourceInState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>,
+		ResourceInState<SSAOTexture_Transposed, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>
 		>;
 	using ReadRes = std::tuple
 		<
-		ResourceWithState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-		ResourceWithState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
 		ForwardPassCB
 		>;
 	using CloseRes = std::tuple

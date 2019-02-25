@@ -382,9 +382,6 @@
     <ClInclude Include="src\Framegraph.h">
       <Filter>core\Framegraph</Filter>
     </ClInclude>
-    <ClInclude Include="src\Framegraph.hpp">
-      <Filter>core\Framegraph</Filter>
-    </ClInclude>
     <ClInclude Include="src\FramegraphResource.h">
       <Filter>core\Framegraph</Filter>
     </ClInclude>
@@ -417,6 +414,9 @@
     </ClInclude>
     <ClInclude Include="src\CommandListPool.h">
       <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FramegraphImpl.h">
+      <Filter>core\Framegraph</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

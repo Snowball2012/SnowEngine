@@ -15,12 +15,12 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_RENDER_TARGET>
+		ResourceInState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_RENDER_TARGET>
 		>;
 	using ReadRes = std::tuple
 		<
-		ResourceWithState<NormalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-		ResourceWithState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<NormalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+		ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
 		ScreenConstants,
 		ForwardPassCB,
 		HBAOSettings

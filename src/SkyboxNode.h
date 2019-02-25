@@ -14,11 +14,11 @@ public:
 		>;
 	using WriteRes = std::tuple
 		<
-		ResourceWithState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
+		ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
 		>;
 	using ReadRes = std::tuple
 		<
-		ResourceWithState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_READ>,
+		ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_READ>,
 		Skybox,
 		ForwardPassCB,
 		ScreenConstants
