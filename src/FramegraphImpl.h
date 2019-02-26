@@ -105,7 +105,12 @@ namespace details
 			static void Fill( Framegraph& fg, std::vector<RequiredResourceState>& vec )
 			{
 				RequiredResourceState res_state;
-				res_state.fg_resource_handle = &fg.GetRes<First>().value();
+
+				// HACK HACK HACK HACK TERRIBLE TERRIBLE HACK!
+				// sadly there is no good way to obtain a pointer to uninitialized data in std::optional
+				// this solution relies on a particular layout (an optional type must be placed before an initialize flag)
+				// fortunately, every stl implementation i know of uses this layout
+				res_state.fg_resource_handle = reinterpret_cast<First*>( &fg.GetRes<First>() );
 				res_state.state = first_state;
 
 				vec.push_back( res_state );
@@ -236,14 +241,21 @@ namespace details
 
 			using NodeStorage = std::tuple<OptionalFgNode<Nodes<FramegraphInstance>>...>;
 
+			using LayerStatesMap = std::map<TrackedResource*, D3D12_RESOURCE_STATES>;
+
 			NodeStorage m_node_storage;
 			OptionalTuple<FramegraphResources> m_resources;
 			std::vector<std::vector<BaseNode*>> m_node_layers; // runtime framegraph
+
+			std::vector<std::vector<TrackedResource*>> m_barrier_resources;
+			std::vector<std::vector<D3D12_RESOURCE_BARRIER>> m_barriers;
+
 			bool m_need_to_rebuild_framegraph = true;
 
 			std::map<size_t, RuntimeNodeInfo> CollectActiveNodes();
 			std::map<TypeIdWithName, ResourceUsers> FindResourceUsers( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
 			std::vector<std::pair<const RuntimeNodeInfo*, const RuntimeNodeInfo*>> BuildFrameGraphEdges( const std::map<size_t, RuntimeNodeInfo>& active_nodes );
+			void BuildBarriers( const std::vector<LayerStatesMap>& resource_state_layers );
 		};
 
 
@@ -291,11 +303,14 @@ namespace details
 
 			auto edges = BuildFrameGraphEdges( active_node_info );
 
+			std::vector<LayerStatesMap> resource_states;
+
 			m_node_layers.clear();
 			for ( bool layer_created = true; layer_created; )
 			{
 				layer_created = false;
 				std::vector<BaseNode*> new_layer;
+				LayerStatesMap layer_states;
 
 				std::set<size_t> nodes_with_outcoming_edges;
 				for ( const auto& edge : edges )
@@ -307,6 +322,26 @@ namespace details
 					{
 						nodes_to_remove.insert( node_id );
 						new_layer.push_back( info.node_ptr );
+						for ( RequiredResourceState& node_resource : info.required_states )
+						{
+							if ( auto existing_record = layer_states.find( node_resource.fg_resource_handle );
+								 existing_record != layer_states.end() )
+							{
+								D3D12_RESOURCE_STATES& existing_state = existing_record->second;
+								if ( existing_state != node_resource.state )
+								{
+									existing_state |= node_resource.state;
+
+									// check if states are compatible
+									if ( existing_state & ( ~( D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_DEPTH_READ ) ) )
+										throw SnowEngineException( "one framegraph layer requires a resource to be in incompatible states" );
+								}
+							}
+							else
+							{
+								layer_states[node_resource.fg_resource_handle] = node_resource.state;
+							}
+						}
 					}
 
 				edges.erase( boost::remove_if( edges, [&nodes_to_remove]( const auto& edge )
@@ -321,6 +356,7 @@ namespace details
 				if ( ! new_layer.empty() )
 				{
 					m_node_layers.emplace_back( std::move( new_layer ) );
+					resource_states.emplace_back( std::move( layer_states ) );
 					layer_created = true;
 				}
 			}
@@ -329,6 +365,9 @@ namespace details
 				throw SnowEngineException( "framegraph can't be created, resource dependency cycle has been found" );
 
 			boost::reverse( m_node_layers );
+			boost::reverse( resource_states );
+
+			BuildBarriers( resource_states );
 
 			m_need_to_rebuild_framegraph = false;
 		}
@@ -436,6 +475,71 @@ namespace details
 						edges.emplace_back( src_node, dst_node );
 			}
 			return std::move( edges );
+		}
+
+
+		template<template <typename> class ...Nodes>
+		void FramegraphImpl<Nodes...>::BuildBarriers( const std::vector<LayerStatesMap>& resource_state_layers )
+		{
+			// prefer to batch barriers over split barriers
+			struct Transition
+			{
+				D3D12_RESOURCE_STATES state_before;
+				D3D12_RESOURCE_STATES state_after;
+				int start_layer;
+				int end_layer;
+				bool is_split;
+			};
+
+			// 1. Collect transitions for each resource
+			std::map<TrackedResource*, std::vector<Transition>> pending_transitions;
+			for ( int layer_idx = 0; layer_idx < resource_state_layers.size(); ++layer_idx )
+			{
+				const LayerStatesMap& layer = resource_state_layers[layer_idx];
+				for ( const auto& resource_state : layer )
+				{
+					auto& transitions = pending_transitions[resource_state.first];
+					if ( transitions.empty() )
+					{
+						transitions.emplace_back();
+						transitions.back().state_before = resource_state.second;
+						transitions.back().is_split = false;
+					}
+
+					auto& current_transition = transitions.back();
+					if ( current_transition.state_before == resource_state.second )
+					{
+						current_transition.start_layer = layer_idx;
+					}
+					else
+					{
+						current_transition.state_after = resource_state.second;
+						current_transition.end_layer = layer_idx;
+
+						transitions.emplace_back();
+						transitions.back().state_before = resource_state.second;
+						transitions.back().start_layer = layer_idx;
+						transitions.back().is_split = false;
+					}
+				}
+			}
+
+			// the last transition of each resource is incomplete, remove it
+			for ( auto resource_transitions = pending_transitions.begin(); resource_transitions != pending_transitions.end(); )
+			{
+				auto& transitions_list = resource_transitions->second;
+				if ( ! transitions_list.empty() )
+					transitions_list.pop_back();
+
+				if ( transitions_list.empty() )
+					resource_transitions = pending_transitions.erase( resource_transitions );
+				else
+					resource_transitions++;
+			}
+
+			// TODO: make barriers
+
+			NOTIMPL;
 		}
 
 
