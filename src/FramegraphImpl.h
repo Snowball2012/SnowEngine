@@ -66,6 +66,12 @@ namespace details
 		template<typename Framegraph>
 		using BaseNode = BaseRenderNode<Framegraph>;
 
+		struct RequiredResourceState
+		{
+			TrackedResource* fg_resource_handle = nullptr;
+			D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
+		};
+
 		template<typename Framegraph>
 		struct RuntimeNodeInfo
 		{
@@ -76,10 +82,50 @@ namespace details
 			std::vector<TypeIdWithName> write_ids;
 			std::vector<TypeIdWithName> read_ids;
 			std::vector<TypeIdWithName> close_ids;
+			std::vector<RequiredResourceState> required_states;
 		};
 
-
 		// resource helpers
+
+		// tuple -> vector of RequiredResourceState
+		template<typename T>
+		struct NodeResourceInfoFiller;
+
+		template<>
+		struct NodeResourceInfoFiller<std::tuple<>>
+		{
+			template<typename Framegraph>
+			static void Fill( Framegraph& fg, std::vector<RequiredResourceState>& vec ) {}
+		};
+
+		template<typename First, D3D12_RESOURCE_STATES first_state, typename ...Rest>
+		struct NodeResourceInfoFiller<std::tuple<ResourceInState<First, first_state>, Rest...>>
+		{
+			template<typename Framegraph>
+			static void Fill( Framegraph& fg, std::vector<RequiredResourceState>& vec )
+			{
+				RequiredResourceState res_state;
+				res_state.fg_resource_handle = &fg.GetRes<First>().value();
+				res_state.state = first_state;
+
+				vec.push_back( res_state );
+
+				using RestOfTuple = std::tuple<Rest...>;
+				NodeResourceInfoFiller<RestOfTuple>::Fill( fg, vec );
+			}
+		};
+
+		template<typename First, typename ...Rest>
+		struct NodeResourceInfoFiller<std::tuple<First, Rest...>>
+		{
+			template<typename Framegraph>
+			static void Fill( Framegraph& fg, std::vector<RequiredResourceState>& vec )
+			{
+				using RestOfTuple = std::tuple<Rest...>;
+				NodeResourceInfoFiller<RestOfTuple>::Fill( fg, vec );
+			}
+		};
+
 
 		// extracts resource from TrackedResource
 		template<typename T>
@@ -309,9 +355,9 @@ namespace details
 		{
 			std::map<size_t, RuntimeNodeInfo> active_node_info;
 
-			auto fill_info = [&active_node_info]( auto&& ...nodes )
+			auto fill_info = [&active_node_info, this]( auto&& ...nodes )
 			{
-				auto f_impl = [&active_node_info]( auto& self, auto& node, auto&& ... rest )
+				auto f_impl = [&active_node_info, this]( auto& self, auto& node, auto&& ... rest )
 				{
 					if ( node.node.has_value() && node.enabled )
 					{
@@ -327,6 +373,11 @@ namespace details
 						TypeidFiller<typename StrippedResourceTuple<typename NodeType::WriteRes>::Type>::FillTypeids( node_info.write_ids );
 						TypeidFiller<typename StrippedResourceTuple<typename NodeType::ReadRes>::Type>::FillTypeids( node_info.read_ids );
 						TypeidFiller<typename StrippedResourceTuple<typename NodeType::CloseRes>::Type>::FillTypeids( node_info.close_ids );
+
+						NodeResourceInfoFiller<typename NodeType::OpenRes>::Fill( *this, node_info.required_states );
+						NodeResourceInfoFiller<typename NodeType::WriteRes>::Fill( *this, node_info.required_states );
+						NodeResourceInfoFiller<typename NodeType::ReadRes>::Fill( *this, node_info.required_states );
+						NodeResourceInfoFiller<typename NodeType::CloseRes>::Fill( *this, node_info.required_states );
 					}
 					if constexpr ( sizeof...( rest ) > 0 )
 						self( self, rest... );
