@@ -16,7 +16,7 @@ public:
 	using WriteRes = std::tuple
 		<
 		ResourceInState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>,
-		ResourceInState<SSAOTexture_Transposed, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>
+		SSAOTexture_Transposed
 		>;
 	using ReadRes = std::tuple
 		<
@@ -73,6 +73,7 @@ inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12Graphic
 
 	m_pass.Draw( ctx );
 
+	// TODO: let the framegraph handle this barrier
 	CD3DX12_RESOURCE_BARRIER barriers[] =
 	{
 		CD3DX12_RESOURCE_BARRIER::Transition( transposed_ssao->res,
@@ -90,12 +91,6 @@ inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12Graphic
 	ctx.uav_height = blurred_desc.Height;
 
 	m_pass.Draw( ctx );
-
-	barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( blurred_ssao->res,
-														D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-														D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE );
-
-	cmd_list.ResourceBarrier( 1, barriers );
 
 	m_pass.End();
 }

@@ -69,9 +69,6 @@ public:
 
 		m_pass.End();
 
-		cmd_list.ResourceBarrier( 1, &CD3DX12_RESOURCE_BARRIER::Transition( shadow_maps->res,
-																			D3D12_RESOURCE_STATE_DEPTH_WRITE,
-																			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) );
 	}
 
 private:

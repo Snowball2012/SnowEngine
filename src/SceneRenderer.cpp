@@ -257,7 +257,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 
 	ID3D12GraphicsCommandList* list_iface = cmd_list.GetInterface();
 
-	constexpr uint32_t nbarriers = 8;
+	constexpr uint32_t nbarriers = 9;
 	CD3DX12_RESOURCE_BARRIER rtv_barriers[nbarriers];
 	rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_backbuffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 	rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_ambient->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -276,6 +276,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 			throw SnowEngineException( "missing resource" );
 		rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 	}
+	rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->Resource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 
 	list_iface->ResourceBarrier( nbarriers, rtv_barriers );
 	ID3D12DescriptorHeap* heaps[] = { m_descriptor_tables->CurrentGPUHeap().Get() };
@@ -308,6 +309,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 		DepthStencilBuffer depth_buffer;
 		depth_buffer.dsv = m_depth_stencil_buffer->DSV()->HandleCPU();
 		depth_buffer.srv = GetGPUHandle( m_depth_stencil_buffer->SRV() );
+		depth_buffer.res = m_depth_stencil_buffer->Resource();
 		m_framegraph.SetRes( depth_buffer );
 
 		ScreenConstants screen;

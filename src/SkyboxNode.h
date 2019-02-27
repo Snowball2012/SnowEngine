@@ -46,17 +46,7 @@ public:
 			throw SnowEngineException( "missing resource" );
 
 		if ( skybox->srv_skybox.ptr == 0 )
-		{
-			CD3DX12_RESOURCE_BARRIER barriers[] =
-			{
-				CD3DX12_RESOURCE_BARRIER::Transition( hdr_buffer->res,
-				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
-			};
-
-			cmd_list.ResourceBarrier( 1, barriers );
 			return;
-		}
 
 		m_pass.Begin( m_state, cmd_list );
 
@@ -73,15 +63,6 @@ public:
 		m_pass.Draw( ctx );
 
 		m_pass.End();
-
-		CD3DX12_RESOURCE_BARRIER barriers[] =
-		{
-			CD3DX12_RESOURCE_BARRIER::Transition( hdr_buffer->res,
-			D3D12_RESOURCE_STATE_RENDER_TARGET,
-			D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
-		};
-
-		cmd_list.ResourceBarrier( 1, barriers );
 	}
 
 private:

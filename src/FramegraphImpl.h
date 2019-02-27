@@ -384,9 +384,25 @@ namespace details
 			if ( m_need_to_rebuild_framegraph )
 				throw SnowEngineException( "framegraph rebuild is needed" );
 
-			for ( auto& layer : m_node_layers )
-				for ( auto& node : layer )
+			for ( int layer_idx = 0; layer_idx < m_node_layers.size(); ++layer_idx )
+			{
+				if ( layer_idx > 0 )
+				{
+					auto& barriers = m_barriers[layer_idx - 1];
+					auto& resources = m_barrier_resources[layer_idx - 1];
+					if ( barriers.size() != resources.size() )
+						throw SnowEngineException( "corrupted resource barriers in Framegraph" );
+
+					for ( int i = 0; i < barriers.size(); ++i )
+						barriers[i].Transition.pResource = resources[i]->res;
+
+					cmd_list.ResourceBarrier( barriers.size(), barriers.data() );
+				}
+
+				auto& nodes = m_node_layers[layer_idx];
+				for ( auto& node : nodes )
 					node->Run( *this, cmd_list );
+			}
 		}
 
 		template<template <typename> class ...Nodes>
@@ -534,12 +550,81 @@ namespace details
 				if ( transitions_list.empty() )
 					resource_transitions = pending_transitions.erase( resource_transitions );
 				else
+				{
+					boost::reverse( transitions_list );
 					resource_transitions++;
+				}
 			}
 
-			// TODO: make barriers
+			m_barriers.clear();
+			m_barrier_resources.clear();
+			m_barriers.resize( m_node_layers.size() - 1 );
+			m_barrier_resources.resize( m_node_layers.size() - 1 );
+			while ( !pending_transitions.empty() )
+			{
+				int min_end_layer = m_node_layers.size();
+				for ( const auto& [resource, transitions] : pending_transitions )
+				{
+					assert( ! transitions.empty() );
+					if ( transitions.back().end_layer < min_end_layer )
+						min_end_layer = transitions.back().end_layer;
+				}
 
-			NOTIMPL;
+				const int barrier_layer_idx = min_end_layer - 1;
+				assert( barrier_layer_idx >= 0 );
+				auto& layer_barriers = m_barriers[barrier_layer_idx];
+				auto& layer_resources = m_barrier_resources[barrier_layer_idx];
+
+				for ( auto resource_transitions = pending_transitions.begin(); resource_transitions != pending_transitions.end(); )
+				{
+					TrackedResource* resource = resource_transitions->first;
+					auto& all_transitions = resource_transitions->second;
+					Transition& transition = all_transitions.back();
+
+					if ( transition.start_layer >= min_end_layer )
+					{
+						resource_transitions++;
+						continue;
+					}
+
+					bool transition_completed = false;
+
+					D3D12_RESOURCE_BARRIER_FLAGS flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+					if ( transition.is_split )
+					{
+						transition_completed = true;
+						flags = D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
+					}
+					else if ( transition.end_layer == min_end_layer )
+					{
+						transition_completed = true;
+					}
+					else
+					{
+						flags = D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
+						transition.is_split = true;
+					}
+
+					layer_barriers.push_back( CD3DX12_RESOURCE_BARRIER::Transition( nullptr,
+																					transition.state_before,
+																					transition.state_after,
+																					D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+																					flags ) );
+
+					layer_resources.push_back( resource );
+
+					if ( transition_completed )
+					{
+						all_transitions.pop_back();
+						if ( all_transitions.empty() )
+							resource_transitions = pending_transitions.erase( resource_transitions );
+						else
+							resource_transitions++;
+					}
+					else
+						resource_transitions++;
+				}
+			}
 		}
 
 

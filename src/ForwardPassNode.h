@@ -108,16 +108,4 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12Grap
 	m_pass.Draw( ctx );
 
 	m_pass.End();
-
-	CD3DX12_RESOURCE_BARRIER barriers[] =
-	{
-		CD3DX12_RESOURCE_BARRIER::Transition( ambient_buffer->res,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ),
-		CD3DX12_RESOURCE_BARRIER::Transition( normal_buffer->res,
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE )
-	};
-
-	cmd_list.ResourceBarrier( 2, barriers );
 }
