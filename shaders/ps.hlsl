@@ -162,7 +162,7 @@ PixelOut main(PixelIn pin)
     float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, roughness ) * 6.0f );
     float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( saturate( dot( normalize( -pin.pos_v ), normal ) ), roughness ) ).xy;
 
-    float3 specular_ambient = ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + float3( 1, 1, 1 ) * env_brdf.y );
+    float3 specular_ambient = ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + fresnelSchlickRoughness( 0, fresnel_r0, roughness ) * env_brdf.y );
 
     res.ambient_color += float4( specular_ambient, 0.0f );
 
