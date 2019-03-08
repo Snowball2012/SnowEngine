@@ -23,14 +23,11 @@ float PercievedBrightness( float3 color )
     return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
 }
 
-float3 Radiance2LinearRGB(float3 radiance, float brightness)
+float3 Radiance2GammaCorrectedRGB(float3 radiance, float brightness)
 {
     float3 normalized_color = radiance / PercievedBrightness(radiance);
     float3 linear_color = normalized_color * brightness;
-    linear_color.r = pow(linear_color.r, 1.0f / 2.2f);
-    linear_color.g = pow(linear_color.g, 1.0f / 2.2f);
-    linear_color.b = pow(linear_color.b, 1.0f / 2.2f);
-    return linear_color;
+    return pow(linear_color, 1.0f / 2.2f);
 }
 
 //#define DEBUG_SSAO
@@ -54,6 +51,6 @@ float4 main(float4 coord : SV_POSITION) : SV_TARGET
         float ssao_factor = ssao.Sample( linear_wrap_sampler, coord.xy / rt_dimensions ).r;
         return float4( ssao_factor, ssao_factor, ssao_factor, 1.0f );
     #else
-        return float4(Radiance2LinearRGB(cur_radiance.rgb, linear_brightness), cur_radiance.a);
+        return float4(Radiance2GammaCorrectedRGB(cur_radiance.rgb, linear_brightness), cur_radiance.a);
     #endif
 }

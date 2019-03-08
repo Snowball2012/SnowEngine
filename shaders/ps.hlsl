@@ -91,28 +91,28 @@ float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
     return F0 + (max(float3(1,1,1) * (1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+
 PixelOut main(PixelIn pin)
 {
     float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
+    base_color = pow( base_color, 2.2f );
 
 #ifdef DEBUG_TEXTURE_LOD
     float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
-    if ( lod > 1.0f )
+
+    float4 oversampled_color = float4( 1, 1, 0.1, 1 );
+    float4 undersampled_color = float4( 1, 0.1, 1, 1 );
+
+    if ( lod > 2.0f )
     {
-        base_color.r = pow(base_color.r, 2.2f);
-        base_color.g = pow(base_color.g, 2.2f);
-        base_color.b = pow(base_color.b, 2.2f);
+        // oversampled
+        base_color = lerp( base_color, oversampled_color, pow( (clamp( lod, 2.0f, 4.0f ) - 2.0f) / 2.0f, 2.2f ) );
     }
-    else
+    else if ( lod < 0.1f )
     {
-        base_color.r = pow(lod, 2.2f);
-        base_color.g = pow(lod, 2.2f);
-        base_color.b = pow(lod, 2.2f);
+        // undersampled
+        base_color = lerp( base_color, undersampled_color, pow( 1.0f - lod * 10.0f, 2.2f ) );
     }
-#else
-    base_color.r = pow(base_color.r, 2.2f);
-    base_color.g = pow(base_color.g, 2.2f);
-    base_color.b = pow(base_color.b, 2.2f);
 #endif
 
 	float3 res_color = float3( 0.0f, 0.0f, 0.0f );

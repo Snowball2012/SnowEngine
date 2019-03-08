@@ -15,9 +15,9 @@ RWTexture2D<min16float> output : register( u0 );
 
 SamplerState linear_wrap_sampler : register( s0 );
 
-float LinearDepth( float hyperbolic_z )
+float LinearDepth( float hyperbolic_reversed_z )
 {
-    return rcp( 1.001f - hyperbolic_z );
+    return rcp( hyperbolic_reversed_z + 1.e-4f ) / 1.e4f * ( pass_params.near_z - pass_params.far_z ) + pass_params.far_z;
 }
 
 #define BLUR_RADIUS (5)
@@ -76,7 +76,7 @@ void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupT
     for ( int i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i )
     {
         float sample_depth = shared_depth_data[group_data_idx + i];
-        float weight = rcp( pow( 2, abs( sample_depth - depth_ref ) ) ) * exp( - i * i / ( 2.0f * ( SIGMA * SIGMA ) ) ); // bilateral depth * gauss
+        float weight = rcp( pow( 2, 40 * abs( sample_depth - depth_ref ) ) ) * exp( - i * i / ( 2.0f * ( SIGMA * SIGMA ) ) ); // bilateral depth * gauss
 
         sum += shared_ssao_data[group_data_idx + i] * weight;
         weight_sum += weight;
