@@ -17,11 +17,14 @@ SamplerState linear_wrap_sampler : register( s0 );
 
 float LinearDepth( float hyperbolic_reversed_z )
 {
-    return rcp( hyperbolic_reversed_z + 1.e-4f ) / 1.e4f * ( pass_params.near_z - pass_params.far_z ) + pass_params.far_z;
+    float z_n = 2.0 * hyperbolic_reversed_z - 1.0;
+    float z_e = 2.0 * pass_params.near_z * pass_params.far_z / (pass_params.far_z + pass_params.near_z - z_n * (pass_params.far_z - pass_params.near_z));
+
+    return z_e;
 }
 
-#define BLUR_RADIUS (5)
-#define SIGMA BLUR_RADIUS
+#define BLUR_RADIUS (10)
+#define SIGMA ( BLUR_RADIUS )
 
 #define GROUP_SIZE_X 64
 #define GROUP_SIZE_Y 4
