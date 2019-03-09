@@ -34,9 +34,11 @@ SamplerComparisonState shadow_map_sampler : register(s6);
 Texture2D base_color_map : register(t0);
 Texture2D normal_map : register(t1);
 Texture2D specular_map : register(t2);
-Texture2D shadow_map : register(t3);
-Texture2DArray shadow_cascade : register(t4);
-Texture2D brdf_lut : register(t5);
+Texture2D brdf_lut : register(t3);
+
+Texture2D shadow_map : register(t4);
+Texture2DArray shadow_cascade : register(t5);
+
 TextureCube irradiance_map : register(t6);
 TextureCube reflection_probe : register(t7);
 

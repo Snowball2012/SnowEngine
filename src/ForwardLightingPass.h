@@ -89,9 +89,12 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 		t0 - albedo
 		t1 - normal
 		t2 - specular
-		t3 - shadow
-		t4 - shadow cascade
-		t5 - irradiance map
+		t3 - brdf lut
+
+		t4 - shadow
+		t5 - shadow cascade
+
+		t6 - irradiance map
 
 	*/
 	constexpr int nparams = 9;
@@ -102,10 +105,10 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	slot_root_parameter[1].InitAsConstantBufferView( 1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL );
 
 	CD3DX12_DESCRIPTOR_RANGE1 desc_table[4];
-	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // albedo, normal, specular
-	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3 ); // shadow
-	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow cascade
-	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 5, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // irradiance map
+	desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // albedo, normal, specular, brdf_lut
+	desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 4 ); // shadow
+	desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 5 ); // shadow cascade
+	desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 6, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC ); // irradiance map & reflection probe
 
 	slot_root_parameter[2].InitAsDescriptorTable( 1, &desc_table[0], D3D12_SHADER_VISIBILITY_PIXEL );
 	slot_root_parameter[3].InitAsDescriptorTable( 1, &desc_table[1], D3D12_SHADER_VISIBILITY_PIXEL );

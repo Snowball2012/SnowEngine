@@ -430,6 +430,7 @@ void RenderApp::LoadPlaceholderTextures()
 	m_ph_normal_texture = scene.LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
 	m_ph_specular_texture = scene.LoadStreamedTexture( "resources/textures/default_spec.dds" );
 	TextureID skybox_tex = scene.LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
+	m_brdf_lut = scene.LoadStaticTexture( "D:/scenes/bistro/ibl/brdf_lut.DDS" );
 	m_skybox_tf = scene.AddTransform();
 	CubemapID skybox_cubemap = scene.AddCubemapFromTexture( skybox_tex );
 	m_ph_skybox = scene.AddEnviromentMap( skybox_cubemap, m_skybox_tf );
@@ -460,6 +461,8 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 			textures.specular = m_ph_specular_texture;
 		else
 			textures.specular = ext_scene.textures[spec_map_idx].second;
+
+		textures.preintegrated_brdf = m_brdf_lut;
 
 		ext_material.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
 	}

@@ -30,7 +30,7 @@ float3 radiance2gamma_corrected_rgb(float3 radiance, float brightness)
     return pow(linear_color, 1.0f / 2.2f);
 }
 
-#define DEBUG_SSAO
+//#define DEBUG_SSAO
 
 float4 main(float4 coord : SV_POSITION) : SV_TARGET
 {

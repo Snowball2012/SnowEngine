@@ -443,7 +443,7 @@ std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& ca
 
 		bool has_unloaded_texture = false;
 		const auto& textures = material.Textures();
-		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
+		for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
 		{
 			if ( ! scene.AllTextures()[tex_id].IsLoaded() )
 			{

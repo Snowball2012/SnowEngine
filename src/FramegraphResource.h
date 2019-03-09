@@ -61,7 +61,7 @@ struct NormalBuffer : TrackedResource
 struct Skybox
 {
 	D3D12_GPU_DESCRIPTOR_HANDLE srv_skybox;
-	D3D12_GPU_DESCRIPTOR_HANDLE srv_table; // brdf, irradiance, reflection
+	D3D12_GPU_DESCRIPTOR_HANDLE srv_table; // irradiance, reflection
 	D3D12_GPU_VIRTUAL_ADDRESS tf_cbv;
 	float radiance_factor;
 };

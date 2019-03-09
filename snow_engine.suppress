@@ -791,4 +791,60 @@
     <CodeCurrent>737704107</CodeCurrent>
     <CodeNext>4046215760</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>OldRenderer.cpp</FileName>
+    <ErrorCode>V1020</ErrorCode>
+    <Message>The function exited without calling the 'upload.End' function. Check lines: _, _.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>958756</CodeCurrent>
+    <CodeNext>86499344</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>OldRenderer.cpp</FileName>
+    <ErrorCode>V807</ErrorCode>
+    <Message>Decreased performance. Consider creating a reference to avoid using the 'lists_to_execute.back()' expression repeatedly.</Message>
+    <CodePrev>163985478</CodePrev>
+    <CodeCurrent>1054289726</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>OldRenderer.cpp</FileName>
+    <ErrorCode>V821</ErrorCode>
+    <Message>Decreased performance. The 'desc_table' variable can be constructed in a lower level scope.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>239911323</CodeCurrent>
+    <CodeNext>1888375007</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>OldRenderer.cpp</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the constructor. Consider inspecting: m_screen_viewport, m_scissor_rect.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>696119622</CodeCurrent>
+    <CodeNext>3611432588</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>CommandListPool.cpp</FileName>
+    <ErrorCode>V2006</ErrorCode>
+    <Message>Implicit type conversion from enum type to integer type.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>633518789</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>CommandListPool.cpp</FileName>
+    <ErrorCode>V2006</ErrorCode>
+    <Message>Implicit type conversion from enum type to integer type.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>3327826093</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>SceneRenderer.cpp</FileName>
+    <ErrorCode>V2006</ErrorCode>
+    <Message>Implicit type conversion from enum type to integer type.</Message>
+    <CodePrev>2835830609</CodePrev>
+    <CodeCurrent>335803541</CodeCurrent>
+    <CodeNext>23426475</CodeNext>
+  </snow_engine>
 </NewDataSet>

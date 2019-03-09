@@ -223,7 +223,7 @@ MaterialID Scene::AddMaterial( const MaterialPBR::TextureIds& textures )
 		tex->AddRef();
 	};
 
-	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular } )
+	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
 		add_ref( tex_id );
 
 	MaterialPBR material;
@@ -246,7 +246,7 @@ bool Scene::RemoveMaterial( MaterialID id ) noexcept
 	};
 
 	const auto& textures = material->Textures();
-	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular } )
+	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
 		release_ref( tex_id );
 
 	return Remove( id );

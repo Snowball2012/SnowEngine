@@ -16,7 +16,7 @@ void MaterialTableBaker::RegisterMaterial( MaterialID id )
 {
 	m_materials.emplace_back();
 	auto& material_data = m_materials.back();
-	material_data.table_id = m_tables->AllocateTable( 3 );
+	material_data.table_id = m_tables->AllocateTable( 4 );
 	material_data.material_id = id;
 	assert( m_scene->AllMaterials().has( id ) );
 	UpdateMaterialTextures( m_scene->AllMaterials()[id], material_data.table_id, true );
@@ -118,6 +118,7 @@ void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, Ta
 	update_texture( textures.base_color, 0 );
 	update_texture( textures.normal, 1 );
 	update_texture( textures.specular, 2 );
+	update_texture( textures.preintegrated_brdf, 3 );
 }
 
 void MaterialTableBaker::UpdateEnvmapTextures( const EnviromentMap& envmap, TableID envmap_table_id, bool first_load )

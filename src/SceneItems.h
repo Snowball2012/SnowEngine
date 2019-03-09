@@ -199,6 +199,7 @@ public:
 		TextureID base_color;
 		TextureID normal;
 		TextureID specular;
+		TextureID preintegrated_brdf;
 	};
 
 	struct Data
