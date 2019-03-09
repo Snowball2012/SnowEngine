@@ -15,24 +15,21 @@ RWTexture2D<min16float> output : register( u0 );
 
 SamplerState linear_wrap_sampler : register( s0 );
 
-float LinearDepth( float hyperbolic_reversed_z )
+float linear_depth( float hyperbolic_z )
 {
-    float z_n = 2.0 * hyperbolic_reversed_z - 1.0;
-    float z_e = 2.0 * pass_params.near_z * pass_params.far_z / (pass_params.far_z + pass_params.near_z - z_n * (pass_params.far_z - pass_params.near_z));
-
-    return z_e;
+    float remapped_z = 2.0 * hyperbolic_z - 1.0;
+    return 2.0 * pass_params.near_z * pass_params.far_z / (pass_params.far_z + pass_params.near_z - remapped_z * (pass_params.far_z - pass_params.near_z));
 }
 
-#define BLUR_RADIUS (10)
-#define SIGMA ( BLUR_RADIUS )
+static const int BLUR_RADIUS = 10;
+static const float SIGMA = BLUR_RADIUS;
 
-#define GROUP_SIZE_X 64
-#define GROUP_SIZE_Y 4
-#define GROUP_DATA_ELEM_NUM_X (( BLUR_RADIUS * 2 + GROUP_SIZE_X ))
+static const int GROUP_SIZE_X = 64;
+static const int GROUP_SIZE_Y = 4;
+static const int GROUP_DATA_ELEM_NUM_X = BLUR_RADIUS * 2 + GROUP_SIZE_X;
 
 groupshared float shared_depth_data[GROUP_DATA_ELEM_NUM_X * GROUP_SIZE_Y];
 groupshared float shared_ssao_data[GROUP_DATA_ELEM_NUM_X * GROUP_SIZE_Y];
-
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
 void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupThreadID )
@@ -56,17 +53,17 @@ void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupT
     // 1. Collect group data
     uint group_data_idx = thread_in_group.y * GROUP_DATA_ELEM_NUM_X + BLUR_RADIUS + thread_in_group.x;
     
-    float depth_ref = LinearDepth( depth[ref_coord].r );
+    float depth_ref = linear_depth( depth[ref_coord].r );
 
     shared_depth_data[group_data_idx] = depth_ref;
     shared_ssao_data[group_data_idx] = input.SampleLevel( linear_wrap_sampler, float2( thread.xy ) / rt_dimensions, 0 ).r;
 
-    int is_hi_thread_in_group = ( thread_in_group.x >= ( GROUP_SIZE_X - BLUR_RADIUS ) );
-    if ( ( thread_in_group.x < BLUR_RADIUS ) + is_hi_thread_in_group )
+    int is_hi_thread_in_group = ( (int)thread_in_group.x >= ( GROUP_SIZE_X - BLUR_RADIUS ) );
+    if ( ( (int)thread_in_group.x < BLUR_RADIUS ) + is_hi_thread_in_group )
     {
         int additional_offset =  -BLUR_RADIUS + is_hi_thread_in_group * 2 * BLUR_RADIUS;
         uint additional_data_idx = group_data_idx + additional_offset;
-        shared_depth_data[additional_data_idx] = LinearDepth( depth[ref_coord + additional_offset * offset].r );
+        shared_depth_data[additional_data_idx] = linear_depth( depth[ref_coord + additional_offset * offset].r );
         shared_ssao_data[additional_data_idx] = input.SampleLevel( linear_wrap_sampler, float2( thread.xy + int2( additional_offset, 0 ) ) / rt_dimensions, 0 ).r;
     }
 

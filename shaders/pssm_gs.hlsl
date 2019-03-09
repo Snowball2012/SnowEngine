@@ -27,7 +27,7 @@ void main( triangle GSInput input[3],
            inout TriangleStream<GSOutput> output )
 {
     ParallelLight light = pass_params.parallel_lights[light_idx];
-    for ( uint split_idx = 0; split_idx < light.csm_num_split_positions + 1; ++split_idx )
+    for ( int split_idx = 0; split_idx < light.csm_num_split_positions + 1; ++split_idx )
     {
         float4x4 shadow_mat = light.shadow_map_mat[split_idx];
 		output.RestartStrip();

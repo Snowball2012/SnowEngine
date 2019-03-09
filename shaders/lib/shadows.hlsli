@@ -51,7 +51,7 @@ float shadow_factor( float3 pos_v, float4x4 shadow_map_mat, Texture2D shadow_map
 	return percent_lit;
 }
 
-// ToDo: generalize somehow?
+// TODO: generalize somehow?
 float shadow_factor_array( float3 pos_v, float4x4 shadow_map_mat, Texture2DArray shadow_map, int shadow_map_idx, SamplerComparisonState shadow_map_sampler )
 {
 	// 3x3 PCF
@@ -92,8 +92,9 @@ float shadow_factor_array( float3 pos_v, float4x4 shadow_map_mat, Texture2DArray
 	for ( int i = 0; i < 9; ++i )
 		percent_lit += shadow_map.SampleCmpLevelZero( shadow_map_sampler, shadow_pos_h.xyz + float3( offsets[i], 0 ), fragment_z ).r * gauss_kernel[i];
 
-	return ( sin(( percent_lit - 0.5f ) * M_PI ) + 1.0f ) / 2.0f; // hard shadows effect without pixelization
+	return ( sin(( percent_lit - 0.5f ) * PI ) + 1.0f ) / 2.0f; // hard shadows effect without pixelization
 }
+
 float csm_shadow_factor( float3 pos_v, ParallelLight light, Texture2DArray shadow_cascade, float split_positions[MAX_CASCADE_SIZE-1], SamplerComparisonState shadow_map_sampler )
 {
     int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_split_positions, split_positions );

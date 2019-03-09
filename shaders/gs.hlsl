@@ -12,7 +12,6 @@ struct GSOutput
 	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
 	float3 tangent : TANGENT;
-	float3 binormal : BINORMAL;
 	float2 uv : TEXCOORD;
 };
 
@@ -30,7 +29,6 @@ void main(
 
 	float inv_det = 1.0f / ( duv1.x * duv2.y - duv1.y * duv2.x );
 	float3 tangent = normalize( inv_det * ( dp1 * duv2.y - dp2 * duv1.y ) );
-	float3 binormal = normalize( inv_det * ( dp2 * duv1.x - dp1 * duv2.x ) );
 
 	for ( uint i = 0; i < 3; i++ )
 	{
@@ -40,7 +38,6 @@ void main(
 		element.normal = input[i].normal;
 		element.uv = input[i].uv;
 		element.tangent = tangent;
-		element.binormal = binormal;
 		output.Append( element );
 	}
 }
