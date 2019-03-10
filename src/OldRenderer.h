@@ -97,7 +97,7 @@ private:
 	CameraID m_frustrum_cull_camera_id = CameraID::nullid;
 
 	CubemapID m_irradiance_map = CubemapID::nullid;
-	ComPtr<ID3D12Resource> m_reflection_probe_res;
+	CubemapID m_reflection_probe = CubemapID::nullid;
 	TextureID m_brdf_lut = TextureID::nullid;
 	DescriptorTableID m_ibl_table = DescriptorTableID::nullid;
 

@@ -41,6 +41,7 @@ public:
 	StaticMeshID LoadStaticMesh( std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices );
 	TextureID LoadStreamedTexture( std::string path );
 	TextureID LoadStaticTexture( std::string path );
+	CubemapID LoadCubemap( std::string path );
 	CubemapID AddCubemapFromTexture( TextureID tex_id );
 	TransformID AddTransform( const DirectX::XMFLOAT4X4& obj2world = Identity4x4 );
 	MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT4X4& uv_transform = Identity4x4 );

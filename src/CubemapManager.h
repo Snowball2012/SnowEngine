@@ -20,7 +20,12 @@ public:
 
 	void CreateCubemapFromTexture( CubemapID cubemap_id, TextureID texture_id );
 
-	void Update( );
+	void LoadCubemap( CubemapID cubemap_id, std::string path );
+
+	void Update( GPUTaskQueue::Timestamp current_timestamp, SceneCopyOp copy_op, ID3D12GraphicsCommandList& cmd_list );
+
+	// post a timestamp for given operation. May throw SnowEngineException if there already is a timestamp for this operation
+	void PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp );
 
 	void OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_graphics_queue );
 
@@ -39,11 +44,23 @@ private:
 		CubemapData cubemap;
 	};
 
+	struct CopyData
+	{
+		CubemapData cubemap;
+
+		Microsoft::WRL::ComPtr<ID3D12Resource> upload_res;
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> footprints;
+
+		std::optional<SceneCopyOp> operation_tag;
+		std::optional<GPUTaskQueue::Timestamp> end_timestamp;
+	};
+
 	Microsoft::WRL::ComPtr<ID3D12Device> m_device;
 
 	std::vector<CubemapData> m_loaded_cubemaps;
 
 	std::vector<ConvertationData> m_conversion_in_progress;
+	std::vector<CopyData> m_copy_in_progress;
 
 	StagingDescriptorHeap m_srv_heap;
 	DescriptorTableBakery* m_desc_tables;
@@ -53,4 +70,6 @@ private:
 	static constexpr uint32_t CubemapResolution = 2048;
 
 	Scene* m_scene = nullptr;
+
+	void FillUploader( CopyData& data, const span<D3D12_SUBRESOURCE_DATA>& subresources );
 };

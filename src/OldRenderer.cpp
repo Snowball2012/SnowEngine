@@ -76,22 +76,9 @@ void OldRenderer::Init()
 
 	TextureID irradiance_map_tex = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
 	m_irradiance_map = GetScene().AddCubemapFromTexture( irradiance_map_tex );
+	m_reflection_probe = GetScene().LoadCubemap( "D:/scenes/bistro/ibl/reflection_probe_cm.dds" );
 	m_ibl_table = DescriptorTables().AllocateTable( 2 );
 
-	{
-		ResourceUploadBatch upload( m_d3d_device.Get() );
-
-		upload.Begin();
-
-		ThrowIfFailed(
-			CreateDDSTextureFromFile( m_d3d_device.Get(), upload, L"D:/scenes/bistro/ibl/reflection_probe_cm.dds",
-									  m_reflection_probe_res.ReleaseAndGetAddressOf() ) );
-
-		upload.End( m_graphics_queue->GetCmdQueue() ).wait();
-
-		CreateShaderResourceView( m_d3d_device.Get(), m_reflection_probe_res.Get(),
-								  CD3DX12_CPU_DESCRIPTOR_HANDLE( *DescriptorTables().ModifyTable( m_ibl_table ), 1, m_cbv_srv_uav_size ), true );
-	}
 }
 
 
@@ -111,6 +98,14 @@ void OldRenderer::Draw()
 			if ( tex->IsLoaded() )
 			{
 				m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 0, m_cbv_srv_uav_size ),
+													 tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+			}
+		}
+		if ( auto* tex = GetScene().GetROScene().AllCubemaps().try_get( m_reflection_probe ) )
+		{
+			if ( tex->IsLoaded() )
+			{
+				m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, m_cbv_srv_uav_size ),
 													 tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
 			}
 		}

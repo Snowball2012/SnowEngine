@@ -36,6 +36,13 @@ TextureID SceneClientView::LoadStaticTexture( std::string path )
 	return tex_id;
 }
 
+CubemapID SceneClientView::LoadCubemap( std::string path )
+{
+	CubemapID id = m_scene->AddCubemap();
+	m_cubemap_manager->LoadCubemap( id, std::move( path ) );
+	return id;
+}
+
 CubemapID SceneClientView::AddCubemapFromTexture( TextureID tex_id )
 {
 	CubemapID cm_id = m_scene->AddCubemap();
@@ -236,7 +243,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 	m_uv_density_calculator.Update( main_camera_id, main_viewport );
 	m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );
 	m_static_texture_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
-	m_cubemap_mgr.Update();
+	m_cubemap_mgr.Update( current_copy_time, cur_op, *m_copy_cmd_list.Get() );
 	m_dynamic_buffers.Update();
 	m_material_table_baker.UpdateStagingDescriptors();
 
@@ -250,6 +257,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 	m_static_mesh_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_static_texture_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 	m_tex_streamer.PostTimestamp( cur_op, m_last_copy_timestamp );
+	m_cubemap_mgr.PostTimestamp( cur_op, m_last_copy_timestamp );
 
 	if ( m_gpu_descriptor_tables.BakeGPUTables() )
 	{
@@ -258,7 +266,6 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
 
 		m_material_table_baker.UpdateGPUDescriptors();
 		m_cubemap_mgr.OnBakeDescriptors( *m_graphics_cmd_list.Get() );
-
 	}
 
 	ThrowIfFailed( m_graphics_cmd_list->Close() );
