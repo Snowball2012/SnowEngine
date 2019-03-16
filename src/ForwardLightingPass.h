@@ -117,7 +117,7 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
 	slot_root_parameter[5].InitAsConstantBufferView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC );
 
 	slot_root_parameter[6].InitAsDescriptorTable( 1, &desc_table[3], D3D12_SHADER_VISIBILITY_PIXEL );
-	slot_root_parameter[7].InitAsConstantBufferView( 3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_PIXEL );
+	slot_root_parameter[7].InitAsConstantBufferView( 3, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_VERTEX );
 	slot_root_parameter[8].InitAsConstants( 1, 4, 0, D3D12_SHADER_VISIBILITY_PIXEL );
 
 	CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,

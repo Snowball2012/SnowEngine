@@ -92,7 +92,7 @@ void ParallelSplitShadowMapping::CalcShadowMatrixForFrustrumLH( const span<XMVEC
 	DirectX::XMVECTOR light_eye = DirectX::XMVectorScale( light_dir, box_depth / 2.0f + additional_height );
 	light_eye = DirectX::XMVectorAdd( light_eye, box_center );
 
-	light_space[min_i] = light_space[min_i] * DirectX::XMMatrixTranslationFromVector( light_eye );
+	// TODO: snap light_eye and max_side to a grid to remove shadow jittering
 
 	light_space[min_i] = ( min_i == 0 ) ? DirectX::XMMatrixLookToLH( light_eye, DirectX::XMVectorNegate( light_dir ), up )
 											: DirectX::XMMatrixLookToLH( light_eye, DirectX::XMVectorNegate( light_dir ), DirectX::XMVector3Transform( up, DirectX::XMMatrixRotationAxis( light_dir, DirectX::XM_PIDIV4 ) ) );
@@ -103,17 +103,6 @@ void ParallelSplitShadowMapping::CalcShadowMatrixForFrustrumLH( const span<XMVEC
 	                                                                           box_depth + additional_height );
 
 	shadow_matrix = light_space[min_i];
-
-	DirectX::XMVECTOR dbg = DirectX::XMVector4Transform( frustrum_vertices[0], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[1], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[2], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[3], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[4], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[5], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[6], shadow_matrix );
-	dbg = DirectX::XMVector4Transform( frustrum_vertices[7], shadow_matrix );
-
-	bool wrk = true;
 }
 
 

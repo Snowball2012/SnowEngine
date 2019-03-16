@@ -6,6 +6,17 @@
 #define PER_PASS_CB_BINDING b2
 #include "bindings/pass_cb.hlsli"
 
+struct IBLTransform
+{
+    float4x4 world2env_mat;
+    float4x4 world2env_inv_transposed_mat;
+};
+
+cbuffer cbIBLTransform : register(b3)
+{
+    IBLTransform ibl;
+}
+
 struct VertexIn
 {
 	float3 pos : POSITION;
@@ -15,6 +26,7 @@ struct VertexIn
 
 struct VertexOut
 {
+    nointerpolation float4x4 view2env : VIEWTOENV;
 	float4 pos : SV_POSITION;
 	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
@@ -31,5 +43,6 @@ VertexOut main( VertexIn vin )
 
 	vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
 	vout.uv = vin.uv;
+    vout.view2env = mul( pass_params.view_inv_mat, ibl.world2env_mat );
 	return vout;
 }

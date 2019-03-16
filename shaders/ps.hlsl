@@ -7,17 +7,6 @@
 #define PER_PASS_CB_BINDING b2
 #include "bindings/pass_cb.hlsli"
 
-struct IBLTransform
-{
-    float4x4 world2env_mat;
-    float4x4 world2env_inv_transposed_mat;
-};
-
-cbuffer cbIBLTransform : register(b3)
-{
-    IBLTransform ibl;
-}
-
 cbuffer cbIBLParams : register(b4)
 {
     float ibl_radiance_multiplier;
@@ -44,6 +33,7 @@ TextureCube reflection_probe : register(t7);
 
 struct PixelIn
 {
+    float4x4 view2env : VIEWTOENV;
 	float4 pos : SV_POSITION;
 	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
@@ -53,34 +43,23 @@ struct PixelIn
 
 struct PixelOut
 {
-    float4 color : SV_TARGET0;
-    float4 ambient_color : SV_TARGET1;
+    float4 direct_lighting : SV_TARGET0;
+    float4 ambient_lighting : SV_TARGET1;
     float2 screen_space_normal : SV_TARGET2;
 };
 
-float3 rendering_equation( half4 base_color, float3 to_source, float3 to_camera, float3 normal, float roughness, float metallic )
+float3 parallel_direct_lighting( float3 diffuse_albedo, float3 f0, float3 l, float3 v, float3 n, float cos_nv, float roughness )
 {
-	float lambert_term = saturate( dot( to_source, normal ) );
-	float normal_to_eye_cos = saturate( dot( to_camera, normal ) );
-	float3 h = normalize( halfvector( to_source, to_camera ) );
-	float source_to_half_cos = saturate( dot( to_source, h ) );
+	float cos_nl = saturate( dot( l, n ) );
+	float3 h = normalize( halfvector( l, v ) );
+	float cos_lh = saturate( dot( l, h ) );
 
-	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
-	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
+    float3 diffused_part = make_float3( 1.0f ) - fresnel_schlick( f0, cos_nl );
 
-    float3 fresnel_term_d = make_float3( 1.0f ) - fresnel_schlick( fresnel_r0, lambert_term );
-
-	return ( lambert_term )
-		    * ( fresnel_term_d * diffuse_disney( roughness, lambert_term, normal_to_eye_cos, source_to_half_cos ) * diffuse_albedo +
-               bsdf_ggx_optimized( fresnel_r0, dot( normal, h ), source_to_half_cos, normal_to_eye_cos, lambert_term, roughness ) );
+	return cos_nl * ( diffused_part * diffuse_disney( roughness, cos_nl, cos_nv, cos_lh ) * diffuse_albedo
+                      + bsdf_ggx_optimized( f0, dot( n, h ), cos_lh, cos_nv, cos_nl, roughness ) );
 }
 
-float3 ws_normal_bump_mapping( float3 ws_normal, float3 ws_tangent, float3 ws_bitangent, float2 ts_normal_compressed, out float tangent_normal_z )
-{
-	ts_normal_compressed = 2 * ts_normal_compressed - make_float2( 1.0f );
-	tangent_normal_z = sqrt( 1.0 - sqr( ts_normal_compressed.x ) - sqr( ts_normal_compressed.y ) );
-	return ts_normal_compressed.x * ws_tangent + ts_normal_compressed.y * ws_bitangent + tangent_normal_z * ws_normal;
-}
 
 float percieved_brightness(float3 color)
 {
@@ -88,78 +67,128 @@ float percieved_brightness(float3 color)
 }
 
 
-PixelOut main(PixelIn pin)
+float gamma2linear( float val, float gamma )
 {
-    float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
-    base_color = pow( base_color, 2.2f );
+    return pow( val, gamma );
+}
 
-#ifdef DEBUG_TEXTURE_LOD
-    float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
+float4 gamma2linear( float4 val, float gamma )
+{
+    return pow( val, make_float4( gamma ) );
+}
 
+
+float gamma2linear_std( float val )
+{
+    return gamma2linear( val, 2.2f );
+}
+
+float4 gamma2linear_std( float4 val )
+{
+    return gamma2linear( val, 2.2f );
+}
+
+
+void renormalize_tbn( inout float3 n, inout float3 t, out float3 b )
+{
+    // Gram–Schmidt process
+    n = normalize( n );
+    t = normalize( t - dot( t, n ) * n );
+    b = cross( n, t );    
+}
+
+float3 unpack_normal( float2 compressed_normal, float3 t, float3 b, float3 n )
+{
+	compressed_normal = 2 * compressed_normal - make_float2( 1.0f );
+	float3 compressed_z = sqrt( 1.0 - sqr( compressed_normal.x ) - sqr( compressed_normal.y ) );
+	return compressed_normal.x * t + compressed_normal.y * b + compressed_z * n;
+}
+
+
+void unpack_specular( float3 specular_sample, out float roughness, out float metallic )
+{
+    // specular.a responds to occlusion, but strangely all textures in Bistro scene store 0 there
+    roughness = 1.0f - specular_sample.g;
+    metallic = specular_sample.b;
+}
+
+
+float4 dbg_get_lod_color( float4 base_color, float lod )
+{
     float4 oversampled_color = float4( 1, 1, 0.1, 1 );
     float4 undersampled_color = float4( 1, 0.1, 1, 1 );
 
     if ( lod > 2.0f )
     {
         // oversampled
-        base_color = lerp( base_color, oversampled_color, pow( (clamp( lod, 2.0f, 4.0f ) - 2.0f) / 2.0f, 2.2f ) );
+        return lerp( base_color, oversampled_color, ( clamp( lod, 2.0f, 4.0f ) - 2.0f ) / 2.0f );
     }
     else if ( lod < 0.1f )
     {
         // undersampled
-        base_color = lerp( base_color, undersampled_color, pow( 1.0f - lod * 10.0f, 2.2f ) );
+        return lerp( base_color, undersampled_color, 1.0f - lod * 10.0f );
     }
+    return base_color;
+}
+
+
+PixelOut main(PixelIn pin)
+{
+    // unpack data
+    float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
+
+#ifdef DEBUG_TEXTURE_LOD
+    float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
+    base_color = dbg_get_lod_color( base_color, lod );
 #endif
+    base_color = gamma2linear_std( base_color );
 
-	float3 res_color = make_float3( 0.0f );
+    float3 bitangent;
+    renormalize_tbn( pin.normal, pin.tangent, bitangent );
+    
+	float3 normal = unpack_normal( normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
+                                   pin.tangent, bitangent, pin.normal );
 
-    float tangent_normal_z;
-    pin.normal = normalize( pin.normal );
-    pin.tangent = normalize( pin.tangent - dot( pin.tangent, pin.normal ) * pin.normal );
-    float3 bitangent = cross( pin.normal, pin.tangent );
-	float3 normal = ws_normal_bump_mapping( normalize( pin.normal ),
-											pin.tangent,
-											bitangent,
-											normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
-                                            tangent_normal_z );
+    float roughness;
+    float metallic;
+    unpack_specular( specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb, roughness, metallic );
+    
+	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
+	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
+    
+    float3 to_camera = normalize( -pin.pos_v );
+    float cos_nv = saturate( dot( to_camera, normal ) );
 
-	float3 specular = specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb; // r - occlusion, g - smoothness, b - metallic
-
+    // calc direct
+	float3 direct_lighting = make_float3( 0.0f );
 	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
 	{
         ParallelLight light = pass_params.parallel_lights[light_idx];
 
-		float3 light_radiance = rendering_equation( base_color, light.dir,
-												 normalize( -pin.pos_v ),
-												 normal,
-												 1.0f - specular.g, specular.b );
+		float3 light_radiance = light.strength * parallel_direct_lighting( diffuse_albedo, fresnel_r0,
+                                                                           light.dir, to_camera, normal, cos_nv,
+												                           roughness );
 
-        res_color += light.strength
-                     * light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade, pass_params.csm_split_positions, shadow_map_sampler );
+        direct_lighting +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade, pass_params.csm_split_positions, shadow_map_sampler );
     }
 
-    // ambient for sky, remove after skybox gen
-    const float3 ambient_color_linear = float3(0.0558f, 0.078f, 0.138f);
-  
-    float4 irradiance_dir = mul( mul( float4( normal, 0.0f ), pass_params.view_inv_mat ), ibl.world2env_mat );
-    float4 reflection_dir = mul( mul( float4( reflect( pin.pos_v, normal ), 0.0f ), pass_params.view_inv_mat ), ibl.world2env_mat );
-    PixelOut res;
-    res.color = float4(res_color, 1.0f);
+    // calc ambient
+    float4 irradiance_dir = mul( float4( normal, 0.0f ), pin.view2env );
+    float4 reflection_dir = mul( float4( reflect( pin.pos_v, normal ), 0.0f ), pin.view2env );
     
-    res.ambient_color = float4( (1.0f - specular.b) * ibl_radiance_multiplier * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz * base_color.rgb, 1.0f);
-
-    float metallic = specular.b;
-	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
-	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
-    float cos_nv = saturate( dot( normalize( -pin.pos_v ), normal ) );
-    float roughness = 1.0f - specular.g;
+    float3 ambient_lighting = make_float3( 0.0f );
+    
+    ambient_lighting = float3( ibl_radiance_multiplier * diffuse_albedo * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz );
+    
     float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, roughness ) * 6.0f ).xyz;
-    float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( saturate( dot( normalize( -pin.pos_v ), normal ) ), roughness ) ).xy;
+    float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( cos_nv, roughness ) ).xy;
 
-    float3 specular_ambient = ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + fresnel_schlick_roughness( 0, fresnel_r0, roughness ) * env_brdf.y );
+    ambient_lighting += ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + fresnel_schlick_roughness( 0, fresnel_r0, roughness ) * env_brdf.y );
 
-    res.ambient_color += float4( specular_ambient, 0.0f );
-
+    // pack data
+    PixelOut res;
+    res.direct_lighting = float4(direct_lighting, 1.0f);
+    res.ambient_lighting = float4( ambient_lighting, 1.0f );
     res.screen_space_normal = normal.xy;
 	return res;
 }

@@ -55,6 +55,9 @@ public:
 	bool SetMainCamera( CameraID id );
 	bool SetFrustrumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
 
+	bool SetIrradianceMap( CubemapID id );
+	bool SetReflectionProbe( CubemapID id );
+
 	struct PerformanceStats
 	{
 		TextureStreamer::Stats tex_streamer;

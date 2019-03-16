@@ -133,9 +133,8 @@ void RenderApp::UpdateGUI()
 
 	{
 		ImGui::Begin( "Render settings", nullptr );
-		ImGui::Checkbox( "Wireframe mode", &m_wireframe_mode );
 		float pssm_interpolator = m_renderer->PSSM().GetUniformFactor();
-		ImGui::SliderFloat( "INTERPOLATOR", &pssm_interpolator,0 , 1, "%.2f" );
+		ImGui::SliderFloat( "PSSM uniform split factor", &pssm_interpolator,0 , 1, "%.2f" );
 		m_renderer->PSSM().SetUniformFactor( pssm_interpolator );
 
 		ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
@@ -270,13 +269,6 @@ void RenderApp::UpdateLights()
 	light_ptr->ModifyShadow() = sun_shadow;
 }
 
-void RenderApp::ReadEventKeys()
-{
-	auto kb_state = m_keyboard->GetState();
-	if ( kb_state.F3 )
-		m_wireframe_mode = !m_wireframe_mode;
-}
-
 void RenderApp::ReadKeyboardState( const GameTimer& gt )
 {
 	auto kb_state = m_keyboard->GetState();
@@ -347,14 +339,11 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 		}
 		else if ( ( btnState & MK_RBUTTON ) != 0 )
 		{
-			// Make each pixel correspond to 0.005 unit in the scene.
 			float dx = 0.005f*static_cast<float>( x - m_last_mouse_pos.x );
 			float dy = 0.005f*static_cast<float>( y - m_last_mouse_pos.y );
 
-			// Update the camera radius based on input.
 			m_camera_speed += ( dx - dy ) * m_camera_speed;
 
-			// Restrict the radius.
 			m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
 		}
 
@@ -377,10 +366,6 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 			Keyboard::ProcessMessage( msg, wParam, lParam );
-			if ( ! ImGui::GetIO().WantCaptureKeyboard )
-			{
-				ReadEventKeys();
-			}
 			break;
 	}
 
@@ -434,6 +419,10 @@ void RenderApp::LoadPlaceholderTextures()
 	m_skybox_tf = scene.AddTransform();
 	CubemapID skybox_cubemap = scene.AddCubemapFromTexture( skybox_tex );
 	m_ph_skybox = scene.AddEnviromentMap( skybox_cubemap, m_skybox_tf );
+
+	TextureID irradiance_map_tex = scene.LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
+	m_renderer->SetIrradianceMap( scene.AddCubemapFromTexture( irradiance_map_tex ) );
+	m_renderer->SetReflectionProbe( scene.LoadCubemap( "D:/scenes/bistro/ibl/reflection_probe_cm.dds" ) );
 }
 
 void RenderApp::BuildGeometry( ImportedScene& ext_scene )

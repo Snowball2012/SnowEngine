@@ -16,8 +16,6 @@
 #include "DescriptorHeap.h"
 #include "SceneImporter.h"
 
-#include "TemporalAA.h"
-
 #include "OldRenderer.h"
 
 class RenderApp: public D3DApp
@@ -42,7 +40,6 @@ private:
 	void UpdateLights();
 
 	// input
-	void ReadEventKeys();
 	void ReadKeyboardState( const GameTimer& gt );
 
 	virtual void Draw( const GameTimer& gt ) override;
@@ -78,6 +75,15 @@ private:
 	EnvMapID m_ph_skybox = EnvMapID::nullid;
 	TransformID m_skybox_tf = TransformID::nullid;
 
+	CubemapID m_reflection_probe = CubemapID::nullid;
+	CubemapID m_irradiance_map = CubemapID::nullid;
+	TextureID m_brdf_lut = TextureID::nullid;
+
+	CameraID m_camera = CameraID::nullid;
+	CameraID m_dbg_frustrum_camera = CameraID::nullid;
+	bool m_dbg_use_separate_camera = false;
+	LightID m_sun = LightID::nullid;
+
 	class LoadingScreen
 	{
 	public:
@@ -98,15 +104,6 @@ private:
 	std::future<void> m_is_scene_loaded;
 
 	std::unique_ptr<OldRenderer> m_renderer = nullptr;
-	CameraID m_camera = CameraID::nullid;
-	CameraID m_dbg_frustrum_camera = CameraID::nullid;
-	bool m_dbg_use_separate_camera = false;
-	LightID m_sun = LightID::nullid;
-
-
-	CubemapID m_reflection_probe = CubemapID::nullid;
-	CubemapID m_irradiance_map = CubemapID::nullid;
-	TextureID m_brdf_lut = TextureID::nullid;
 
 	// external geometry
 	ImportedScene m_imported_scene;
@@ -122,11 +119,6 @@ private:
 	float m_sky_phi = DirectX::XM_PI;
 	float m_sky_radiance_factor = 10.0f;
 	DirectX::XMFLOAT3 m_sun_color_corrected = DirectX::XMFLOAT3( 1.0f, 232.0f /255.0f, 213.0f /255.0f ); // gamma == 2.2
-
-	bool m_wireframe_mode = false;
-
-	// temporal AA
-	bool m_taa_enabled = false;
 
 	// inputs
 	std::unique_ptr<DirectX::Keyboard> m_keyboard;

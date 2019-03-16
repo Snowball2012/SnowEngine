@@ -1,5 +1,6 @@
 struct GSInput
 {
+    float4x4 view2env : VIEWTOENV;
 	float4 pos : SV_POSITION;
 	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
@@ -8,6 +9,7 @@ struct GSInput
 
 struct GSOutput
 {
+    nointerpolation float4x4 view2env : VIEWTOENV;
 	float4 pos : SV_POSITION;
 	float3 pos_v : POSITION;
 	float3 normal : NORMAL;
@@ -37,6 +39,7 @@ void main(
 		element.pos_v = input[i].pos_v;
 		element.normal = input[i].normal;
 		element.uv = input[i].uv;
+        element.view2env = input[i].view2env;
 		element.tangent = tangent;
 		output.Append( element );
 	}

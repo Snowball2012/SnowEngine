@@ -74,11 +74,7 @@ void OldRenderer::Init()
 
 	m_renderer->GetPSSM().SetSplitsNum( MAX_CASCADE_SIZE );
 
-	TextureID irradiance_map_tex = GetScene().LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
-	m_irradiance_map = GetScene().AddCubemapFromTexture( irradiance_map_tex );
-	m_reflection_probe = GetScene().LoadCubemap( "D:/scenes/bistro/ibl/reflection_probe_cm.dds" );
 	m_ibl_table = DescriptorTables().AllocateTable( 2 );
-
 }
 
 
@@ -198,6 +194,22 @@ bool OldRenderer::SetFrustrumCullCamera( CameraID id )
 	if ( ! GetScene().GetROScene().AllCameras().has( id ) )
 		return false;
 	m_frustrum_cull_camera_id = id;
+	return true;
+}
+
+bool OldRenderer::SetIrradianceMap( CubemapID id )
+{
+	if ( ! GetScene().GetROScene().AllCubemaps().has( id ) )
+		return false;
+	m_irradiance_map = id;
+	return true;
+}
+
+bool OldRenderer::SetReflectionProbe( CubemapID id )
+{
+	if ( ! GetScene().GetROScene().AllCubemaps().has( id ) )
+		return false;
+	m_reflection_probe = id;
 	return true;
 }
 
