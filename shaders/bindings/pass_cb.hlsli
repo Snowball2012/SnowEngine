@@ -1,9 +1,7 @@
 #ifndef PASS_CB_HLSLI
 #define PASS_CB_HLSLI
 
-#ifdef PER_PASS_CB_BINDING
-
-#include "../lib/lighting.hlsli"
+#include "light_cb.hlsli"
 
 #define MAX_LIGHTS 15
 #define MAX_CSM_LIGHTS 1
@@ -43,6 +41,8 @@ struct PassConstants
 	int n_spotlight_lights;
 	int _padding3;
 };
+
+#ifdef PER_PASS_CB_BINDING
 
 cbuffer cbPerPass : register( PER_PASS_CB_BINDING )
 {

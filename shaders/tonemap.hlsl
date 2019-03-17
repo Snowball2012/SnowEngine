@@ -1,3 +1,5 @@
+#include "lib/colorspaces.hlsli"
+
 cbuffer TonemapSettigns : register(b0)
 {
     float max_luminance;
@@ -11,24 +13,6 @@ Texture2D ambient : register(t1);
 Texture2D ssao : register(t2);
 
 SamplerState linear_wrap_sampler : register( s0 );
-
-float photopic_luminance(float3 radiance)
-{
-    // rgb radiance in watt/(sr*m^2)
-    return 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b);
-}
-
-float percieved_brightness( float3 color )
-{
-    return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
-}
-
-float3 radiance2gamma_corrected_rgb(float3 radiance, float brightness)
-{
-    float3 normalized_color = radiance / percieved_brightness(radiance);
-    float3 linear_color = normalized_color * brightness;
-    return pow(linear_color, 1.0f / 2.2f);
-}
 
 //#define DEBUG_SSAO
 
@@ -51,6 +35,6 @@ float4 main(float4 coord : SV_POSITION) : SV_TARGET
         float ssao_factor = ssao.Sample( linear_wrap_sampler, coord.xy / rt_dimensions ).r;
         return float4( ssao_factor, ssao_factor, ssao_factor, 1.0f );
     #else
-        return float4( radiance2gamma_corrected_rgb( cur_radiance.rgb, linear_brightness ), cur_radiance.a );
+        return float4( radiance2gamma_rgb( cur_radiance.rgb, linear_brightness ), cur_radiance.a );
     #endif
 }

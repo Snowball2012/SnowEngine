@@ -3,27 +3,6 @@
 
 #include "math_utils.hlsli"
 
-struct Light
-{
-	float4x4 shadow_map_mat;
-	float3 strength;
-	float falloff_start;
-	float3 origin;
-	float falloff_end;
-	float3 dir;
-	float spot_power;
-};
-
-#define MAX_CASCADE_SIZE 4
-struct ParallelLight
-{
-	float4x4 shadow_map_mat[MAX_CASCADE_SIZE];
-    float3 strength;
-    int csm_num_split_positions;
-	float3 dir;
-    float _padding;
-};
-
 static const float GGX_ROUGHNESS_REMAPPED_MIN = 0.4f;
 
 // all outputs are not normalized
@@ -32,10 +11,6 @@ float3 halfvector( float3 to_source, float3 to_camera )
 	return to_source + to_camera;
 }
 
-float lambert( float3 to_source, float3 normal )
-{
-	return dot( normal, to_source );
-}
 
 float3 fresnel_schlick( float3 f0, float cos_nl )
 {
@@ -47,6 +22,7 @@ float3 fresnel_schlick_roughness(float cos_nl, float3 f0, float roughness)
     return f0 + ( max( make_float3( 1 ) * (1.0 - roughness), f0 ) - f0 ) * pow( 1.0 - cos_nl, 5.0 );
 }
 
+
 float diffuse_disney( float roughness, float source_to_normal_cos, float normal_to_eye_cos, float source_to_half_cos )
 {
 	// disney semi-pbr diffuse model
@@ -55,6 +31,7 @@ float diffuse_disney( float roughness, float source_to_normal_cos, float normal_
 	return ( 1.0f + f * pow( 1 - source_to_normal_cos, 5 ) )
 		* ( 1.0f + f * pow( 1 - normal_to_eye_cos, 5 ) ) / PI;
 }
+
 
 // GGX self-shadowing term with Smith's method, cos_nv = ( n, v ), where v is view vector or light vector , alpha = roughness^2
 float smith_ggx_shadowing( float cos_nv, float alpha2 )
@@ -92,6 +69,18 @@ float3 bsdf_ggx_optimized( float3 fresnel_r0, float cos_nh, float cos_lh, float 
     return saturate( fresnel_schlick( fresnel_r0, cos_lh ) * bsdf_no_fresnel );
 }
 
+
+float3 parallel_direct_lighting( float3 diffuse_albedo, float3 f0, float3 l, float3 v, float3 n, float cos_nv, float roughness )
+{
+	float cos_nl = saturate( dot( l, n ) );
+	float3 h = normalize( halfvector( l, v ) );
+	float cos_lh = saturate( dot( l, h ) );
+
+    float3 diffused_part = make_float3( 1.0f ) - fresnel_schlick( f0, cos_nl );
+
+	return cos_nl * ( diffused_part * diffuse_disney( roughness, cos_nl, cos_nv, cos_lh ) * diffuse_albedo
+                      + bsdf_ggx_optimized( f0, dot( n, h ), cos_lh, cos_nv, cos_nl, roughness ) );
+}
 
 
 #endif // LIGHTING_HLSLI

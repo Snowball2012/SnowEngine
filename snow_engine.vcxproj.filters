@@ -75,6 +75,9 @@
     <Filter Include="core\APILayer\DescriptorUtils">
       <UniqueIdentifier>{98d7b39d-3574-4896-82d6-371fdb2d92c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\forward_lighting">
+      <UniqueIdentifier>{29f1f4c6-6035-4b02-82e2-734dbca489be}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -420,15 +423,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders\ps.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\vs.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="shaders\gs.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
@@ -465,6 +459,15 @@
     <FxCompile Include="shaders\cubemap_gen_ps.hlsl">
       <Filter>shaders\cubemap_gen</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\forward_vs.hlsl">
+      <Filter>shaders\forward_lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\forward_gs.hlsl">
+      <Filter>shaders\forward_lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\forward_ps.hlsl">
+      <Filter>shaders\forward_lighting</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\lib\lighting.hlsli">
@@ -484,6 +487,12 @@
     </None>
     <None Include="shaders\lib\shadows.hlsli">
       <Filter>shaders\lib</Filter>
+    </None>
+    <None Include="shaders\lib\colorspaces.hlsli">
+      <Filter>shaders\lib</Filter>
+    </None>
+    <None Include="shaders\bindings\light_cb.hlsli">
+      <Filter>shaders\bindings</Filter>
     </None>
   </ItemGroup>
 </Project>

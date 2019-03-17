@@ -1,6 +1,24 @@
 #ifndef MATH_UTILS_HLSLI
 #define MATH_UTILS_HLSLI
 
+
+static const float PI = 3.14159265f;
+
+static const float GAUSS_KERNEL_3X3_SIGMA1[9] =
+{
+	0.077847f,	0.123317f,	0.077847f,
+	0.123317f,	0.195346f,	0.123317f,
+	0.077847f,	0.123317f,	0.077847f,
+};
+
+static const float2 OFFSETS_3X3[9] =
+{
+	float2( -1.0f, -1.0f ), float2( 0.0f, -1.0f ), float2( 1.0f, -1.0f ),
+	float2( -1.0f,  0.0f ), float2( 0.0f,  0.0f ), float2( 1.0f,  0.0f ),
+	float2( -1.0f,  1.0f ), float2( 0.0f,  1.0f ), float2( 1.0f,  1.0f )
+};
+
+
 float sqr( float a )
 {
 	return a * a;
@@ -21,6 +39,13 @@ float4 make_float4( float val )
     return float4( val, val, val, val );
 }
 
-static const float PI = 3.14159265f;
+
+void renormalize_tbn( inout float3 n, inout float3 t, out float3 b )
+{
+    // Gram–Schmidt process
+    n = normalize( n );
+    t = normalize( t - dot( t, n ) * n );
+    b = cross( n, t );    
+}
 
 #endif

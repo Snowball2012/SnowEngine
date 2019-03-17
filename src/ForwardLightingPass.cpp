@@ -114,9 +114,9 @@ ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
 {
 	return Shaders
 	{
-		Utils::LoadBinary( L"shaders/vs.cso" ),
-		Utils::LoadBinary( L"shaders/gs.cso" ),
-		Utils::LoadBinary( L"shaders/ps.cso" )
+		Utils::LoadBinary( L"shaders/forward_vs.cso" ),
+		Utils::LoadBinary( L"shaders/forward_gs.cso" ),
+		Utils::LoadBinary( L"shaders/forward_ps.cso" )
 	};
 }
 

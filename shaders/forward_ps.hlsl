@@ -1,5 +1,6 @@
 #include "lib/lighting.hlsli"
 #include "lib/shadows.hlsli"
+#include "lib/colorspaces.hlsli"
 
 #define PER_MATERIAL_CB_BINDING b1
 #include "bindings/material_cb.hlsli"
@@ -48,54 +49,6 @@ struct PixelOut
     float2 screen_space_normal : SV_TARGET2;
 };
 
-float3 parallel_direct_lighting( float3 diffuse_albedo, float3 f0, float3 l, float3 v, float3 n, float cos_nv, float roughness )
-{
-	float cos_nl = saturate( dot( l, n ) );
-	float3 h = normalize( halfvector( l, v ) );
-	float cos_lh = saturate( dot( l, h ) );
-
-    float3 diffused_part = make_float3( 1.0f ) - fresnel_schlick( f0, cos_nl );
-
-	return cos_nl * ( diffused_part * diffuse_disney( roughness, cos_nl, cos_nv, cos_lh ) * diffuse_albedo
-                      + bsdf_ggx_optimized( f0, dot( n, h ), cos_lh, cos_nv, cos_nl, roughness ) );
-}
-
-
-float percieved_brightness(float3 color)
-{
-    return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
-}
-
-
-float gamma2linear( float val, float gamma )
-{
-    return pow( val, gamma );
-}
-
-float4 gamma2linear( float4 val, float gamma )
-{
-    return pow( val, make_float4( gamma ) );
-}
-
-
-float gamma2linear_std( float val )
-{
-    return gamma2linear( val, 2.2f );
-}
-
-float4 gamma2linear_std( float4 val )
-{
-    return gamma2linear( val, 2.2f );
-}
-
-
-void renormalize_tbn( inout float3 n, inout float3 t, out float3 b )
-{
-    // Gram–Schmidt process
-    n = normalize( n );
-    t = normalize( t - dot( t, n ) * n );
-    b = cross( n, t );    
-}
 
 float3 unpack_normal( float2 compressed_normal, float3 t, float3 b, float3 n )
 {
@@ -110,6 +63,22 @@ void unpack_specular( float3 specular_sample, out float roughness, out float met
     // specular.a responds to occlusion, but strangely all textures in Bistro scene store 0 there
     roughness = 1.0f - specular_sample.g;
     metallic = specular_sample.b;
+}
+
+
+int csm_get_frustrum( float depth, int num_split_positions, float split_positions[MAX_CASCADE_SIZE-1] )
+{
+    int frustrum = 0;
+    for ( int i = 0; i < num_split_positions; i++ )
+        frustrum += depth > split_positions[i]; // no branching, since num_split_positions should be ~[2..4]
+    return frustrum;
+}
+
+float csm_shadow_factor( float3 pos_v, ParallelLight light, Texture2DArray shadow_cascade,
+                         float split_positions[MAX_CASCADE_SIZE-1], SamplerComparisonState shadow_map_sampler )
+{
+    int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_split_positions, split_positions );
+    return shadow_factor_array( pos_v, light.shadow_map_mat[frustrum], shadow_cascade, frustrum, shadow_map_sampler );
 }
 
 
@@ -160,7 +129,9 @@ PixelOut main(PixelIn pin)
     float cos_nv = saturate( dot( to_camera, normal ) );
 
     // calc direct
-	float3 direct_lighting = make_float3( 0.0f );
+    PixelOut res;
+
+	res.direct_lighting.rgb = make_float3( 0.0f );
 	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
 	{
         ParallelLight light = pass_params.parallel_lights[light_idx];
@@ -169,26 +140,25 @@ PixelOut main(PixelIn pin)
                                                                            light.dir, to_camera, normal, cos_nv,
 												                           roughness );
 
-        direct_lighting +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade, pass_params.csm_split_positions, shadow_map_sampler );
+        res.direct_lighting.rgb +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade,
+                                                                        pass_params.csm_split_positions, shadow_map_sampler );
     }
 
     // calc ambient
     float4 irradiance_dir = mul( float4( normal, 0.0f ), pin.view2env );
     float4 reflection_dir = mul( float4( reflect( pin.pos_v, normal ), 0.0f ), pin.view2env );
     
-    float3 ambient_lighting = make_float3( 0.0f );
-    
-    ambient_lighting = float3( ibl_radiance_multiplier * diffuse_albedo * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz );
+    res.ambient_lighting.rgb = float3( ibl_radiance_multiplier * diffuse_albedo * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz );
     
     float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, roughness ) * 6.0f ).xyz;
     float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( cos_nv, roughness ) ).xy;
 
-    ambient_lighting += ibl_radiance_multiplier * prefiltered_spec_radiance * ( fresnel_r0 * env_brdf.x + fresnel_schlick_roughness( 0, fresnel_r0, roughness ) * env_brdf.y );
+    res.ambient_lighting.rgb += ibl_radiance_multiplier * prefiltered_spec_radiance
+                                * ( fresnel_r0 * env_brdf.x + fresnel_schlick_roughness( 0, fresnel_r0, roughness ) * env_brdf.y );
 
     // pack data
-    PixelOut res;
-    res.direct_lighting = float4(direct_lighting, 1.0f);
-    res.ambient_lighting = float4( ambient_lighting, 1.0f );
+    res.ambient_lighting.a = 1.0f;
+    res.direct_lighting.a = 1.0f;
     res.screen_space_normal = normal.xy;
 	return res;
 }

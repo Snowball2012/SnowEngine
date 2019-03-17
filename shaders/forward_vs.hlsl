@@ -35,11 +35,11 @@ struct VertexOut
 
 VertexOut main( VertexIn vin )
 {
-	float4x4 mvp_mat = mul( renderitem.model_mat, pass_params.view_proj_mat );
+	float4 pos_ws = mul( float4( vin.pos, 1.0f ), renderitem.model_mat );
 	VertexOut vout;
-	float4 pos_v = mul( mul( float4( vin.pos, 1.0f ), renderitem.model_mat ), pass_params.view_mat );
+	float4 pos_v = mul( pos_ws, pass_params.view_mat );
+	vout.pos = mul( pos_ws, pass_params.view_proj_mat );
 	vout.pos_v = pos_v.xyz / pos_v.w;
-	vout.pos = mul( float4( vin.pos, 1.0f ), mvp_mat );
 
 	vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
 	vout.uv = vin.uv;
