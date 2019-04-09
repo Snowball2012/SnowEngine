@@ -157,11 +157,9 @@ private:
 	// permanent context
 	ID3D12Device* m_device = nullptr;
 	DescriptorTableBakery* m_descriptor_tables = nullptr;
-	const uint32_t m_n_frames_in_flight = 0;
 
 	SceneRenderer( const DeviceContext& ctx,
 				   uint32_t width, uint32_t height,
-				   uint32_t n_frames_in_flight,
 				   StagingDescriptorHeap&& dsv_heap,
 				   StagingDescriptorHeap&& rtv_heap,
 				   ForwardCBProvider&& forward_cb_provider,

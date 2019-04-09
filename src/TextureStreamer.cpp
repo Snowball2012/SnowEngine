@@ -9,7 +9,7 @@
 #include <dxtk12/DirectXHelpers.h>
 
 
-TextureStreamer::TextureStreamer( Microsoft::WRL::ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
+TextureStreamer::TextureStreamer( ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
 								  uint8_t n_bufferized_frames, Scene* scene )
 	: m_device( std::move( device ) ), m_scene( scene )
 	, m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device.Get() )
@@ -122,7 +122,6 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
 
 	CalcDesiredMipLevels();
 
-	// TODO: drop mips
 	UploaderFillData new_upload;
 	
 	std::vector<AsyncFileReadTask> tasks;
@@ -231,7 +230,6 @@ std::optional<
 	>
 > TextureStreamer::CreatePackedMipsUploadTask( TextureData& texture, GPUTaskQueue& copy_queue )
 {
-
 	// first load
 	uint32_t required_tiles_num = texture.tiling.packed_mip_info.NumTilesForPackedMips;
 	uint64_t required_uploader_size = texture.virtual_layout.total_size - texture.virtual_layout.footprints[texture.tiling.packed_mip_info.NumStandardMips].Offset;
@@ -268,11 +266,11 @@ std::optional<
 	coords.Y = 0;
 	coords.Z = 0;
 
-	std::vector<D3D12_TILE_REGION_SIZE> resource_region_sizes;
-	resource_region_sizes.emplace_back();
-	resource_region_sizes.back().UseBox = FALSE;
-	resource_region_sizes.back().NumTiles = required_tiles_num;
+	D3D12_TILE_REGION_SIZE resource_region_size;
+	resource_region_size.UseBox = FALSE;
+	resource_region_size.NumTiles = required_tiles_num;
 
+	// too many heap memory allocations for such a simple thing. TODO: use linear allocator here.
 	std::vector<D3D12_TILE_RANGE_FLAGS> range_flags;
 	range_flags.resize( required_tiles_num, D3D12_TILE_RANGE_FLAG_NONE );
 	std::vector<UINT> range_start_offsets;
@@ -280,11 +278,11 @@ std::optional<
 	for ( uint32_t page : m_gpu_mem_basic_mips->GetPages( texture.tiling.packed_mip_pages ) )
 		range_start_offsets.push_back( page );
 	std::vector<UINT> range_tile_counts;
-	range_tile_counts.resize( required_tiles_num, 1 );
+	range_tile_counts.resize( required_tiles_num, 1 ); // this is ridiculous. Maybe use static array of ones?
 	copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
 												  resource_region_coords.size(),
 												  resource_region_coords.data(),
-												  resource_region_sizes.data(),
+												  &resource_region_size,
 												  m_gpu_mem_basic_mips->GetDXHeap(),
 												  range_flags.size(),
 												  range_flags.data(),
@@ -298,11 +296,13 @@ std::optional<
 
 std::optional<
 	std::pair<
-	TextureStreamer::MipUploader,
-	TextureStreamer::AsyncFileReadTask
+		TextureStreamer::MipUploader,
+		TextureStreamer::AsyncFileReadTask
 	>
 > TextureStreamer::CreateMipUploadTask( TextureData& texture, GPUTaskQueue& copy_queue )
 {
+	assert( texture.most_detailed_loaded_mip > 0 );
+
 	const uint32_t mip_to_load = texture.most_detailed_loaded_mip - 1;
 
 	auto& mip_tiling = texture.tiling.nonpacked_tiling[mip_to_load];
@@ -322,7 +322,7 @@ std::optional<
 	auto& pages = texture.tiling.nonpacked_tiling[mip_to_load].mip_pages;
 	pages = m_gpu_mem_detailed_mips->Alloc( required_tiles_num );
 	if ( pages == GPUPagedAllocator::ChunkID::nullid )
-		return std::nullopt;
+		return std::nullopt; // no available memory
 
 	auto uploader_chunk = m_upload_buffer->AllocateBuffer( required_uploader_size );
 	if ( ! uploader_chunk.first )
@@ -392,11 +392,6 @@ void TextureStreamer::PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Ti
 			copy_op.timestamp = end_timestamp;
 }
 
-
-void TextureStreamer::LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp )
-{
-	FinalizeCompletedGPUUploads( timestamp );
-}
 
 TextureStreamer::Stats TextureStreamer::GetPerformanceStats() const noexcept
 {
@@ -525,7 +520,6 @@ void TextureStreamer::CopyUploaderToMainResource( const TextureData& texture, ID
 
 void TextureStreamer::CalcDesiredMipLevels()
 {
-	// placeholder
 	for ( auto& texture : m_loaded_textures )
 	{
 		if ( texture.state == TextureState::Normal )

@@ -33,7 +33,7 @@ groupshared float shared_ssao_data[GROUP_DATA_ELEM_NUM_X * GROUP_SIZE_Y];
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
 void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupThreadID )
-{   
+{
     float2 rt_dimensions;
     uint2 ref_coord;
     int2 offset;

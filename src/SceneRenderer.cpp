@@ -17,7 +17,7 @@ SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, u
 	ForwardCBProvider forward_cb_provider( *ctx.device, n_frames_in_flight );
 	ShadowProvider shadow_provider( ctx.device, n_frames_in_flight, ctx.srv_cbv_uav_tables );
 
-	return SceneRenderer( ctx, width, height, n_frames_in_flight,
+	return SceneRenderer( ctx, width, height,
 						  std::move( dsv_heap ), std::move( rtv_heap ),
 						  std::move( forward_cb_provider ), std::move( shadow_provider ) );
 }
@@ -35,7 +35,6 @@ SceneRenderer::~SceneRenderer()
 
 SceneRenderer::SceneRenderer( const DeviceContext& ctx,
 							  uint32_t width, uint32_t height,
-							  uint32_t n_frames_in_flight,
 							  StagingDescriptorHeap&& dsv_heap,
 							  StagingDescriptorHeap&& rtv_heap,
 							  ForwardCBProvider&& forward_cb_provider,
@@ -44,11 +43,9 @@ SceneRenderer::SceneRenderer( const DeviceContext& ctx,
 	, m_rtv_heap( std::move( rtv_heap ) )
 	, m_forward_cb_provider( std::move( forward_cb_provider ) )
 	, m_shadow_provider( std::move( shadow_provider ) )
-	, m_n_frames_in_flight( n_frames_in_flight )
 {
 	assert( ctx.device );
 	assert( ctx.srv_cbv_uav_tables );
-	assert( n_frames_in_flight > 0 );
 	assert( width > 0 );
 	assert( height > 0 );
 
@@ -157,7 +154,7 @@ void SceneRenderer::CreateTransientResources()
 
 void SceneRenderer::ResizeTransientResources()
 {
-	auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
+	auto resize_tex = [&]( const wchar_t* name, auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
 	{
 		tex.Resize( width, height );
 		if ( make_srv )
@@ -166,23 +163,18 @@ void SceneRenderer::ResizeTransientResources()
 			m_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *m_descriptor_tables->ModifyTable( tex.UAV() ) );
 		if ( make_rtv )
 			m_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
+
+		tex.Resource()->SetName( name );
 	};
 
-	resize_tex( *m_hdr_backbuffer, m_resolution_width, m_resolution_height, true, false, true );
-	m_hdr_backbuffer->Resource()->SetName( L"hdr buffer" );
-	resize_tex( *m_hdr_ambient, m_resolution_width, m_resolution_height, true, false, true );
-	m_hdr_ambient->Resource()->SetName( L"ambient buffer" );
-	resize_tex( *m_normals, m_resolution_width, m_resolution_height, true, false, true );
-	m_normals->Resource()->SetName( L"normal buffer" );
-	resize_tex( *m_ssao, m_resolution_width / 2, m_resolution_height / 2, true, false, true );
-	m_ssao->Resource()->SetName( L"ssao" );
-	resize_tex( *m_ssao_blurred, m_resolution_width, m_resolution_height, true, true, false );
-	m_ssao_blurred->Resource()->SetName( L"m_ssao_blurred" );
-	resize_tex( *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width, true, true, false );
-	m_ssao_blurred_transposed->Resource()->SetName( L"m_ssao_blurred_transposed" );
+	resize_tex( L"hdr buffer", *m_hdr_backbuffer, m_resolution_width, m_resolution_height, true, false, true );
+	resize_tex( L"hdr ambient", *m_hdr_ambient, m_resolution_width, m_resolution_height, true, false, true );
+	resize_tex( L"normal buffer", *m_normals, m_resolution_width, m_resolution_height, true, false, true );
+	resize_tex( L"ssao", *m_ssao, m_resolution_width / 2, m_resolution_height / 2, true, false, true );
+	resize_tex( L"blurred ssao", *m_ssao_blurred, m_resolution_width, m_resolution_height, true, true, false );
+	resize_tex( L"transposed ssao", *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width, true, true, false );
 
-	resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height, false, false, false );
-	m_depth_stencil_buffer->Resource()->SetName( L"m_depth_stencil_buffer" );
+	resize_tex( L"depth stencil buffer", *m_depth_stencil_buffer, m_resolution_width, m_resolution_height, false, false, false );
 	{
 		auto& tex = *m_depth_stencil_buffer;
 		D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
@@ -411,7 +403,7 @@ std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& ca
 
 	DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
 														DirectX::XMLoadFloat3( &camera.dir ),
-														DirectX::XMLoadFloat3( &camera.up ) );
+														DirectX::XMLoadFloat3( &camera.up ) ); // maybe store this matrix in the camera?
 	DirectX::XMVECTOR det;
 	main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
 

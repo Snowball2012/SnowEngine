@@ -1,3 +1,10 @@
+// Noisy HBAO
+//
+// Used suffixes:
+// _vs - view space
+// _ws - world space
+// _ndc - normalized device coordinates
+
 #define PER_PASS_CB_BINDING b0
 #include "../bindings/pass_cb.hlsli"
 
@@ -26,7 +33,7 @@ float calc_occlusion( float3 origin2sample, float3 normal, float max_r )
     float horizon_occlusion = saturate( dot( normalize( origin2sample ), normal ) );
 
     // reset occlusion to 0 without branching if distance to the sample is too big;
-    return min( horizon_occlusion, ( max_r * max_r ) > dot( origin2sample, origin2sample ) );
+    return min( horizon_occlusion, sqr( max_r ) > dot( origin2sample, origin2sample ) );
 }
 
 float4 reconstruct_position_vs( float2 uv )
@@ -80,7 +87,7 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
 {
     float2 origin_uv = coord.xy / settings.render_target_size;
 
-    float2 seed = (frac(sin(dot(origin_uv ,float2(12.9898,78.233)*2.0)) * 43758.5453)); // random vector for marching directions & pixel position jittering
+    float2 seed = frac(sin(dot(origin_uv ,float2(12.9898,78.233)*2.0)) * 43758.5453); // random vector for marching directions & pixel position jittering
     float2 rotation = random_rotation( seed );
 
     // origin sample setup
