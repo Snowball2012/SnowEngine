@@ -16,7 +16,7 @@ struct GSInput
 
 struct GSOutput
 {
-	float4 pos : SV_POSITION;
+    float4 pos : SV_POSITION;
     float2 uv : TEXCOORD;
     uint split_idx : SV_RenderTargetArrayIndex;
 };
@@ -30,14 +30,14 @@ void main( triangle GSInput input[3],
     for ( int split_idx = 0; split_idx < light.csm_num_split_positions + 1; ++split_idx )
     {
         float4x4 shadow_mat = light.shadow_map_mat[split_idx];
-		output.RestartStrip();
-	    for (uint i = 0; i < 3; i++)
-	    {
-		    GSOutput element;
+        output.RestartStrip();
+        for (uint i = 0; i < 3; i++)
+        {
+            GSOutput element;
             element.pos = mul( input[i].pos_v, shadow_mat ); 
             element.uv = input[i].uv;
             element.split_idx = split_idx;
-		    output.Append(element);
-	    }
+            output.Append(element);
+        }
     }
 }

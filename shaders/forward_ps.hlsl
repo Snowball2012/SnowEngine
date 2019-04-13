@@ -35,11 +35,11 @@ TextureCube reflection_probe : register(t7);
 struct PixelIn
 {
     float4x4 view2env : VIEWTOENV;
-	float4 pos : SV_POSITION;
-	float3 pos_v : POSITION;
-	float3 normal : NORMAL;
-	float3 tangent : TANGENT;
-	float2 uv : TEXCOORD;
+    float4 pos : SV_POSITION;
+    float3 pos_v : POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv : TEXCOORD;
 };
 
 struct PixelOut
@@ -52,9 +52,9 @@ struct PixelOut
 
 float3 unpack_normal( float2 compressed_normal, float3 t, float3 b, float3 n )
 {
-	compressed_normal = 2 * compressed_normal - make_float2( 1.0f );
-	float3 compressed_z = sqrt( 1.0 - sqr( compressed_normal.x ) - sqr( compressed_normal.y ) );
-	return compressed_normal.x * t + compressed_normal.y * b + compressed_z * n;
+    compressed_normal = 2 * compressed_normal - make_float2( 1.0f );
+    float3 compressed_z = sqrt( 1.0 - sqr( compressed_normal.x ) - sqr( compressed_normal.y ) );
+    return compressed_normal.x * t + compressed_normal.y * b + compressed_z * n;
 }
 
 
@@ -115,15 +115,15 @@ PixelOut main(PixelIn pin)
     float3 bitangent;
     renormalize_tbn( pin.normal, pin.tangent, bitangent );
     
-	float3 normal = unpack_normal( normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
+    float3 normal = unpack_normal( normal_map.Sample( linear_wrap_sampler, pin.uv ).xy,
                                    pin.tangent, bitangent, pin.normal );
 
     float roughness;
     float metallic;
     unpack_specular( specular_map.Sample( linear_wrap_sampler, pin.uv ).rgb, roughness, metallic );
     
-	float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
-	float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
+    float3 diffuse_albedo = (1.0f - metallic) * base_color.rgb;
+    float3 fresnel_r0 = lerp( material.diffuse_fresnel, base_color.rgb, metallic );
     
     float3 to_camera = normalize( -pin.pos_v );
     float cos_nv = saturate( dot( to_camera, normal ) );
@@ -131,14 +131,14 @@ PixelOut main(PixelIn pin)
     // calc direct
     PixelOut res;
 
-	res.direct_lighting.rgb = make_float3( 0.0f );
-	for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
-	{
+    res.direct_lighting.rgb = make_float3( 0.0f );
+    for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
+    {
         ParallelLight light = pass_params.parallel_lights[light_idx];
 
-		float3 light_radiance = light.strength * parallel_direct_lighting( diffuse_albedo, fresnel_r0,
+        float3 light_radiance = light.strength * parallel_direct_lighting( diffuse_albedo, fresnel_r0,
                                                                            light.dir, to_camera, normal, cos_nv,
-												                           roughness );
+                                                                           roughness );
 
         res.direct_lighting.rgb +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade,
                                                                         pass_params.csm_split_positions, shadow_map_sampler );
@@ -160,5 +160,5 @@ PixelOut main(PixelIn pin)
     res.ambient_lighting.a = 1.0f;
     res.direct_lighting.a = 1.0f;
     res.screen_space_normal = normal.xy;
-	return res;
+    return res;
 }

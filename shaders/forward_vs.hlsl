@@ -19,30 +19,30 @@ cbuffer cbIBLTransform : register(b3)
 
 struct VertexIn
 {
-	float3 pos : POSITION;
-	float3 normal : NORMAL;
-	float2 uv : TEXCOORD;
+    float3 pos : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 struct VertexOut
 {
     nointerpolation float4x4 view2env : VIEWTOENV;
-	float4 pos : SV_POSITION;
-	float3 pos_v : POSITION;
-	float3 normal : NORMAL;
-	float2 uv : TEXCOORD;
+    float4 pos : SV_POSITION;
+    float3 pos_v : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
 };
 
 VertexOut main( VertexIn vin )
 {
-	float4 pos_ws = mul( float4( vin.pos, 1.0f ), renderitem.model_mat );
-	VertexOut vout;
-	float4 pos_v = mul( pos_ws, pass_params.view_mat );
-	vout.pos = mul( pos_ws, pass_params.view_proj_mat );
-	vout.pos_v = pos_v.xyz / pos_v.w;
+    float4 pos_ws = mul( float4( vin.pos, 1.0f ), renderitem.model_mat );
+    VertexOut vout;
+    float4 pos_v = mul( pos_ws, pass_params.view_mat );
+    vout.pos = mul( pos_ws, pass_params.view_proj_mat );
+    vout.pos_v = pos_v.xyz / pos_v.w;
 
-	vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
-	vout.uv = vin.uv;
+    vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
+    vout.uv = vin.uv;
     vout.view2env = mul( pass_params.view_inv_mat, ibl.world2env_mat );
-	return vout;
+    return vout;
 }

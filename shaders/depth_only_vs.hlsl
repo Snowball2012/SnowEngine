@@ -22,8 +22,8 @@ struct VertexOut
 VertexOut main(VertexIn vin)
 {
     float4 pos_ws = mul( float4( vin.pos, 1.0f ), renderitem.model_mat );
-	VertexOut vout;
-	vout.pos = mul( pos_ws, pass_params.view_proj_mat );	
-	vout.uv = vin.uv;
+    VertexOut vout;
+    vout.pos = mul( pos_ws, pass_params.view_proj_mat );	
+    vout.uv = vin.uv;
     return vout;
 }

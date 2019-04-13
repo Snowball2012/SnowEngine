@@ -6,22 +6,22 @@ static const float PI = 3.14159265f;
 
 static const float GAUSS_KERNEL_3X3_SIGMA1[9] =
 {
-	0.077847f,	0.123317f,	0.077847f,
-	0.123317f,	0.195346f,	0.123317f,
-	0.077847f,	0.123317f,	0.077847f,
+    0.077847f,	0.123317f,	0.077847f,
+    0.123317f,	0.195346f,	0.123317f,
+    0.077847f,	0.123317f,	0.077847f,
 };
 
 static const float2 OFFSETS_3X3[9] =
 {
-	float2( -1.0f, -1.0f ), float2( 0.0f, -1.0f ), float2( 1.0f, -1.0f ),
-	float2( -1.0f,  0.0f ), float2( 0.0f,  0.0f ), float2( 1.0f,  0.0f ),
-	float2( -1.0f,  1.0f ), float2( 0.0f,  1.0f ), float2( 1.0f,  1.0f )
+    float2( -1.0f, -1.0f ), float2( 0.0f, -1.0f ), float2( 1.0f, -1.0f ),
+    float2( -1.0f,  0.0f ), float2( 0.0f,  0.0f ), float2( 1.0f,  0.0f ),
+    float2( -1.0f,  1.0f ), float2( 0.0f,  1.0f ), float2( 1.0f,  1.0f )
 };
 
 
 float sqr( float a )
 {
-	return a * a;
+    return a * a;
 }
 
 float2 make_float2( float val )

@@ -4,14 +4,14 @@
 struct MaterialConstants
 {
     float4x4 transform;
-	float3 diffuse_fresnel;
+    float3 diffuse_fresnel;
 };
 
 #ifdef PER_MATERIAL_CB_BINDING
 
 cbuffer cbPerMaterial : register( PER_MATERIAL_CB_BINDING )
 {
-	MaterialConstants material;
+    MaterialConstants material;
 }
 
 #endif // PER_MATERIAL_CB_BINDING

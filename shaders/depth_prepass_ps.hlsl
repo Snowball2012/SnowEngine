@@ -13,5 +13,5 @@ SamplerState base_color_sampler : register( s0 );
 void main( PixelIn pin )
 {
     clip( base_color_map.Sample( base_color_sampler, pin.uv).a - ALPHA_BIAS );
-	return;
+    return;
 }
