@@ -32,24 +32,24 @@ namespace bc = boost::container;
 class SnowEngineException
 {
 public:
-	SnowEngineException()
-	{}
-	SnowEngineException( std::string msg )
-		: m_msg( std::move( msg ) )
-	{
-		MessageBoxA( NULL, "se", m_msg.c_str(), MB_OK );
-	}
+    SnowEngineException()
+    {}
+    SnowEngineException( std::string msg )
+        : m_msg( std::move( msg ) )
+    {
+        MessageBoxA( NULL, "se", m_msg.c_str(), MB_OK );
+    }
 
 private:
-	friend std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex );
+    friend std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex );
 
-	std::string m_msg;
+    std::string m_msg;
 };
 
 inline std::ostream& operator<< ( std::ostream& stream, const SnowEngineException& ex )
 {
-	stream << ex.m_msg;
-	return stream;
+    stream << ex.m_msg;
+    return stream;
 }
 
 #ifndef NOTIMPL

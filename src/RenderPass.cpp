@@ -7,20 +7,20 @@
 
 void RenderPass::Begin( RenderStateID state, ID3D12GraphicsCommandList& command_list ) noexcept
 {
-	assert( m_pso_cache.has( state ) );
-	command_list.SetPipelineState( m_pso_cache[state].Get() );
-	m_cmd_list = &command_list;
-	BeginDerived( state );
+    assert( m_pso_cache.has( state ) );
+    command_list.SetPipelineState( m_pso_cache[state].Get() );
+    m_cmd_list = &command_list;
+    BeginDerived( state );
 }
 
 
 void RenderPass::End() noexcept
 {
-	m_cmd_list = nullptr;
+    m_cmd_list = nullptr;
 }
 
 
 void RenderPass::DeleteState( RenderStateID state ) noexcept
 {
-	m_pso_cache.erase( state );
+    m_pso_cache.erase( state );
 }

@@ -32,20 +32,20 @@ float DistanceToBoxSqr( const DirectX::XMVECTOR& point, const DirectX::BoundingO
 
 constexpr DirectX::XMFLOAT4X4 Identity4x4 =
 {
-		1.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f, 0.0f,
-		0.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
 };
 
 constexpr float HaltonSequence23[8][2] =
 {
-	{ 1.f / 2.f, 1.f / 3.f },
-	{ 1.f / 4.f, 2.f / 3.f },
-	{ 3.f / 4.f, 1.f / 9.f },
-	{ 1.f / 8.f, 4.f / 9.f },
-	{ 5.f / 8.f, 7.f / 9.f },
-	{ 3.f / 8.f, 2.f / 9.f },
-	{ 7.f / 8.f, 5.f / 9.f },
-	{ 1.f / 16.f, 8.f / 9.f }
+    { 1.f / 2.f, 1.f / 3.f },
+    { 1.f / 4.f, 2.f / 3.f },
+    { 3.f / 4.f, 1.f / 9.f },
+    { 1.f / 8.f, 4.f / 9.f },
+    { 5.f / 8.f, 7.f / 9.f },
+    { 3.f / 8.f, 2.f / 9.f },
+    { 7.f / 8.f, 5.f / 9.f },
+    { 1.f / 16.f, 8.f / 9.f }
 };

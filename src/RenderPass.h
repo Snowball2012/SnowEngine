@@ -19,26 +19,26 @@
 class RenderPass
 {
 protected:
-	using RenderState = ComPtr<ID3D12PipelineState>;
+    using RenderState = ComPtr<ID3D12PipelineState>;
 
-	template<class T>
-	using PSOFreelistStorage = boost::container::small_vector<T, 1>;
+    template<class T>
+    using PSOFreelistStorage = boost::container::small_vector<T, 1>;
 
-	using RenderStates = packed_freelist<RenderState, PSOFreelistStorage>;
+    using RenderStates = packed_freelist<RenderState, PSOFreelistStorage>;
 
 public:
-	using RenderStateID = typename RenderStates::id;
+    using RenderStateID = typename RenderStates::id;
 
-	void Begin( RenderStateID state, ID3D12GraphicsCommandList& command_list ) noexcept;
-	void End() noexcept;
+    void Begin( RenderStateID state, ID3D12GraphicsCommandList& command_list ) noexcept;
+    void End() noexcept;
 
-	void DeleteState( RenderStateID state ) noexcept;
+    void DeleteState( RenderStateID state ) noexcept;
 
 protected:
 
-	virtual void BeginDerived( RenderStateID state ) noexcept = 0;
+    virtual void BeginDerived( RenderStateID state ) noexcept = 0;
 
-	ID3D12GraphicsCommandList* m_cmd_list = nullptr;
+    ID3D12GraphicsCommandList* m_cmd_list = nullptr;
 
-	RenderStates m_pso_cache;
+    RenderStates m_pso_cache;
 };

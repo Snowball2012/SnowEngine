@@ -8,9 +8,9 @@
 
 void StaticMesh::Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibv ) noexcept
 {
-	m_vbv = vbv;
-	m_ibv = ibv;
-	m_is_loaded = true;
+    m_vbv = vbv;
+    m_ibv = ibv;
+    m_is_loaded = true;
 }
 
 // Scene
@@ -18,87 +18,87 @@ void StaticMesh::Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BU
 // template helpers
 template<> struct Scene::ID2Obj<TransformID>
 {
-	using type = ObjectTransform;
+    using type = ObjectTransform;
 };
 
 template<> struct Scene::ID2Obj<StaticMeshID>
 {
-	using type = StaticMesh;
+    using type = StaticMesh;
 };
 
 template<> struct Scene::ID2Obj<StaticSubmeshID>
 {
-	using type = StaticSubmesh;
+    using type = StaticSubmesh;
 };
 
 template<> struct Scene::ID2Obj<TextureID>
 {
-	using type = Texture;
+    using type = Texture;
 };
 
 template<> struct Scene::ID2Obj<CubemapID>
 {
-	using type = Cubemap;
+    using type = Cubemap;
 };
 
 template<> struct Scene::ID2Obj<MaterialID>
 {
-	using type = MaterialPBR;
+    using type = MaterialPBR;
 };
 
 template<> struct Scene::ID2Obj<EnvMapID>
 {
-	using type = EnviromentMap;
+    using type = EnviromentMap;
 };
 
 template<> Scene::freelist_from_id<TransformID>& Scene::GetStorage<TransformID>() noexcept
 {
-	return m_obj_tfs;
+    return m_obj_tfs;
 }
 
 template<> Scene::freelist_from_id<StaticMeshID>& Scene::GetStorage<StaticMeshID>() noexcept
 {
-	return m_static_meshes;
+    return m_static_meshes;
 }
 
 template<> Scene::freelist_from_id<StaticSubmeshID>& Scene::GetStorage<StaticSubmeshID>() noexcept
 {
-	return m_static_submeshes;
+    return m_static_submeshes;
 }
 
 template<> Scene::freelist_from_id<TextureID>& Scene::GetStorage<TextureID>() noexcept
 {
-	return m_textures;
+    return m_textures;
 }
 
 template<> Scene::freelist_from_id<CubemapID>& Scene::GetStorage<CubemapID>() noexcept
 {
-	return m_cubemaps;
+    return m_cubemaps;
 }
 
 template<> Scene::freelist_from_id<MaterialID>& Scene::GetStorage<MaterialID>() noexcept
 {
-	return m_materials;
+    return m_materials;
 }
 
 template<> Scene::freelist_from_id<EnvMapID>& Scene::GetStorage<EnvMapID>() noexcept
 {
-	return m_env_maps;
+    return m_env_maps;
 }
 
 // generic methods
 template<typename IDType>
 bool Scene::Remove( IDType obj_id ) noexcept
 {
-	auto* obj = GetStorage<IDType>().try_get( obj_id );
-	if ( ! obj )
-		return true;
+    auto* obj = GetStorage<IDType>().try_get( obj_id );
+    if ( ! obj )
+        return true;
 
-	if ( obj->GetRefCount() != 0 )
-		return false;
+    if ( obj->GetRefCount() != 0 )
+        return false;
 
-	GetStorage<IDType>().erase( obj_id );
-	return true;
+    GetStorage<IDType>().erase( obj_id );
+    return true;
 }
 
 
@@ -106,18 +106,18 @@ bool Scene::Remove( IDType obj_id ) noexcept
 
 TransformID Scene::AddTransform( ) noexcept
 {
-	ObjectTransform tf;
-	return m_obj_tfs.insert( std::move( tf ) );
+    ObjectTransform tf;
+    return m_obj_tfs.insert( std::move( tf ) );
 }
 
 bool Scene::RemoveTransform( TransformID id ) noexcept
 {
-	return Remove( id );
+    return Remove( id );
 }
 
 ObjectTransform* Scene::TryModifyTransform( TransformID id ) noexcept
 {
-	return m_obj_tfs.try_get( id );
+    return m_obj_tfs.try_get( id );
 }
 
 
@@ -125,51 +125,51 @@ ObjectTransform* Scene::TryModifyTransform( TransformID id ) noexcept
 
 StaticMeshID Scene::AddStaticMesh() noexcept
 {
-	StaticMesh mesh;
-	return m_static_meshes.insert( std::move( mesh ) );
+    StaticMesh mesh;
+    return m_static_meshes.insert( std::move( mesh ) );
 }
 
 bool Scene::RemoveStaticMesh( StaticMeshID id ) noexcept
 {
-	return Remove( id );
+    return Remove( id );
 }
 
 StaticMesh* Scene::TryModifyStaticMesh( StaticMeshID id ) noexcept
 {
-	return m_static_meshes.try_get( id );
+    return m_static_meshes.try_get( id );
 }
 
 
 // Submeshes
 StaticSubmeshID Scene::AddStaticSubmesh( StaticMeshID mesh_id )
 {
-	StaticMesh* mesh = m_static_meshes.try_get( mesh_id );
-	if ( ! mesh )
-		throw SnowEngineException( "referenced mesh does not exist" );
-	mesh->AddRef();
+    StaticMesh* mesh = m_static_meshes.try_get( mesh_id );
+    if ( ! mesh )
+        throw SnowEngineException( "referenced mesh does not exist" );
+    mesh->AddRef();
 
-	StaticSubmesh submesh( mesh_id );
-	return m_static_submeshes.insert( std::move( submesh ) );
+    StaticSubmesh submesh( mesh_id );
+    return m_static_submeshes.insert( std::move( submesh ) );
 }
 
 bool Scene::RemoveStaticSubmesh( StaticSubmeshID id ) noexcept
 {
-	StaticSubmesh* submesh = m_static_submeshes.try_get( id );
-	if ( ! submesh )
-		return true;
+    StaticSubmesh* submesh = m_static_submeshes.try_get( id );
+    if ( ! submesh )
+        return true;
 
-	StaticMesh* mesh = m_static_meshes.try_get( submesh->GetMesh() );
+    StaticMesh* mesh = m_static_meshes.try_get( submesh->GetMesh() );
 
-	assert( mesh != nullptr ); // It's a strange situation indeed, but I don't see why we should fail here, since we are deleting this element anyway
-	if ( mesh )
-		mesh->ReleaseRef();
+    assert( mesh != nullptr ); // It's a strange situation indeed, but I don't see why we should fail here, since we are deleting this element anyway
+    if ( mesh )
+        mesh->ReleaseRef();
 
-	return Remove( id );
+    return Remove( id );
 }
 
 StaticSubmesh* Scene::TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept
 {
-	return m_static_submeshes.try_get( id );
+    return m_static_submeshes.try_get( id );
 }
 
 
@@ -177,18 +177,18 @@ StaticSubmesh* Scene::TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept
 
 TextureID Scene::AddTexture() noexcept
 {
-	Texture texture;
-	return m_textures.insert( std::move( texture ) );
+    Texture texture;
+    return m_textures.insert( std::move( texture ) );
 }
 
 bool Scene::RemoveTexture( TextureID id ) noexcept
 {
-	return Remove( id );
+    return Remove( id );
 }
 
 Texture* Scene::TryModifyTexture( TextureID id ) noexcept
 {
-	return m_textures.try_get( id );
+    return m_textures.try_get( id );
 }
 
 
@@ -196,18 +196,18 @@ Texture* Scene::TryModifyTexture( TextureID id ) noexcept
 
 CubemapID Scene::AddCubemap() noexcept
 {
-	Cubemap cubemap;
-	return m_cubemaps.insert( std::move( cubemap ) );
+    Cubemap cubemap;
+    return m_cubemaps.insert( std::move( cubemap ) );
 }
 
 bool Scene::RemoveCubemap( CubemapID id ) noexcept
 {
-	return Remove( id );
+    return Remove( id );
 }
 
 Cubemap* Scene::TryModifyCubemap( CubemapID id ) noexcept
 {
-	return m_cubemaps.try_get( id );
+    return m_cubemaps.try_get( id );
 }
 
 
@@ -215,46 +215,46 @@ Cubemap* Scene::TryModifyCubemap( CubemapID id ) noexcept
 
 MaterialID Scene::AddMaterial( const MaterialPBR::TextureIds& textures )
 {
-	auto add_ref = [&]( TextureID id )
-	{
-		Texture* tex = m_textures.try_get( id );
-		if ( ! tex )
-			throw SnowEngineException( "referenced texture does not exist" );
-		tex->AddRef();
-	};
+    auto add_ref = [&]( TextureID id )
+    {
+        Texture* tex = m_textures.try_get( id );
+        if ( ! tex )
+            throw SnowEngineException( "referenced texture does not exist" );
+        tex->AddRef();
+    };
 
-	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
-		add_ref( tex_id );
+    for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
+        add_ref( tex_id );
 
-	MaterialPBR material;
-	material.Textures() = textures;
-	return m_materials.insert( std::move( material ) );
+    MaterialPBR material;
+    material.Textures() = textures;
+    return m_materials.insert( std::move( material ) );
 }
 
 bool Scene::RemoveMaterial( MaterialID id ) noexcept
 {
-	MaterialPBR* material = m_materials.try_get( id );
-	if ( ! material )
-		return true;
+    MaterialPBR* material = m_materials.try_get( id );
+    if ( ! material )
+        return true;
 
-	auto release_ref = [&]( TextureID id )
-	{
-		Texture* tex = m_textures.try_get( id );
-		assert( tex != nullptr );
-		if ( tex )
-			tex->ReleaseRef();
-	};
+    auto release_ref = [&]( TextureID id )
+    {
+        Texture* tex = m_textures.try_get( id );
+        assert( tex != nullptr );
+        if ( tex )
+            tex->ReleaseRef();
+    };
 
-	const auto& textures = material->Textures();
-	for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
-		release_ref( tex_id );
+    const auto& textures = material->Textures();
+    for ( const auto& tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
+        release_ref( tex_id );
 
-	return Remove( id );
+    return Remove( id );
 }
 
 MaterialPBR* Scene::TryModifyMaterial( MaterialID id ) noexcept
 {
-	return m_materials.try_get( id );
+    return m_materials.try_get( id );
 }
 
 
@@ -262,49 +262,49 @@ MaterialPBR* Scene::TryModifyMaterial( MaterialID id ) noexcept
 
 MeshInstanceID Scene::AddStaticMeshInstance( TransformID tf_id, StaticSubmeshID submesh_id, MaterialID material_id )
 {
-	ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
-	StaticSubmesh* submesh = m_static_submeshes.try_get( submesh_id );
-	MaterialPBR* material = m_materials.try_get( material_id );
-	if ( ! ( tf && submesh && material ) )
-		throw SnowEngineException( "referenced objects do not exist" );
+    ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
+    StaticSubmesh* submesh = m_static_submeshes.try_get( submesh_id );
+    MaterialPBR* material = m_materials.try_get( material_id );
+    if ( ! ( tf && submesh && material ) )
+        throw SnowEngineException( "referenced objects do not exist" );
 
-	tf->AddRef();
-	submesh->AddRef();
-	material->AddRef();
+    tf->AddRef();
+    submesh->AddRef();
+    material->AddRef();
 
-	StaticMeshInstance instance;
-	instance.Material() = material_id;
-	instance.Submesh() = submesh_id;
-	instance.Transform() = tf_id;
+    StaticMeshInstance instance;
+    instance.Material() = material_id;
+    instance.Submesh() = submesh_id;
+    instance.Transform() = tf_id;
 
-	return m_static_mesh_instances.insert( instance );
+    return m_static_mesh_instances.insert( instance );
 }
 
 bool Scene::RemoveStaticMeshInstance( MeshInstanceID id ) noexcept
 {
-	StaticMeshInstance* instance = m_static_mesh_instances.try_get( id );
-	if ( ! instance )
-		return true;
+    StaticMeshInstance* instance = m_static_mesh_instances.try_get( id );
+    if ( ! instance )
+        return true;
 
-	ObjectTransform* tf = m_obj_tfs.try_get( instance->GetTransform() );
-	StaticSubmesh* submesh = m_static_submeshes.try_get( instance->Submesh() );
-	MaterialPBR* material = m_materials.try_get( instance->Material() );
+    ObjectTransform* tf = m_obj_tfs.try_get( instance->GetTransform() );
+    StaticSubmesh* submesh = m_static_submeshes.try_get( instance->Submesh() );
+    MaterialPBR* material = m_materials.try_get( instance->Material() );
 
-	assert( tf && submesh && material );
-	if ( tf )
-		tf->ReleaseRef();
-	if ( submesh )
-		submesh->ReleaseRef();
-	if ( material )
-		material->ReleaseRef();
+    assert( tf && submesh && material );
+    if ( tf )
+        tf->ReleaseRef();
+    if ( submesh )
+        submesh->ReleaseRef();
+    if ( material )
+        material->ReleaseRef();
 
-	m_static_mesh_instances.erase( id );
-	return true;
+    m_static_mesh_instances.erase( id );
+    return true;
 }
 
 StaticMeshInstance* Scene::TryModifyStaticMeshInstance( MeshInstanceID id ) noexcept
 {
-	return m_static_mesh_instances.try_get( id );
+    return m_static_mesh_instances.try_get( id );
 }
 
 
@@ -312,19 +312,19 @@ StaticMeshInstance* Scene::TryModifyStaticMeshInstance( MeshInstanceID id ) noex
 
 CameraID Scene::AddCamera() noexcept
 {
-	return m_cameras.emplace();
+    return m_cameras.emplace();
 }
 
 bool Scene::RemoveCamera( CameraID id ) noexcept
 {
-	bool has_camera = m_cameras.has( id );
-	m_cameras.erase( id );
-	return has_camera;
+    bool has_camera = m_cameras.has( id );
+    m_cameras.erase( id );
+    return has_camera;
 }
 
 Camera* Scene::TryModifyCamera( CameraID id ) noexcept
 {
-	return m_cameras.try_get( id );
+    return m_cameras.try_get( id );
 }
 
 
@@ -332,63 +332,63 @@ Camera* Scene::TryModifyCamera( CameraID id ) noexcept
 
 LightID Scene::AddLight() noexcept
 {
-	return m_lights.emplace();
+    return m_lights.emplace();
 }
 
 bool Scene::RemoveLight( LightID id ) noexcept
 {
-	bool has_light = m_lights.has( id );
-	m_lights.erase( id );
-	return has_light;
+    bool has_light = m_lights.has( id );
+    m_lights.erase( id );
+    return has_light;
 }
 
 SceneLight* Scene::TryModifyLight( LightID id ) noexcept
 {
-	return m_lights.try_get( id );
+    return m_lights.try_get( id );
 }
 
 // Enviroment maps
 
 EnvMapID Scene::AddEnviromentMap( CubemapID cubemap_id, TransformID tf_id )
 {
-	Cubemap* cubemap = m_cubemaps.try_get( cubemap_id );
-	if ( ! cubemap )
-		throw SnowEngineException( "referenced cubemap does not exist" );
-	cubemap->AddRef();
+    Cubemap* cubemap = m_cubemaps.try_get( cubemap_id );
+    if ( ! cubemap )
+        throw SnowEngineException( "referenced cubemap does not exist" );
+    cubemap->AddRef();
 
-	ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
-	if ( ! tf )
-		throw SnowEngineException( "referenced transform does not exist" );
-	tf->AddRef();
+    ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
+    if ( ! tf )
+        throw SnowEngineException( "referenced transform does not exist" );
+    tf->AddRef();
 
-	EnviromentMap envmap;
+    EnviromentMap envmap;
 
-	envmap.Map() = cubemap_id;
-	envmap.Transform() = tf_id;
+    envmap.Map() = cubemap_id;
+    envmap.Transform() = tf_id;
 
-	return m_env_maps.insert( std::move( envmap ) );
+    return m_env_maps.insert( std::move( envmap ) );
 }
 
 bool Scene::RemoveEnviromentMap( EnvMapID id ) noexcept
 {
-	EnviromentMap* envmap = m_env_maps.try_get( id );
-	if ( ! envmap )
-		return true;
+    EnviromentMap* envmap = m_env_maps.try_get( id );
+    if ( ! envmap )
+        return true;
 
-	Cubemap* cubemap = m_cubemaps.try_get( envmap->GetMap() );
-	assert( cubemap != nullptr );
-	if ( cubemap )
-		cubemap->ReleaseRef();
+    Cubemap* cubemap = m_cubemaps.try_get( envmap->GetMap() );
+    assert( cubemap != nullptr );
+    if ( cubemap )
+        cubemap->ReleaseRef();
 
-	ObjectTransform* tf = m_obj_tfs.try_get( envmap->GetTransform() );
-	assert( tf != nullptr );
-	if ( tf )
-		tf->ReleaseRef();
+    ObjectTransform* tf = m_obj_tfs.try_get( envmap->GetTransform() );
+    assert( tf != nullptr );
+    if ( tf )
+        tf->ReleaseRef();
 
-	return Remove( id );
+    return Remove( id );
 }
 
 EnviromentMap* Scene::TryModifyEnvMap( EnvMapID id ) noexcept
 {
-	return m_env_maps.try_get( id );
+    return m_env_maps.try_get( id );
 }

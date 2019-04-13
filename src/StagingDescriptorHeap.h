@@ -8,17 +8,17 @@
 class StagingDescriptorHeap
 {
 public:
-	StagingDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12Device* device );
-	Descriptor AllocateDescriptor();
+    StagingDescriptorHeap( D3D12_DESCRIPTOR_HEAP_TYPE type, ID3D12Device* device );
+    Descriptor AllocateDescriptor();
 
 private:
-	static constexpr size_t DefaultChunkSizeInDescriptors = 256;
+    static constexpr size_t DefaultChunkSizeInDescriptors = 256;
 
-	D3D12_DESCRIPTOR_HEAP_TYPE m_type = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+    D3D12_DESCRIPTOR_HEAP_TYPE m_type = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 
-	void AddChunk();
+    void AddChunk();
 
-	std::list<DescriptorHeap> m_chunks; // all DescriptorHeaps must remain valid once allocated so all descriptors can be safely deallocated
+    std::list<DescriptorHeap> m_chunks; // all DescriptorHeaps must remain valid once allocated so all descriptors can be safely deallocated
 
-	ID3D12Device* m_device;
+    ID3D12Device* m_device;
 };
