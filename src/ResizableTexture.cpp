@@ -27,7 +27,7 @@ void ResizableTexture::Resize( uint32_t width, uint32_t height )
 
     m_res = nullptr;
     
-    ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
+    ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
                                                       D3D12_HEAP_FLAG_NONE,
                                                       &desc, m_initial_state,
                                                       m_clear_value.has_value() ? &m_clear_value.value() : nullptr,

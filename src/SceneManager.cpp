@@ -170,27 +170,27 @@ SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device,
     {
         m_copy_cmd_allocators.emplace_back();
         auto& allocator = m_copy_cmd_allocators.back();
-        ThrowIfFailed( device->CreateCommandAllocator(
+        ThrowIfFailedH( device->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_COPY,
             IID_PPV_ARGS( allocator.first.GetAddressOf() ) ) );
         allocator.second = 0;
 
         m_graphics_cmd_allocators.emplace_back();
         auto& graphics_allocator = m_graphics_cmd_allocators.back();
-        ThrowIfFailed( device->CreateCommandAllocator(
+        ThrowIfFailedH( device->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_DIRECT,
             IID_PPV_ARGS( graphics_allocator.first.GetAddressOf() ) ) );
         graphics_allocator.second = 0;
     }
 
-    ThrowIfFailed( device->CreateCommandList(
+    ThrowIfFailedH( device->CreateCommandList(
         0,
         D3D12_COMMAND_LIST_TYPE_COPY,
         m_copy_cmd_allocators[0].first.Get(), // Associated command allocator
         nullptr,                 
         IID_PPV_ARGS( m_copy_cmd_list.GetAddressOf() ) ) );
 
-    ThrowIfFailed( device->CreateCommandList(
+    ThrowIfFailedH( device->CreateCommandList(
         0,
         D3D12_COMMAND_LIST_TYPE_DIRECT,
         m_graphics_cmd_allocators[0].first.Get(), // Associated command allocator
@@ -227,11 +227,11 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
     SceneCopyOp cur_op = m_operation_counter++;
 
     m_copy_queue->WaitForTimestamp( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].second );
-    ThrowIfFailed( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
+    ThrowIfFailedH( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
     m_copy_cmd_list->Reset( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
 
     m_graphics_queue->WaitForTimestamp( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].second );
-    ThrowIfFailed( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
+    ThrowIfFailedH( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
     m_graphics_cmd_list->Reset( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
 
     m_main_camera_id = main_camera_id;
@@ -247,7 +247,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
     m_dynamic_buffers.Update();
     m_material_table_baker.UpdateStagingDescriptors();
 
-    ThrowIfFailed( m_copy_cmd_list->Close() );
+    ThrowIfFailedH( m_copy_cmd_list->Close() );
     ID3D12CommandList* lists_to_exec[]{ m_copy_cmd_list.Get() };
     m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
     
@@ -268,7 +268,7 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
         m_cubemap_mgr.OnBakeDescriptors( *m_graphics_cmd_list.Get() );
     }
 
-    ThrowIfFailed( m_graphics_cmd_list->Close() );
+    ThrowIfFailedH( m_graphics_cmd_list->Close() );
     lists_to_exec[0] = m_graphics_cmd_list.Get();
     m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
 

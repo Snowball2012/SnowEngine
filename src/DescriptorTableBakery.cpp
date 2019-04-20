@@ -20,12 +20,12 @@ DescriptorTableBakery::DescriptorTableBakery( Microsoft::WRL::ComPtr<ID3D12Devic
     desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     desc.Type = type;
     desc.NumDescriptors = UINT( num_descriptors_baseline );
-    ThrowIfFailed( m_device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( m_staging_heap.heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( m_staging_heap.heap.GetAddressOf() ) ) );
 
     desc.Flags |= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 
     for ( auto& heap_instance : m_gpu_heaps )
-        ThrowIfFailed( m_device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( heap_instance.GetAddressOf() ) ) );
+        ThrowIfFailedH( m_device->CreateDescriptorHeap( &desc, IID_PPV_ARGS( heap_instance.GetAddressOf() ) ) );
 }
 
 
@@ -41,7 +41,7 @@ bool DescriptorTableBakery::BakeGPUTables()
         {
             D3D12_DESCRIPTOR_HEAP_DESC gpu_heap_desc = m_staging_heap.heap->GetDesc();
             gpu_heap_desc.Flags |= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-            ThrowIfFailed( m_device->CreateDescriptorHeap( &gpu_heap_desc, IID_PPV_ARGS( cur_gpu_heap.GetAddressOf() ) ) );
+            ThrowIfFailedH( m_device->CreateDescriptorHeap( &gpu_heap_desc, IID_PPV_ARGS( cur_gpu_heap.GetAddressOf() ) ) );
         }
 
         m_device->CopyDescriptorsSimple( UINT( m_staging_heap.heap_end ),
@@ -132,7 +132,7 @@ void DescriptorTableBakery::Rebuild( StagingHeap& staging_heap, size_t new_capac
     new_heap_desc.NumDescriptors = UINT( new_capacity );
 
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> new_heap;
-    ThrowIfFailed( m_device->CreateDescriptorHeap( &new_heap_desc, IID_PPV_ARGS( new_heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateDescriptorHeap( &new_heap_desc, IID_PPV_ARGS( new_heap.GetAddressOf() ) ) );
 
     UINT new_end = 0;
     std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> src_ranges_start;

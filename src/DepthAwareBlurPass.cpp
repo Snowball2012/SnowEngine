@@ -26,7 +26,7 @@ DepthAwareBlurPass::RenderStateID DepthAwareBlurPass::BuildRenderState( ID3D12De
     };
 
     RenderStateID retval = m_pso_cache.emplace();
-    ThrowIfFailed( device.CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_cache[retval] ) ) );
+    ThrowIfFailedH( device.CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &m_pso_cache[retval] ) ) );
 
     return retval;
 }
@@ -100,11 +100,11 @@ ComPtr<ID3D12RootSignature> DepthAwareBlurPass::BuildRootSignature( ID3D12Device
     {
         OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
     }
-    ThrowIfFailed( hr );
+    ThrowIfFailedH( hr );
 
     ComPtr<ID3D12RootSignature> rootsig;
 
-    ThrowIfFailed( device.CreateRootSignature(
+    ThrowIfFailedH( device.CreateRootSignature(
         0,
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),

@@ -122,7 +122,7 @@ void SceneRenderer::CreateTransientResources()
 
             const auto* opt_clear_ptr = (create_rtv_desc || create_dsv_desc) ? &clear_value : nullptr;
             ComPtr<ID3D12Resource> res;
-            ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+            ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
                                                               &desc, initial_state,
                                                               opt_clear_ptr,
                                                               IID_PPV_ARGS( res.GetAddressOf() ) ) );
@@ -355,7 +355,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 
     m_framegraph.Run( *list_iface );
 
-    ThrowIfFailed( list_iface->Close() );
+    ThrowIfFailedH( list_iface->Close() );
 
     graphics_cmd_lists.emplace_back( std::move( cmd_list ) );
 }

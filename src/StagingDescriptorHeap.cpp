@@ -34,7 +34,7 @@ void StagingDescriptorHeap::AddChunk()
     heap_desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
     ComPtr<ID3D12DescriptorHeap> heap;
-    ThrowIfFailed( m_device->CreateDescriptorHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateDescriptorHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
     
     m_chunks.emplace_back( std::move( heap ), desc_size );
 }

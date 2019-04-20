@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <queue>
 #include <memory>
+#include <exception>
 
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
@@ -27,9 +28,54 @@ namespace bc = boost::container;
 #include <dxgi1_5.h>
 
 #include "Ptr.h"
+
+#ifndef ThrowIfFailedH
+#define ThrowIfFailedH(x)                                              \
+{                                                                     \
+    HRESULT hr__ = (x);                                               \
+    std::wstring wfn = AnsiToWString(__FILE__);                       \
+    if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
+}
+#endif
+
+#ifndef ThrowIfFailedB
+#define ThrowIfFailedB(x)                                              \
+{                                                                     \
+    if ( !(x) )
+    {
+        std::wstring wfn = AnsiToWString( __FILE__ );
+        throw DxException( hr__, L#x, wfn, __LINE__ );
+    }
+    
+    std::wstring wfn = AnsiToWString(__FILE__);                       \
+    if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
+}
+#endif
+
 #include "RenderUtils.h"
 
-class SnowEngineException
+class DxException
+{
+public:
+    DxException() = default;
+    DxException( HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber );
+
+    std::wstring ToString()const;
+
+    HRESULT ErrorCode = S_OK;
+    std::wstring FunctionName;
+    std::wstring Filename;
+    int LineNumber = -1;
+};
+
+inline std::wstring AnsiToWString( const std::string& str )
+{
+    WCHAR buffer[512];
+    MultiByteToWideChar( CP_ACP, 0, str.c_str(), -1, buffer, 512 );
+    return std::wstring( buffer );
+}
+
+class SnowEngineException : public std::exception
 {
 public:
     SnowEngineException()
@@ -38,6 +84,11 @@ public:
         : m_msg( std::move( msg ) )
     {
         MessageBoxA( NULL, "se", m_msg.c_str(), MB_OK );
+    }
+
+    virtual char const* what() const
+    {
+        return m_msg.c_str();
     }
 
 private:

@@ -46,7 +46,7 @@ SkyboxPass::RenderStateID SkyboxPass::BuildRenderState( DXGI_FORMAT rtv_format, 
     pso_desc.SampleDesc.Quality = 0;
     pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
+    ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
 
     return m_pso_cache.emplace( std::move( pso ) );
 }
@@ -109,11 +109,11 @@ ComPtr<ID3D12RootSignature> SkyboxPass::BuildRootSignature( ID3D12Device & devic
     {
         OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
     }
-    ThrowIfFailed( hr );
+    ThrowIfFailedH( hr );
 
     ComPtr<ID3D12RootSignature> rootsig;
 
-    ThrowIfFailed( device.CreateRootSignature(
+    ThrowIfFailedH( device.CreateRootSignature(
         0,
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),

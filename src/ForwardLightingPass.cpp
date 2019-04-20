@@ -63,11 +63,11 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
     pso_desc.DSVFormat = depth_stencil_format;
 
     ComPtr<ID3D12PipelineState> main_pso, wireframe_pso;
-    ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &main_pso ) ) );
+    ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &main_pso ) ) );
 
     pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
     pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-    ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &wireframe_pso ) ) );
+    ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &wireframe_pso ) ) );
 
     States retval;
     retval.triangle_fill = m_pso_cache.emplace( std::move( main_pso ) );

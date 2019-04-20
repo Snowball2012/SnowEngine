@@ -133,11 +133,11 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
     if ( error_blob )
         OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
 
-    ThrowIfFailed( hr );
+    ThrowIfFailedH( hr );
 
     ComPtr<ID3D12RootSignature> rootsig;
 
-    ThrowIfFailed( device.CreateRootSignature(
+    ThrowIfFailedH( device.CreateRootSignature(
         0,
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),

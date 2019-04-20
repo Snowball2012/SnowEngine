@@ -6,19 +6,6 @@
 
 #include <string>
 
-#ifndef ThrowIfFailed
-#define ThrowIfFailed(x)                                              \
-{                                                                     \
-    HRESULT hr__ = (x);                                               \
-    std::wstring wfn = Utils::AnsiToWString(__FILE__);                       \
-    if(FAILED(hr__)) { throw Utils::DxException(hr__, L#x, wfn, __LINE__); } \
-}
-#endif
-
-#ifndef ReleaseCom
-#define ReleaseCom(x) { if(x){ x->Release(); x = 0; } }
-#endif
-
 namespace Utils
 {
     Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(
@@ -55,7 +42,7 @@ namespace Utils
             if ( isConstantBuffer )
                 mElementByteSize = Utils::CalcConstantBufferByteSize( sizeof( T ) );
 
-            ThrowIfFailed( device->CreateCommittedResource(
+            ThrowIfFailedH( device->CreateCommittedResource(
                 &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
                 D3D12_HEAP_FLAG_NONE,
                 &CD3DX12_RESOURCE_DESC::Buffer( mElementByteSize*elementCount ),
@@ -63,7 +50,7 @@ namespace Utils
                 nullptr,
                 IID_PPV_ARGS( &mUploadBuffer ) ) );
 
-            ThrowIfFailed( mUploadBuffer->Map( 0, nullptr, reinterpret_cast<void**>( &mMappedData ) ) );
+            ThrowIfFailedH( mUploadBuffer->Map( 0, nullptr, reinterpret_cast<void**>( &mMappedData ) ) );
 
             // We do not need to unmap until we are done with the resource.  However, we must not write to
             // the resource while it is in use by the GPU (so we must use synchronization techniques).
@@ -160,26 +147,5 @@ namespace Utils
                  linearWrap, linearClamp,
                  anisotropicWrap, anisotropicClamp, shadow };
     }
-
-    // temp
-    class DxException
-    {
-    public:
-        DxException() = default;
-        DxException( HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber );
-
-        std::wstring ToString()const;
-
-        HRESULT ErrorCode = S_OK;
-        std::wstring FunctionName;
-        std::wstring Filename;
-        int LineNumber = -1;
-    };
-
-    inline std::wstring AnsiToWString( const std::string& str )
-    {
-        WCHAR buffer[512];
-        MultiByteToWideChar( CP_ACP, 0, str.c_str(), -1, buffer, 512 );
-        return std::wstring( buffer );
-    }
+    
 }

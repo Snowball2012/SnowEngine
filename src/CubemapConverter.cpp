@@ -30,7 +30,7 @@ ComPtr<ID3D12Resource> CubemapConverter::MakeCubemapFromCylindrical( uint32_t re
     D3D12_RESOURCE_DESC cubemap_desc = GetCubemapDesc( resolution, cubemap_format );
 
     ComPtr<ID3D12Resource> cubemap;
-    ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
+    ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
                                                       D3D12_HEAP_FLAG_NONE,
                                                       &cubemap_desc,
                                                       D3D12_RESOURCE_STATE_RENDER_TARGET, nullptr,
@@ -39,7 +39,7 @@ ComPtr<ID3D12Resource> CubemapConverter::MakeCubemapFromCylindrical( uint32_t re
     D3D12_DESCRIPTOR_HEAP_DESC heap_desc{};
     heap_desc.NumDescriptors = 6;
     heap_desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    ThrowIfFailed( m_device->CreateDescriptorHeap( &heap_desc, IID_PPV_ARGS( cubemap_rtv_heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateDescriptorHeap( &heap_desc, IID_PPV_ARGS( cubemap_rtv_heap.GetAddressOf() ) ) );
 
     const UINT desc_handle_size = m_device->GetDescriptorHandleIncrementSize( heap_desc.Type );
 
@@ -137,11 +137,11 @@ ComPtr<ID3D12RootSignature> CubemapConverter::BuildRootSignature() const
     {
         OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
     }
-    ThrowIfFailed( hr );
+    ThrowIfFailedH( hr );
 
     ComPtr<ID3D12RootSignature> rootsig;
 
-    ThrowIfFailed( m_device->CreateRootSignature(
+    ThrowIfFailedH( m_device->CreateRootSignature(
         0,
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),
@@ -175,7 +175,7 @@ ComPtr<ID3D12PipelineState> CubemapConverter::BuildPSO( DXGI_FORMAT rtv_format, 
     desc.SampleDesc.Quality = 0;
 
     ComPtr<ID3D12PipelineState> pso;
-    ThrowIfFailed( m_device->CreateGraphicsPipelineState( &desc, IID_PPV_ARGS( pso.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateGraphicsPipelineState( &desc, IID_PPV_ARGS( pso.GetAddressOf() ) ) );
 
     return std::move( pso );
 }
@@ -186,14 +186,14 @@ ComPtr<ID3D12Resource> CubemapConverter::BuildGPUMatrices() const
 
     ComPtr<ID3D12Resource> constant_buffer;
     constexpr UINT64 cb_size = Utils::CalcConstantBufferByteSize( sizeof( XMFLOAT4X4 ) );
-    ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
+    ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
                                                       D3D12_HEAP_FLAG_NONE,
                                                       &CD3DX12_RESOURCE_DESC::Buffer( 6 * cb_size ),
                                                       D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                       IID_PPV_ARGS( constant_buffer.GetAddressOf() ) ) );
 
     void* data;
-    ThrowIfFailed( constant_buffer->Map( 0, nullptr, &data ) );
+    ThrowIfFailedH( constant_buffer->Map( 0, nullptr, &data ) );
 
     if ( !data )
         throw SnowEngineException( "nullptr returned after ID3D12Resource::Map()" );

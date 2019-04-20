@@ -81,7 +81,7 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
         constexpr float extra_buffer_space = 1.2f; // to avoid buffer recreation for every new transform/material
         buffer.capacity = m_buffer_size * extra_buffer_space;
         
-        ThrowIfFailed( m_device->CreateCommittedResource(
+        ThrowIfFailedH( m_device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( buffer.capacity ),
@@ -89,7 +89,7 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
             nullptr,
             IID_PPV_ARGS( buffer.gpu_res.GetAddressOf() ) ) );
 
-        ThrowIfFailed( buffer.gpu_res->Map( 0, nullptr, reinterpret_cast<void**>( &buffer.mapped_data ) ) );
+        ThrowIfFailedH( buffer.gpu_res->Map( 0, nullptr, reinterpret_cast<void**>( &buffer.mapped_data ) ) );
     }
 
     size_t cur_offset = 0;

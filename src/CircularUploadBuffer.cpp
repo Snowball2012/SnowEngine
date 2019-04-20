@@ -15,7 +15,7 @@ CircularUploadBuffer::CircularUploadBuffer( ComPtr<ID3D12Device> device, uint64_
     heap_desc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
     heap_desc.Alignment = alignment;
 
-    ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( m_heap.GetAddressOf() ) ) );	
+    ThrowIfFailedH( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( m_heap.GetAddressOf() ) ) );	
 }
 
 
@@ -53,7 +53,7 @@ std::pair<ID3D12Resource*, span<uint8_t>> CircularUploadBuffer::AllocateBuffer( 
     alloc.placed_res.Reset();
 
 
-    ThrowIfFailed( m_device->CreatePlacedResource( m_heap.Get(),
+    ThrowIfFailedH( m_device->CreatePlacedResource( m_heap.Get(),
                                                    new_allocation_offset,
                                                    &CD3DX12_RESOURCE_DESC::Buffer( size ),
                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
@@ -61,7 +61,7 @@ std::pair<ID3D12Resource*, span<uint8_t>> CircularUploadBuffer::AllocateBuffer( 
                                                    IID_PPV_ARGS( alloc.placed_res.GetAddressOf() ) ) );
 
     uint8_t* mapped_data;
-    ThrowIfFailed( alloc.placed_res->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_data ) ) );
+    ThrowIfFailedH( alloc.placed_res->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_data ) ) );
 
     alloc.mapped_data = make_span( mapped_data, mapped_data + size );
 

@@ -51,7 +51,7 @@ void CubemapManager::LoadCubemap( CubemapID cubemap_id, std::string path )
 
     bool is_cubemap;
 
-    ThrowIfFailed( DirectX::LoadDDSTextureFromFileEx( m_device.Get(),
+    ThrowIfFailedH( DirectX::LoadDDSTextureFromFileEx( m_device.Get(),
                                                       std::wstring( path.cbegin(), path.cend() ).c_str(), 0,
                                                       D3D12_RESOURCE_FLAG_NONE,
                                                       DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_IN_COMMON_STATE,
@@ -182,7 +182,7 @@ void CubemapManager::FillUploader( CopyData& data, const span<D3D12_SUBRESOURCE_
     UINT64 required_size = 0;
     m_device->GetCopyableFootprints( &res_desc, 0, UINT( nsubres ), 0, footprints.data(), nrows.data(), row_size.data(), &required_size );
 
-    ThrowIfFailed( m_device->CreateCommittedResource(
+    ThrowIfFailedH( m_device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer( required_size ),
@@ -191,7 +191,7 @@ void CubemapManager::FillUploader( CopyData& data, const span<D3D12_SUBRESOURCE_
         IID_PPV_ARGS( data.upload_res.GetAddressOf() ) ) );
 
     uint8_t* mapped_uploader;
-    ThrowIfFailed( data.upload_res->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
+    ThrowIfFailedH( data.upload_res->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
 
     for ( size_t i = 0; i < nsubres; ++i )
     {

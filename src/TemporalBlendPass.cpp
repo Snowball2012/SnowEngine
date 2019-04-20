@@ -67,11 +67,11 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
     {
         OutputDebugStringA( (char*)error_blob->GetBufferPointer() );
     }
-    ThrowIfFailed( hr );
+    ThrowIfFailedH( hr );
 
     ComPtr<ID3D12RootSignature> rootsig;
 
-    ThrowIfFailed( device.CreateRootSignature(
+    ThrowIfFailedH( device.CreateRootSignature(
         0,
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),
@@ -118,7 +118,7 @@ void TemporalBlendPass::BuildData( DXGI_FORMAT rtv_format, ID3D12Device& device,
         pso_desc.SampleDesc.Quality = 0;
         pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-        ThrowIfFailed( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
+        ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) );
     }
 }
 

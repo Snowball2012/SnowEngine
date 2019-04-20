@@ -7,11 +7,11 @@
 GPUTaskQueue::GPUTaskQueue( ID3D12Device& device, D3D12_COMMAND_LIST_TYPE type, std::shared_ptr<CommandListPool> pool )
     : m_type( type ), m_pool( std::move( pool ) )
 {
-    ThrowIfFailed( device.CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( &m_fence ) ) );
+    ThrowIfFailedH( device.CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( &m_fence ) ) );
     D3D12_COMMAND_QUEUE_DESC queue_desc = {};
     queue_desc.Type = type;
     queue_desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    ThrowIfFailed( device.CreateCommandQueue( &queue_desc, IID_PPV_ARGS( &m_cmd_queue ) ) );
+    ThrowIfFailedH( device.CreateCommandQueue( &queue_desc, IID_PPV_ARGS( &m_cmd_queue ) ) );
 }
 
 
@@ -39,7 +39,7 @@ ID3D12CommandQueue* GPUTaskQueue::GetCmdQueue() noexcept
 GPUTaskQueue::Timestamp GPUTaskQueue::CreateTimestamp()
 {
     m_current_fence_value++;
-    ThrowIfFailed( m_cmd_queue->Signal( m_fence.Get(), m_current_fence_value ) );
+    ThrowIfFailedH( m_cmd_queue->Signal( m_fence.Get(), m_current_fence_value ) );
     return m_current_fence_value;
 }
 
@@ -89,7 +89,7 @@ void GPUTaskQueue::WaitForTimestamp( Timestamp ts )
         HANDLE eventHandle = CreateEventEx( nullptr, nullptr, 0, EVENT_ALL_ACCESS );
 
         // Fire event when GPU hits current fence.  
-        ThrowIfFailed( m_fence->SetEventOnCompletion( ts, eventHandle ) );
+        ThrowIfFailedH( m_fence->SetEventOnCompletion( ts, eventHandle ) );
 
         // Wait until the GPU hits current fence event is fired.
         WaitForSingleObject( eventHandle, INFINITE );

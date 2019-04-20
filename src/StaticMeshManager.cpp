@@ -18,7 +18,7 @@ namespace
                                              Microsoft::WRL::ComPtr<ID3D12Resource>& uploader,
                                              const void* data, size_t size_in_bytes )
     {
-        ThrowIfFailed( device.CreateCommittedResource(
+        ThrowIfFailedH( device.CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( size_in_bytes ),
@@ -26,7 +26,7 @@ namespace
             nullptr,
             IID_PPV_ARGS( gpu_res.GetAddressOf() ) ) );
 
-        ThrowIfFailed( device.CreateCommittedResource(
+        ThrowIfFailedH( device.CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( size_in_bytes ),
@@ -35,7 +35,7 @@ namespace
             IID_PPV_ARGS( uploader.GetAddressOf() ) ) );
 
         uint8_t* mapped_uploader;
-        ThrowIfFailed( uploader->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
+        ThrowIfFailedH( uploader->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
 
         memcpy( mapped_uploader, data, size_in_bytes );
 

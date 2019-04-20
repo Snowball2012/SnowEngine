@@ -128,7 +128,7 @@ void OldRenderer::Draw()
     ID3D12DescriptorHeap* heaps[] = { m_scene_manager->GetDescriptorTables().CurrentGPUHeap().Get() };
     cmd_list->SetDescriptorHeaps( 1, heaps );
 
-    ThrowIfFailed( cmd_list->Close() );
+    ThrowIfFailedH( cmd_list->Close() );
 
     SceneRenderer::SceneContext scene_ctx;
     scene_ctx.ibl_table = m_ibl_table;
@@ -160,7 +160,7 @@ void OldRenderer::Draw()
     
     cmd_list->ResourceBarrier( 1, barriers );
 
-    ThrowIfFailed( cmd_list->Close() );
+    ThrowIfFailedH( cmd_list->Close() );
 
     m_graphics_queue->SubmitLists( make_span( lists_to_execute ) );
 
@@ -224,13 +224,13 @@ void OldRenderer::CreateDevice()
 #if defined(DEBUG) || defined(_DEBUG) 
     ComPtr<ID3D12Debug> spDebugController0;
     ComPtr<ID3D12Debug1> spDebugController1;
-    ThrowIfFailed( D3D12GetDebugInterface( IID_PPV_ARGS( &spDebugController0 ) ) );
+    ThrowIfFailedH( D3D12GetDebugInterface( IID_PPV_ARGS( &spDebugController0 ) ) );
     spDebugController0->EnableDebugLayer();
-    ThrowIfFailed( spDebugController0->QueryInterface( IID_PPV_ARGS( &spDebugController1 ) ) );
+    ThrowIfFailedH( spDebugController0->QueryInterface( IID_PPV_ARGS( &spDebugController1 ) ) );
     //spDebugController1->SetEnableGPUBasedValidation( true );
 #endif
 
-    ThrowIfFailed( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
+    ThrowIfFailedH( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
 
     // Try to create hardware device.
     HRESULT hardware_result;
@@ -244,9 +244,9 @@ void OldRenderer::CreateDevice()
     if ( FAILED( hardware_result ) )
     {
         ComPtr<IDXGIAdapter> pWarpAdapter;
-        ThrowIfFailed( m_dxgi_factory->EnumWarpAdapter( IID_PPV_ARGS( &pWarpAdapter ) ) );
+        ThrowIfFailedH( m_dxgi_factory->EnumWarpAdapter( IID_PPV_ARGS( &pWarpAdapter ) ) );
 
-        ThrowIfFailed( D3D12CreateDevice(
+        ThrowIfFailedH( D3D12CreateDevice(
             pWarpAdapter.Get(),
             D3D_FEATURE_LEVEL_11_0,
             IID_PPV_ARGS( &m_d3d_device ) ) );
@@ -276,7 +276,7 @@ void OldRenderer::CreateSwapChain()
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
     // Note: Swap chain uses queue to perform flush.
-    ThrowIfFailed( m_dxgi_factory->CreateSwapChain(
+    ThrowIfFailedH( m_dxgi_factory->CreateSwapChain(
         m_graphics_queue->GetCmdQueue(),
         &sd,
         m_swap_chain.GetAddressOf() ) );
@@ -299,7 +299,7 @@ void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
         m_swap_chain_buffer[i].Reset();
 
     // Resize the swap chain.
-    ThrowIfFailed( m_swap_chain->ResizeBuffers(
+    ThrowIfFailedH( m_swap_chain->ResizeBuffers(
         SwapChainBufferCount,
         UINT( m_client_width ), UINT( m_client_height ),
         m_back_buffer_format,
@@ -309,7 +309,7 @@ void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
 
     for ( size_t i = 0; i < SwapChainBufferCount; ++i )
     {
-        ThrowIfFailed( m_swap_chain->GetBuffer( UINT( i ), IID_PPV_ARGS( &m_swap_chain_buffer[i] ) ) );
+        ThrowIfFailedH( m_swap_chain->GetBuffer( UINT( i ), IID_PPV_ARGS( &m_swap_chain_buffer[i] ) ) );
 
         m_back_buffer_rtv[i] = std::nullopt;
         m_back_buffer_rtv[i].emplace( std::move( m_rtv_heap->AllocateDescriptor() ) );
@@ -344,7 +344,7 @@ void OldRenderer::BuildUIDescriptorHeap( )
         srv_heap_desc.NumDescriptors = 1 /*imgui font*/;
 
         ComPtr<ID3D12DescriptorHeap> srv_heap;
-        ThrowIfFailed( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
+        ThrowIfFailedH( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
         m_srv_ui_heap = std::make_unique<DescriptorHeap>( std::move( srv_heap ), m_cbv_srv_uav_size );
     }
 }
@@ -375,7 +375,7 @@ void OldRenderer::EndFrame()
 
     m_cur_frame_resource->available_timestamp = m_graphics_queue->ExecuteSubmitted();
     // swap buffers
-    ThrowIfFailed( m_swap_chain->Present( 0, 0 ) );
+    ThrowIfFailedH( m_swap_chain->Present( 0, 0 ) );
     m_curr_back_buff = ( m_curr_back_buff + 1 ) % SwapChainBufferCount;
 
     // CPU timeline

@@ -23,11 +23,11 @@ TextureStreamer::TextureStreamer( ComPtr<ID3D12Device> device, uint64_t gpu_mem_
     constexpr uint64_t alignment = 1 << 16; // 64kb
     heap_desc.Alignment = alignment;
 
-    ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
     m_gpu_mem_basic_mips = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
 
     heap_desc.SizeInBytes = gpu_mem_budget_detailed_mips;
-    ThrowIfFailed( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
+    ThrowIfFailedH( m_device->CreateHeap( &heap_desc, IID_PPV_ARGS( heap.GetAddressOf() ) ) );
     m_gpu_mem_detailed_mips = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
 
     // 64k alignment
@@ -57,7 +57,7 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
     tex_data.path = std::move( path );
 
     tex_data.gpu_res.Reset();
-    ThrowIfFailed( DirectX::LoadDDSTextureFromMemoryEx( m_device.Get(),
+    ThrowIfFailedH( DirectX::LoadDDSTextureFromMemoryEx( m_device.Get(),
                                                         tex_data.file.GetData().cbegin(), tex_data.file.GetData().size(), 0,
                                                         D3D12_RESOURCE_FLAG_NONE,
                                                         DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_RESERVED_RESOURCE | DirectX::DDS_LOADER_CREATE_IN_COMMON_STATE,
@@ -522,6 +522,7 @@ void TextureStreamer::CopyUploaderToMainResource( const TextureData& texture, ID
 
 void TextureStreamer::CalcDesiredMipLevels()
 {
+    // TODO: bad cache utilization
     for ( auto& texture : m_loaded_textures )
     {
         if ( texture.state == TextureState::Normal )

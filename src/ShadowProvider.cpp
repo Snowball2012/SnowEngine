@@ -27,7 +27,7 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, D
     opt_clear.DepthStencil.Stencil = 0;
 
     {
-        ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+        ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
                                                           &tex_desc, D3D12_RESOURCE_STATE_COMMON,
                                                           &opt_clear, IID_PPV_ARGS( &m_sm_res ) ) );
 
@@ -57,7 +57,7 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, D
         tex_desc.Width = PSSMShadowMapSize;
         tex_desc.Height = PSSMShadowMapSize;
 
-        ThrowIfFailed( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
+        ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
                                                           &tex_desc, D3D12_RESOURCE_STATE_COMMON,
                                                           &opt_clear, IID_PPV_ARGS( &m_pssm_res ) ) );
 

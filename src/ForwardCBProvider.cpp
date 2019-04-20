@@ -10,7 +10,7 @@
 ForwardCBProvider::ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames )
     : m_nbuffers( n_bufferized_frames )
 {
-    ThrowIfFailed( device.CreateCommittedResource(
+    ThrowIfFailedH( device.CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer( BufferGPUSize * m_nbuffers ),
@@ -19,7 +19,7 @@ ForwardCBProvider::ForwardCBProvider( ID3D12Device& device, int n_bufferized_fra
         IID_PPV_ARGS( m_gpu_res.GetAddressOf() ) ) );
 
     void* mapped_data = nullptr;
-    ThrowIfFailed( m_gpu_res->Map( 0, nullptr, &mapped_data ) );
+    ThrowIfFailedH( m_gpu_res->Map( 0, nullptr, &mapped_data ) );
 
     m_mapped_data = span<uint8_t>( reinterpret_cast<uint8_t*>( mapped_data ),
                                    reinterpret_cast<uint8_t*>( mapped_data ) + BufferGPUSize * m_nbuffers );

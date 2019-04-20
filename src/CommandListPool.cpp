@@ -8,8 +8,8 @@
 CommandList::CommandList( ID3D12Device& device, D3D12_COMMAND_LIST_TYPE type )
     : m_type( type )
 {
-    ThrowIfFailed( device.CreateCommandAllocator( m_type, IID_PPV_ARGS( m_allocator.GetAddressOf() ) ) );
-    ThrowIfFailed( device.CreateCommandList( 0, type, m_allocator.Get(), nullptr, IID_PPV_ARGS( m_list.GetAddressOf() ) ) );
+    ThrowIfFailedH( device.CreateCommandAllocator( m_type, IID_PPV_ARGS( m_allocator.GetAddressOf() ) ) );
+    ThrowIfFailedH( device.CreateCommandList( 0, type, m_allocator.Get(), nullptr, IID_PPV_ARGS( m_list.GetAddressOf() ) ) );
 }
 
 
@@ -28,9 +28,9 @@ const ID3D12GraphicsCommandList* CommandList::GetInterface() const noexcept
 void CommandList::Reset( ID3D12PipelineState* initial_pso, bool reset_allocator )
 {
     if ( reset_allocator )
-        ThrowIfFailed( m_allocator->Reset() );
+        ThrowIfFailedH( m_allocator->Reset() );
 
-    ThrowIfFailed( m_list->Reset( m_allocator.Get(), initial_pso ) );
+    ThrowIfFailedH( m_list->Reset( m_allocator.Get(), initial_pso ) );
 }
 
 
@@ -59,7 +59,7 @@ CommandList CommandListPool::GetList( D3D12_COMMAND_LIST_TYPE type )
     }
 
     auto new_list = CommandList( *m_device, type );
-    ThrowIfFailed( new_list.GetInterface()->Close() );
+    ThrowIfFailedH( new_list.GetInterface()->Close() );
     return new_list;
 }
 

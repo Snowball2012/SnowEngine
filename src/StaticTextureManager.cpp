@@ -32,7 +32,7 @@ void StaticTextureManager::LoadTexture( TextureID id, std::string path )
 
     std::unique_ptr<uint8_t[]> dds_data;
     std::vector<D3D12_SUBRESOURCE_DATA> subresources;
-    ThrowIfFailed( DirectX::LoadDDSTextureFromFileEx( m_device.Get(),
+    ThrowIfFailedH( DirectX::LoadDDSTextureFromFileEx( m_device.Get(),
                                                       std::wstring( path.cbegin(), path.cend() ).c_str(), 0,
                                                       D3D12_RESOURCE_FLAG_NONE,
                                                       DirectX::DDS_LOADER_DEFAULT | DirectX::DDS_LOADER_CREATE_IN_COMMON_STATE,
@@ -189,7 +189,7 @@ StaticTextureManager::UploadData StaticTextureManager::CreateAndFillUploader( co
     UINT64 required_size = 0;
     m_device->GetCopyableFootprints( &res_desc, 0, UINT( nsubres ), 0, footprints.data(), nrows.data(), row_size.data(), &required_size );
 
-    ThrowIfFailed( m_device->CreateCommittedResource(
+    ThrowIfFailedH( m_device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer( required_size ),
@@ -198,7 +198,7 @@ StaticTextureManager::UploadData StaticTextureManager::CreateAndFillUploader( co
         IID_PPV_ARGS( uploader.resource.GetAddressOf() ) ) );
 
     uint8_t* mapped_uploader;
-    ThrowIfFailed( uploader.resource->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
+    ThrowIfFailedH( uploader.resource->Map( 0, nullptr, reinterpret_cast<void**>( &mapped_uploader ) ) );
 
     for ( size_t i = 0; i < nsubres; ++i )
     {

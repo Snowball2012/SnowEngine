@@ -23,7 +23,7 @@ namespace Utils
         ComPtr<ID3D12Resource> defaultBuffer;
 
         // Create the actual default buffer resource.
-        ThrowIfFailed( device->CreateCommittedResource(
+        ThrowIfFailedH( device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( byteSize ),
@@ -33,7 +33,7 @@ namespace Utils
 
         // In order to copy CPU memory data into our default buffer, we need to create
         // an intermediate upload heap. 
-        ThrowIfFailed( device->CreateCommittedResource(
+        ThrowIfFailedH( device->CreateCommittedResource(
             &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
             D3D12_HEAP_FLAG_NONE,
             &CD3DX12_RESOURCE_DESC::Buffer( byteSize ),
@@ -73,7 +73,7 @@ namespace Utils
         fin.seekg( 0, std::ios_base::beg );
 
         ComPtr<ID3DBlob> blob;
-        ThrowIfFailed( D3DCreateBlob( size, blob.GetAddressOf() ) );
+        ThrowIfFailedH( D3DCreateBlob( size, blob.GetAddressOf() ) );
 
         fin.read( (char*)blob->GetBufferPointer(), size );
         fin.close();
