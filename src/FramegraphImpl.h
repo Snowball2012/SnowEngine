@@ -45,7 +45,7 @@ namespace details
     {
         static void FillTypeids( std::vector<TypeIdWithName>& vec )
         {
-            vec.push_back( TypeIdWithName{ typeid( First ).hash_code(), typeid( Rest ).name() } );
+            vec.push_back( TypeIdWithName{ typeid( First ).hash_code(), typeid( First ).name() } );
 
             using RestOfTuple = std::tuple<Rest...>;
             TypeidFiller<RestOfTuple>::FillTypeids( vec );

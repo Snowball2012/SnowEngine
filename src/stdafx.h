@@ -34,10 +34,10 @@ namespace bc = boost::container;
 {                                                                     \
     HRESULT hr__ = (x);                                               \
     std::wstring wfn = AnsiToWString(__FILE__);                       \
-    if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
+    if(FAILED(hr__)) { throw Utils::DxException(hr__, L#x, wfn, __LINE__); } \
 }
 #endif
-
+/*/
 #ifndef ThrowIfFailedB
 #define ThrowIfFailedB(x)                                              \
 {                                                                     \
@@ -50,23 +50,26 @@ namespace bc = boost::container;
     std::wstring wfn = AnsiToWString(__FILE__);                       \
     if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
 }
-#endif
+#endif*/
 
 #include "RenderUtils.h"
 
-class DxException
+namespace Utils
 {
-public:
-    DxException() = default;
-    DxException( HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber );
+	class DxException
+	{
+	public:
+		DxException() = default;
+		DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber);
 
-    std::wstring ToString()const;
+		std::wstring ToString()const;
 
-    HRESULT ErrorCode = S_OK;
-    std::wstring FunctionName;
-    std::wstring Filename;
-    int LineNumber = -1;
-};
+		HRESULT ErrorCode = S_OK;
+		std::wstring FunctionName;
+		std::wstring Filename;
+		int LineNumber = -1;
+	};
+}
 
 inline std::wstring AnsiToWString( const std::string& str )
 {
