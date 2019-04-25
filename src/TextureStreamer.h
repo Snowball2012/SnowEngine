@@ -86,12 +86,11 @@ private:
         FileLayout file_layout;
         GPUVirtualLayout virtual_layout;
         Tiling tiling;
-        std::vector<Descriptor> mip_cumulative_srv; // srv for mip 0 includes all following mips
+        std::vector<Descriptor> mip_cumulative_srv; // srv for a mip includes all following mips, so mip_cumulative_srv[2] includes all mips in range [2, n_mips]
         uint32_t most_detailed_loaded_mip = std::numeric_limits<uint32_t>::max();
         uint32_t desired_mip = 0;
         TextureState state = TextureState::Normal;
 
-        // file mapping stuff
         MemoryMappedFile file;
 
         std::string path; // mainly for debug purposes
@@ -102,12 +101,12 @@ private:
     struct MipUploader
     {
         StreamedTextureID id;
-        ID3D12Resource* resource; // placed resource in upload heap with a compatible format
+        ID3D12Resource* resource; // a placed resource in an upload heap in a compatible format
     };
     struct UploaderFillData
     {
         std::vector<MipUploader> uploaders;
-        std::future<void> op_completed;
+        std::future<void> file_read_complete;
     };
     struct UploadTransaction
     {
@@ -145,7 +144,10 @@ private:
     void CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip, ID3D12GraphicsCommandList& cmd_list );
     void CalcDesiredMipLevels();
 
-    // can return null if uploader doesn't have available space for the moment
+    void FreeUnusedMips( TextureData& texture );
+    std::future<void> LaunchFileReadTasks( std::vector<AsyncFileReadTask> tasks );
+
+    // can return null if the uploader doesn't have available space for the moment
     std::optional<std::pair<MipUploader, AsyncFileReadTask>> CreatePackedMipsUploadTask( TextureData& texture, GPUTaskQueue& copy_queue );
     std::optional<std::pair<MipUploader, AsyncFileReadTask>> CreateMipUploadTask( TextureData& texture, GPUTaskQueue& copy_queue );
 

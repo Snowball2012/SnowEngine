@@ -58,7 +58,7 @@ void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT
 
         const float camera2box = std::sqrt( DistanceToBoxSqr( camera_origin, bob ) );
 
-        // Add FLT_EPSILON to avoid division by zero because camera may be inside the box
+        // Add FLT_EPSILON to avoid division by zero because the camera may be inside the box
         XMVECTOR pixels_per_uv = XMLoadFloat2( &submesh.MaxInverseUVDensity() );
         pixels_per_uv *= pixels_per_angle_est
                          * ( std::sqrt( lengths2_sum_world

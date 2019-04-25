@@ -130,9 +130,14 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
         if ( texture.state != TextureState::Normal )
             continue;
 
-        if ( texture.desired_mip < texture.most_detailed_loaded_mip )
+        const bool load_mip = texture.desired_mip < texture.most_detailed_loaded_mip;
+        const bool drop_mip = ( texture.desired_mip > texture.most_detailed_loaded_mip + 1 )
+                              && ( texture.most_detailed_loaded_mip < texture.tiling.packed_mip_info.NumStandardMips );
+
+        if ( load_mip )
         {
-            if ( texture.most_detailed_loaded_mip >= texture.mip_cumulative_srv.size() )
+            const bool load_packed_mips = texture.most_detailed_loaded_mip >= texture.mip_cumulative_srv.size();
+            if ( load_packed_mips )
             {
                 auto&& task = CreatePackedMipsUploadTask( texture, copy_queue );
 
@@ -165,52 +170,18 @@ void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp
                 }
             }
         }
-        else if ( ( texture.desired_mip > texture.most_detailed_loaded_mip + 1 )
-                  && ( texture.most_detailed_loaded_mip < texture.tiling.packed_mip_info.NumStandardMips ) )
+        else if ( drop_mip )
         {
             texture.most_detailed_loaded_mip++;
         }
 
         if ( texture.state == TextureState::Normal )
-        {
-            // free unused mip memory
-            for ( int mip_level = texture.most_detailed_loaded_mip - 1; mip_level >= 0; --mip_level )
-            {
-                auto& tiling = texture.tiling.nonpacked_tiling[mip_level];
-                if ( ! ( tiling.mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
-                {
-                    if ( tiling.nframes_in_use == 0 )
-                    {
-                        m_gpu_mem_detailed_mips->Free( tiling.mip_pages );
-                        tiling.mip_pages = GPUPagedAllocator::ChunkID::nullid;
-                    }
-                    else
-                    {
-                        tiling.nframes_in_use--;
-                    }
-                }
-            }
-        }
+            FreeUnusedMips( texture );
     }
 
     if ( ! tasks.empty() )
     {
-        new_upload.op_completed = std::async( std::launch::async, [this, tasks{ move( tasks ) }]() mutable
-        {
-            for ( AsyncFileReadTask& task : tasks )
-            {
-                for ( size_t i = 0; i < task.dst_footprints.size(); ++i )
-                {
-                    const auto& footprint = task.dst_footprints[i];
-                    D3D12_MEMCPY_DEST dst;
-                    dst.pData = task.mapped_uploader.begin() + footprint.Offset - task.dst_footprints[0].Offset;
-                    dst.RowPitch = footprint.Footprint.RowPitch;
-                    dst.SlicePitch = dst.RowPitch * task.dst_nrows[i];
-
-                    MemcpySubresource( &dst, &task.src_data[i], SIZE_T( task.dst_row_size[i] ), task.dst_nrows[i], footprint.Footprint.Depth );
-                }
-            }
-        } );
+        new_upload.file_read_complete = LaunchFileReadTasks( std::move( tasks ) );
         m_uploaders_to_fill.push_back( std::move( new_upload ) );
     }
 
@@ -322,11 +293,12 @@ std::optional<
     auto& pages = texture.tiling.nonpacked_tiling[mip_to_load].mip_pages;
     pages = m_gpu_mem_detailed_mips->Alloc( required_tiles_num );
     if ( pages == GPUPagedAllocator::ChunkID::nullid )
-        return std::nullopt; // no available memory
+        return std::nullopt; // no available gpu memory
 
     auto uploader_chunk = m_upload_buffer->AllocateBuffer( required_uploader_size );
     if ( ! uploader_chunk.first )
     {
+        // no available uploader memory
         m_gpu_mem_detailed_mips->Free( pages );
         return std::nullopt;
     }
@@ -378,8 +350,6 @@ std::optional<
                                                   range_start_offsets.data(),
                                                   range_tile_counts.data(),
                                                   D3D12_TILE_MAPPING_FLAG_NONE );
-
-
 
     return retval;
 }
@@ -462,7 +432,7 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
     for ( ; first_still_active_disk_op < m_uploaders_to_fill.size(); ++first_still_active_disk_op )
     {
         const auto& transaction = m_uploaders_to_fill[first_still_active_disk_op];
-        if ( transaction.op_completed.wait_for( std::chrono::seconds( 0 ) ) != std::future_status::ready )
+        if ( transaction.file_read_complete.wait_for( std::chrono::seconds( 0 ) ) != std::future_status::ready )
             break;
     }
 
@@ -548,6 +518,46 @@ void TextureStreamer::CalcDesiredMipLevels()
             texture.desired_mip = uint32_t( std::clamp( int( mip_level ) - 1, 0, int( texture.tiling.packed_mip_info.NumStandardMips ) ) );
         }
     }
+}
+
+void TextureStreamer::FreeUnusedMips( TextureData& texture )
+{
+    for ( int mip_level = texture.most_detailed_loaded_mip - 1; mip_level >= 0; --mip_level )
+    {
+        auto& tiling = texture.tiling.nonpacked_tiling[mip_level];
+        if ( ! ( tiling.mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
+        {
+            if ( tiling.nframes_in_use == 0 )
+            {
+                m_gpu_mem_detailed_mips->Free( tiling.mip_pages );
+                tiling.mip_pages = GPUPagedAllocator::ChunkID::nullid;
+            }
+            else
+            {
+                tiling.nframes_in_use--;
+            }
+        }
+    }
+}
+
+std::future<void> TextureStreamer::LaunchFileReadTasks( std::vector<AsyncFileReadTask> tasks )
+{
+    return std::async( std::launch::async, [this, tasks{ move( tasks ) }]() mutable
+    {
+        for ( AsyncFileReadTask& task : tasks )
+        {
+            for ( size_t i = 0; i < task.dst_footprints.size(); ++i )
+            {
+                const auto& footprint = task.dst_footprints[i];
+                D3D12_MEMCPY_DEST dst;
+                dst.pData = task.mapped_uploader.begin() + footprint.Offset - task.dst_footprints[0].Offset;
+                dst.RowPitch = footprint.Footprint.RowPitch;
+                dst.SlicePitch = dst.RowPitch * task.dst_nrows[i];
+
+                MemcpySubresource( &dst, &task.src_data[i], SIZE_T( task.dst_row_size[i] ), task.dst_nrows[i], footprint.Footprint.Depth );
+            }
+        }
+    } );
 }
 
 
