@@ -10,7 +10,7 @@
 
 
 TextureStreamer::TextureStreamer( ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
-                                  uint8_t n_bufferized_frames, Scene* scene )
+                                  size_t n_bufferized_frames, Scene* scene )
     : m_device( std::move( device ) ), m_scene( scene )
     , m_srv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_device.Get() )
     , m_n_bufferized_frames( n_bufferized_frames )
@@ -68,7 +68,7 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
     tex_data.virtual_layout.nrows.resize( subresource_num );
     tex_data.virtual_layout.row_size.resize( subresource_num );
     tex_data.virtual_layout.footprints.resize( subresource_num );
-    m_device->GetCopyableFootprints( &res_desc, 0, subresource_num, 0,
+    m_device->GetCopyableFootprints( &res_desc, 0, UINT( subresource_num ), 0,
                                      tex_data.virtual_layout.footprints.data(),
                                      tex_data.virtual_layout.nrows.data(),
                                      tex_data.virtual_layout.row_size.data(), &tex_data.virtual_layout.total_size );
@@ -88,13 +88,13 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
     {
         tex_data.mip_cumulative_srv.emplace_back( std::move( m_srv_heap.AllocateDescriptor() ) );
 
-        srv_desc.Texture2D.MostDetailedMip = mip_idx;
+        srv_desc.Texture2D.MostDetailedMip = UINT( mip_idx );
         srv_desc.Texture2D.ResourceMinLODClamp = FLOAT( mip_idx );
         m_device->CreateShaderResourceView( tex_data.gpu_res.Get(), &srv_desc, tex_data.mip_cumulative_srv.back().HandleCPU() );
     }
 
     UINT ntiles_for_resource;
-    UINT num_subresource_tilings = subresource_num;
+    UINT num_subresource_tilings = UINT( subresource_num );
     std::vector<D3D12_SUBRESOURCE_TILING> subresource_tilings_for_nonpacked_mips( num_subresource_tilings );
 
     m_device->GetResourceTiling( tex_data.gpu_res.Get(),
@@ -251,11 +251,11 @@ std::optional<
     std::vector<UINT> range_tile_counts;
     range_tile_counts.resize( required_tiles_num, 1 ); // this is ridiculous. Maybe use static array of ones?
     copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
-                                                  resource_region_coords.size(),
+                                                  UINT( resource_region_coords.size() ),
                                                   resource_region_coords.data(),
                                                   &resource_region_size,
                                                   m_gpu_mem_basic_mips->GetDXHeap(),
-                                                  range_flags.size(),
+                                                  UINT( range_flags.size() ),
                                                   range_flags.data(),
                                                   range_start_offsets.data(),
                                                   range_tile_counts.data(),
@@ -282,7 +282,7 @@ std::optional<
     // try to reuse previously allocated mem
     if ( ! ( mip_tiling.mip_pages == GPUPagedAllocator::ChunkID::nullid ) )
     {
-        mip_tiling.nframes_in_use = m_n_bufferized_frames;
+        mip_tiling.nframes_in_use = uint8_t( m_n_bufferized_frames );
         texture.most_detailed_loaded_mip = mip_to_load;
         return std::nullopt;
     }
@@ -303,7 +303,7 @@ std::optional<
         return std::nullopt;
     }
 
-    texture.tiling.nonpacked_tiling[mip_to_load].nframes_in_use = m_n_bufferized_frames;
+    texture.tiling.nonpacked_tiling[mip_to_load].nframes_in_use = uint8_t( m_n_bufferized_frames );
 
     std::pair<MipUploader, AsyncFileReadTask> retval;
 
@@ -341,11 +341,11 @@ std::optional<
     std::vector<UINT> range_tile_counts;
     range_tile_counts.resize( required_tiles_num, 1 );
     copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
-                                                  resource_region_coords.size(),
+                                                  UINT( resource_region_coords.size() ),
                                                   resource_region_coords.data(),
                                                   resource_region_sizes.data(),
                                                   m_gpu_mem_detailed_mips->GetDXHeap(),
-                                                  range_flags.size(),
+                                                  UINT( range_flags.size() ),
                                                   range_flags.data(),
                                                   range_start_offsets.data(),
                                                   range_tile_counts.data(),
@@ -454,7 +454,7 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
                 for ( size_t packed_mip_idx = 0; packed_mip_idx < texture->tiling.packed_mip_info.NumPackedMips; ++packed_mip_idx )
                 {
                     const size_t subresource_idx = packed_mip_idx + texture->tiling.packed_mip_info.NumStandardMips;
-                    CopyUploaderToMainResource( *texture, mip.resource, subresource_idx, texture->tiling.packed_mip_info.NumStandardMips, cmd_list );
+                    CopyUploaderToMainResource( *texture, mip.resource, uint32_t( subresource_idx ), texture->tiling.packed_mip_info.NumStandardMips, cmd_list );
                 }
             }
             else

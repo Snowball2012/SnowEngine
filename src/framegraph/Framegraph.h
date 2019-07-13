@@ -1,7 +1,9 @@
 #pragma once
 
 // generic cpu-gpu rendering framegraph
-// TODO: 2 different framegraphs ( cpu and gpu ) for cpu resources and gpu resources instead of fused one
+// TODO: 2 different framegraphs ( cpu and gpu ) for cpu resources and gpu resources instead of a fused one
+
+#include <d3d12.h>
 
 struct ID3D12GraphicsCommandList;
 

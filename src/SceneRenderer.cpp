@@ -4,9 +4,6 @@
 
 #include "SceneRenderer.h"
 
-#include "FramegraphResource.h"
-#include "Framegraph.h"
-
 
 SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height, uint32_t n_frames_in_flight )
 {

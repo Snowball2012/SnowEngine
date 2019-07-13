@@ -22,7 +22,7 @@ class TextureStreamer
 {
 public:
     TextureStreamer( ComPtr<ID3D12Device> device, uint64_t gpu_mem_budget_detailed_mips, uint64_t cpu_mem_budget,
-                     uint8_t n_bufferized_frames, Scene* scene );
+                     size_t n_bufferized_frames, Scene* scene );
     ~TextureStreamer( );
 
     void LoadStreamedTexture( TextureID id, std::string path );
@@ -130,7 +130,7 @@ private:
     std::unique_ptr<GPUPagedAllocator> m_gpu_mem_detailed_mips;
     std::unique_ptr<CircularUploadBuffer> m_upload_buffer;
 
-    const uint8_t m_n_bufferized_frames;
+    const size_t m_n_bufferized_frames;
 
     packed_freelist<TextureData> m_loaded_textures;
 

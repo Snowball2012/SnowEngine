@@ -57,9 +57,6 @@
     <Filter Include="core\Framegraph">
       <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\Framegraph\Nodes">
-      <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="core\FramegraphDataProviders">
       <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
@@ -77,6 +74,15 @@
     </Filter>
     <Filter Include="shaders\forward_lighting">
       <UniqueIdentifier>{29f1f4c6-6035-4b02-82e2-734dbca489be}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\FramegraphInstance">
+      <UniqueIdentifier>{c3353320-fed7-4f8a-bae9-92240a758fc0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\FramegraphInstance\Nodes">
+      <UniqueIdentifier>{2d5967f4-79c6-43de-a957-10206cad3c9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\Framegraph\utils">
+      <UniqueIdentifier>{864ed003-74b0-41d1-a1ec-6b9b3317f9a1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -127,9 +133,6 @@
     </ClCompile>
     <ClCompile Include="src\ToneMappingPass.cpp">
       <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\utils\CompileTimeTests.cpp">
-      <Filter>utils</Filter>
     </ClCompile>
     <ClCompile Include="src\HBAOPass.cpp">
       <Filter>core\RenderPasses</Filter>
@@ -221,6 +224,9 @@
     <ClCompile Include="src\CommandListPool.cpp">
       <Filter>core\APILayer</Filter>
     </ClCompile>
+    <ClCompile Include="src\framegraph\utils\UnitTests.cpp">
+      <Filter>core\Framegraph\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -273,9 +279,6 @@
     </ClInclude>
     <ClInclude Include="src\ToneMappingPass.h">
       <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\UniqueTuple.h">
-      <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\HBAOPass.h">
       <Filter>core\RenderPasses</Filter>
@@ -353,40 +356,31 @@
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\ForwardPassNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\BlurSSAONode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\DepthPrepassNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\ShadowPassNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\PSSMNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\HBAONode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\ToneMapNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\SkyboxPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\SkyboxNode.h">
-      <Filter>core\Framegraph\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\OptionalTuple.h">
-      <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Framegraph.h">
-      <Filter>core\Framegraph</Filter>
-    </ClInclude>
-    <ClInclude Include="src\FramegraphResource.h">
-      <Filter>core\Framegraph</Filter>
+      <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
     <ClInclude Include="src\StaticTextureManager.h">
       <Filter>core\SceneSystems</Filter>
@@ -418,8 +412,20 @@
     <ClInclude Include="src\CommandListPool.h">
       <Filter>core\APILayer</Filter>
     </ClInclude>
-    <ClInclude Include="src\FramegraphImpl.h">
+    <ClInclude Include="src\framegraph\Framegraph.h">
       <Filter>core\Framegraph</Filter>
+    </ClInclude>
+    <ClInclude Include="src\framegraph\FramegraphImpl.h">
+      <Filter>core\Framegraph</Filter>
+    </ClInclude>
+    <ClInclude Include="src\FramegraphResource.h">
+      <Filter>core\FramegraphInstance</Filter>
+    </ClInclude>
+    <ClInclude Include="src\framegraph\utils\OptionalTuple.h">
+      <Filter>core\Framegraph\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\framegraph\utils\UniqueTuple.h">
+      <Filter>core\Framegraph\utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -3,6 +3,7 @@
 #include "utils/OptionalTuple.h"
 #include "utils/UniqueTuple.h"
 
+#include <vector>
 #include <map>
 #include <set>
 #include <string_view>
@@ -396,7 +397,7 @@ namespace details
                     for ( int i = 0; i < barriers.size(); ++i )
                         barriers[i].Transition.pResource = resources[i]->res;
 
-                    cmd_list.ResourceBarrier( barriers.size(), barriers.data() );
+                    cmd_list.ResourceBarrier( UINT( barriers.size() ), barriers.data() );
                 }
 
                 auto& nodes = m_node_layers[layer_idx];
@@ -409,7 +410,7 @@ namespace details
         std::map<size_t, typename FramegraphImpl<Nodes...>::RuntimeNodeInfo> FramegraphImpl<Nodes...>::CollectActiveNodes()
         {
             std::map<size_t, RuntimeNodeInfo> active_node_info;
-            auto fill_node_info = [&active_node_info, this]( auto&& node ) -> int
+            auto fill_node_info = [&active_node_info, this]( auto&& node ) -> void
             {
                 if ( node.node.has_value() && node.enabled )
                 {
@@ -431,18 +432,12 @@ namespace details
                     NodeResourceInfoFiller<typename NodeType::ReadRes>::Fill( *this, node_info.required_states );
                     NodeResourceInfoFiller<typename NodeType::CloseRes>::Fill( *this, node_info.required_states );
                 }
-
-                return 0;
             };
 
-            auto fill_info = [&active_node_info, &fill_node_info, this]( auto&& ...nodes )
+            std::apply( [&active_node_info, &fill_node_info, this]( auto&& ...nodes )
             {
-                auto accept_anything = []( auto&& ...anything ) -> void{};
-
-                accept_anything( fill_node_info( nodes )... );
-            };
-
-            std::apply( fill_info, m_node_storage );
+                ( fill_node_info( nodes ), ... );
+            }, m_node_storage );
 
             return std::move( active_node_info );
         }
@@ -509,7 +504,7 @@ namespace details
 
             // 1. Collect transitions for each resource
             std::map<TrackedResource*, std::vector<Transition>> pending_transitions;
-            for ( int layer_idx = 0; layer_idx < resource_state_layers.size(); ++layer_idx )
+            for ( int layer_idx = 0; layer_idx < int( resource_state_layers.size() ); ++layer_idx )
             {
                 const LayerStatesMap& layer = resource_state_layers[layer_idx];
                 for ( const auto& resource_state : layer )

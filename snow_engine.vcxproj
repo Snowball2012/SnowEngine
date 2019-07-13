@@ -180,6 +180,9 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
     <ClCompile Include="src\ForwardCBProvider.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
+    <ClCompile Include="src\framegraph\utils\UnitTests.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
     <ClCompile Include="src\GPUPagedAllocator.cpp" />
@@ -229,10 +232,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\TemporalBlendPass.cpp" />
     <ClCompile Include="src\TextureStreamer.cpp" />
     <ClCompile Include="src\ToneMappingPass.cpp" />
-    <ClCompile Include="src\utils\CompileTimeTests.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="src\utils\MemoryMappedFile.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
@@ -256,7 +255,10 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\ForwardCBProvider.h" />
     <ClInclude Include="src\ForwardLightingPass.h" />
     <ClInclude Include="src\ForwardPassNode.h" />
-    <ClInclude Include="src\FramegraphImpl.h" />
+    <ClInclude Include="src\framegraph\Framegraph.h" />
+    <ClInclude Include="src\framegraph\FramegraphImpl.h" />
+    <ClInclude Include="src\framegraph\utils\OptionalTuple.h" />
+    <ClInclude Include="src\framegraph\utils\UniqueTuple.h" />
     <ClInclude Include="src\FrameResource.h" />
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
@@ -269,7 +271,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
     <ClInclude Include="src\MaterialTableBaker.h" />
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
-    <ClInclude Include="src\Framegraph.h" />
     <ClInclude Include="src\SceneRenderer.h" />
     <ClInclude Include="src\SkyboxNode.h" />
     <ClInclude Include="src\SkyboxPass.h" />
@@ -303,11 +304,9 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\ToneMapNode.h" />
     <ClInclude Include="src\ToneMappingPass.h" />
     <ClInclude Include="src\utils\MemoryMappedFile.h" />
-    <ClInclude Include="src\utils\OptionalTuple.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />
     <ClInclude Include="src\utils\packed_freelist.hpp" />
     <ClInclude Include="src\utils\span.h" />
-    <ClInclude Include="src\utils\UniqueTuple.h" />
     <ClInclude Include="src\UVScreenDensityCalculator.h" />
     <ClInclude Include="src\MathUtils.h" />
   </ItemGroup>

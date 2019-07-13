@@ -93,7 +93,7 @@ void OldRenderer::Draw()
         {
             if ( tex->IsLoaded() )
             {
-                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 0, m_cbv_srv_uav_size ),
+                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 0, UINT( m_cbv_srv_uav_size ) ),
                                                      tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
             }
         }
@@ -101,7 +101,7 @@ void OldRenderer::Draw()
         {
             if ( tex->IsLoaded() )
             {
-                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, m_cbv_srv_uav_size ),
+                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, UINT( m_cbv_srv_uav_size ) ),
                                                      tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
             }
         }
