@@ -224,9 +224,6 @@
     <ClCompile Include="src\CommandListPool.cpp">
       <Filter>core\APILayer</Filter>
     </ClCompile>
-    <ClCompile Include="src\framegraph\utils\UnitTests.cpp">
-      <Filter>core\Framegraph\utils</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">

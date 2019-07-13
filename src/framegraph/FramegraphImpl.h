@@ -24,7 +24,7 @@ namespace details
     struct TypeIdWithName
     {
         size_t id;
-        std::string_view name; // name is stored purely for debug purposes
+        std::string_view name; // name is stored solely for debug purposes
 
         bool operator==( const TypeIdWithName& other ) const { return this->id == other.id; }
         bool operator<( const TypeIdWithName& other ) const { return this->id < other.id; }

@@ -180,9 +180,6 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
     <ClCompile Include="src\ForwardCBProvider.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
-    <ClCompile Include="src\framegraph\utils\UnitTests.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
     <ClCompile Include="src\GPUPagedAllocator.cpp" />
