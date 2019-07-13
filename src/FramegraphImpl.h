@@ -409,37 +409,37 @@ namespace details
         std::map<size_t, typename FramegraphImpl<Nodes...>::RuntimeNodeInfo> FramegraphImpl<Nodes...>::CollectActiveNodes()
         {
             std::map<size_t, RuntimeNodeInfo> active_node_info;
-
-            auto fill_info = [&active_node_info, this]( auto&& ...nodes )
+            auto fill_node_info = [&active_node_info, this]( auto&& node ) -> int
             {
-                auto f_impl = [&active_node_info, this]( auto& self, auto& node, auto&& ... rest )
+                if ( node.node.has_value() && node.enabled )
                 {
-                    if ( node.node.has_value() && node.enabled )
-                    {
-                        using NodeType = std::decay_t<decltype( *node.node )>;
-                        const size_t node_id = typeid( NodeType ).hash_code();
-                        RuntimeNodeInfo& node_info = active_node_info.emplace( node_id, RuntimeNodeInfo() ).first->second;
-                        node_info.node_id = node_id;
-                        node_info.node_ptr = &*node.node;
-                        node_info.node_name = typeid( NodeType ).name();
-                        TypeidFiller<std::tuple<const NodeType*>>::FillTypeids( node_info.open_ids );
+                    using NodeType = std::decay_t<decltype( *node.node )>;
+                    const size_t node_id = typeid( NodeType ).hash_code();
+                    RuntimeNodeInfo& node_info = active_node_info.emplace( node_id, RuntimeNodeInfo() ).first->second;
+                    node_info.node_id = node_id;
+                    node_info.node_ptr = &*node.node;
+                    node_info.node_name = typeid( NodeType ).name();
+                    TypeidFiller<std::tuple<const NodeType*>>::FillTypeids( node_info.open_ids );
 
-                        TypeidFiller<typename StrippedResourceTuple<typename NodeType::OpenRes>::Type>::FillTypeids( node_info.open_ids );
-                        TypeidFiller<typename StrippedResourceTuple<typename NodeType::WriteRes>::Type>::FillTypeids( node_info.write_ids );
-                        TypeidFiller<typename StrippedResourceTuple<typename NodeType::ReadRes>::Type>::FillTypeids( node_info.read_ids );
-                        TypeidFiller<typename StrippedResourceTuple<typename NodeType::CloseRes>::Type>::FillTypeids( node_info.close_ids );
+                    TypeidFiller<typename StrippedResourceTuple<typename NodeType::OpenRes>::Type>::FillTypeids( node_info.open_ids );
+                    TypeidFiller<typename StrippedResourceTuple<typename NodeType::WriteRes>::Type>::FillTypeids( node_info.write_ids );
+                    TypeidFiller<typename StrippedResourceTuple<typename NodeType::ReadRes>::Type>::FillTypeids( node_info.read_ids );
+                    TypeidFiller<typename StrippedResourceTuple<typename NodeType::CloseRes>::Type>::FillTypeids( node_info.close_ids );
 
-                        NodeResourceInfoFiller<typename NodeType::OpenRes>::Fill( *this, node_info.required_states );
-                        NodeResourceInfoFiller<typename NodeType::WriteRes>::Fill( *this, node_info.required_states );
-                        NodeResourceInfoFiller<typename NodeType::ReadRes>::Fill( *this, node_info.required_states );
-                        NodeResourceInfoFiller<typename NodeType::CloseRes>::Fill( *this, node_info.required_states );
-                    }
-                    if constexpr ( sizeof...( rest ) > 0 )
-                        self( self, rest... );
-                    return;
-                };
-                f_impl( f_impl, nodes... );
-                return;
+                    NodeResourceInfoFiller<typename NodeType::OpenRes>::Fill( *this, node_info.required_states );
+                    NodeResourceInfoFiller<typename NodeType::WriteRes>::Fill( *this, node_info.required_states );
+                    NodeResourceInfoFiller<typename NodeType::ReadRes>::Fill( *this, node_info.required_states );
+                    NodeResourceInfoFiller<typename NodeType::CloseRes>::Fill( *this, node_info.required_states );
+                }
+
+                return 0;
+            };
+
+            auto fill_info = [&active_node_info, &fill_node_info, this]( auto&& ...nodes )
+            {
+                auto accept_anything = []( auto&& ...anything ) -> void{};
+
+                accept_anything( fill_node_info( nodes )... );
             };
 
             std::apply( fill_info, m_node_storage );
