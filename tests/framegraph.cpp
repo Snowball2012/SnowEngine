@@ -49,7 +49,7 @@ struct SSAOBufferBlurred
 // Each Node opens <const Node*> resource automatically when scheduled, it may be used for "Node A must be scheduled before Node B" barriers
 
 template<class Framegraph>
-class ZPrepass : public BaseRenderNode
+class ZPrepass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -69,14 +69,13 @@ public:
 		<
 		>;
 
-	ZPrepass( Framegraph* pipeline )
-	{}
+	ZPrepass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Z prepass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Z prepass"; }
 };
 
 template<class Framegraph>
-class ShadowPass : public BaseRenderNode
+class ShadowPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -96,14 +95,13 @@ public:
 		<
 		>;
 
-	ShadowPass( Framegraph* pipeline )
-	{}
+	ShadowPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "shadow pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "shadow pass"; }
 };
 
 template<class Framegraph>
-class PSSMPass : public BaseRenderNode
+class PSSMPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -123,15 +121,14 @@ public:
 		<
 		>;
 
-	PSSMPass( Framegraph* pipeline )
-	{}
+	PSSMPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "PSSM pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "PSSM pass"; }
 };
 
 
 template<class Framegraph>
-class ForwardPass : public BaseRenderNode
+class ForwardPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -157,14 +154,13 @@ public:
 		<
 		>;
 
-	ForwardPass( Framegraph* pipeline )
-	{}
+	ForwardPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
 };
 
 template<class Framegraph>
-class SkyboxPass : public BaseRenderNode
+class SkyboxPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -186,14 +182,13 @@ public:
 		<
 		>;
 
-	SkyboxPass( Framegraph* pipeline )
-	{}
+	SkyboxPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Skybox Pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Skybox Pass"; }
 };
 
 template<class Framegraph>
-class HBAOPass : public BaseRenderNode
+class HBAOPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -215,14 +210,13 @@ public:
 		<
 		>;
 
-	HBAOPass( Framegraph* pipeline )
-	{}
+	HBAOPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "HBAO Pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "HBAO Pass"; }
 };
 
 template<class Framegraph>
-class SSAOBlurPass : public BaseRenderNode
+class SSAOBlurPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -244,14 +238,13 @@ public:
 		<
 		>;
 
-	SSAOBlurPass( Framegraph* pipeline )
-	{}
+	SSAOBlurPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "SSAO blur pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "SSAO blur pass"; }
 };
 
 template<class Framegraph>
-class TonemapPass : public BaseRenderNode
+class TonemapPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -275,14 +268,13 @@ public:
 		<
 		>;
 
-	TonemapPass( Framegraph* pipeline )
-	{}
+	TonemapPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "tonemap pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "tonemap pass"; }
 };
 
 template<class Framegraph>
-class UIPass : public BaseRenderNode
+class UIPass : public BaseRenderNode<Framegraph>
 {
 public:
 	using OpenRes = std::tuple
@@ -302,10 +294,9 @@ public:
 		SDRFramebuffer
 		>;
 
-	UIPass( Framegraph* pipeline )
-	{}
+	UIPass( ) = default;
 
-	virtual void Run( ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "ui pass"; }
+	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "ui pass"; }
 };
 
 BOOST_AUTO_TEST_SUITE( framegraph )
@@ -362,6 +353,8 @@ BOOST_AUTO_TEST_CASE( create )
 		framegraph.Rebuild();
 
 	framegraph.Run( *cmd_lst ); // should work just fine
+
+    BOOST_TEST( true );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

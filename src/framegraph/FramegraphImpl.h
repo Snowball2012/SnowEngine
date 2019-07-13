@@ -390,6 +390,9 @@ namespace details
                 if ( layer_idx > 0 )
                 {
                     auto& barriers = m_barriers[layer_idx - 1];
+                    if ( barriers.empty() )
+                        continue;
+
                     auto& resources = m_barrier_resources[layer_idx - 1];
                     if ( barriers.size() != resources.size() )
                         throw SnowEngineException( "corrupted resource barriers in Framegraph" );
@@ -557,7 +560,7 @@ namespace details
             m_barrier_resources.resize( m_node_layers.size() - 1 );
             while ( !pending_transitions.empty() )
             {
-                int min_end_layer = m_node_layers.size();
+                int min_end_layer = int( m_node_layers.size() );
                 for ( const auto& [resource, transitions] : pending_transitions )
                 {
                     assert( ! transitions.empty() );
