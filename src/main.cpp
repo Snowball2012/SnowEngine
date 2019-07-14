@@ -20,7 +20,7 @@ int APIENTRY WinMain( HINSTANCE hinstance, HINSTANCE prev_instance, LPSTR cmd_li
             return 1;
         return app.Run();
     }
-    catch ( DxException& e )
+    catch ( Utils::DxException& e )
     {
         MessageBox( nullptr, e.ToString().c_str(), L"HR Failed", MB_OK );
         return 0;

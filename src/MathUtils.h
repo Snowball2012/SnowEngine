@@ -27,7 +27,7 @@ DirectX::XMFLOAT3 SphericalToCartesian( float radius, float phi, float theta );
 
 DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m );
 
-// returns 0 if the point is inside the box
+// returns 0 if a point is inside a box
 float DistanceToBoxSqr( const DirectX::XMVECTOR& point, const DirectX::BoundingOrientedBox& box );
 
 constexpr DirectX::XMFLOAT4X4 Identity4x4 =

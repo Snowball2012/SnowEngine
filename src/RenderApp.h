@@ -2,9 +2,6 @@
 
 #include <future>
 
-#include <Luna/MathHelper.h>
-#include <Luna/UploadBuffer.h>
-
 #include <dxtk12/Keyboard.h>
 #include <imgui/imgui.h>
 #include "imgui_impl/imgui_impl_win32.h"

@@ -1,6 +1,5 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-#include "RenderApp.h"
 #include "stdafx.h"
 
 #include "RenderApp.h"
@@ -97,7 +96,7 @@ void RenderApp::UpdateGUI()
         ImGui::InputFloat3( "Camera position", &m_camera_pos.x, "%.2f" );
         ImGui::NewLine();
         ImGui::SliderFloat( "Camera speed", &m_camera_speed, 1.0f, 100.0f, "%.2f" );
-        m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
+        m_camera_speed = boost::algorithm::clamp( m_camera_speed, 1.0f, 100.0f );
 
         ImGui::NewLine();
         ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
@@ -202,7 +201,7 @@ void RenderApp::UpdateCamera()
         cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
         cam_data.pos = m_camera_pos;
         cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
-        cam_data.fov_y = MathHelper::Pi / 4;
+        cam_data.fov_y = XM_PIDIV4;
         cam_data.aspect_ratio = AspectRatio();
         cam_data.far_plane = 200.0f;
         cam_data.near_plane = 0.1f;
@@ -220,7 +219,7 @@ void RenderApp::UpdateCamera()
         cam_data.dir = cam_data.pos * -1.0f;
         XMFloat3Normalize( cam_data.dir );
         cam_data.up = XMFLOAT3( 0.0f, 1.0f, 0.0f );
-        cam_data.fov_y = MathHelper::Pi / 4;
+        cam_data.fov_y = XM_PIDIV4;
         cam_data.aspect_ratio = AspectRatio();
         cam_data.far_plane = 100.0f;
         cam_data.near_plane = 0.1f;
@@ -335,7 +334,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
             m_phi -= dy;
 
             // Restrict the angle phi.
-            m_phi = MathHelper::Clamp( m_phi, 0.1f, MathHelper::Pi - 0.1f );
+            m_phi = boost::algorithm::clamp( m_phi, 0.1f, XM_PI - 0.1f );
         }
         else if ( ( btnState & MK_RBUTTON ) != 0 )
         {
@@ -344,7 +343,7 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
 
             m_camera_speed += ( dx - dy ) * m_camera_speed;
 
-            m_camera_speed = MathHelper::Clamp( m_camera_speed, 1.0f, 100.0f );
+            m_camera_speed = boost::algorithm::clamp( m_camera_speed, 1.0f, 100.0f );
         }
 
         m_last_mouse_pos.x = x;
@@ -504,7 +503,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
     camera_data.dir = DirectX::XMFLOAT3( 0, -0.3f, 1 );
     XMFloat3Normalize( camera_data.dir );
     camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
-    camera_data.fov_y = MathHelper::Pi / 4;
+    camera_data.fov_y = XM_PIDIV4;
     camera_data.far_plane = 10000.0f;
     camera_data.near_plane = 0.1f;
     m_camera = scene.AddCamera( camera_data );
@@ -565,7 +564,7 @@ void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_widt
     ObjectTransform* tf = scene.ModifyTransform( cube->GetTransform() );
     assert( tf );
     m_theta = gt.TotalTime();
-    XMFLOAT3 cube_eye_dir = SphericalToCartesian( 1, MathHelper::Pi / 2.0f, m_theta );
+    XMFLOAT3 cube_eye_dir = SphericalToCartesian( 1, XM_PIDIV2, m_theta );
     auto& cube_local2world = tf->ModifyMat();
 
     auto scale = XMMatrixScaling( 0.1f, 0.1f, 0.1f );

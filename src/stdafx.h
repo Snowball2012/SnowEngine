@@ -37,20 +37,6 @@ namespace bc = boost::container;
     if(FAILED(hr__)) { throw Utils::DxException(hr__, L#x, wfn, __LINE__); } \
 }
 #endif
-/*/
-#ifndef ThrowIfFailedB
-#define ThrowIfFailedB(x)                                              \
-{                                                                     \
-    if ( !(x) )
-    {
-        std::wstring wfn = AnsiToWString( __FILE__ );
-        throw DxException( hr__, L#x, wfn, __LINE__ );
-    }
-    
-    std::wstring wfn = AnsiToWString(__FILE__);                       \
-    if(FAILED(hr__)) { throw DxException(hr__, L#x, wfn, __LINE__); } \
-}
-#endif*/
 
 #include "RenderUtils.h"
 
