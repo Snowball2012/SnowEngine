@@ -424,6 +424,9 @@
     <ClInclude Include="src\framegraph\utils\UniqueTuple.h">
       <Filter>core\Framegraph\utils</Filter>
     </ClInclude>
+    <ClInclude Include="src\Console.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">

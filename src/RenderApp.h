@@ -6,6 +6,7 @@
 #include <imgui/imgui.h>
 #include "imgui_impl/imgui_impl_win32.h"
 #include "imgui_impl/imgui_impl_dx12.h"
+#include "Console.h"
 #include <DirectXMath.h>
 
 #include "D3DApp.h"
@@ -48,15 +49,14 @@ private:
     virtual LRESULT MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam ) override;
 
     // scene loading
-    void LoadScene( const std::string& filename );
-    void InitScene( );
+    ImportedScene LoadScene( const std::string& filename );
+    void InitScene( ImportedScene scene );
 
     void BuildGeometry( ImportedScene& ext_scene );
     void BuildMaterials( ImportedScene& ext_scene );
     void BuildRenderItems( const ImportedScene& ext_scene );
     void LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_texture );
     void LoadPlaceholderTextures();
-    void ReleaseIntermediateSceneMemory();
 
     enum class State
     {
@@ -98,12 +98,9 @@ private:
         float m_theta = 0;
     } m_loading_screen;
 
-    std::future<void> m_is_scene_loaded;
+    std::future<ImportedScene> m_is_scene_loaded;
 
     std::unique_ptr<OldRenderer> m_renderer = nullptr;
-
-    // external geometry
-    ImportedScene m_imported_scene;
     
     float m_theta = -0.1f * DirectX::XM_PI;
     float m_phi = 0.8f * DirectX::XM_PIDIV2;
@@ -116,6 +113,10 @@ private:
     float m_sky_phi = DirectX::XM_PI;
     float m_sky_radiance_factor = 10.0f;
     DirectX::XMFLOAT3 m_sun_color_corrected = DirectX::XMFLOAT3( 1.0f, 232.0f /255.0f, 213.0f /255.0f ); // gamma == 2.2
+
+    bool m_is_console_opened = true;
+    bool m_tilda_was_pressed_last_frame = false;
+    ExampleAppConsole m_console;
 
     // inputs
     std::unique_ptr<DirectX::Keyboard> m_keyboard;

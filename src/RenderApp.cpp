@@ -40,7 +40,7 @@ bool RenderApp::Initialize()
     m_renderer->Init();
 
     if ( strlen( m_cmd_line ) != 0 ) //-V805
-        m_is_scene_loaded = std::async( std::launch::async, [this]() { LoadScene( m_cmd_line ); } );
+        m_is_scene_loaded = std::async( std::launch::async, [this]() { return LoadScene( m_cmd_line ); } );
 
     LoadPlaceholderTextures();
 
@@ -70,7 +70,7 @@ void RenderApp::Update( const GameTimer& gt )
         {
             m_cur_state = State::Main;
             m_loading_screen.Disable( m_renderer->GetScene(), *m_renderer );
-            InitScene();
+            InitScene( m_is_scene_loaded.get() );
         }
     }
 
@@ -185,6 +185,13 @@ void RenderApp::UpdateGUI()
 
         ImGui::End();
     }
+
+    {
+        if ( m_is_console_opened )
+        {
+            m_console.Draw( "Console", &m_is_console_opened );
+        }
+    }
     ImGui::Render();
 }
 
@@ -290,7 +297,11 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
             m_camera_pos += SphericalToCartesian( -m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
         if ( kb_state.S )
             m_camera_pos += SphericalToCartesian( m_camera_speed * gt.DeltaTime(), m_phi, m_theta );
+        if ( kb_state.OemTilde && !m_tilda_was_pressed_last_frame )
+            m_is_console_opened = !m_is_console_opened;
     }
+
+    m_tilda_was_pressed_last_frame = kb_state.OemTilde;
     m_sun_phi = boost::algorithm::clamp( m_sun_phi, 0, DirectX::XM_PI );
     m_sun_theta = fmod( m_sun_theta, DirectX::XM_2PI );
 }
@@ -371,18 +382,19 @@ LRESULT RenderApp::MsgProc( HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam )
     return D3DApp::MsgProc( hwnd, msg, wParam, lParam );
 }
 
-void RenderApp::LoadScene( const std::string& filename )
+ImportedScene RenderApp::LoadScene( const std::string& filename )
 {
-    LoadFbxFromFile( filename, m_imported_scene );
+    ImportedScene scene;
+    LoadFbxFromFile( filename, scene );
+    return std::move( scene );
 }
 
-void RenderApp::InitScene()
+void RenderApp::InitScene( ImportedScene imported_scene )
 {
-    LoadAndBuildTextures( m_imported_scene, true );
-    BuildGeometry( m_imported_scene );
-    BuildMaterials( m_imported_scene );
-    BuildRenderItems( m_imported_scene );
-    ReleaseIntermediateSceneMemory();
+    LoadAndBuildTextures( imported_scene, true );
+    BuildGeometry( imported_scene );
+    BuildMaterials( imported_scene );
+    BuildRenderItems( imported_scene );
 
     auto& scene = m_renderer->GetScene();
 
@@ -477,22 +489,6 @@ void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
 
         MeshInstanceID mesh_instance = scene.AddMeshInstance( submesh_id, tf, mat );
     }
-}
-
-
-void RenderApp::ReleaseIntermediateSceneMemory()
-{
-    m_imported_scene.indices.clear();
-    m_imported_scene.materials.clear();
-    m_imported_scene.submeshes.clear();
-    m_imported_scene.textures.clear();
-    m_imported_scene.vertices.clear();
-
-    m_imported_scene.indices.shrink_to_fit();
-    m_imported_scene.materials.shrink_to_fit();
-    m_imported_scene.submeshes.shrink_to_fit();
-    m_imported_scene.textures.shrink_to_fit();
-    m_imported_scene.vertices.shrink_to_fit();
 }
 
 void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id, EnvMapID skybox_id )

@@ -152,14 +152,4 @@ struct LightInCB
     const SceneLight* light;
 };
 
-// scene representation for renderer
-struct RenderSceneContext
-{
-    std::unordered_map<std::string, StaticSubmeshID> static_geometry;
-
-    // lighting, materials and textures
-    std::unordered_map<std::string, MaterialID> materials;
-    std::unordered_map<std::string, TextureID> textures;
-};
-
 using InputLayout = std::vector<D3D12_INPUT_ELEMENT_DESC>;

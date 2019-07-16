@@ -104,7 +104,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -145,7 +145,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -239,6 +239,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
   <ItemGroup>
     <ClInclude Include="src\BlurSSAONode.h" />
     <ClInclude Include="src\CommandListPool.h" />
+    <ClInclude Include="src\Console.h" />
     <ClInclude Include="src\CubemapConverter.h" />
     <ClInclude Include="src\CubemapManager.h" />
     <ClInclude Include="src\DepthAwareBlurPass.h" />
