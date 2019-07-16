@@ -58,6 +58,8 @@ public:
     bool SetIrradianceMap( CubemapID id );
     bool SetReflectionProbe( CubemapID id );
 
+    void SetSkybox( bool enable );
+
     struct PerformanceStats
     {
         TextureStreamer::Stats tex_streamer;

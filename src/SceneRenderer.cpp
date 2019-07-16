@@ -358,6 +358,15 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 }
 
 
+void SceneRenderer::SetSkybox( bool enable )
+{
+    if ( enable )
+        m_framegraph.Enable<SkyboxNode>();
+    else
+        m_framegraph.Disable<SkyboxNode>();
+}
+
+
 void SceneRenderer::SetInternalResolution( uint32_t width, uint32_t height )
 {
     m_resolution_width = width;

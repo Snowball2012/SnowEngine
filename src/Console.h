@@ -22,6 +22,8 @@ struct ExampleAppConsole
     bool                  AutoScroll;
     bool                  ScrollToBottom;
 
+    bool Skybox = true;
+
     ExampleAppConsole()
     {
         ClearLog();
@@ -31,6 +33,7 @@ struct ExampleAppConsole
         Commands.push_back("HISTORY");
         Commands.push_back("CLEAR");
         Commands.push_back("CLASSIFY");  // "classify" is only here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
+        Commands.push_back("SKYBOX");
         AutoScroll = true;
         ScrollToBottom = true;
         AddLog("Welcome to Dear ImGui!");
@@ -214,6 +217,10 @@ struct ExampleAppConsole
             int first = History.Size - 10;
             for (int i = first > 0 ? first : 0; i < History.Size; i++)
                 AddLog("%3d: %s\n", i, History[i]);
+        }
+        else if (Stricmp(command_line, "SKYBOX") == 0)
+        {
+            Skybox = !Skybox;
         }
         else
         {

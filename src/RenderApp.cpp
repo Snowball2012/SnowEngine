@@ -190,6 +190,7 @@ void RenderApp::UpdateGUI()
         if ( m_is_console_opened )
         {
             m_console.Draw( "Console", &m_is_console_opened );
+            m_renderer->SetSkybox( m_console.Skybox );
         }
     }
     ImGui::Render();

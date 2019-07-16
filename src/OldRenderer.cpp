@@ -213,6 +213,11 @@ bool OldRenderer::SetReflectionProbe( CubemapID id )
     return true;
 }
 
+void OldRenderer::SetSkybox( bool enable )
+{
+    m_renderer->SetSkybox( enable );
+}
+
 OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
 {
     return { m_scene_manager->GetTexStreamer().GetPerformanceStats() };

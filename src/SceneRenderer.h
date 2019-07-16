@@ -93,6 +93,8 @@ public:
     void SetHBAOSettings( const HBAOSettings& settings ) noexcept { m_hbao_settings = settings; }
     HBAOSettings GetHBAOSettings() const noexcept { return m_hbao_settings; }
 
+    void SetSkybox( bool enable );
+
     ParallelSplitShadowMapping& GetPSSM() noexcept { return m_pssm; }
 
     // All queues used in Draw must be flushed before calling this method
