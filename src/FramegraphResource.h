@@ -118,3 +118,55 @@ struct MainRenderitems
 {
     span<RenderItem> items;
 };
+
+
+// UNDER CONSTRUCTION
+enum class FramegraphTechnique
+{
+    ShadowGenPass,
+    ForwardZPass
+};
+
+struct IRenderMaterial
+{
+    // first - pso id, second - rootsig id
+    virtual std::pair<uint64_t, uint64_t> GetPipelineStateID( FramegraphTechnique technique ) const = 0;
+
+    // todo: replace D3D12_ROOT_PARAMETER with actual shader parameter class
+    virtual bool BindDataToPipeline( const span<D3D12_ROOT_PARAMETER>& data ) const = 0;
+};
+
+struct IRenderGeom
+{
+};
+
+struct RenderBatch
+{
+    const IRenderMaterial* material = nullptr;
+    const IRenderGeom* geom = nullptr;
+
+    uint32_t index_count = 0;
+    uint32_t index_offset = 0;
+    uint32_t vertex_offset = 0;
+    uint32_t instance_count = 0;
+
+    D3D12_GPU_VIRTUAL_ADDRESS per_object_cb; // contents of this buffer may vary depending on the passes this batch participates in
+    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb; // some materials may require various per object data
+
+    D3D12_BOX bounding_box;
+};
+
+struct RenderItem_New
+{
+    const IRenderMaterial* material = nullptr;
+    const IRenderGeom* geom = nullptr;
+
+    uint32_t index_count = 0;
+    uint32_t index_offset = 0;
+    uint32_t vertex_offset = 0;
+    
+    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb; // some materials may require various per object data
+    
+    D3D12_BOX bounding_box;
+    DirectX::XMFLOAT4X4 local2world;
+};

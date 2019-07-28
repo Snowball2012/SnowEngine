@@ -45,6 +45,7 @@ struct RenderItem
     uint32_t index_count = 0;
     uint32_t index_offset = 0;
     uint32_t vertex_offset = 0;
+    uint32_t instance_count = 1;
     
     D3D12_GPU_VIRTUAL_ADDRESS mat_cb;
     D3D12_GPU_DESCRIPTOR_HANDLE mat_table;
