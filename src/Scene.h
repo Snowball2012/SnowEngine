@@ -103,7 +103,7 @@ public:
     auto LightSpan() const noexcept { return m_lights.get_elems(); }
     // for element modification
     auto LightSpan() noexcept { return m_lights.get_elems(); }
-    SceneLight* TryModifyLight( LightID id ) noexcept; // returns nullptr if object no longer exists
+    Light* TryModifyLight( LightID id ) noexcept; // returns nullptr if object no longer exists
 
 
     // Enviriment maps
@@ -114,7 +114,7 @@ public:
     auto EnviromentMapSpan() const noexcept { return m_env_maps.get_elems(); }
     // for element modification
     auto EnviromentMapSpan() noexcept { return m_env_maps.get_elems(); }
-    EnviromentMap* TryModifyEnvMap( EnvMapID id ) noexcept; // returns nullptr if object no longer exists
+    EnvironmentMap* TryModifyEnvMap( EnvMapID id ) noexcept; // returns nullptr if object no longer exists
 
 private:
     template<typename ID>
@@ -139,6 +139,6 @@ private:
     packed_freelist<MaterialPBR> m_materials;
     packed_freelist<StaticMeshInstance> m_static_mesh_instances;
     packed_freelist<Camera> m_cameras;
-    packed_freelist<SceneLight> m_lights;
-    packed_freelist<EnviromentMap> m_env_maps;
+    packed_freelist<Light> m_lights;
+    packed_freelist<EnvironmentMap> m_env_maps;
 };

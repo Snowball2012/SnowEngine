@@ -61,15 +61,17 @@ public:
     {
         Target render_target;
         CommandListPool* cmd_list_pool;
+
     };
 
     struct SceneContext
     {
-        Scene* scene = nullptr;
-        CameraID main_camera = CameraID::nullid;
+        const Camera::Data* main_camera;
+        SkyboxData skybox;
 
-        // temporary
-        DescriptorTableID ibl_table = DescriptorTableID::nullid;
+        span<RenderItem_New> shadow_list;
+        span<RenderItem_New> opaque_list;
+        span<Light> light_list;
     };
 
     // factory

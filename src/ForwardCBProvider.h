@@ -17,7 +17,7 @@ public:
     ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames );
     ~ForwardCBProvider() noexcept;
 
-    void Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const SceneLight>& scene_lights );
+    void Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const Light>& scene_lights );
 
     D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
     span<const LightInCB> GetLightsInCB() const noexcept;
@@ -26,7 +26,7 @@ private:
     void FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
 
     // pass transposed matrix here, it's more convenient for the caller 
-    void FillLightData( const span<const SceneLight>& lights,
+    void FillLightData( const span<const Light>& lights,
                         const DirectX::XMMATRIX& inv_view_matrix_transposed,
                         const DirectX::XMMATRIX& view_matrix,
                         PassConstants& gpu_data );

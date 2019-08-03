@@ -170,3 +170,10 @@ struct RenderItem_New
     D3D12_BOX bounding_box;
     DirectX::XMFLOAT4X4 local2world;
 };
+
+struct SkyboxData
+{
+    float radiance_factor = 0;
+    D3D12_GPU_DESCRIPTOR_HANDLE cubemap_srv;
+    DirectX::XMFLOAT4X4 obj2world_mat;
+};

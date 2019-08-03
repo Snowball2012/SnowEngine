@@ -182,6 +182,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\ForwardLightingPass.cpp" />
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
+    <ClCompile Include="src\GPUAllocators.cpp" />
     <ClCompile Include="src\GPUPagedAllocator.cpp" />
     <ClCompile Include="src\GPUTaskQueue.cpp" />
     <ClCompile Include="src\HBAOPass.cpp" />
@@ -261,6 +262,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
     <ClInclude Include="src\GeomGeneration.hpp" />
+    <ClInclude Include="src\GPUAllocators.h" />
     <ClInclude Include="src\GPUPagedAllocator.h" />
     <ClInclude Include="src\GPUTaskQueue.h" />
     <ClInclude Include="src\HBAONode.h" />

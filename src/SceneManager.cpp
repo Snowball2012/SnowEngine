@@ -95,12 +95,12 @@ EnvMapID SceneClientView::AddEnviromentMap( CubemapID cubemap_id, TransformID tr
     return id;
 }
 
-EnviromentMap* SceneClientView::ModifyEnviromentMap( EnvMapID envmap_id ) noexcept
+EnvironmentMap* SceneClientView::ModifyEnviromentMap( EnvMapID envmap_id ) noexcept
 {
     return m_scene->TryModifyEnvMap( envmap_id );
 }
 
-const EnviromentMap* SceneClientView::GetEnviromentMap( EnvMapID envmap_id ) const noexcept
+const EnvironmentMap* SceneClientView::GetEnviromentMap( EnvMapID envmap_id ) const noexcept
 {
     return m_scene->AllEnviromentMaps().try_get( envmap_id );
 }
@@ -122,19 +122,19 @@ Camera* SceneClientView::ModifyCamera( CameraID id ) noexcept
     return m_scene->TryModifyCamera( id );
 }
 
-LightID SceneClientView::AddLight( const SceneLight::Data& data ) noexcept
+LightID SceneClientView::AddLight( const Light::Data& data ) noexcept
 {
     LightID id = m_scene->AddLight();
     m_scene->TryModifyLight( id )->ModifyData() = data;
     return id;
 }
 
-const SceneLight* SceneClientView::GetLight( LightID id ) const noexcept
+const Light* SceneClientView::GetLight( LightID id ) const noexcept
 {
     return m_scene->AllLights().try_get( id );
 }
 
-SceneLight* SceneClientView::ModifyLight( LightID id ) noexcept
+Light* SceneClientView::ModifyLight( LightID id ) noexcept
 {
     return m_scene->TryModifyLight( id );
 }

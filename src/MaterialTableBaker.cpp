@@ -56,7 +56,7 @@ void MaterialTableBaker::UpdateStagingDescriptors()
     for ( size_t i = 0; i < m_envmaps.size(); )
     {
         auto& material_data = m_envmaps[i];
-        EnviromentMap* mat = m_scene->TryModifyEnvMap( material_data.env_map_id );
+        EnvironmentMap* mat = m_scene->TryModifyEnvMap( material_data.env_map_id );
         if ( ! mat )
         {
             m_tables->EraseTable( material_data.table_id );
@@ -121,7 +121,7 @@ void MaterialTableBaker::UpdateMaterialTextures( const MaterialPBR& material, Ta
     update_texture( textures.preintegrated_brdf, 3 );
 }
 
-void MaterialTableBaker::UpdateEnvmapTextures( const EnviromentMap& envmap, TableID envmap_table_id, bool first_load )
+void MaterialTableBaker::UpdateEnvmapTextures( const EnvironmentMap& envmap, TableID envmap_table_id, bool first_load )
 {
     auto update_cubemap = [&]( CubemapID cubemap_id ) -> void
     {

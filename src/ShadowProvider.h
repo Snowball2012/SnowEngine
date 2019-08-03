@@ -17,7 +17,7 @@ class ShadowProvider
 public:
     ShadowProvider( ID3D12Device* device, int n_bufferized_frames, DescriptorTableBakery* srv_tables );
 
-    void Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
+    void Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
     void FillFramegraphStructures( const Scene& scene, const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
                                    ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,

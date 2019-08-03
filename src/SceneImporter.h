@@ -29,7 +29,7 @@ struct ImportedScene
 
     Camera::Data camera;
 
-    std::optional<SceneLight::Data> sun;
+    std::optional<Light::Data> sun;
 
     std::string skybox_spherical;
     float skybox_radiance_multiplier;

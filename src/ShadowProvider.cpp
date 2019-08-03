@@ -85,13 +85,13 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, D
 }
 
 
-void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
+void ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
     std::array<float, MAX_CASCADE_SIZE - 1> split_positions_storage;
 
     auto split_positions = pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions_storage ) );
 
-    for ( SceneLight& light : scene_lights )
+    for ( Light& light : scene_lights )
     {
         if ( ! light.IsEnabled() )
             continue;
@@ -99,9 +99,9 @@ void ShadowProvider::Update( span<SceneLight> scene_lights, const ParallelSplitS
         if ( const auto& shadow_desc = light.GetShadow() )
         {
             const bool use_csm = shadow_desc->num_cascades > 1
-                                 || light.GetData().type == SceneLight::LightType::Parallel; // right now shaders require all parallel lights to use pssm
+                                 || light.GetData().type == Light::LightType::Parallel; // right now shaders require all parallel lights to use pssm
 
-            if ( light.GetData().type != SceneLight::LightType::Parallel && use_csm )
+            if ( light.GetData().type != Light::LightType::Parallel && use_csm )
                 NOTIMPL;
 
             if ( shadow_desc->num_cascades > MAX_CASCADE_SIZE )
@@ -146,18 +146,18 @@ void ShadowProvider::CreateShadowProducers( const span<const LightInCB>& lights 
     bool regular_light_with_shadow_found = false;
     for ( const LightInCB& light_in_cb : lights )
     {
-        const SceneLight& light = *light_in_cb.light;
+        const Light& light = *light_in_cb.light;
 
         const auto& shadow_desc = light.GetShadow();
         if ( ! shadow_desc )
             continue;
 
-        if ( light.GetShadowMatrices().size() > 1 || light.GetData().type == SceneLight::LightType::Parallel )
+        if ( light.GetShadowMatrices().size() > 1 || light.GetData().type == Light::LightType::Parallel )
         {
             if ( pssm_light_with_shadow_found )
                 NOTIMPL; // pack all pssm shadow maps in one
 
-            if ( light.GetData().type != SceneLight::LightType::Parallel )
+            if ( light.GetData().type != Light::LightType::Parallel )
                 NOTIMPL; // only parallel lights may be pssm
 
             pssm_light_with_shadow_found = true;

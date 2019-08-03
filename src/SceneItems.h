@@ -272,7 +272,7 @@ private:
 using MeshInstanceID = typename packed_freelist<StaticMeshInstance>::id;
 
 
-class EnviromentMap : public RefCounter
+class EnvironmentMap : public RefCounter
 {
 public:
     CubemapID GetMap() const noexcept { return m_cubemap; }
@@ -287,7 +287,7 @@ public:
 
 private:
     friend class Scene;
-    EnviromentMap() {}
+    EnvironmentMap() {}
 
     CubemapID& Map() noexcept { return m_cubemap; }
     TransformID& Transform() noexcept { return m_tf; }
@@ -297,7 +297,7 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE m_srv;
     float m_radiance_factor = 1.0f;
 };
-using EnvMapID = typename packed_freelist<EnviromentMap>::id;
+using EnvMapID = typename packed_freelist<EnvironmentMap>::id;
 
 
 class Camera
@@ -336,7 +336,7 @@ private:
 using CameraID = typename packed_freelist<Camera>::id;
 
 
-class SceneLight
+class Light
 {
 public:
     enum class LightType
@@ -387,6 +387,6 @@ private:
 
     bool m_is_enabled = true;
 };
-using LightID = typename packed_freelist<SceneLight>::id;
+using LightID = typename packed_freelist<Light>::id;
 
 

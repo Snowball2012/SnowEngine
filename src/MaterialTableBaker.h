@@ -28,7 +28,7 @@ private:
     };
     
     void UpdateMaterialTextures( const MaterialPBR& material, TableID material_table_id, bool first_load );
-    void UpdateEnvmapTextures( const EnviromentMap& envmap, TableID envmap_table_id, bool first_load );
+    void UpdateEnvmapTextures( const EnvironmentMap& envmap, TableID envmap_table_id, bool first_load );
 
     std::vector<MaterialData> m_materials;
     std::vector<EnvMapData> m_envmaps;

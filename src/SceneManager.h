@@ -49,16 +49,16 @@ public:
     MeshInstanceID AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id );
 
     EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id );
-    EnviromentMap* ModifyEnviromentMap( EnvMapID envmap_id ) noexcept;
-    const EnviromentMap* GetEnviromentMap( EnvMapID envmap_id ) const noexcept;
+    EnvironmentMap* ModifyEnviromentMap( EnvMapID envmap_id ) noexcept;
+    const EnvironmentMap* GetEnviromentMap( EnvMapID envmap_id ) const noexcept;
     
     CameraID AddCamera( const Camera::Data& data ) noexcept;
     const Camera* GetCamera( CameraID id ) const noexcept;
     Camera* ModifyCamera( CameraID id ) noexcept;
 
-    LightID AddLight( const SceneLight::Data& data ) noexcept;
-    const SceneLight* GetLight( LightID id ) const noexcept;
-    SceneLight* ModifyLight( LightID id ) noexcept;
+    LightID AddLight( const Light::Data& data ) noexcept;
+    const Light* GetLight( LightID id ) const noexcept;
+    Light* ModifyLight( LightID id ) noexcept;
 
     StaticMeshInstance* ModifyInstance( MeshInstanceID id ) noexcept;
     ObjectTransform* ModifyTransform( TransformID id ) noexcept;

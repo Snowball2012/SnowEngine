@@ -124,10 +124,10 @@ namespace
     }
 }
 
-span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const Camera::Data& camera, const SceneLight& light, const span<float>& split_positions, span<XMMATRIX> matrices_storage ) const
+span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const Camera::Data& camera, const Light& light, const span<float>& split_positions, span<XMMATRIX> matrices_storage ) const
 {
     assert( camera.type == Camera::Type::Perspective );
-    assert( light.GetData().type == SceneLight::LightType::Parallel );
+    assert( light.GetData().type == Light::LightType::Parallel );
     assert( light.GetShadow().has_value() );
 
     const auto& shadow_desc = *light.GetShadow();

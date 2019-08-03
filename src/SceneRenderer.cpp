@@ -475,7 +475,7 @@ Skybox SceneRenderer::CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_ta
 {
     assert( scene.AllEnviromentMaps().has( skybox_id ) );
 
-    const EnviromentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
+    const EnvironmentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
 
     Skybox framegraph_res;
 

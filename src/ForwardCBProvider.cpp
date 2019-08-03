@@ -33,7 +33,7 @@ ForwardCBProvider::~ForwardCBProvider() noexcept
 }
 
 
-void ForwardCBProvider::Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const SceneLight>& scene_lights )
+void ForwardCBProvider::Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const Light>& scene_lights )
 {
     // ToDo: fill time info
     ++m_cur_res_idx %= m_nbuffers; //-V567
@@ -100,7 +100,7 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 }
 
 
-void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
+void ForwardCBProvider::FillLightData( const span<const Light>& lights,
                                        const DirectX::XMMATRIX& inv_view_matrix_transposed,
                                        const DirectX::XMMATRIX& view_matrix,
                                        PassConstants& gpu_data )
@@ -114,17 +114,17 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
         if ( ! light.IsEnabled() )
             continue;
 
-        const SceneLight::LightType light_type = light.GetData().type;
+        const Light::LightType light_type = light.GetData().type;
 
         switch ( light_type )
         {
-            case SceneLight::LightType::Parallel:
+            case Light::LightType::Parallel:
                 gpu_data.n_parallel_lights++;
                 break;
-            case SceneLight::LightType::Point:
+            case Light::LightType::Point:
                 gpu_data.n_point_lights++;
                 break;
-            case SceneLight::LightType::Spotlight:
+            case Light::LightType::Spotlight:
                 gpu_data.n_spotlight_lights++;
                 break;
             default:
@@ -144,18 +144,18 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
         if ( ! light.IsEnabled() )
             continue;
 
-        const SceneLight::LightType light_type = light.GetData().type;
+        const Light::LightType light_type = light.GetData().type;
 
         uint32_t gpu_idx = 0;
         switch ( light_type )
         {
-            case SceneLight::LightType::Parallel:
+            case Light::LightType::Parallel:
                 gpu_idx = parallel_idx++;
                 break;
-            case SceneLight::LightType::Point:
+            case Light::LightType::Point:
                 gpu_idx = point_idx++;
                 break;
-            case SceneLight::LightType::Spotlight:
+            case Light::LightType::Spotlight:
                 gpu_idx = spotlight_idx++;
                 break;
             default:
@@ -164,7 +164,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
 
         m_lights_in_cb.push_back( LightInCB{ gpu_idx, &light } );
 
-        if ( light_type == SceneLight::LightType::Parallel )
+        if ( light_type == Light::LightType::Parallel )
         {
             ParallelLightConstants& data = gpu_data.parallel_lights[gpu_idx];
             const auto& shadow_matrices = light.GetShadowMatrices(); // here matrix is in world space, we need to convert it to view space for the shaders
@@ -177,7 +177,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
             }
             data.csm_num_split_positions = int32_t( shadow_matrices.size() ) - 1;
 
-            const SceneLight::Data& src_data = light.GetData();
+            const Light::Data& src_data = light.GetData();
             DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
             data.strength = src_data.strength;
         }
@@ -191,7 +191,7 @@ void ForwardCBProvider::FillLightData( const span<const SceneLight>& lights,
                                           DirectX::XMMatrixMultiply( DirectX::XMMatrixTranspose( shadow_matrix[0] ), inv_view_matrix_transposed ) );
             }
 
-            const SceneLight::Data& src_data = light.GetData();
+            const Light::Data& src_data = light.GetData();
             DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
             data.falloff_end = src_data.falloff_end;
             data.falloff_start = src_data.falloff_start;

@@ -102,7 +102,7 @@ void RenderApp::UpdateGUI()
         ImGui::Text( "Camera Euler angles:\n\tphi: %.3f\n\ttheta: %.3f", m_phi, m_theta );
         ImGui::NewLine();
 
-        EnviromentMap* skybox = m_renderer->GetScene().ModifyEnviromentMap( m_ph_skybox );
+        EnvironmentMap* skybox = m_renderer->GetScene().ModifyEnviromentMap( m_ph_skybox );
         if ( skybox )
         {
             ImGui::SliderFloat( "Skybox luminance multiplier", &m_sky_radiance_factor, 0, 1.e2 );
@@ -258,16 +258,16 @@ namespace
 
 void RenderApp::UpdateLights()
 {
-    SceneLight* light_ptr = m_renderer->GetScene().ModifyLight( m_sun );
+    Light* light_ptr = m_renderer->GetScene().ModifyLight( m_sun );
     if ( ! light_ptr )
         throw SnowEngineException( "no sun" );
 
-    SceneLight::Data& sun_data = light_ptr->ModifyData();
+    Light::Data& sun_data = light_ptr->ModifyData();
     {
         sun_data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
         sun_data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
     }
-    SceneLight::Shadow sun_shadow;
+    Light::Shadow sun_shadow;
     {
         sun_shadow.orthogonal_ws_height = 100.0f;
         sun_shadow.sm_size = 2048;
@@ -404,8 +404,8 @@ void RenderApp::InitScene( ImportedScene imported_scene )
     m_camera = scene.AddCamera( camera_data );
     scene.ModifyCamera( m_camera )->SetSkybox() = m_ph_skybox;
     m_renderer->SetMainCamera( m_camera );
-    SceneLight::Data sun_data;
-    sun_data.type = SceneLight::LightType::Parallel;
+    Light::Data sun_data;
+    sun_data.type = Light::LightType::Parallel;
     m_sun = scene.AddLight( sun_data );
 
     Camera::Data dbg_frustrum_cam_data;
@@ -506,13 +506,13 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
     m_camera = scene.AddCamera( camera_data );
     scene.ModifyCamera( m_camera )->SetSkybox() = skybox_id;
 
-    SceneLight::Data light_data;
-    light_data.type = SceneLight::LightType::Parallel;
+    Light::Data light_data;
+    light_data.type = Light::LightType::Parallel;
     light_data.dir = DirectX::XMFLOAT3( 1, 1, -1 );
     XMFloat3Normalize( light_data.dir );
     light_data.strength = getLightIrradiance( 70.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
     m_light = scene.AddLight( light_data );
-    scene.ModifyLight( m_light )->ModifyShadow() = SceneLight::Shadow{ 512, 3.0f, MAX_CASCADE_SIZE };
+    scene.ModifyLight( m_light )->ModifyShadow() = Light::Shadow{ 512, 3.0f, MAX_CASCADE_SIZE };
 
     LoadCube( scene, normal_tex_id, specular_tex_id );
 }
@@ -521,7 +521,7 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& rend
 {
     renderer.SetFrustrumCullCamera( CameraID::nullid );
     renderer.SetMainCamera( m_camera );
-    SceneLight* light = scene.ModifyLight( m_light );
+    Light* light = scene.ModifyLight( m_light );
     if ( ! light )
         throw SnowEngineException( "light not found!" );
     light->IsEnabled() = true;
@@ -535,7 +535,7 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& rend
 void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& renderer )
 {
     renderer.SetMainCamera( CameraID::nullid );
-    SceneLight* light = scene.ModifyLight( m_light );
+    Light* light = scene.ModifyLight( m_light );
     if ( ! light )
         throw SnowEngineException( "light not found!" );
     light->IsEnabled() = false;

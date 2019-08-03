@@ -48,7 +48,7 @@ template<> struct Scene::ID2Obj<MaterialID>
 
 template<> struct Scene::ID2Obj<EnvMapID>
 {
-    using type = EnviromentMap;
+    using type = EnvironmentMap;
 };
 
 template<> Scene::freelist_from_id<TransformID>& Scene::GetStorage<TransformID>() noexcept
@@ -342,7 +342,7 @@ bool Scene::RemoveLight( LightID id ) noexcept
     return has_light;
 }
 
-SceneLight* Scene::TryModifyLight( LightID id ) noexcept
+Light* Scene::TryModifyLight( LightID id ) noexcept
 {
     return m_lights.try_get( id );
 }
@@ -361,7 +361,7 @@ EnvMapID Scene::AddEnviromentMap( CubemapID cubemap_id, TransformID tf_id )
         throw SnowEngineException( "referenced transform does not exist" );
     tf->AddRef();
 
-    EnviromentMap envmap;
+    EnvironmentMap envmap;
 
     envmap.Map() = cubemap_id;
     envmap.Transform() = tf_id;
@@ -371,7 +371,7 @@ EnvMapID Scene::AddEnviromentMap( CubemapID cubemap_id, TransformID tf_id )
 
 bool Scene::RemoveEnviromentMap( EnvMapID id ) noexcept
 {
-    EnviromentMap* envmap = m_env_maps.try_get( id );
+    EnvironmentMap* envmap = m_env_maps.try_get( id );
     if ( ! envmap )
         return true;
 
@@ -388,7 +388,7 @@ bool Scene::RemoveEnviromentMap( EnvMapID id ) noexcept
     return Remove( id );
 }
 
-EnviromentMap* Scene::TryModifyEnvMap( EnvMapID id ) noexcept
+EnvironmentMap* Scene::TryModifyEnvMap( EnvMapID id ) noexcept
 {
     return m_env_maps.try_get( id );
 }

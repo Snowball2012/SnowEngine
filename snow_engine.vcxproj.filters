@@ -224,6 +224,9 @@
     <ClCompile Include="src\CommandListPool.cpp">
       <Filter>core\APILayer</Filter>
     </ClCompile>
+    <ClCompile Include="src\GPUAllocators.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -426,6 +429,9 @@
     </ClInclude>
     <ClInclude Include="src\Console.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GPUAllocators.h">
+      <Filter>core\APILayer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

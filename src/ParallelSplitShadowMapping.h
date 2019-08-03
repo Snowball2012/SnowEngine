@@ -25,7 +25,7 @@ public:
     span<float> CalcSplitPositionsVS( const Camera::Data& camera_data, const span<float>& positions_storage ) const noexcept;
 
     // light must be parallel, split_positions must be initialized
-    span<DirectX::XMMATRIX> CalcShadowMatricesWS( const Camera::Data& camera, const SceneLight& light, const span<float>& split_positions, span<DirectX::XMMATRIX> matrices_storage ) const;
+    span<DirectX::XMMATRIX> CalcShadowMatricesWS( const Camera::Data& camera, const Light& light, const span<float>& split_positions, span<DirectX::XMMATRIX> matrices_storage ) const;
 
     // settings
     void SetUniformFactor( float uniform_factor ) noexcept;

@@ -150,7 +150,7 @@ struct alignas( 16 ) PassConstants
 struct LightInCB
 {
     uint32_t light_idx_in_cb;
-    const SceneLight* light;
+    const Light* light;
 };
 
 using InputLayout = std::vector<D3D12_INPUT_ELEMENT_DESC>;
