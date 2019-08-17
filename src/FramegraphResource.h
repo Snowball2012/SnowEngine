@@ -150,10 +150,10 @@ struct RenderBatch
     uint32_t vertex_offset = 0;
     uint32_t instance_count = 0;
 
-    D3D12_GPU_VIRTUAL_ADDRESS per_object_cb; // contents of this buffer may vary depending on the passes this batch participates in
-    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb; // some materials may require various per object data
+    D3D12_GPU_VIRTUAL_ADDRESS per_object_cb = 0; // contents of this buffer may vary depending on the passes this batch participates in
+    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb = 0; // some materials may require various per object data
 
-    D3D12_BOX bounding_box;
+    D3D12_BOX bounding_box = {};
 };
 
 struct RenderItem_New
@@ -165,15 +165,15 @@ struct RenderItem_New
     uint32_t index_offset = 0;
     uint32_t vertex_offset = 0;
     
-    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb; // some materials may require various per object data
+    D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb = 0; // some materials may require various per object data
     
-    D3D12_BOX bounding_box;
-    DirectX::XMFLOAT4X4 local2world;
+    D3D12_BOX bounding_box = {};
+    DirectX::XMFLOAT4X4 local2world = {};
 };
 
 struct SkyboxData
 {
     float radiance_factor = 0;
-    D3D12_GPU_DESCRIPTOR_HANDLE cubemap_srv;
-    DirectX::XMFLOAT4X4 obj2world_mat;
+    D3D12_GPU_DESCRIPTOR_HANDLE cubemap_srv = {};
+    DirectX::XMFLOAT4X4 obj2world_mat = {};
 };

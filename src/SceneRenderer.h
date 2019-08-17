@@ -4,6 +4,8 @@
 #include "StagingDescriptorHeap.h"
 #include "CommandListPool.h"
 
+#include "GPUResourceHolder.h"
+
 #include "DepthPrepassNode.h"
 #include "ShadowPassNode.h"
 #include "PSSMNode.h"
@@ -61,7 +63,6 @@ public:
     {
         Target render_target;
         CommandListPool* cmd_list_pool;
-
     };
 
     struct SceneContext
@@ -72,6 +73,8 @@ public:
         span<RenderItem_New> shadow_list;
         span<RenderItem_New> opaque_list;
         span<Light> light_list;
+
+        DescriptorTableID ibl_table;
     };
 
     // factory
@@ -85,9 +88,11 @@ public:
     SceneRenderer& operator=( SceneRenderer&& ) = default;
 
     // Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
-    // Returned lists must be submitted to graphics queue
+    // Returned lists must be submitted to graphics queue, returned allocators
+    // can be freed after the rendering is over on device queues
     void Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-               std::vector<CommandList>& graphics_cmd_lists );
+               std::vector<CommandList>& graphics_cmd_lists,
+               GPUResourceHolder& frame_resources );
 
     void SetTonemapSettings( const TonemapSettings& settings ) noexcept { m_tonemap_settings = settings; }
     TonemapSettings GetTonemapSettings() const noexcept { return m_tonemap_settings; }
@@ -174,8 +179,12 @@ private:
     void CreateTransientResources();
     void ResizeTransientResources();
 
+    D3D12_HEAP_DESC GetUploadHeapDescription() const;
+
     std::vector<RenderItem> CreateRenderitems( const Camera::Data& camera, const Scene& scene ) const;
-    Skybox CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const;
+    std::pair<Skybox, ComPtr<ID3D12Resource>> CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const;
+
+    ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
 };

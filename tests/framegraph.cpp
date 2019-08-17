@@ -338,7 +338,7 @@ BOOST_AUTO_TEST_CASE( create )
 	framegraph.SetRes( SDRFramebuffer() );
 	framegraph.SetRes( Skybox() );
 
-	ID3D12GraphicsCommandList* cmd_lst = nullptr;
+	ID3D12GraphicsCommandList* cmd_lst = (ID3D12GraphicsCommandList*)1;
 	// run framegraph
 	framegraph.Run( *cmd_lst );
 

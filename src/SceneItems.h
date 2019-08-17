@@ -381,7 +381,7 @@ public:
     const bool& IsEnabled() const noexcept { return m_is_enabled; }
 
 private:
-    Data m_data; 
+    Data m_data = {}; 
     ShadowMatrices m_shadow_matrices;
     std::optional<Shadow> m_sm;
 

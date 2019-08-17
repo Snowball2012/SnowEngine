@@ -10,7 +10,6 @@
 #include <DirectXMath.h>
 
 #include "D3DApp.h"
-#include "FrameResource.h"
 #include "DescriptorHeap.h"
 #include "SceneImporter.h"
 

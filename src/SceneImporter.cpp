@@ -383,7 +383,7 @@ namespace
                 case FbxNodeAttribute::eCameraSwitcher: return "camera switcher";
                 case FbxNodeAttribute::eLight: return "light";
                 case FbxNodeAttribute::eOpticalReference: return "optical reference";
-                case FbxNodeAttribute::eOpticalMarker: return "marker";
+                case FbxNodeAttribute::eOpticalMarker: return "optical marker";
                 case FbxNodeAttribute::eNurbsCurve: return "nurbs curve";
                 case FbxNodeAttribute::eTrimNurbsSurface: return "trim nurbs surface";
                 case FbxNodeAttribute::eBoundary: return "boundary";

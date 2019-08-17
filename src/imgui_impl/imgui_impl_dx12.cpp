@@ -1,3 +1,6 @@
+// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
+
 // ImGui Win32 + DirectX12 binding
 // FIXME: 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*))
 

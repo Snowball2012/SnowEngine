@@ -3,17 +3,17 @@
 
 #include "stdafx.h"
 
-#include "GPUResourceHolder.h"
+#include "FrameResources.h"
 
 
-GPUResourceHolder::~GPUResourceHolder()
+FrameResources::~FrameResources()
 {
     m_resources.clear();
     m_allocators.clear();
 }
 
 
-void GPUResourceHolder::Merge( GPUResourceHolder&& other )
+void FrameResources::Merge( FrameResources&& other )
 {
     m_resources.reserve( m_resources.size() + other.m_resources.size() );
     m_allocators.reserve( m_allocators.size() + other.m_allocators.size() );
@@ -27,7 +27,7 @@ void GPUResourceHolder::Merge( GPUResourceHolder&& other )
 }
 
 
-void GPUResourceHolder::AddAllocators( const span<GPULinearAllocator>& allocators )
+void FrameResources::AddAllocators( const span<GPULinearAllocator>& allocators )
 {
     m_allocators.reserve( m_allocators.size() + allocators.size() );
     for ( auto& allocator : allocators )
@@ -35,7 +35,7 @@ void GPUResourceHolder::AddAllocators( const span<GPULinearAllocator>& allocator
 }
 
 
-void GPUResourceHolder::AddResources( const span<ComPtr<ID3D12Resource>>& resources )
+void FrameResources::AddResources( const span<ComPtr<ID3D12Resource>>& resources )
 {
     m_resources.reserve( m_resources.size() + resources.size() );
     for ( auto& resource : resources )

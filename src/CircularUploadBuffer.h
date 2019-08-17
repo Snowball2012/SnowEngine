@@ -7,7 +7,7 @@
 #include <d3d12.h>
 #include <queue>
 
-// FIFO allocator with constant storage
+// FIFO allocator with a constant storage
 class CircularUploadBuffer
 {
 public:

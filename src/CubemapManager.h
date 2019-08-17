@@ -20,7 +20,7 @@ public:
 
     void CreateCubemapFromTexture( CubemapID cubemap_id, TextureID texture_id );
 
-    void LoadCubemap( CubemapID cubemap_id, std::string path );
+    void LoadCubemap( CubemapID cubemap_id, const std::string& path );
 
     void Update( GPUTaskQueue::Timestamp current_timestamp, SceneCopyOp copy_op, ID3D12GraphicsCommandList& cmd_list );
 

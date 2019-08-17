@@ -84,6 +84,12 @@ span<T> make_span( span<T>& other_span )
     return span<T>( other_span );
 }
 
+template<typename T>
+span<T> make_single_elem_span( T& elem )
+{
+    return make_span( &elem, &elem + 1 );
+}
+
 #include <boost/container/static_vector.hpp>
 #include <boost/container/small_vector.hpp>
 

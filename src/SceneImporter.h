@@ -27,15 +27,15 @@ struct ImportedScene
     std::vector<Submesh> submeshes;
     StaticMeshID mesh_id = StaticMeshID::nullid;
 
-    Camera::Data camera;
+    Camera::Data camera = {};
 
     std::optional<Light::Data> sun;
 
     std::string skybox_spherical;
-    float skybox_radiance_multiplier;
+    float skybox_radiance_multiplier = -1;
     std::string irradiance_map_spherical;
     std::string reflection_probe_cubemap;
-    float ibl_radiance_multiplier;
+    float ibl_radiance_multiplier = -1;
 };
 
 // todo: obj format

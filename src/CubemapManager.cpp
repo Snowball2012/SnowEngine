@@ -38,7 +38,7 @@ void CubemapManager::CreateCubemapFromTexture( CubemapID cubemap_id, TextureID t
 }
 
 
-void CubemapManager::LoadCubemap( CubemapID cubemap_id, std::string path )
+void CubemapManager::LoadCubemap( CubemapID cubemap_id, const std::string& path )
 {
     m_copy_in_progress.emplace_back();
     auto& new_copy = m_copy_in_progress.back();

@@ -227,6 +227,9 @@
     <ClCompile Include="src\GPUAllocators.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\GPUResourceHolder.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -432,6 +435,9 @@
     </ClInclude>
     <ClInclude Include="src\GPUAllocators.h">
       <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\GPUResourceHolder.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

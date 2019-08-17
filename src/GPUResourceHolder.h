@@ -6,11 +6,15 @@
 // This class holds all resources created by a frame until the frame is fully processed
 // It respects dependencies between various types of objects (e.g. resources will be freed 
 //     before allocators, descriptors before resources, etc.)
-class FrameResources
+class GPUResourceHolder
 {
 public:
-    FrameResources( const FrameResources& ) = delete;
-    FrameResources( FrameResources&& ) = default;
+    GPUResourceHolder( const GPUResourceHolder& ) = delete;
+    GPUResourceHolder( GPUResourceHolder&& ) = default;
+
+    ~GPUResourceHolder();
+
+    void Merge( GPUResourceHolder&& other );
 
     void AddAllocators( const span<GPULinearAllocator>& allocators );
     void AddResources( const span<ComPtr<ID3D12Resource>>& resources );

@@ -16,6 +16,9 @@ public:
     // It may later grow if more memory then anticipated was requested
     GPULinearAllocator( ID3D12Device* device, const D3D12_HEAP_DESC& desc );
 
+    GPULinearAllocator( const GPULinearAllocator& ) = delete;
+    GPULinearAllocator( GPULinearAllocator&& ) = default;
+
     void Reserve( uint64_t size );
 
     // The second field of the result is an allocation offset in a heap

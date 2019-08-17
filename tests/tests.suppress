@@ -1,0 +1,98 @@
+<?xml version="1.0" standalone="yes"?>
+<NewDataSet>
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:UseCurrentLocale="true">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="SuppressVersion">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="CurrentVersion" type="xs:int" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+          <xs:element name="tests">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="FileName" type="xs:string" default="" />
+                <xs:element name="ErrorCode" type="xs:string" default="" />
+                <xs:element name="Message" type="xs:string" default="" />
+                <xs:element name="CodePrev" type="xs:unsignedInt" default="0" />
+                <xs:element name="CodeCurrent" type="xs:unsignedInt" default="0" />
+                <xs:element name="CodeNext" type="xs:unsignedInt" default="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+      <xs:unique name="Constraint1" msdata:PrimaryKey="true">
+        <xs:selector xpath=".//tests" />
+        <xs:field xpath="FileName" />
+        <xs:field xpath="ErrorCode" />
+        <xs:field xpath="Message" />
+        <xs:field xpath="CodePrev" />
+        <xs:field xpath="CodeCurrent" />
+        <xs:field xpath="CodeNext" />
+      </xs:unique>
+    </xs:element>
+  </xs:schema>
+  <SuppressVersion>
+    <CurrentVersion>2</CurrentVersion>
+  </SuppressVersion>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>443688171</CodePrev>
+    <CodeCurrent>689630914</CodeCurrent>
+    <CodeNext>539</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>3415503159</CodeCurrent>
+    <CodeNext>666279342</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>2905267</CodePrev>
+    <CodeCurrent>966727977</CodeCurrent>
+    <CodeNext>707983</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>79997277</CodePrev>
+    <CodeCurrent>1171200297</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>193445975</CodeCurrent>
+    <CodeNext>1311825697</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>2288743567</CodeCurrent>
+    <CodeNext>1359814433</CodeNext>
+  </tests>
+  <tests>
+    <FileName>packed_freelist.hpp</FileName>
+    <ErrorCode>V108</ErrorCode>
+    <Message>Incorrect index type: m_freelist[not a memsize-type]. Use memsize type instead.</Message>
+    <CodePrev>2288743567</CodePrev>
+    <CodeCurrent>1359814433</CodeCurrent>
+    <CodeNext>125</CodeNext>
+  </tests>
+</NewDataSet>

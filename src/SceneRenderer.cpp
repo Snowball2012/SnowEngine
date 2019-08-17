@@ -194,12 +194,18 @@ void SceneRenderer::ResizeTransientResources()
     }
 }
 
+D3D12_HEAP_DESC SceneRenderer::GetUploadHeapDescription() const
+{
+    constexpr UINT64 heap_block_size = 64 * 1024;
+    return CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD );
+}
+
 
 void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-                          std::vector<CommandList>& graphics_cmd_lists )
+                          std::vector<CommandList>& graphics_cmd_lists,
+                          GPUResourceHolder& frame_resources )
 {
-    assert( scene_ctx.main_camera != CameraID::nullid );
-    assert( scene_ctx.scene != nullptr );
+    assert( scene_ctx.main_camera != nullptr );
 
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
@@ -209,16 +215,13 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
     if ( m_framegraph.IsRebuildNeeded() )
         m_framegraph.Rebuild();
 
-    Scene& scene = *scene_ctx.scene;
+    
+    GPULinearAllocator upload_allocator( m_device, GetUploadHeapDescription() );
 
-    const Camera* main_camera = scene.AllCameras().try_get( scene_ctx.main_camera );
-    if ( ! main_camera )
-        throw SnowEngineException( "no main camera" );
+    std::vector<RenderItem> lighting_items = CreateRenderitems( *scene_ctx.main_camera, scene );
 
-    std::vector<RenderItem> lighting_items = CreateRenderitems( main_camera->GetData(), scene );
-
-    m_shadow_provider.Update( scene.LightSpan(), m_pssm, main_camera->GetData() );
-    m_forward_cb_provider.Update( main_camera->GetData(), m_pssm, scene.LightSpan() );
+    m_shadow_provider.Update( scene.LightSpan(), m_pssm, *scene_ctx.main_camera );
+    m_forward_cb_provider.Update( *scene_ctx.main_camera, m_pssm, scene_ctx.light_list );
 
     {
         ShadowProducers producers;
@@ -272,7 +275,10 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
     list_iface->SetDescriptorHeaps( 1, heaps );
 
     {
-        m_framegraph.SetRes( CreateSkybox( main_camera->GetSkybox(), scene_ctx.ibl_table, scene ) );
+        auto skybox_framegraph_res = CreateSkybox( scene_ctx.skybox, scene_ctx.ibl_table, upload_allocator );
+        frame_resources.AddResources( make_single_elem_span( skybox_framegraph_res.second ) );
+
+        m_framegraph.SetRes( CreateSkybox( scene_ctx.skybox, scene_ctx.ibl_table, upload_allocator ) );
 
         ForwardPassCB pass_cb{ m_forward_cb_provider.GetCBPointer() };
         m_framegraph.SetRes( pass_cb );
@@ -355,6 +361,8 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
     ThrowIfFailedH( list_iface->Close() );
 
     graphics_cmd_lists.emplace_back( std::move( cmd_list ) );
+
+    frame_resources.AddAllocators( make_single_elem_span( upload_allocator ) );
 }
 
 
@@ -471,37 +479,42 @@ std::vector<RenderItem> SceneRenderer::CreateRenderitems( const Camera::Data& ca
     return std::move( items );
 }
 
-Skybox SceneRenderer::CreateSkybox( EnvMapID skybox_id, DescriptorTableID ibl_table, const Scene& scene ) const
+
+std::pair<Skybox, ComPtr<ID3D12Resource>> SceneRenderer::CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const
 {
-    assert( scene.AllEnviromentMaps().has( skybox_id ) );
-
-    const EnvironmentMap& skybox = scene.AllEnviromentMaps()[skybox_id];
-
-    Skybox framegraph_res;
-
-    CubemapID cubemap_id = skybox.GetMap();
-
-    const Cubemap* cubemap = scene.AllCubemaps().try_get( cubemap_id );
-    if ( ! cubemap )
-        throw SnowEngineException( "skybox does not have a cubemap attached" );
-
-    if ( cubemap->IsLoaded() )
-        framegraph_res.srv_skybox = skybox.GetSRV();
-    else
-        framegraph_res.srv_skybox.ptr = 0;
+    std::pair<Skybox, ComPtr<ID3D12Resource>> res;
+    res.first.srv_skybox = skybox.cubemap_srv;
 
     {
         D3D12_GPU_DESCRIPTOR_HANDLE desc_table = m_descriptor_tables->GetTable( ibl_table )->gpu_handle;
-        framegraph_res.srv_table = desc_table;
+        res.first.srv_table = desc_table;
     }
 
-    const ObjectTransform* tf = scene.AllTransforms().try_get( skybox.GetTransform() );
-    if ( ! tf )
-        throw SnowEngineException( "skybox does not have a transform attached" );
+    res.second = CreateSkyboxCB( skybox.obj2world_mat, upload_cb_allocator );
+    res.first.tf_cbv = res.second->GetGPUVirtualAddress();
 
-    framegraph_res.tf_cbv = tf->GPUView();
+    res.first.radiance_factor = skybox.radiance_factor;
 
-    framegraph_res.radiance_factor = skybox.GetRadianceFactor();
+    return std::move( res );
+}
 
-    return framegraph_res;
+
+ComPtr<ID3D12Resource> SceneRenderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const
+{
+    ComPtr<ID3D12Resource> res;
+
+    constexpr uint64_t cb_size = sizeof( obj2world );
+    auto allocation = upload_cb_allocator.Alloc( cb_size );
+    ThrowIfFailedH( m_device->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
+                                                    &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                    IID_PPV_ARGS( res.GetAddressOf() ) ) );
+
+    DirectX::XMFLOAT4X4* mapped_cb; 
+    ThrowIfFailedH( res->Map( 0, nullptr, (void**)&mapped_cb ) );
+
+    DirectX::XMMATRIX transposed_mat = DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &obj2world ) );
+    DirectX::XMStoreFloat4x4( mapped_cb, transposed_mat );
+    res->Unmap( 0, nullptr );
+
+    return std::move( res );
 }
