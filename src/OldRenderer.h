@@ -2,7 +2,6 @@
 
 #include "RenderData.h"
 #include "SceneImporter.h"
-#include "FrameResource.h"
 
 #include "StagingDescriptorHeap.h"
 
@@ -121,8 +120,8 @@ private:
 
     // resources
     static constexpr int FrameResourceCount = 3;
-    std::vector<FrameResource> m_frame_resources;
-    FrameResource* m_cur_frame_resource = nullptr;
+    std::vector<GPUTaskQueue::Timestamp> m_frame_resources;
+    GPUTaskQueue::Timestamp* m_cur_frame_resource = nullptr;
     int m_cur_fr_idx = 0;
 
     std::unique_ptr<SceneRenderer> m_renderer = nullptr;
