@@ -114,10 +114,7 @@ struct ScreenConstants
     D3D12_RECT scissor_rect;
 };
 
-struct MainRenderitems
-{
-    span<RenderItem> items;
-};
+
 
 
 // UNDER CONSTRUCTION
@@ -152,8 +149,6 @@ struct RenderBatch
 
     D3D12_GPU_VIRTUAL_ADDRESS per_object_cb = 0; // contents of this buffer may vary depending on the passes this batch participates in
     D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb = 0; // some materials may require various per object data
-
-    D3D12_BOX bounding_box = {};
 };
 
 struct RenderItem_New
@@ -167,8 +162,12 @@ struct RenderItem_New
     
     D3D12_GPU_VIRTUAL_ADDRESS custom_per_object_cb = 0; // some materials may require various per object data
     
-    D3D12_BOX bounding_box = {};
     DirectX::XMFLOAT4X4 local2world = {};
+};
+
+struct MainRenderitems
+{
+    span<span<RenderBatch>> items;
 };
 
 struct SkyboxData

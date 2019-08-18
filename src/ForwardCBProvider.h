@@ -8,40 +8,39 @@
 #include "RenderData.h"
 #include "SceneItems.h"
 
+#include "GPUAllocators.h"
+
 class ParallelSplitShadowMapping;
 
-// Fills PassConstants circular buffer on GPU
+// Fills GPUPassConstants circular buffer on GPU
 class ForwardCBProvider
 {
 public:
-    ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames );
-    ~ForwardCBProvider() noexcept;
+    static ForwardCBProvider Create( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
+                                     const span<const Light>& scene_lights,
+                                     ID3D12Device& device, GPULinearAllocator& upload_cb_allocator );
 
-    void Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const Light>& scene_lights );
-
-    D3D12_GPU_VIRTUAL_ADDRESS GetCBPointer() const noexcept;
+    ComPtr<ID3D12Resource> GetResource() const noexcept;
     span<const LightInCB> GetLightsInCB() const noexcept;
 
 private:
-    void FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept;
+    static constexpr uint64_t BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( GPUPassConstants ) );
+    static constexpr size_t MaxLights = sizeof( GPUPassConstants::lights ) / sizeof( LightConstants );
+    static constexpr size_t MaxParallelLights = sizeof( GPUPassConstants::parallel_lights ) / sizeof( ParallelLightConstants );
+    
+    Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
+    bc::static_vector<LightInCB, MaxLights + MaxParallelLights> m_lights_in_cb;
 
-    // pass transposed matrix here, it's more convenient for the caller 
+    ForwardCBProvider( );
+
+    static void FillCameraData( const Camera::Data& camera, GPUPassConstants& gpu_data ) noexcept;
+    static void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
+                             GPUPassConstants& gpu_data ) noexcept;
+
+    // pass transposed matrix here, it's more convenient for a caller 
     void FillLightData( const span<const Light>& lights,
                         const DirectX::XMMATRIX& inv_view_matrix_transposed,
                         const DirectX::XMMATRIX& view_matrix,
-                        PassConstants& gpu_data );
+                        GPUPassConstants& gpu_data );    
 
-    void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, PassConstants& gpu_data ) const noexcept;
-
-    Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
-    span<uint8_t> m_mapped_data;
-    int m_cur_res_idx = 0;
-    const int m_nbuffers;
-
-    static constexpr size_t MaxLights = sizeof( PassConstants::lights ) / sizeof( LightConstants );
-    static constexpr size_t MaxParallelLights = sizeof( PassConstants::parallel_lights ) / sizeof( ParallelLightConstants );
-
-    bc::static_vector<LightInCB, MaxLights + MaxParallelLights> m_lights_in_cb;
-
-    static constexpr UINT BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( PassConstants ) );
 };

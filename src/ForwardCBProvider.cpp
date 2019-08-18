@@ -7,52 +7,44 @@
 #include "ParallelSplitShadowMapping.h"
 
 
-ForwardCBProvider::ForwardCBProvider( ID3D12Device& device, int n_bufferized_frames )
-    : m_nbuffers( n_bufferized_frames )
+ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
+                                             const span<const Light>& scene_lights,
+                                             ID3D12Device& device, GPULinearAllocator& upload_cb_allocator )
 {
-    ThrowIfFailedH( device.CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_UPLOAD ),
-        D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer( BufferGPUSize * m_nbuffers ),
+    ForwardCBProvider buffer;
+
+    auto allocation = upload_cb_allocator.Alloc( BufferGPUSize );
+
+    ThrowIfFailedH( device.CreatePlacedResource(
+        allocation.first, allocation.second,
+        &CD3DX12_RESOURCE_DESC::Buffer( BufferGPUSize ),
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
-        IID_PPV_ARGS( m_gpu_res.GetAddressOf() ) ) );
+        IID_PPV_ARGS( buffer.m_gpu_res.GetAddressOf() ) ) );
 
     void* mapped_data = nullptr;
-    ThrowIfFailedH( m_gpu_res->Map( 0, nullptr, &mapped_data ) );
+    ThrowIfFailedH( buffer.m_gpu_res->Map( 0, nullptr, &mapped_data ) );
 
-    m_mapped_data = span<uint8_t>( reinterpret_cast<uint8_t*>( mapped_data ),
-                                   reinterpret_cast<uint8_t*>( mapped_data ) + BufferGPUSize * m_nbuffers );
-}
-
-
-ForwardCBProvider::~ForwardCBProvider() noexcept
-{
-    if ( m_mapped_data.cbegin() && m_gpu_res )
-        m_gpu_res->Unmap( 0, nullptr );
-}
-
-
-void ForwardCBProvider::Update( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, const span<const Light>& scene_lights )
-{
-    // ToDo: fill time info
-    ++m_cur_res_idx %= m_nbuffers; //-V567
-
-    PassConstants gpu_data;
+    GPUPassConstants gpu_data;
     FillCameraData( camera, gpu_data );
-    FillLightData( scene_lights,
+    buffer.FillLightData( scene_lights,
                    DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
                    DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
                    gpu_data );
+
     FillCSMData( camera, pssm, gpu_data );
     
-    memcpy( m_mapped_data.begin() + BufferGPUSize * m_cur_res_idx, &gpu_data, BufferGPUSize );
+    memcpy( mapped_data, &gpu_data, BufferGPUSize );
+
+    buffer.m_gpu_res->Unmap( 0, nullptr );
+
+    return buffer;
 }
 
 
-D3D12_GPU_VIRTUAL_ADDRESS ForwardCBProvider::GetCBPointer() const noexcept
+ComPtr<ID3D12Resource> ForwardCBProvider::GetResource() const noexcept
 {
-    return m_gpu_res->GetGPUVirtualAddress() + BufferGPUSize * m_cur_res_idx;
+    return m_gpu_res;
 }
 
 
@@ -62,7 +54,7 @@ span<const LightInCB> ForwardCBProvider::GetLightsInCB() const noexcept
 }
 
 
-void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstants& gpu_data ) const noexcept
+void ForwardCBProvider::FillCameraData( const Camera::Data& camera, GPUPassConstants& gpu_data ) noexcept
 {
     // reversed z
     DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
@@ -103,7 +95,7 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, PassConstant
 void ForwardCBProvider::FillLightData( const span<const Light>& lights,
                                        const DirectX::XMMATRIX& inv_view_matrix_transposed,
                                        const DirectX::XMMATRIX& view_matrix,
-                                       PassConstants& gpu_data )
+                                       GPUPassConstants& gpu_data )
 {
     m_lights_in_cb.clear();
 
@@ -202,7 +194,7 @@ void ForwardCBProvider::FillLightData( const span<const Light>& lights,
     }
 }
 
-void ForwardCBProvider::FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, PassConstants& gpu_data ) const noexcept
+void ForwardCBProvider::FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm, GPUPassConstants& gpu_data ) noexcept
 {
     // fill split positions
     const auto& res_positions = pssm.CalcSplitPositionsVS( camera, make_span( gpu_data.csm_split_positions, gpu_data.csm_split_positions + MAX_CASCADE_SIZE - 1 ) );

@@ -8,9 +8,7 @@ cbuffer SkyboxParamsCB : register( b1 )
 
 cbuffer SkyboxTF : register( b2 )
 {
-    
     float4x4 model_mat;
-    float4x4 model_inv_transpose_mat;
 }
 
 // parabolic hdr skybox

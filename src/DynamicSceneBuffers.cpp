@@ -36,7 +36,7 @@ void DynamicSceneBuffers::AddTransform( TransformID id ) noexcept
 {
     InvalidateAllBuffers();
     m_transforms.push_back( TransformData{ id, BufferData{} } );
-    m_buffer_size += Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
+    m_buffer_size += Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
 }
 
 
@@ -102,10 +102,10 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
 
         transform_data.data.offset = cur_offset;
 
-        constexpr size_t tf_gpu_size = Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
+        constexpr size_t tf_gpu_size = Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
         cur_offset += tf_gpu_size;
 
-        ObjectConstants src_data = CreateTransformGPUData( tf );
+        GPUObjectConstants src_data = CreateTransformGPUData( tf );
         CopyToBuffer( buffer, transform_data.data, src_data );
     };
 
@@ -139,7 +139,7 @@ void DynamicSceneBuffers::UpdateBufferContents( BufferInstance& buffer )
 
         if ( transform_data.data.dirty_buffers_cnt > 0 )
         {
-            ObjectConstants src_data = CreateTransformGPUData( tf );
+            GPUObjectConstants src_data = CreateTransformGPUData( tf );
             CopyToBuffer( buffer, transform_data.data, src_data );
             transform_data.data.dirty_buffers_cnt--;
         }
@@ -162,9 +162,9 @@ void DynamicSceneBuffers::UpdateBufferContents( BufferInstance& buffer )
 }
 
 
-ObjectConstants DynamicSceneBuffers::CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept
+GPUObjectConstants DynamicSceneBuffers::CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept
 {
-    ObjectConstants gpu_data;
+    GPUObjectConstants gpu_data;
     DirectX::XMMATRIX obj2world = XMLoadFloat4x4( &cpu_data.Obj2World() );
     XMStoreFloat4x4( &gpu_data.model, XMMatrixTranspose( obj2world ) );
     XMStoreFloat4x4( &gpu_data.model_inv_transpose, XMMatrixTranspose( InverseTranspose( obj2world ) ) );
@@ -219,7 +219,7 @@ void DynamicSceneBuffers::UpdateAllItems( const BufferInstance& buffer, const fn
             if ( ( tf_idx + 1 ) != m_transforms.size() )
                 transform_data = std::move( m_transforms.back() );
             m_transforms.pop_back();
-            m_buffer_size -= Utils::CalcConstantBufferByteSize( sizeof( ObjectConstants ) );
+            m_buffer_size -= Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
         }
         else
         {

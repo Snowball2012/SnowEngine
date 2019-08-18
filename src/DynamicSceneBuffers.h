@@ -54,7 +54,7 @@ private:
     template<typename fnUseTransform, typename fnUseMaterial>
     void UpdateAllItems( const BufferInstance& buffer, const fnUseTransform& fn_tf, const fnUseMaterial& fn_mat );
 
-    ObjectConstants CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept;
+    GPUObjectConstants CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept;
     MaterialConstants CreateMaterialGPUData( const MaterialPBR& cpu_data ) const noexcept;
 
     template<typename Data>

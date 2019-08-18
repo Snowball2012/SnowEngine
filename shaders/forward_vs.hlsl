@@ -9,7 +9,6 @@
 struct IBLTransform
 {
     float4x4 world2env_mat;
-    float4x4 world2env_inv_transposed_mat;
 };
 
 cbuffer cbIBLTransform : register(b3)

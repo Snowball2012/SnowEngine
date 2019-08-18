@@ -180,7 +180,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
     <ClCompile Include="src\ForwardCBProvider.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
-    <ClCompile Include="src\FrameResources.cpp" />
+    <ClCompile Include="src\GPUResourceHolder.cpp" />
     <ClCompile Include="src\GameTimer.cpp" />
     <ClCompile Include="src\GeomGeneration.cpp" />
     <ClCompile Include="src\GPUAllocators.cpp" />
@@ -260,7 +260,7 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\framegraph\utils\OptionalTuple.h" />
     <ClInclude Include="src\framegraph\utils\UniqueTuple.h" />
     <ClInclude Include="src\FrameResource.h" />
-    <ClInclude Include="src\FrameResources.h" />
+    <ClInclude Include="src\GPUResourceHolder.h" />
     <ClInclude Include="src\GameTimer.h" />
     <ClInclude Include="src\GeomGeneration.h" />
     <ClInclude Include="src\GeomGeneration.hpp" />

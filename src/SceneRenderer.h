@@ -112,6 +112,8 @@ public:
     // May involve PSO recompilation
     void SetTargetFormat( RenderMode mode, DXGI_FORMAT format );
 
+    static void MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectConstants& object_cb );
+
 private:
     // settings
 
@@ -140,7 +142,6 @@ private:
             ToneMapNode
         >;
     FramegraphInstance m_framegraph;
-    ForwardCBProvider m_forward_cb_provider;
     ShadowProvider m_shadow_provider;
 
     // transient resources
@@ -171,7 +172,6 @@ private:
                    uint32_t width, uint32_t height,
                    StagingDescriptorHeap&& dsv_heap,
                    StagingDescriptorHeap&& rtv_heap,
-                   ForwardCBProvider&& forward_cb_provider,
                    ShadowProvider&& shadow_provider ) noexcept;
 
 
@@ -181,7 +181,13 @@ private:
 
     D3D12_HEAP_DESC GetUploadHeapDescription() const;
 
-    std::vector<RenderItem> CreateRenderitems( const Camera::Data& camera, const Scene& scene ) const;
+    struct RenderBatchList
+    {
+        std::vector<RenderBatch> batches;
+        ComPtr<ID3D12Resource> per_obj_cb;
+    };
+    RenderBatchList CreateRenderitems( const span<const RenderItem_New>& render_list, GPULinearAllocator& frame_allocator ) const;
+
     std::pair<Skybox, ComPtr<ID3D12Resource>> CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const;
 
     ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;

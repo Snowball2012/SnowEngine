@@ -72,10 +72,10 @@ struct ShadowCascadeProducer
     std::vector<RenderItem> casters;
 };
 
-struct ObjectConstants
+struct GPUObjectConstants
 {
-    DirectX::XMFLOAT4X4 model = Identity4x4;
-    DirectX::XMFLOAT4X4 model_inv_transpose = Identity4x4;
+    DirectX::XMFLOAT4X4 model;
+    DirectX::XMFLOAT4X4 model_inv_transpose;
 };
 
 struct MaterialConstants
@@ -112,7 +112,7 @@ struct ParallelLightConstants
 constexpr uint32_t MAX_LIGHTS = 15;
 constexpr uint32_t MAX_CSM_LIGHTS = 1;
 
-struct alignas( 16 ) PassConstants
+struct alignas( 16 ) GPUPassConstants
 {
     DirectX::XMFLOAT4X4 view_mat = Identity4x4;
     DirectX::XMFLOAT4X4 view_inv_mat = Identity4x4;
