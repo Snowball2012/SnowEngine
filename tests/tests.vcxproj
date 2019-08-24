@@ -81,7 +81,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\3rdparty\d3dx12;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\directxtk12_include;..\3rdparty\d3dx12;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>NOMINMAX;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>

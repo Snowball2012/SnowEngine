@@ -7,6 +7,10 @@
 #include "ParallelSplitShadowMapping.h"
 
 
+ForwardCBProvider::ForwardCBProvider()
+{}
+
+
 ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                                              const span<const Light>& scene_lights,
                                              ID3D12Device& device, GPULinearAllocator& upload_cb_allocator )

@@ -77,7 +77,7 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
 }
 
 
-void ForwardLightingPass::Draw( const Context& context ) noexcept
+void ForwardLightingPass::Draw( const Context& context )
 {	
     D3D12_CPU_DESCRIPTOR_HANDLE render_targets[3] =
     {
@@ -98,14 +98,20 @@ void ForwardLightingPass::Draw( const Context& context ) noexcept
 
     m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
-    for ( const auto& render_item : context.renderitems )
+    for ( const auto& item_span : context.renderitems )
     {
-        m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.tf_addr );
-        m_cmd_list->SetGraphicsRootConstantBufferView( 1, render_item.mat_cb );
-        m_cmd_list->SetGraphicsRootDescriptorTable( 2, render_item.mat_table );
-        m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
-        m_cmd_list->IASetIndexBuffer( &render_item.ibv );
-        m_cmd_list->DrawIndexedInstanced( render_item.index_count, 1, render_item.index_offset, render_item.vertex_offset, 0 );
+        for ( const auto& render_item : item_span )
+        {
+            if ( ! render_item.material->BindDataToPipeline( FramegraphTechnique::ForwardZPass, render_item.item_id, *m_cmd_list ) )
+                throw SnowEngineException( "couldn't bind a material to the pipeline" );
+
+            m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.per_object_cb );            
+
+            m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
+            m_cmd_list->IASetIndexBuffer( &render_item.ibv );
+            m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+            m_cmd_list->DrawIndexedInstanced( render_item.index_count, render_item.instance_count, render_item.index_offset, render_item.vertex_offset, 0 );
+        }
     }
 }
 

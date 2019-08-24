@@ -15,11 +15,11 @@
 class ShadowProvider
 {
 public:
-    ShadowProvider( ID3D12Device* device, int n_bufferized_frames, DescriptorTableBakery* srv_tables );
+    ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv_tables );
 
     void Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
-    void FillFramegraphStructures( const Scene& scene, const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems,
+    void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems,
                                    ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,
                                    ShadowMaps& storage, ShadowCascade& pssm_storage );
 
@@ -27,8 +27,7 @@ private:
     using SrvID = DescriptorTableBakery::TableID;
 
     void CreateShadowProducers( const span<const LightInCB>& lights );
-    void FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems, const Scene& scene );
-
+    
     std::vector<ShadowProducer> m_producers;
     std::unique_ptr<Descriptor> m_dsv = nullptr;
     SrvID m_srv = SrvID::nullid;

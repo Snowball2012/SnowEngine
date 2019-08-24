@@ -8,6 +8,7 @@
 #include "ParallelSplitShadowMapping.h"
 
 #include "GPUTaskQueue.h"
+#include "GPUResourceHolder.h"
 
 #include "SceneManager.h"
 
@@ -120,8 +121,8 @@ private:
 
     // resources
     static constexpr int FrameResourceCount = 3;
-    std::vector<GPUTaskQueue::Timestamp> m_frame_resources;
-    GPUTaskQueue::Timestamp* m_cur_frame_resource = nullptr;
+    std::vector<std::pair<GPUTaskQueue::Timestamp, GPUResourceHolder>> m_frame_resources;
+    std::pair<GPUTaskQueue::Timestamp, GPUResourceHolder>* m_cur_frame_resource = nullptr;
     int m_cur_fr_idx = 0;
 
     std::unique_ptr<SceneRenderer> m_renderer = nullptr;
@@ -138,6 +139,13 @@ private:
     void BuildFrameResources();
 
     void EndFrame(); // call at the end of the frame to wait for next available frame resource
+
+    struct RenderLists
+    {
+        std::vector<RenderItem_New> opaque_items;
+        std::vector<RenderItem_New> shadow_items;
+    };
+    RenderLists CreateRenderItems();
 
     ID3D12Resource* CurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;

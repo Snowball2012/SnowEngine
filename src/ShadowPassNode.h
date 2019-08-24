@@ -55,12 +55,13 @@ public:
                 sm_scissor.top = producer.map_data.viewport.TopLeftY;
             }
             cmd_list.RSSetScissorRects( 1, &sm_scissor );
-
+            
+            const auto caster_span = make_span( producer.casters );
             DepthOnlyPass::Context ctx;
             {
                 ctx.depth_stencil_view = shadow_maps->dsv;
                 ctx.pass_cbv = producer.map_data.pass_cb;
-                ctx.renderitems = make_span( producer.casters );
+                ctx.renderitems = make_single_elem_span( caster_span );
             }
             m_pass.Draw( ctx );
         }

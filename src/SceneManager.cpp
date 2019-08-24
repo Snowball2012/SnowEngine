@@ -139,6 +139,11 @@ Light* SceneClientView::ModifyLight( LightID id ) noexcept
     return m_scene->TryModifyLight( id );
 }
 
+span<Light> SceneClientView::GetAllLights() noexcept
+{
+    return m_scene->LightSpan();
+}
+
 StaticMeshInstance* SceneClientView::ModifyInstance( MeshInstanceID id ) noexcept
 {
     return m_scene->TryModifyStaticMeshInstance( id );

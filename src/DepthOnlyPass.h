@@ -6,6 +6,8 @@
 
 #include "RenderPass.h"
 
+#include "FramegraphResource.h"
+
 class DepthOnlyPass : public RenderPass
 {
 public:
@@ -17,7 +19,7 @@ public:
 
     struct Context
     {
-        span<const RenderItem> renderitems;
+        span<const span<const RenderBatch>> renderitems;
         D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
     };

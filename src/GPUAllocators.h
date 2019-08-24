@@ -18,6 +18,7 @@ public:
 
     GPULinearAllocator( const GPULinearAllocator& ) = delete;
     GPULinearAllocator( GPULinearAllocator&& ) = default;
+    GPULinearAllocator& operator=( GPULinearAllocator&& ) = default;
 
     void Reserve( uint64_t size );
 

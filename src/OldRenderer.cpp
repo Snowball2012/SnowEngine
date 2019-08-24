@@ -10,6 +10,8 @@
 
 #include "TemporalBlendPass.h"
 
+#include "GPUResourceHolder.h"
+
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
 #include <dxtk12/ResourceUploadBatch.h>
@@ -70,7 +72,7 @@ void OldRenderer::Init()
     SceneRenderer::DeviceContext device_ctx;
     device_ctx.device = m_d3d_device.Get();
     device_ctx.srv_cbv_uav_tables = &DescriptorTables();
-    m_renderer = std::make_unique<SceneRenderer>( SceneRenderer::Create( device_ctx, m_client_width, m_client_height, FrameResourceCount ) );
+    m_renderer = std::make_unique<SceneRenderer>( SceneRenderer::Create( device_ctx, m_client_width, m_client_height ) );
 
     m_renderer->GetPSSM().SetSplitsNum( MAX_CASCADE_SIZE );
 
@@ -87,9 +89,11 @@ void OldRenderer::Draw()
     else
         scene_camera = m_main_camera_id;
 
+    const Scene& scene = GetScene().GetROScene();
+
     {
         D3D12_CPU_DESCRIPTOR_HANDLE desc_table = *DescriptorTables().ModifyTable( m_ibl_table );
-        if ( auto* tex = GetScene().GetROScene().AllCubemaps().try_get( m_irradiance_map ) )
+        if ( auto* tex = scene.AllCubemaps().try_get( m_irradiance_map ) )
         {
             if ( tex->IsLoaded() )
             {
@@ -97,7 +101,7 @@ void OldRenderer::Draw()
                                                      tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
             }
         }
-        if ( auto* tex = GetScene().GetROScene().AllCubemaps().try_get( m_reflection_probe ) )
+        if ( auto* tex = scene.AllCubemaps().try_get( m_reflection_probe ) )
         {
             if ( tex->IsLoaded() )
             {
@@ -132,8 +136,26 @@ void OldRenderer::Draw()
 
     SceneRenderer::SceneContext scene_ctx;
     scene_ctx.ibl_table = m_ibl_table;
-    scene_ctx.main_camera = m_main_camera_id;
-    scene_ctx.scene = &m_scene_manager->GetScene_Unsafe();
+    scene_ctx.main_camera = &main_camera->GetData();
+
+    const EnvironmentMap* env_map = GetScene().GetEnviromentMap( main_camera->GetSkybox() );
+    if ( env_map )
+    {
+        scene_ctx.skybox.cubemap_srv = env_map->GetSRV();
+        scene_ctx.skybox.obj2world_mat = scene.AllTransforms()[env_map->GetTransform()].Obj2World();
+        scene_ctx.skybox.radiance_factor = env_map->GetRadianceFactor();
+    }
+    else
+    {
+        m_renderer->SetSkybox( false );
+    }
+
+    scene_ctx.light_list = GetScene().GetAllLights();
+
+    RenderLists render_lists = CreateRenderItems();
+
+    scene_ctx.opaque_list = make_span( render_lists.opaque_items );
+    scene_ctx.shadow_list = make_span( render_lists.shadow_items );
 
     SceneRenderer::FrameContext frame_ctx;
     frame_ctx.cmd_list_pool = m_cmd_lists.get();
@@ -144,7 +166,9 @@ void OldRenderer::Draw()
 
     m_renderer->SetHBAOSettings( SceneRenderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
     m_renderer->SetTonemapSettings( SceneRenderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
-    m_renderer->Draw( scene_ctx, frame_ctx, SceneRenderer::RenderMode::FullTonemapped, lists_to_execute );
+
+    m_renderer->Draw( scene_ctx, frame_ctx, SceneRenderer::RenderMode::FullTonemapped,
+                      lists_to_execute, m_cur_frame_resource->second );
 
     // Draw UI
     lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
@@ -164,7 +188,7 @@ void OldRenderer::Draw()
 
     m_graphics_queue->SubmitLists( make_span( lists_to_execute ) );
 
-    EndFrame();	
+    EndFrame( );	
 }
 
 void OldRenderer::NewGUIFrame()
@@ -374,11 +398,11 @@ void OldRenderer::BuildFrameResources( )
     m_cur_frame_resource = &m_frame_resources[m_cur_fr_idx];
 }
 
-void OldRenderer::EndFrame()
+void OldRenderer::EndFrame( )
 {
     // GPU timeline
 
-    m_cur_frame_resource->available_timestamp = m_graphics_queue->ExecuteSubmitted();
+    m_cur_frame_resource->first = m_graphics_queue->ExecuteSubmitted();
     // swap buffers
     ThrowIfFailedH( m_swap_chain->Present( 0, 0 ) );
     m_curr_back_buff = ( m_curr_back_buff + 1 ) % SwapChainBufferCount;
@@ -388,8 +412,94 @@ void OldRenderer::EndFrame()
     m_cur_frame_resource = m_frame_resources.data() + m_cur_fr_idx;
 
     // wait for gpu to complete (i - 2)th frame;
-    if ( m_cur_frame_resource->available_timestamp != 0 )
-        m_graphics_queue->WaitForTimestamp( m_cur_frame_resource->available_timestamp );
+    if ( m_cur_frame_resource->first != 0 )
+        m_graphics_queue->WaitForTimestamp( m_cur_frame_resource->first );
+
+    m_cur_frame_resource->second.Clear();
+}
+
+OldRenderer::RenderLists OldRenderer::CreateRenderItems()
+{
+    const Camera::Data& camera = GetScene().GetCamera( m_main_camera_id )->GetData();
+    if ( camera.type != Camera::Type::Perspective )
+        NOTIMPL;
+
+    DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
+                                                                camera.aspect_ratio,
+                                                                camera.near_plane,
+                                                                camera.far_plane );
+
+    DirectX::BoundingFrustum main_bf( proj );
+
+    DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
+                                                        DirectX::XMLoadFloat3( &camera.dir ),
+                                                        DirectX::XMLoadFloat3( &camera.up ) ); // maybe store this matrix in the camera?
+    DirectX::XMVECTOR det;
+    main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
+
+    const Scene& scene = GetScene().GetROScene();
+
+    RenderLists lists;
+
+    lists.opaque_items.reserve( scene.StaticMeshInstanceSpan().size() );
+    lists.shadow_items.reserve( scene.StaticMeshInstanceSpan().size() );
+
+    for ( const auto& mesh_instance : scene.StaticMeshInstanceSpan() )
+    {
+        if ( ! mesh_instance.IsEnabled() )
+            continue;
+
+        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
+        const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
+        if ( ! geom.IsLoaded() )
+            continue;
+
+        RenderItem_New item;
+        item.ibv = geom.IndexBufferView();
+        item.vbv = geom.VertexBufferView();
+
+        const auto& submesh_draw_args = submesh.DrawArgs();
+
+        item.index_count = submesh_draw_args.idx_cnt;
+        item.index_offset = submesh_draw_args.start_index_loc;
+        item.vertex_offset = submesh_draw_args.base_vertex_loc;
+
+        const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
+
+        item.material = &material;
+
+        bool has_unloaded_texture = false;
+        const auto& textures = material.Textures();
+        for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
+        {
+            if ( ! scene.AllTextures()[tex_id].IsLoaded() )
+            {
+                has_unloaded_texture = true;
+                break;
+            }
+        }
+
+        if ( has_unloaded_texture )
+            continue;
+
+        const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
+        item.local2world = tf.Obj2World();
+
+        DirectX::BoundingOrientedBox item_box;
+        DirectX::BoundingOrientedBox::CreateFromBoundingBox( item_box, submesh.Box() );
+
+        item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
+
+        if ( item_box.Intersects( main_bf ) )
+            lists.opaque_items.push_back( item );
+
+        lists.shadow_items.push_back( item );
+    }
+
+    boost::sort( lists.opaque_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
+    boost::sort( lists.shadow_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
+
+    return std::move( lists );
 }
 
 ID3D12Resource* OldRenderer::CurrentBackBuffer()

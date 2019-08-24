@@ -8,7 +8,7 @@ using namespace DirectX;
 
 // temporary implementation, only one shadow map 4kx4k max
 
-ShadowProvider::ShadowProvider( ID3D12Device* device, int n_bufferized_frames, DescriptorTableBakery* srv_tables )
+ShadowProvider::ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv_tables )
     : m_device( device ), m_dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, device ), m_descriptor_tables( srv_tables )
 {
     assert( device );
@@ -117,11 +117,18 @@ void ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadow
 }
 
 
-void ShadowProvider::FillFramegraphStructures( const Scene& scene, const span<const LightInCB>& lights, const span<const StaticMeshInstance>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
+void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
 {
-    // todo: frustrum cull renderitems
     CreateShadowProducers( lights );
-    FillProducersWithRenderitems( renderitems, scene );
+
+    for ( const auto& item : renderitems )
+    {
+        for ( auto& producer : m_pssm_producers )
+            producer.casters.push_back( item );
+
+        for ( auto& producer : m_producers )
+            producer.casters.push_back( item );
+    }
 
     producers.arr = make_span( m_producers );
 
@@ -181,56 +188,5 @@ void ShadowProvider::CreateShadowProducers( const span<const LightInCB>& lights 
         {
             NOTIMPL; // TODO: restore regular shadow mapping
         }
-    }
-}
-
-
-void ShadowProvider::FillProducersWithRenderitems( const span<const StaticMeshInstance>& renderitems, const Scene& scene )
-{
-    for ( const auto& mesh_instance : renderitems )
-    {
-        if ( ! mesh_instance.IsEnabled() )
-            continue;
-
-        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
-        const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
-        if ( ! geom.IsLoaded() )
-            continue;
-
-        RenderItem item;
-        item.ibv = geom.IndexBufferView();
-        item.vbv = geom.VertexBufferView();
-
-        const auto& submesh_draw_args = submesh.DrawArgs();
-        item.index_count = submesh_draw_args.idx_cnt;
-        item.index_offset = submesh_draw_args.start_index_loc;
-        item.vertex_offset = submesh_draw_args.base_vertex_loc;
-
-        const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
-        item.mat_cb = material.GPUConstantBuffer();
-        item.mat_table = material.DescriptorTable();
-
-        bool has_unloaded_texture = false;
-        const auto& textures = material.Textures();
-        for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular } )
-        {
-            if ( ! scene.AllTextures()[tex_id].IsLoaded() )
-            {
-                has_unloaded_texture = true;
-                break;
-            }
-        }
-
-        if ( has_unloaded_texture )
-            continue;
-
-        const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
-        item.tf_addr = tf.GPUView();
-
-        for ( auto& producer : m_pssm_producers )
-            producer.casters.push_back( item );
-
-        for ( auto& producer : m_producers )
-            producer.casters.push_back( item );
     }
 }

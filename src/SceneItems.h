@@ -5,6 +5,8 @@
 #include <DirectXMath.h>
 #include <boost/container/small_vector.hpp>
 
+#include "RenderData.h"
+
 #include "utils/packed_freelist.h"
 
 class Scene;
@@ -191,7 +193,7 @@ private:
 using CubemapID = typename packed_freelist<Cubemap>::id;
 
 
-class MaterialPBR : public RefCounter
+class MaterialPBR : public RefCounter, public IRenderMaterial
 {
 public:
     struct TextureIds
@@ -238,6 +240,10 @@ private:
     D3D12_GPU_VIRTUAL_ADDRESS m_material_cb;
 
     bool m_is_dirty = false;
+
+    // Inherited via IRenderMaterial
+    virtual std::pair<uint64_t, uint64_t> GetPipelineStateID( FramegraphTechnique technique ) const override;
+    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const override;
 };
 using MaterialID = typename packed_freelist<MaterialPBR>::id;
 

@@ -10,8 +10,6 @@
 
 #include "ResizableTexture.h"
 
-#include "Scene.h"
-
 // resides only in GPU mem
 class DynamicTexture : public ResizableTexture
 {
@@ -53,6 +51,55 @@ struct RenderItem
     D3D12_GPU_VIRTUAL_ADDRESS tf_addr;
 };
 
+enum class FramegraphTechnique
+{
+    ShadowGenPass,
+    ForwardZPass,
+    DepthPass,
+};
+
+struct IRenderMaterial
+{
+    // first - pso id, second - rootsig id
+    virtual std::pair<uint64_t, uint64_t> GetPipelineStateID( FramegraphTechnique technique ) const = 0;
+
+    // todo: replace command list with something less spaghetti(some parameter class)
+    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const = 0;
+};
+
+struct RenderBatch
+{
+    const IRenderMaterial* material = nullptr;
+
+    D3D12_VERTEX_BUFFER_VIEW vbv = {};
+    D3D12_INDEX_BUFFER_VIEW ibv = {};
+
+    uint32_t index_count = 0;
+    uint32_t index_offset = 0;
+    uint32_t vertex_offset = 0;
+    uint32_t instance_count = 0;
+
+    D3D12_GPU_VIRTUAL_ADDRESS per_object_cb = 0; // contents of this buffer may vary depending on the passes this batch participates in
+
+    uint64_t item_id = 0; // some id for a material to find object-specific info
+};
+
+struct RenderItem_New
+{
+    const IRenderMaterial* material = nullptr;
+
+    D3D12_VERTEX_BUFFER_VIEW vbv = {};
+    D3D12_INDEX_BUFFER_VIEW ibv = {};
+
+    uint32_t index_count = 0;
+    uint32_t index_offset = 0;
+    uint32_t vertex_offset = 0;
+    
+    uint64_t item_id = 0; // some id for a material to find object-specific info
+
+    DirectX::XMFLOAT4X4 local2world = {};
+};
+
 struct ShadowMapGenData
 {
     D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
@@ -62,14 +109,14 @@ struct ShadowMapGenData
 struct ShadowProducer
 {
     ShadowMapGenData map_data;
-    std::vector<RenderItem> casters;
+    std::vector<RenderBatch> casters;
 };
 
 struct ShadowCascadeProducer
 {
     D3D12_VIEWPORT viewport;
     uint32_t light_idx_in_cb;
-    std::vector<RenderItem> casters;
+    std::vector<RenderBatch> casters;
 };
 
 struct GPUObjectConstants
@@ -146,6 +193,8 @@ struct alignas( 16 ) GPUPassConstants
     int32_t n_spotlight_lights = 0;
     int32_t _padding3 = 0;
 };
+
+class Light;
 
 struct LightInCB
 {

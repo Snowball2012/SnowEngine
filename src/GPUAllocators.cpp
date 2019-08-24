@@ -34,7 +34,7 @@ std::pair<ID3D12Heap*, uint64_t> GPULinearAllocator::Alloc( uint64_t size )
         AllocateAdditionalHeap( size );
 
     std::pair<ID3D12Heap*, uint64_t> retval;
-    if ( m_heaps[m_cur_heap_idx]->GetDesc().SizeInBytes - m_cur_heap_offset <= size )
+    if ( m_heaps[m_cur_heap_idx]->GetDesc().SizeInBytes - m_cur_heap_offset >= size )
     {
         retval.first = m_heaps[m_cur_heap_idx].Get();
     }
@@ -95,7 +95,8 @@ void GPULinearAllocator::AllocateAdditionalHeap( uint64_t size )
 
 uint64_t GPULinearAllocator::CalcAllocationSize( uint64_t size ) const
 {
-    return ceil_integer_div( size, m_initial_desc.Alignment ) * m_initial_desc.Alignment;
+    const UINT64 alignment = std::max<UINT64>( 1 << 16, m_initial_desc.Alignment ); // min 64k alignment
+    return ceil_integer_div( size, alignment ) * alignment;
 }
 
 

@@ -847,4 +847,12 @@
     <CodeCurrent>335803541</CodeCurrent>
     <CodeNext>23426475</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>RenderData.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: lights, parallel_lights, csm_split_positions.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>2817222228</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
 </NewDataSet>

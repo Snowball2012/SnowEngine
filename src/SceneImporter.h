@@ -3,6 +3,8 @@
 #include <DirectXMath.h>
 #include "RenderData.h"
 
+#include "SceneItems.h"
+
 struct ImportedScene
 {
     struct SceneMaterial

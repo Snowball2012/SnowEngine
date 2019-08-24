@@ -59,6 +59,7 @@ public:
     LightID AddLight( const Light::Data& data ) noexcept;
     const Light* GetLight( LightID id ) const noexcept;
     Light* ModifyLight( LightID id ) noexcept;
+    span<Light> GetAllLights() noexcept;
 
     StaticMeshInstance* ModifyInstance( MeshInstanceID id ) noexcept;
     ObjectTransform* ModifyTransform( TransformID id ) noexcept;

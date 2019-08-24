@@ -5,13 +5,13 @@
 #include "SceneRenderer.h"
 
 
-SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height, uint32_t n_frames_in_flight )
+SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
 {
     assert( ctx.device );
 
     StagingDescriptorHeap dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, ctx.device );
     StagingDescriptorHeap rtv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, ctx.device );
-    ShadowProvider shadow_provider( ctx.device, n_frames_in_flight, ctx.srv_cbv_uav_tables );
+    ShadowProvider shadow_provider( ctx.device, ctx.srv_cbv_uav_tables );
 
     return SceneRenderer( ctx, width, height,
                           std::move( dsv_heap ), std::move( rtv_heap ),
@@ -193,8 +193,8 @@ void SceneRenderer::ResizeTransientResources()
 
 D3D12_HEAP_DESC SceneRenderer::GetUploadHeapDescription() const
 {
-    constexpr UINT64 heap_block_size = 64 * 1024;
-    return CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD );
+    constexpr UINT64 heap_block_size = 1024 * 1024;
+    return CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS );
 }
 
 
@@ -216,21 +216,25 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
     GPULinearAllocator upload_allocator( m_device, GetUploadHeapDescription() );
 
     auto dynamic_items = CreateRenderitems( scene_ctx.opaque_list, upload_allocator );
+    auto shadow_items = CreateRenderitems( scene_ctx.shadow_list, upload_allocator );
 
-    auto dynamic_span = make_span( dynamic_items.batches );
+    auto dynamic_span = make_const_span( dynamic_items.batches );
+    auto shadow_span = make_const_span( shadow_items.batches );
 
     m_shadow_provider.Update( scene_ctx.light_list, m_pssm, *scene_ctx.main_camera );
     auto forward_cb_provider = ForwardCBProvider::Create( *scene_ctx.main_camera, m_pssm, scene_ctx.light_list,
                                                        *m_device, upload_allocator );
 
     frame_resources.AddResources( make_single_elem_span( forward_cb_provider.GetResource() ) );
+    frame_resources.AddResources( make_single_elem_span( dynamic_items.per_obj_cb ) );
+    frame_resources.AddResources( make_single_elem_span( shadow_items.per_obj_cb ) );
 
     {
         ShadowProducers producers;
         ShadowMaps sm_storage;
         ShadowCascadeProducers pssm_producers;
         ShadowCascade pssm_storage;
-        m_shadow_provider.FillFramegraphStructures( scene, forward_cb_provider.GetLightsInCB(), scene.StaticMeshInstanceSpan(),
+        m_shadow_provider.FillFramegraphStructures( forward_cb_provider.GetLightsInCB(), shadow_span,
                                                     producers, pssm_producers, sm_storage, pssm_storage );
         m_framegraph.SetRes( producers );
         m_framegraph.SetRes( sm_storage );
@@ -280,7 +284,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
         auto skybox_framegraph_res = CreateSkybox( scene_ctx.skybox, scene_ctx.ibl_table, upload_allocator );
         frame_resources.AddResources( make_single_elem_span( skybox_framegraph_res.second ) );
 
-        m_framegraph.SetRes( CreateSkybox( scene_ctx.skybox, scene_ctx.ibl_table, upload_allocator ) );
+        m_framegraph.SetRes( skybox_framegraph_res.first );
 
         ForwardPassCB pass_cb{ forward_cb_provider.GetResource()->GetGPUVirtualAddress() };
         m_framegraph.SetRes( pass_cb );
@@ -415,6 +419,10 @@ void SceneRenderer::MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectC
 SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<const RenderItem_New>& render_list, GPULinearAllocator& frame_allocator ) const
 {
     RenderBatchList items;
+
+    if ( render_list.size() == 0 )
+        return items;
+
     items.batches.reserve( render_list.size() );
 
     constexpr UINT obj_cb_stride = Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) ) ;
@@ -446,8 +454,9 @@ SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<cons
         gpu_addr += obj_cb_stride;
         mapped_cb += obj_cb_stride;
 
-        batch.custom_per_object_cb = item.custom_per_object_cb;
-        batch.geom = item.geom;
+        batch.item_id = item.item_id;
+        batch.vbv = item.vbv;
+        batch.ibv = item.ibv;
         batch.material = item.material;
         batch.instance_count = 1;
         batch.index_count = item.index_count;
@@ -457,85 +466,6 @@ SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<cons
 
     return std::move( items );
 }
-
-
-/* FRUSTRUM CULLING CODE. TODO: move it to OldRenderer until the rework is complete
-
-std::vector<RenderBatch> SceneRenderer::CreateRenderitems( const Camera::Data& camera, const span<const RenderItem_New>& opaque_list ) const
-{
-    if ( camera.type != Camera::Type::Perspective )
-        NOTIMPL;
-
-    DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
-                                                                camera.aspect_ratio,
-                                                                camera.near_plane,
-                                                                camera.far_plane );
-
-    DirectX::BoundingFrustum main_bf( proj );
-
-    DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
-                                                        DirectX::XMLoadFloat3( &camera.dir ),
-                                                        DirectX::XMLoadFloat3( &camera.up ) ); // maybe store this matrix in the camera?
-    DirectX::XMVECTOR det;
-    main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
-
-    std::vector<RenderItem> items;
-    items.reserve( scene.StaticMeshInstanceSpan().size() );
-    for ( const auto& mesh_instance : scene.StaticMeshInstanceSpan() )
-    {
-        if ( ! mesh_instance.IsEnabled() )
-            continue;
-
-        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
-        const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
-        if ( ! geom.IsLoaded() )
-            continue;
-
-        RenderItem item;
-        item.ibv = geom.IndexBufferView();
-        item.vbv = geom.VertexBufferView();
-
-        const auto& submesh_draw_args = submesh.DrawArgs();
-
-        item.index_count = submesh_draw_args.idx_cnt;
-        item.index_offset = submesh_draw_args.start_index_loc;
-        item.vertex_offset = submesh_draw_args.base_vertex_loc;
-
-        const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
-        item.mat_cb = material.GPUConstantBuffer();
-        item.mat_table = material.DescriptorTable();
-
-        bool has_unloaded_texture = false;
-        const auto& textures = material.Textures();
-        for ( TextureID tex_id : { textures.base_color, textures.normal, textures.specular, textures.preintegrated_brdf } )
-        {
-            if ( ! scene.AllTextures()[tex_id].IsLoaded() )
-            {
-                has_unloaded_texture = true;
-                break;
-            }
-        }
-
-        if ( has_unloaded_texture )
-            continue;
-
-        const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
-        item.tf_addr = tf.GPUView();
-
-        DirectX::BoundingOrientedBox item_box;
-        DirectX::BoundingOrientedBox::CreateFromBoundingBox( item_box, submesh.Box() );
-
-        item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
-
-        if ( item_box.Intersects( main_bf ) )
-            items.push_back( item );
-
-    }
-
-    boost::sort( items, []( const auto& lhs, const auto& rhs ) { return lhs.mat_table.ptr < rhs.mat_table.ptr; } );
-
-    return std::move( items );
-}*/
 
 
 std::pair<Skybox, ComPtr<ID3D12Resource>> SceneRenderer::CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const
@@ -564,7 +494,7 @@ ComPtr<ID3D12Resource> SceneRenderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4&
     constexpr uint64_t cb_size = sizeof( obj2world );
     auto allocation = upload_cb_allocator.Alloc( cb_size );
     ThrowIfFailedH( m_device->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
-                                                    &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_COMMON, nullptr,
+                                                    &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                     IID_PPV_ARGS( res.GetAddressOf() ) ) );
 
     DirectX::XMFLOAT4X4* mapped_cb; 

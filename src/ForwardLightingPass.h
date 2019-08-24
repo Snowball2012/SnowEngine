@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RenderData.h"
+#include "FramegraphResource.h"
 
 #include "RenderPass.h"
 
@@ -23,7 +24,7 @@ public:
 
     struct Context
     {
-        span<RenderItem> renderitems;
+        span<const span<const RenderBatch>> renderitems;
         D3D12_CPU_DESCRIPTOR_HANDLE back_buffer_rtv;
         D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
         D3D12_CPU_DESCRIPTOR_HANDLE ambient_rtv;
@@ -40,7 +41,7 @@ public:
     };
 
     // all descriptor heaps must be set prematurely
-    void Draw( const Context& context ) noexcept;
+    void Draw( const Context& context );
 
     static inline InputLayout InputLayout() noexcept;
 

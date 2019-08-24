@@ -9,6 +9,7 @@
 class GPUResourceHolder
 {
 public:
+    GPUResourceHolder() = default;
     GPUResourceHolder( const GPUResourceHolder& ) = delete;
     GPUResourceHolder( GPUResourceHolder&& ) = default;
 
@@ -18,6 +19,8 @@ public:
 
     void AddAllocators( const span<GPULinearAllocator>& allocators );
     void AddResources( const span<ComPtr<ID3D12Resource>>& resources );
+
+    void Clear() noexcept;
 
 private:
     std::vector<GPULinearAllocator> m_allocators;

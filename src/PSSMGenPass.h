@@ -3,6 +3,7 @@
 #include "Ptr.h"
 
 #include "RenderData.h"
+#include "FramegraphResource.h"
 
 #include "RenderPass.h"
 
@@ -15,13 +16,13 @@ public:
 
     struct Context
     {
-        span<const RenderItem> renderitems;
+        span<const span<const RenderBatch>> renderitems;
         D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
         uint32_t light_idx;
     };
 
-    void Draw( const Context& context ) noexcept;
+    void Draw( const Context& context );
 
     // uses input layout from ForwardLightingPass
 private:

@@ -61,11 +61,12 @@ public:
             }
             cmd_list.RSSetScissorRects( 1, &sm_scissor );
 
+            const auto caster_span = make_span( producer.casters );
             PSSMGenPass::Context ctx;
             {
                 ctx.depth_stencil_view = shadow_cascade->dsv;
                 ctx.pass_cbv = pass_cb->pass_cb;
-                ctx.renderitems = make_span( producer.casters );
+                ctx.renderitems = make_single_elem_span( caster_span );
                 ctx.light_idx = producer.light_idx_in_cb;
             }
             m_pass.Draw( ctx );

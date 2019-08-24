@@ -61,6 +61,12 @@ span<T> make_span( std::vector<T>& vec )
 }
 
 template<typename T>
+span<const T> make_const_span( std::vector<T>& vec )
+{
+    return span<const T>( vec.data(), vec.data() + vec.size() );
+}
+
+template<typename T>
 span<const T> make_span( const std::vector<T>& vec )
 {
     return span<const T>( vec.data(), vec.data() + vec.size() );
@@ -87,7 +93,7 @@ span<T> make_span( span<T>& other_span )
 template<typename T>
 span<T> make_single_elem_span( T& elem )
 {
-    return make_span( &elem, &elem + 1 );
+    return make_span( (T*)&((void)elem), (T*)&((void)elem) + 1 );
 }
 
 #include <boost/container/static_vector.hpp>

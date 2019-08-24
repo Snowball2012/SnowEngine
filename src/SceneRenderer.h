@@ -70,15 +70,15 @@ public:
         const Camera::Data* main_camera;
         SkyboxData skybox;
 
-        span<RenderItem_New> shadow_list;
-        span<RenderItem_New> opaque_list;
+        span<const RenderItem_New> shadow_list;
+        span<const RenderItem_New> opaque_list;
         span<Light> light_list;
 
         DescriptorTableID ibl_table;
     };
 
     // factory
-    static SceneRenderer Create( const DeviceContext& ctx, uint32_t width, uint32_t height, uint32_t n_frames_in_flight );
+    static SceneRenderer Create( const DeviceContext& ctx, uint32_t width, uint32_t height );
     
     ~SceneRenderer();
 
