@@ -5,7 +5,7 @@
 #include "SceneRenderer.h"
 
 
-SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
+Renderer Renderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
 {
     assert( ctx.device );
 
@@ -13,13 +13,13 @@ SceneRenderer SceneRenderer::Create( const DeviceContext& ctx, uint32_t width, u
     StagingDescriptorHeap rtv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, ctx.device );
     ShadowProvider shadow_provider( ctx.device, ctx.srv_cbv_uav_tables );
 
-    return SceneRenderer( ctx, width, height,
+    return Renderer( ctx, width, height,
                           std::move( dsv_heap ), std::move( rtv_heap ),
                           std::move( shadow_provider ) );
 }
 
 
-SceneRenderer::~SceneRenderer()
+Renderer::~Renderer()
 {
     if ( m_depth_stencil_buffer ) m_depth_stencil_buffer->DSV().reset();
     if ( m_hdr_backbuffer ) m_hdr_backbuffer->RTV().reset();
@@ -29,7 +29,7 @@ SceneRenderer::~SceneRenderer()
 }
 
 
-SceneRenderer::SceneRenderer( const DeviceContext& ctx,
+Renderer::Renderer( const DeviceContext& ctx,
                               uint32_t width, uint32_t height,
                               StagingDescriptorHeap&& dsv_heap,
                               StagingDescriptorHeap&& rtv_heap,
@@ -54,7 +54,7 @@ SceneRenderer::SceneRenderer( const DeviceContext& ctx,
 }
 
 
-void SceneRenderer::InitFramegraph()
+void Renderer::InitFramegraph()
 {
     m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format_dsv, *m_device );
 
@@ -77,7 +77,7 @@ void SceneRenderer::InitFramegraph()
 }
 
 
-void SceneRenderer::CreateTransientResources()
+void Renderer::CreateTransientResources()
 {
     // little hack here, create 1x1 textures and resize them right after
 
@@ -146,7 +146,7 @@ void SceneRenderer::CreateTransientResources()
 }
 
 
-void SceneRenderer::ResizeTransientResources()
+void Renderer::ResizeTransientResources()
 {
     auto resize_tex = [&]( const wchar_t* name, auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
     {
@@ -191,14 +191,14 @@ void SceneRenderer::ResizeTransientResources()
     }
 }
 
-D3D12_HEAP_DESC SceneRenderer::GetUploadHeapDescription() const
+D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
 {
     constexpr UINT64 heap_block_size = 1024 * 1024;
     return CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS );
 }
 
 
-void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
+void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
                           std::vector<CommandList>& graphics_cmd_lists,
                           GPUResourceHolder& frame_resources )
 {
@@ -372,7 +372,7 @@ void SceneRenderer::Draw( const SceneContext& scene_ctx, const FrameContext& fra
 }
 
 
-void SceneRenderer::SetSkybox( bool enable )
+void Renderer::SetSkybox( bool enable )
 {
     if ( enable )
         m_framegraph.Enable<SkyboxNode>();
@@ -381,7 +381,7 @@ void SceneRenderer::SetSkybox( bool enable )
 }
 
 
-void SceneRenderer::SetInternalResolution( uint32_t width, uint32_t height )
+void Renderer::SetInternalResolution( uint32_t width, uint32_t height )
 {
     m_resolution_width = width;
     m_resolution_height = height;
@@ -389,13 +389,13 @@ void SceneRenderer::SetInternalResolution( uint32_t width, uint32_t height )
 }
 
 
-DXGI_FORMAT SceneRenderer::GetTargetFormat( RenderMode mode ) const noexcept
+DXGI_FORMAT Renderer::GetTargetFormat( RenderMode mode ) const noexcept
 {
     return m_back_buffer_format;
 }
 
 
-void SceneRenderer::SetTargetFormat( RenderMode mode, DXGI_FORMAT format )
+void Renderer::SetTargetFormat( RenderMode mode, DXGI_FORMAT format )
 {
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
@@ -409,14 +409,14 @@ void SceneRenderer::SetTargetFormat( RenderMode mode, DXGI_FORMAT format )
 }
 
 
-void SceneRenderer::MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectConstants& object_cb )
+void Renderer::MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectConstants& object_cb )
 {
     XMStoreFloat4x4( &object_cb.model, XMMatrixTranspose( obj2world ) );
     XMStoreFloat4x4( &object_cb.model_inv_transpose, XMMatrixTranspose( InverseTranspose( obj2world ) ) );
 }
 
 
-SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<const RenderItem_New>& render_list, GPULinearAllocator& frame_allocator ) const
+Renderer::RenderBatchList Renderer::CreateRenderitems( const span<const RenderItem>& render_list, GPULinearAllocator& frame_allocator ) const
 {
     RenderBatchList items;
 
@@ -426,7 +426,7 @@ SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<cons
     items.batches.reserve( render_list.size() );
 
     constexpr UINT obj_cb_stride = Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) ) ;
-    const UINT buffer_size = obj_cb_stride * render_list.size();
+    const uint64_t buffer_size = obj_cb_stride * render_list.size();
 
     auto gpu_allocation = frame_allocator.Alloc( buffer_size );
 
@@ -468,7 +468,7 @@ SceneRenderer::RenderBatchList SceneRenderer::CreateRenderitems( const span<cons
 }
 
 
-std::pair<Skybox, ComPtr<ID3D12Resource>> SceneRenderer::CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const
+std::pair<Skybox, ComPtr<ID3D12Resource>> Renderer::CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const
 {
     std::pair<Skybox, ComPtr<ID3D12Resource>> res;
     res.first.srv_skybox = skybox.cubemap_srv;
@@ -487,7 +487,7 @@ std::pair<Skybox, ComPtr<ID3D12Resource>> SceneRenderer::CreateSkybox( const Sky
 }
 
 
-ComPtr<ID3D12Resource> SceneRenderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const
+ComPtr<ID3D12Resource> Renderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const
 {
     ComPtr<ID3D12Resource> res;
 

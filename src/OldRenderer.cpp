@@ -69,10 +69,10 @@ void OldRenderer::Init()
 
     BuildFrameResources();
 
-    SceneRenderer::DeviceContext device_ctx;
+    Renderer::DeviceContext device_ctx;
     device_ctx.device = m_d3d_device.Get();
     device_ctx.srv_cbv_uav_tables = &DescriptorTables();
-    m_renderer = std::make_unique<SceneRenderer>( SceneRenderer::Create( device_ctx, m_client_width, m_client_height ) );
+    m_renderer = std::make_unique<Renderer>( Renderer::Create( device_ctx, m_client_width, m_client_height ) );
 
     m_renderer->GetPSSM().SetSplitsNum( MAX_CASCADE_SIZE );
 
@@ -134,7 +134,7 @@ void OldRenderer::Draw()
 
     ThrowIfFailedH( cmd_list->Close() );
 
-    SceneRenderer::SceneContext scene_ctx;
+    Renderer::SceneContext scene_ctx;
     scene_ctx.ibl_table = m_ibl_table;
     scene_ctx.main_camera = &main_camera->GetData();
 
@@ -157,17 +157,17 @@ void OldRenderer::Draw()
     scene_ctx.opaque_list = make_span( render_lists.opaque_items );
     scene_ctx.shadow_list = make_span( render_lists.shadow_items );
 
-    SceneRenderer::FrameContext frame_ctx;
+    Renderer::FrameContext frame_ctx;
     frame_ctx.cmd_list_pool = m_cmd_lists.get();
     frame_ctx.render_target.resource = CurrentBackBuffer();
     frame_ctx.render_target.rtv = CurrentBackBufferView();
     frame_ctx.render_target.viewport = m_screen_viewport;
     frame_ctx.render_target.scissor_rect = m_scissor_rect;
 
-    m_renderer->SetHBAOSettings( SceneRenderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
-    m_renderer->SetTonemapSettings( SceneRenderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
+    m_renderer->SetHBAOSettings( Renderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
+    m_renderer->SetTonemapSettings( Renderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
 
-    m_renderer->Draw( scene_ctx, frame_ctx, SceneRenderer::RenderMode::FullTonemapped,
+    m_renderer->Draw( scene_ctx, frame_ctx, Renderer::RenderMode::FullTonemapped,
                       lists_to_execute, m_cur_frame_resource->second );
 
     // Draw UI
@@ -454,7 +454,7 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems()
         if ( ! geom.IsLoaded() )
             continue;
 
-        RenderItem_New item;
+        RenderItem item;
         item.ibv = geom.IndexBufferView();
         item.vbv = geom.VertexBufferView();
 

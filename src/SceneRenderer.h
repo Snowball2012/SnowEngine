@@ -23,7 +23,7 @@
 #include "ParallelSplitShadowMapping.h"
 
 
-class SceneRenderer
+class Renderer
 {
 public:
 
@@ -70,22 +70,22 @@ public:
         const Camera::Data* main_camera;
         SkyboxData skybox;
 
-        span<const RenderItem_New> shadow_list;
-        span<const RenderItem_New> opaque_list;
+        span<const RenderItem> shadow_list;
+        span<const RenderItem> opaque_list;
         span<Light> light_list;
 
         DescriptorTableID ibl_table;
     };
 
     // factory
-    static SceneRenderer Create( const DeviceContext& ctx, uint32_t width, uint32_t height );
+    static Renderer Create( const DeviceContext& ctx, uint32_t width, uint32_t height );
     
-    ~SceneRenderer();
+    ~Renderer();
 
-    SceneRenderer( const SceneRenderer& ) = delete;
-    SceneRenderer& operator=( const SceneRenderer& ) = delete;
-    SceneRenderer( SceneRenderer&& ) = default;
-    SceneRenderer& operator=( SceneRenderer&& ) = default;
+    Renderer( const Renderer& ) = delete;
+    Renderer& operator=( const Renderer& ) = delete;
+    Renderer( Renderer&& ) = default;
+    Renderer& operator=( Renderer&& ) = default;
 
     // Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
     // Returned lists must be submitted to graphics queue, returned allocators
@@ -168,7 +168,7 @@ private:
     ID3D12Device* m_device = nullptr;
     DescriptorTableBakery* m_descriptor_tables = nullptr;
 
-    SceneRenderer( const DeviceContext& ctx,
+    Renderer( const DeviceContext& ctx,
                    uint32_t width, uint32_t height,
                    StagingDescriptorHeap&& dsv_heap,
                    StagingDescriptorHeap&& rtv_heap,
@@ -186,7 +186,7 @@ private:
         std::vector<RenderBatch> batches;
         ComPtr<ID3D12Resource> per_obj_cb;
     };
-    RenderBatchList CreateRenderitems( const span<const RenderItem_New>& render_list, GPULinearAllocator& frame_allocator ) const;
+    RenderBatchList CreateRenderitems( const span<const RenderItem>& render_list, GPULinearAllocator& frame_allocator ) const;
 
     std::pair<Skybox, ComPtr<ID3D12Resource>> CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const;
 

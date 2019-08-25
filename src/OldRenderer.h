@@ -12,7 +12,7 @@
 
 #include "SceneManager.h"
 
-class SceneRenderer;
+class Renderer;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
 class OldRenderer
@@ -125,7 +125,7 @@ private:
     std::pair<GPUTaskQueue::Timestamp, GPUResourceHolder>* m_cur_frame_resource = nullptr;
     int m_cur_fr_idx = 0;
 
-    std::unique_ptr<SceneRenderer> m_renderer = nullptr;
+    std::unique_ptr<Renderer> m_renderer = nullptr;
 
     // methods
     void CreateDevice();
@@ -142,8 +142,8 @@ private:
 
     struct RenderLists
     {
-        std::vector<RenderItem_New> opaque_items;
-        std::vector<RenderItem_New> shadow_items;
+        std::vector<RenderItem> opaque_items;
+        std::vector<RenderItem> shadow_items;
     };
     RenderLists CreateRenderItems();
 

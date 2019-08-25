@@ -479,7 +479,6 @@ void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
                                                        StaticSubmesh::Data{ uint32_t( ext_submesh.nindices ),
                                                                             uint32_t( ext_submesh.index_offset ),
                                                                             0 } );
-        RenderItem item;
 
         const int material_idx = ext_submesh.material_idx;
         if ( material_idx < 0 )
