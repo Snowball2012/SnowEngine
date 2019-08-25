@@ -2,7 +2,7 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
-#include "SceneRenderer.h"
+#include "Renderer.h"
 
 
 Renderer Renderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
