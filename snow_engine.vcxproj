@@ -207,8 +207,9 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="src\RenderTask.cpp" />
     <ClCompile Include="src\SceneItems.cpp" />
-    <ClCompile Include="src\SceneRenderer.cpp" />
+    <ClCompile Include="src\Renderer.cpp" />
     <ClCompile Include="src\RenderPass.cpp" />
     <ClCompile Include="src\ResizableTexture.cpp" />
     <ClCompile Include="src\Scene.cpp" />
@@ -274,7 +275,8 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
     <ClInclude Include="src\MaterialTableBaker.h" />
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
-    <ClInclude Include="src\SceneRenderer.h" />
+    <ClInclude Include="src\Renderer.h" />
+    <ClInclude Include="src\RenderTask.h" />
     <ClInclude Include="src\SkyboxNode.h" />
     <ClInclude Include="src\SkyboxPass.h" />
     <ClInclude Include="src\StaticTextureManager.h" />

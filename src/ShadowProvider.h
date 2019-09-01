@@ -8,6 +8,7 @@
 
 #include "Scene.h"
 #include "ParallelSplitShadowMapping.h"
+#include "RenderTask.h"
 
 // This class manages a storage for all shadow maps used in a frame.
 // It packs all shadow maps into one texture and fills relevant framegraph structures
@@ -17,7 +18,7 @@ class ShadowProvider
 public:
     ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv_tables );
 
-    void Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
+    static std::vector<RenderTask::ShadowFrustrum> Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
     void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems,
                                    ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,

@@ -4,7 +4,7 @@
 
 #include "OldRenderer.h"
 
-#include "SceneRenderer.h"
+#include "Renderer.h"
 
 #include "GeomGeneration.h"
 
@@ -133,10 +133,16 @@ void OldRenderer::Draw()
     cmd_list->SetDescriptorHeaps( 1, heaps );
 
     ThrowIfFailedH( cmd_list->Close() );
+    
+    constexpr UINT64 heap_block_size = 1024 * 1024;
+    
+    GPULinearAllocator allocator( m_d3d_device.Get(), CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS ) );
+
+    RenderTask task = m_renderer->CreateTask( main_camera->GetData(), GetScene().GetAllLights(),
+                                              RenderMode::FullTonemapped, allocator );
 
     Renderer::SceneContext scene_ctx;
     scene_ctx.ibl_table = m_ibl_table;
-    scene_ctx.main_camera = &main_camera->GetData();
 
     const EnvironmentMap* env_map = GetScene().GetEnviromentMap( main_camera->GetSkybox() );
     if ( env_map )
@@ -150,12 +156,12 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
-    scene_ctx.light_list = GetScene().GetAllLights();
-
     RenderLists render_lists = CreateRenderItems();
+    auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists.opaque_items ), allocator );
+    auto shadow_list = m_renderer->CreateRenderitems( make_span( render_lists.shadow_items ), allocator );
 
-    scene_ctx.opaque_list = make_span( render_lists.opaque_items );
-    scene_ctx.shadow_list = make_span( render_lists.shadow_items );
+    task.AddOpaqueBatches( make_span( opaque_list.batches ) );
+    task.AddShadowBatches( make_span( shadow_list.batches ), 0 );
 
     Renderer::FrameContext frame_ctx;
     frame_ctx.cmd_list_pool = m_cmd_lists.get();
@@ -163,12 +169,16 @@ void OldRenderer::Draw()
     frame_ctx.render_target.rtv = CurrentBackBufferView();
     frame_ctx.render_target.viewport = m_screen_viewport;
     frame_ctx.render_target.scissor_rect = m_scissor_rect;
+    frame_ctx.resources = &m_cur_frame_resource->second;
+
+    frame_ctx.resources->AddAllocators( make_single_elem_span( allocator ) );
+    frame_ctx.resources->AddResources( make_single_elem_span( opaque_list.per_obj_cb ) );
+    frame_ctx.resources->AddResources( make_single_elem_span( shadow_list.per_obj_cb ) );
 
     m_renderer->SetHBAOSettings( Renderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
     m_renderer->SetTonemapSettings( Renderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
 
-    m_renderer->Draw( scene_ctx, frame_ctx, Renderer::RenderMode::FullTonemapped,
-                      lists_to_execute, m_cur_frame_resource->second );
+    m_renderer->Draw( task, scene_ctx, frame_ctx, lists_to_execute );
 
     // Draw UI
     lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );

@@ -85,8 +85,10 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv
 }
 
 
-void ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
+std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
+    std::vector<RenderTask::ShadowFrustrum> frustrums;
+
     std::array<float, MAX_CASCADE_SIZE - 1> split_positions_storage;
 
     auto split_positions = pssm.CalcSplitPositionsVS( main_camera_data, make_span( split_positions_storage ) );
@@ -112,8 +114,12 @@ void ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadow
 
             if ( use_csm )
                 pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
+
+            frustrums.emplace_back( RenderTask::ShadowFrustrum{ shadow_matrices.back(), &light } );
         }
     }
+
+    return std::move( frustrums );
 }
 
 

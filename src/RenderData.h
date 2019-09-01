@@ -10,6 +10,8 @@
 
 #include "ResizableTexture.h"
 
+#include "MathUtils.h"
+
 // resides only in GPU mem
 class DynamicTexture : public ResizableTexture
 {

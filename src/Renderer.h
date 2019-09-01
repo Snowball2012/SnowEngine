@@ -22,16 +22,20 @@
 
 #include "ParallelSplitShadowMapping.h"
 
+#include "RenderTask.h"
 
+
+// Main renderer class.
+// Basic pipeline:
+// 1. Enable/disable features
+// 2. Get a RenderTask with CreateTask
+// 3. Fill the RenderTask with batches
+// 4. Draw() the RenderTask
+// 5. Feed returned command lists to GPUTaskQueue, keep frame resources until 
+//     the command lists are executed
 class Renderer
 {
 public:
-
-    enum class RenderMode
-    {
-        FullTonemapped
-    };
-
     struct HBAOSettings
     {
         float max_r = 0.20f;
@@ -63,16 +67,12 @@ public:
     {
         Target render_target;
         CommandListPool* cmd_list_pool;
+        GPUResourceHolder* resources;
     };
 
     struct SceneContext
     {
-        const Camera::Data* main_camera;
         SkyboxData skybox;
-
-        span<const RenderItem> shadow_list;
-        span<const RenderItem> opaque_list;
-        span<Light> light_list;
 
         DescriptorTableID ibl_table;
     };
@@ -87,12 +87,12 @@ public:
     Renderer( Renderer&& ) = default;
     Renderer& operator=( Renderer&& ) = default;
 
+    RenderTask CreateTask( const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const;
     // Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
     // Returned lists must be submitted to graphics queue, returned allocators
     // can be freed after the rendering is over on device queues
-    void Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-               std::vector<CommandList>& graphics_cmd_lists,
-               GPUResourceHolder& frame_resources );
+    void Draw( const RenderTask& task, const SceneContext& scene_ctx, const FrameContext& frame_ctx,
+               std::vector<CommandList>& graphics_cmd_lists );
 
     void SetTonemapSettings( const TonemapSettings& settings ) noexcept { m_tonemap_settings = settings; }
     TonemapSettings GetTonemapSettings() const noexcept { return m_tonemap_settings; }
@@ -111,6 +111,13 @@ public:
     DXGI_FORMAT GetTargetFormat( RenderMode mode ) const noexcept;
     // May involve PSO recompilation
     void SetTargetFormat( RenderMode mode, DXGI_FORMAT format );
+
+    struct RenderBatchList
+    {
+        std::vector<RenderBatch> batches;
+        ComPtr<ID3D12Resource> per_obj_cb;
+    };
+    RenderBatchList CreateRenderitems( const span<const RenderItem>& render_list, GPULinearAllocator& frame_allocator ) const;
 
     static void MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectConstants& object_cb );
 
@@ -181,13 +188,7 @@ private:
 
     D3D12_HEAP_DESC GetUploadHeapDescription() const;
 
-    struct RenderBatchList
-    {
-        std::vector<RenderBatch> batches;
-        ComPtr<ID3D12Resource> per_obj_cb;
-    };
-    RenderBatchList CreateRenderitems( const span<const RenderItem>& render_list, GPULinearAllocator& frame_allocator ) const;
-
+    
     std::pair<Skybox, ComPtr<ID3D12Resource>> CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const;
 
     ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;

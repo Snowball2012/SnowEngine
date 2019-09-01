@@ -57,9 +57,6 @@
     <Filter Include="core\Framegraph">
       <UniqueIdentifier>{fd61c60e-90e5-4f6f-b32d-1894c1750d73}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\FramegraphDataProviders">
-      <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="core\Tools">
       <UniqueIdentifier>{ce71357a-f0df-4769-a97a-5f73f048c0fb}</UniqueIdentifier>
     </Filter>
@@ -83,6 +80,9 @@
     </Filter>
     <Filter Include="core\Framegraph\utils">
       <UniqueIdentifier>{864ed003-74b0-41d1-a1ec-6b9b3317f9a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\Framegraph\FramegraphDataProviders">
+      <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -165,10 +165,10 @@
       <Filter>core\SceneSystems</Filter>
     </ClCompile>
     <ClCompile Include="src\ForwardCBProvider.cpp">
-      <Filter>core\FramegraphDataProviders</Filter>
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
     </ClCompile>
     <ClCompile Include="src\ShadowProvider.cpp">
-      <Filter>core\FramegraphDataProviders</Filter>
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
     </ClCompile>
     <ClCompile Include="src\UVScreenDensityCalculator.cpp">
       <Filter>core\SceneSystems</Filter>
@@ -203,9 +203,6 @@
     <ClCompile Include="src\OldRenderer.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="src\SceneRenderer.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
     <ClCompile Include="src\MathUtils.cpp">
       <Filter>utils</Filter>
     </ClCompile>
@@ -224,14 +221,20 @@
     <ClCompile Include="src\CommandListPool.cpp">
       <Filter>core\APILayer</Filter>
     </ClCompile>
-    <ClCompile Include="src\GPUAllocators.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\GPUResourceHolder.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\Renderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GPUAllocators.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
     <ClCompile Include="src\SceneItems.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\RenderTask.cpp">
+      <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -329,13 +332,13 @@
       <Filter>core\SceneSystems</Filter>
     </ClInclude>
     <ClInclude Include="src\ForwardCBProvider.h">
-      <Filter>core\FramegraphDataProviders</Filter>
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\span.h">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\ShadowProvider.h">
-      <Filter>core\FramegraphDataProviders</Filter>
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
     </ClInclude>
     <ClInclude Include="src\UVScreenDensityCalculator.h">
       <Filter>core\SceneSystems</Filter>
@@ -397,9 +400,6 @@
     <ClInclude Include="src\OldRenderer.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\SceneRenderer.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="src\MathUtils.h">
       <Filter>utils</Filter>
     </ClInclude>
@@ -440,6 +440,12 @@
       <Filter>core\APILayer</Filter>
     </ClInclude>
     <ClInclude Include="src\GPUResourceHolder.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Renderer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\RenderTask.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

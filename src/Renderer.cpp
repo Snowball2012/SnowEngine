@@ -30,10 +30,10 @@ Renderer::~Renderer()
 
 
 Renderer::Renderer( const DeviceContext& ctx,
-                              uint32_t width, uint32_t height,
-                              StagingDescriptorHeap&& dsv_heap,
-                              StagingDescriptorHeap&& rtv_heap,
-                              ShadowProvider&& shadow_provider ) noexcept
+                    uint32_t width, uint32_t height,
+                    StagingDescriptorHeap&& dsv_heap,
+                    StagingDescriptorHeap&& rtv_heap,
+                    ShadowProvider&& shadow_provider ) noexcept
     : m_dsv_heap( std::move( dsv_heap ) )
     , m_rtv_heap( std::move( rtv_heap ) )
     , m_shadow_provider( std::move( shadow_provider ) )
@@ -198,14 +198,29 @@ D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
 }
 
 
-void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ctx, RenderMode mode,
-                          std::vector<CommandList>& graphics_cmd_lists,
-                          GPUResourceHolder& frame_resources )
+RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const
 {
-    assert( scene_ctx.main_camera != nullptr );
-
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
+
+    ForwardCBProvider forward_cb = ForwardCBProvider::Create( main_camera, m_pssm, light_list, *m_device, cb_allocator );
+
+    RenderTask new_task( std::move( forward_cb ) );
+    new_task.m_mode = mode;
+
+    new_task.m_shadow_frustrums = ShadowProvider::Update( light_list, m_pssm, main_camera );
+
+    new_task.m_main_frustrum = DirectX::XMLoadFloat4x4( &forward_cb.GetViewProj() );
+
+    return std::move( new_task );
+}
+
+
+void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, const FrameContext& frame_ctx,
+                     std::vector<CommandList>& graphics_cmd_lists )
+{
+    assert( frame_ctx.cmd_list_pool != nullptr );
+    assert( frame_ctx.resources != nullptr );
 
     m_framegraph.ClearResources();
 
@@ -215,26 +230,14 @@ void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ct
     
     GPULinearAllocator upload_allocator( m_device, GetUploadHeapDescription() );
 
-    auto dynamic_items = CreateRenderitems( scene_ctx.opaque_list, upload_allocator );
-    auto shadow_items = CreateRenderitems( scene_ctx.shadow_list, upload_allocator );
-
-    auto dynamic_span = make_const_span( dynamic_items.batches );
-    auto shadow_span = make_const_span( shadow_items.batches );
-
-    m_shadow_provider.Update( scene_ctx.light_list, m_pssm, *scene_ctx.main_camera );
-    auto forward_cb_provider = ForwardCBProvider::Create( *scene_ctx.main_camera, m_pssm, scene_ctx.light_list,
-                                                       *m_device, upload_allocator );
-
-    frame_resources.AddResources( make_single_elem_span( forward_cb_provider.GetResource() ) );
-    frame_resources.AddResources( make_single_elem_span( dynamic_items.per_obj_cb ) );
-    frame_resources.AddResources( make_single_elem_span( shadow_items.per_obj_cb ) );
+    frame_ctx.resources->AddResources( make_single_elem_span( task.m_forward_cb_provider.GetResource() ) );
 
     {
         ShadowProducers producers;
         ShadowMaps sm_storage;
         ShadowCascadeProducers pssm_producers;
         ShadowCascade pssm_storage;
-        m_shadow_provider.FillFramegraphStructures( forward_cb_provider.GetLightsInCB(), shadow_span,
+        m_shadow_provider.FillFramegraphStructures( task.m_forward_cb_provider.GetLightsInCB(), make_span( task.m_shadow_renderlists[0][0] ),
                                                     producers, pssm_producers, sm_storage, pssm_storage );
         m_framegraph.SetRes( producers );
         m_framegraph.SetRes( sm_storage );
@@ -244,7 +247,7 @@ void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ct
 
     {
         MainRenderitems forward_renderitems;
-        forward_renderitems.items = make_single_elem_span( dynamic_span );
+        forward_renderitems.items = make_span( task.m_opaque_renderlist );
         m_framegraph.SetRes( forward_renderitems );
     }
 
@@ -282,11 +285,11 @@ void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ct
 
     {
         auto skybox_framegraph_res = CreateSkybox( scene_ctx.skybox, scene_ctx.ibl_table, upload_allocator );
-        frame_resources.AddResources( make_single_elem_span( skybox_framegraph_res.second ) );
+        frame_ctx.resources->AddResources( make_single_elem_span( skybox_framegraph_res.second ) );
 
         m_framegraph.SetRes( skybox_framegraph_res.first );
 
-        ForwardPassCB pass_cb{ forward_cb_provider.GetResource()->GetGPUVirtualAddress() };
+        ForwardPassCB pass_cb{ task.m_forward_cb_provider.GetResource()->GetGPUVirtualAddress() };
         m_framegraph.SetRes( pass_cb );
 
         HDRBuffer hdr_buffer;
@@ -368,7 +371,7 @@ void Renderer::Draw( const SceneContext& scene_ctx, const FrameContext& frame_ct
 
     graphics_cmd_lists.emplace_back( std::move( cmd_list ) );
 
-    frame_resources.AddAllocators( make_single_elem_span( upload_allocator ) );
+    frame_ctx.resources->AddAllocators( make_single_elem_span( upload_allocator ) );
 }
 
 

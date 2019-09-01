@@ -12,7 +12,7 @@
 
 class ParallelSplitShadowMapping;
 
-// Fills GPUPassConstants circular buffer on GPU
+// Fills GPUPassConstants buffer on GPU
 class ForwardCBProvider
 {
 public:
@@ -23,6 +23,8 @@ public:
     ComPtr<ID3D12Resource> GetResource() const noexcept;
     span<const LightInCB> GetLightsInCB() const noexcept;
 
+    const DirectX::XMFLOAT4X4& GetViewProj() const noexcept { return m_viewproj; };
+
 private:
     static constexpr uint64_t BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( GPUPassConstants ) );
     static constexpr size_t MaxLights = sizeof( GPUPassConstants::lights ) / sizeof( LightConstants );
@@ -30,10 +32,11 @@ private:
     
     Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
     bc::static_vector<LightInCB, MaxLights + MaxParallelLights> m_lights_in_cb;
+    DirectX::XMFLOAT4X4 m_viewproj = Identity4x4;
 
     ForwardCBProvider( );
 
-    static void FillCameraData( const Camera::Data& camera, GPUPassConstants& gpu_data ) noexcept;
+    static void FillCameraData( const Camera::Data& camera, DirectX::XMFLOAT4X4& viewproj, GPUPassConstants& gpu_data ) noexcept;
     static void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                              GPUPassConstants& gpu_data ) noexcept;
 

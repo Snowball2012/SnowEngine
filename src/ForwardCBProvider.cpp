@@ -30,7 +30,7 @@ ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const P
     ThrowIfFailedH( buffer.m_gpu_res->Map( 0, nullptr, &mapped_data ) );
 
     GPUPassConstants gpu_data;
-    FillCameraData( camera, gpu_data );
+    FillCameraData( camera, buffer.m_viewproj, gpu_data );
     buffer.FillLightData( scene_lights,
                    DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
                    DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
@@ -58,7 +58,7 @@ span<const LightInCB> ForwardCBProvider::GetLightsInCB() const noexcept
 }
 
 
-void ForwardCBProvider::FillCameraData( const Camera::Data& camera, GPUPassConstants& gpu_data ) noexcept
+void ForwardCBProvider::FillCameraData( const Camera::Data& camera, DirectX::XMFLOAT4X4& viewproj, GPUPassConstants& gpu_data ) noexcept
 {
     // reversed z
     DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
@@ -71,6 +71,8 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera, GPUPassConst
                                                         DirectX::XMLoadFloat3( &camera.up ) );
 
     DirectX::XMMATRIX view_proj = view * proj;
+
+    DirectX::XMStoreFloat4x4( &viewproj, view_proj );
 
     DirectX::XMVECTOR determinant;
     DirectX::XMMATRIX inv_view = DirectX::XMMatrixInverse( &determinant, view );
