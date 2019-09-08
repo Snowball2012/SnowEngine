@@ -437,13 +437,6 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
     if ( main_frustrum.type != RenderTask::Frustrum::Type::Perspective )
         NOTIMPL;
 
-
-     /*const Camera::Data& camera = GetScene().GetCamera( m_main_camera_id )->GetData();
-
-    const DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
-                                                                camera.aspect_ratio,
-                                                                camera.near_plane,
-                                                                camera.far_plane );*/
     const DirectX::XMMATRIX& proj = main_frustrum.proj;
 
     DirectX::BoundingFrustum main_bf( proj );
