@@ -181,6 +181,8 @@ void RenderApp::UpdateGUI()
         ImGui::NewLine();
         ImGui::Text( "TextureStreamer upload mem:\n\tIn use: %u MB\n\tTotal:  %u MB", stats.tex_streamer.uploader_mem_in_use / ( 1024 * 1024 ), stats.tex_streamer.uploader_mem_allocated / ( 1024 * 1024 ) );
         ImGui::NewLine();
+        ImGui::Text( "Renderitems:\n\tTotal: %u\n\tAfter culling:  %u", stats.num_renderitems_total, stats.num_renderitems_to_draw );
+        ImGui::NewLine();
 
 
         ImGui::End();

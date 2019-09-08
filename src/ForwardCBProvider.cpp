@@ -30,7 +30,7 @@ ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const P
     ThrowIfFailedH( buffer.m_gpu_res->Map( 0, nullptr, &mapped_data ) );
 
     GPUPassConstants gpu_data;
-    FillCameraData( camera, buffer.m_viewproj, gpu_data );
+    FillCameraData( camera, buffer.m_viewproj, buffer.m_view, buffer.m_proj, gpu_data );
     buffer.FillLightData( scene_lights,
                    DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
                    DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
@@ -58,17 +58,21 @@ span<const LightInCB> ForwardCBProvider::GetLightsInCB() const noexcept
 }
 
 
-void ForwardCBProvider::FillCameraData( const Camera::Data& camera, DirectX::XMFLOAT4X4& viewproj, GPUPassConstants& gpu_data ) noexcept
+void ForwardCBProvider::FillCameraData( const Camera::Data& camera,
+                                        DirectX::XMFLOAT4X4& viewproj,
+                                        DirectX::XMMATRIX& view,
+                                        DirectX::XMMATRIX& proj,
+                                        GPUPassConstants& gpu_data ) noexcept
 {
     // reversed z
-    DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
-                                                                camera.aspect_ratio,
-                                                                camera.far_plane,
-                                                                camera.near_plane );
+    proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
+                                              camera.aspect_ratio,
+                                              camera.far_plane,
+                                              camera.near_plane );
 
-    DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
-                                                        DirectX::XMLoadFloat3( &camera.dir ),
-                                                        DirectX::XMLoadFloat3( &camera.up ) );
+    view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
+                                      DirectX::XMLoadFloat3( &camera.dir ),
+                                      DirectX::XMLoadFloat3( &camera.up ) );
 
     DirectX::XMMATRIX view_proj = view * proj;
 

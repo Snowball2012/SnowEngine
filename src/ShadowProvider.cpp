@@ -115,7 +115,13 @@ std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scen
             if ( use_csm )
                 pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
 
-            frustrums.emplace_back( RenderTask::ShadowFrustrum{ shadow_matrices.back(), &light } );
+            frustrums.emplace_back( RenderTask::ShadowFrustrum{ {
+                                        RenderTask::Frustrum::Type::Orthographic,
+                                        DirectX::XMMatrixIdentity(),
+                                        DirectX::XMMatrixIdentity(),
+                                        shadow_matrices.back() },
+                                        &light
+                                    } );
         }
     }
 

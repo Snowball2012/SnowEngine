@@ -63,6 +63,8 @@ public:
     struct PerformanceStats
     {
         TextureStreamer::Stats tex_streamer;
+        uint64_t num_renderitems_total;
+        uint64_t num_renderitems_to_draw;
     };
     
     PerformanceStats GetPerformanceStats() const noexcept;
@@ -127,6 +129,10 @@ private:
 
     std::unique_ptr<Renderer> m_renderer = nullptr;
 
+    // stats
+    uint64_t m_num_renderitems_total = 0; // last frame
+    uint64_t m_num_renderitems_to_draw = 0; // last frame
+
     // methods
     void CreateDevice();
     void CreateSwapChain();
@@ -145,7 +151,7 @@ private:
         std::vector<RenderItem> opaque_items;
         std::vector<RenderItem> shadow_items;
     };
-    RenderLists CreateRenderItems();
+    RenderLists CreateRenderItems( const RenderTask::Frustrum& main_frustrum );
 
     ID3D12Resource* CurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;

@@ -2,7 +2,7 @@
 
 #include "RenderTask.h"
 
-const DirectX::XMMATRIX& RenderTask::GetMainPassFrustrum() const
+const RenderTask::Frustrum& RenderTask::GetMainPassFrustrum() const
 {
     return m_main_frustrum;
 }

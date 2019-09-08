@@ -16,13 +16,25 @@ public:
     RenderTask( RenderTask&& ) = default;
     RenderTask& operator=( RenderTask&& ) = default;
 
+    struct Frustrum
+    {
+        enum class Type
+        {
+            Perspective,
+            Orthographic
+        } type;
+        DirectX::XMMATRIX proj;
+        DirectX::XMMATRIX view;
+        DirectX::XMMATRIX viewproj;
+    };
+
     struct ShadowFrustrum
     {
-        DirectX::XMMATRIX frustrum;
+        Frustrum frustrum;
         Light* light;
     };
 
-    const DirectX::XMMATRIX& GetMainPassFrustrum() const;;
+    const Frustrum& GetMainPassFrustrum() const;;
 
     const span<const ShadowFrustrum> GetShadowFrustrums() const;
 
@@ -38,7 +50,7 @@ private:
     std::vector<std::vector<span<const RenderBatch>>> m_shadow_renderlists;
     std::vector<span<const RenderBatch>> m_opaque_renderlist;
 
-    DirectX::XMMATRIX m_main_frustrum;
+    Frustrum m_main_frustrum;
     std::vector<ShadowFrustrum> m_shadow_frustrums;
 
     RenderMode m_mode;

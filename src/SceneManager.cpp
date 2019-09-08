@@ -159,7 +159,7 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
 SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device,
                             size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue )
     : m_static_mesh_mgr( device, &m_scene )
-    , m_tex_streamer( device, 700*1024*1024ul, 128*1024*1024ul, nframes_to_buffer, &m_scene )
+    , m_tex_streamer( device, 700*1024*1024ul, 32*1024*1024ul, nframes_to_buffer, &m_scene )
     , m_static_texture_mgr( device, &m_scene )
     , m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
     , m_scene_view( &m_scene, &m_static_mesh_mgr, &m_static_texture_mgr, &m_tex_streamer, &m_cubemap_mgr, &m_dynamic_buffers, &m_material_table_baker )

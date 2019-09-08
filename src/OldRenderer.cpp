@@ -156,7 +156,7 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
-    RenderLists render_lists = CreateRenderItems();
+    RenderLists render_lists = CreateRenderItems( task.GetMainPassFrustrum() );
     auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists.opaque_items ), allocator );
     auto shadow_list = m_renderer->CreateRenderitems( make_span( render_lists.shadow_items ), allocator );
 
@@ -254,7 +254,11 @@ void OldRenderer::SetSkybox( bool enable )
 
 OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
 {
-    return { m_scene_manager->GetTexStreamer().GetPerformanceStats() };
+    return {
+        m_scene_manager->GetTexStreamer().GetPerformanceStats(),
+        m_num_renderitems_total,
+        m_num_renderitems_to_draw
+    };
 }
 
 void OldRenderer::CreateDevice()
@@ -428,22 +432,26 @@ void OldRenderer::EndFrame( )
     m_cur_frame_resource->second.Clear();
 }
 
-OldRenderer::RenderLists OldRenderer::CreateRenderItems()
+OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frustrum& main_frustrum )
 {
-    const Camera::Data& camera = GetScene().GetCamera( m_main_camera_id )->GetData();
-    if ( camera.type != Camera::Type::Perspective )
+    if ( main_frustrum.type != RenderTask::Frustrum::Type::Perspective )
         NOTIMPL;
 
-    DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
+
+     /*const Camera::Data& camera = GetScene().GetCamera( m_main_camera_id )->GetData();
+
+    const DirectX::XMMATRIX proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
                                                                 camera.aspect_ratio,
                                                                 camera.near_plane,
-                                                                camera.far_plane );
+                                                                camera.far_plane );*/
+    const DirectX::XMMATRIX& proj = main_frustrum.proj;
 
     DirectX::BoundingFrustum main_bf( proj );
+    if ( main_bf.Far < main_bf.Near ) // reversed z
+        std::swap( main_bf.Far, main_bf.Near );
 
-    DirectX::XMMATRIX view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
-                                                        DirectX::XMLoadFloat3( &camera.dir ),
-                                                        DirectX::XMLoadFloat3( &camera.up ) ); // maybe store this matrix in the camera?
+    const DirectX::XMMATRIX& view = main_frustrum.view;
+
     DirectX::XMVECTOR det;
     main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
 
@@ -453,6 +461,9 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems()
 
     lists.opaque_items.reserve( scene.StaticMeshInstanceSpan().size() );
     lists.shadow_items.reserve( scene.StaticMeshInstanceSpan().size() );
+
+    m_num_renderitems_total = 0;
+    m_num_renderitems_to_draw = 0;
 
     for ( const auto& mesh_instance : scene.StaticMeshInstanceSpan() )
     {
@@ -500,6 +511,7 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems()
 
         item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
 
+        m_num_renderitems_total++;
         if ( item_box.Intersects( main_bf ) )
             lists.opaque_items.push_back( item );
 
@@ -508,6 +520,7 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems()
 
     boost::sort( lists.opaque_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
     boost::sort( lists.shadow_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
+    m_num_renderitems_to_draw = lists.opaque_items.size();
 
     return std::move( lists );
 }

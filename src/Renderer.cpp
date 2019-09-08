@@ -210,7 +210,10 @@ RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Lig
 
     new_task.m_shadow_frustrums = ShadowProvider::Update( light_list, m_pssm, main_camera );
 
-    new_task.m_main_frustrum = DirectX::XMLoadFloat4x4( &forward_cb.GetViewProj() );
+    new_task.m_main_frustrum = RenderTask::Frustrum{ RenderTask::Frustrum::Type::Perspective,
+                                                     forward_cb.GetProj(),
+                                                     forward_cb.GetView(),
+                                                     DirectX::XMLoadFloat4x4( &forward_cb.GetViewProj() ) };
 
     return std::move( new_task );
 }

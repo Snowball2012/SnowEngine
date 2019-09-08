@@ -24,6 +24,8 @@ public:
     span<const LightInCB> GetLightsInCB() const noexcept;
 
     const DirectX::XMFLOAT4X4& GetViewProj() const noexcept { return m_viewproj; };
+    const DirectX::XMMATRIX& GetView() const noexcept { return m_view; }
+    const DirectX::XMMATRIX& GetProj() const noexcept { return m_proj; }
 
 private:
     static constexpr uint64_t BufferGPUSize = Utils::CalcConstantBufferByteSize( sizeof( GPUPassConstants ) );
@@ -33,10 +35,17 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_gpu_res = nullptr;
     bc::static_vector<LightInCB, MaxLights + MaxParallelLights> m_lights_in_cb;
     DirectX::XMFLOAT4X4 m_viewproj = Identity4x4;
+    DirectX::XMMATRIX m_view;
+    DirectX::XMMATRIX m_proj;
 
     ForwardCBProvider( );
 
-    static void FillCameraData( const Camera::Data& camera, DirectX::XMFLOAT4X4& viewproj, GPUPassConstants& gpu_data ) noexcept;
+    static void FillCameraData( const Camera::Data& camera,
+                                DirectX::XMFLOAT4X4& viewproj,
+                                DirectX::XMMATRIX& view,
+                                DirectX::XMMATRIX& proj,
+                                GPUPassConstants& gpu_data ) noexcept;
+
     static void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                              GPUPassConstants& gpu_data ) noexcept;
 
