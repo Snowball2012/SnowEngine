@@ -448,6 +448,12 @@
     <ClInclude Include="src\RenderTask.h">
       <Filter>core</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\btree.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\btree.hpp">
+      <Filter>utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">

@@ -308,6 +308,8 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\TextureStreamer.h" />
     <ClInclude Include="src\ToneMapNode.h" />
     <ClInclude Include="src\ToneMappingPass.h" />
+    <ClInclude Include="src\utils\btree.h" />
+    <ClInclude Include="src\utils\btree.hpp" />
     <ClInclude Include="src\utils\MemoryMappedFile.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />
     <ClInclude Include="src\utils\packed_freelist.hpp" />

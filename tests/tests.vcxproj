@@ -132,6 +132,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="btree.cpp" />
     <ClCompile Include="compile_time_tests.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="packed_freelist.cpp" />
