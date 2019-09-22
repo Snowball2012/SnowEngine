@@ -49,6 +49,8 @@ class btree_map
     using node_t = btree_map_node<Key, T, F>;
     using allocator_t = Allocator;
     using callback_t = PointerChangeCallback;
+
+    static constexpr uint32_t MiddleIdx = F - 1;
 public:
 
     using cursor_t = btree_map_cursor<Key, T, F>;
@@ -61,6 +63,8 @@ public:
     template<typename... Args>
     cursor_t emplace( const Key& key, Args&&... args );
     cursor_t insert( const Key& key, T elem );
+
+    cursor_t find( const Key& key ) const;
 
     void clear();
 
@@ -78,8 +82,9 @@ private:
     node_t* create_empty_node( const cursor_t& cursor );
     node_t* create_root();
 
-    template<bool InsertMode>
-    cursor_t find_elem( const Key& key );
+    cursor_t find_elem( const Key& key ) const;
+
+    cursor_t find_place_for_insertion( const Key& key );
 
     void make_space_for_new_elem( node_t& node, uint32_t pos );
 

@@ -42,7 +42,7 @@ template<typename Key, typename T, uint32_t F,
 template<typename... Args>
 typename btree_map_class::cursor_t btree_map_class::emplace( const Key& key, Args&&... args )
 {
-    cursor_t new_elem_location = find_elem<true>( key );
+    cursor_t new_elem_location = find_place_for_insertion( key );
     assert( new_elem_location.node->is_leaf() );
 
     auto& node = *new_elem_location.node;
@@ -71,7 +71,7 @@ typename btree_map_class::cursor_t btree_map_class::emplace( const Key& key, Arg
 
 btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const Key& key, T elem )
 {
-    cursor_t new_elem_location = find_elem<true>( key );
+    cursor_t new_elem_location = find_place_for_insertion( key );
     assert( new_elem_location.node->is_leaf() );
 
     auto& node = *new_elem_location.node;
@@ -79,7 +79,7 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const
 
     auto* new_key = &node.keys()[pos];
     auto* new_value = &node.values()[pos];
-    if ( *new_key != key )
+    if ( *new_key != key || pos == node.num_elems )
     {
         make_space_for_new_elem( node, pos );
         new( new_key ) Key( key );
@@ -98,12 +98,19 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const
 }
 
 
+btree_map_method_definition( typename btree_map_class::cursor_t )::find( const Key& key ) const
+{
+    return find_elem( key );
+}
+
+
 btree_map_method_definition( void )::clear()
 {
     assert( m_root );
     destroy_node_recursive( m_root );
 
     m_size = 0;
+    m_root = create_root();
 }
 
 
@@ -153,40 +160,64 @@ btree_map_method_definition( typename btree_map_class::node_t* )::create_root()
 }
 
 
-template<typename Key, typename T, uint32_t F,                  
-         typename Allocator, typename PointerChangeCallback>             
-template<bool InsertMode>
-typename btree_map_class::cursor_t btree_map_class::find_elem( const Key& key )
+btree_map_method_definition( typename btree_map_class::cursor_t )::find_elem( const Key& key ) const
 {
     assert( m_root );
-
-    if constexpr ( InsertMode )
-        if ( m_root->is_filled() )
-        {
-            node_t* new_root = create_root();
-            m_root->parent = cursor_t{ new_root, 0 };
-            new_root->children[0] = m_root;
-            m_root = new_root;
-        }
 
     cursor_t retval = cursor_t{ nullptr, 0 };
     node_t* cur_node = m_root;
     while ( retval.node == nullptr )
     {
-        if constexpr ( InsertMode )
+        uint32_t position = 0;
+        for ( ; position < cur_node->num_elems; ++position )
         {
-            if ( cur_node->is_filled() )
+            if ( key == cur_node->keys()[position] )
             {
-                if ( key == cur_node->keys()[F] )
-                {
-                    retval.node = cur_node;
-                    retval.position = F;
-                    return retval;
-                }
-                node_t* right_node = split_node( cur_node );
-                if ( key > cur_node->keys()[F] )
-                    cur_node = right_node;
+                retval.node = cur_node;
+                retval.position = position;
+                return retval;
             }
+            if ( key < cur_node->keys()[position] )
+                break;
+        }
+
+        if ( cur_node->is_leaf() )
+            return retval;
+
+        cur_node = cur_node->children[position];
+    }
+
+    return retval;
+}
+
+
+btree_map_method_definition( typename btree_map_class::cursor_t )::find_place_for_insertion( const Key& key )
+{
+    assert( m_root );
+
+    if ( m_root->is_filled() )
+    {
+        node_t* new_root = create_root();
+        m_root->parent = cursor_t{ new_root, 0 };
+        new_root->children[0] = m_root;
+        m_root = new_root;
+    }
+
+    cursor_t retval = cursor_t{ nullptr, 0 };
+    node_t* cur_node = m_root;
+    while ( retval.node == nullptr )
+    {
+        if ( cur_node->is_filled() )
+        {
+            if ( key == cur_node->keys()[MiddleIdx] )
+            {
+                retval.node = cur_node;
+                retval.position = MiddleIdx;
+                return retval;
+            }
+            node_t* right_node = split_node( cur_node );
+            if ( key > cur_node->keys()[MiddleIdx] )
+                cur_node = right_node;
         }
 
         uint32_t position = 0;
@@ -204,9 +235,6 @@ typename btree_map_class::cursor_t btree_map_class::find_elem( const Key& key )
 
         if ( cur_node->is_leaf() )
         {
-            if constexpr ( !InsertMode )
-                return retval;
-
             retval.node = cur_node;
             retval.position = position;
 
@@ -229,7 +257,7 @@ btree_map_method_definition( void )::make_space_for_new_elem( node_t& node, uint
     
     node.num_elems++;
 
-    if ( pos == node.num_elems )
+    if ( pos == node.num_elems - 1 )
         return;
 
     const auto& last_key = node.keys()[node.num_elems-1];
@@ -266,28 +294,35 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
         parent.node->children[i]->parent.position++;
     }
 
-    new( &parent.node->keys()[parent.position] ) Key( std::move( node->keys()[F] ) );
-    new( &parent.node->values()[parent.position] ) T( std::move( node->values()[F] ) );
-    node->keys()[F].~Key();
-    node->values()[F].~T();
+    new( &parent.node->keys()[parent.position] ) Key( std::move( node->keys()[MiddleIdx] ) );
+    new( &parent.node->values()[parent.position] ) T( std::move( node->values()[MiddleIdx] ) );
+    node->keys()[MiddleIdx].~Key();
+    node->values()[MiddleIdx].~T();
     m_notify_ptr_changed( parent.node->keys()[parent.position], cursor_t{ parent.node, parent.position } );
 
     node_t* right_node = create_empty_node( cursor_t{ parent.node, parent.position + 1 } );
     parent.node->children[parent.position + 1] = right_node;
     for ( uint32_t i = 1; i < F; ++i )
     {
-        new( &right_node->keys()[i - 1] ) Key( std::move( node->keys()[F + i] ) );
-        node->keys()[F + i].~Key();
+        new( &right_node->keys()[i - 1] ) Key( std::move( node->keys()[MiddleIdx + i] ) );
+        node->keys()[MiddleIdx + i].~Key();
     }
     for ( uint32_t i = 1; i < F; ++i )
     {
-        new( &right_node->values()[i - 1] ) Key( std::move( node->values()[F + i] ) );
-        node->values()[F + i].~T();
+        new( &right_node->values()[i - 1] ) Key( std::move( node->values()[MiddleIdx + i] ) );
+        node->values()[MiddleIdx + i].~T();
     }
+    if ( ! node->is_leaf() )
+        for ( uint32_t i = 1; i <= F; ++i )
+        {
+            right_node->children[i - 1] = node->children[MiddleIdx + i];
+            right_node->children[i - 1]->parent = cursor_t{ right_node, i - 1 };
+        }
+
     node->num_elems = F - 1;
     right_node->num_elems = F - 1;
 
-    for ( uint32_t i = 0; i < F - 1; ++i )
+    for ( uint32_t i = 0; i < MiddleIdx; ++i )
         m_notify_ptr_changed( right_node->keys()[i], cursor_t{ right_node, i } );
 
     return right_node;
