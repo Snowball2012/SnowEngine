@@ -50,4 +50,88 @@ BOOST_AUTO_TEST_CASE( search )
     }
 }
 
+
+BOOST_AUTO_TEST_CASE( callback )
+{
+    constexpr int num_keys = 100;
+    constexpr int num_samples = 200;
+
+    std::vector<int> random_numbers;
+    random_numbers.reserve( num_keys );
+    for ( int i = 0; i < num_keys; ++i )
+        random_numbers.push_back( rand() );
+    
+    std::vector<int*> cursors;
+    cursors.resize(num_keys);
+
+    auto callback = [&cursors]( int key, const auto& new_cursor )
+    {
+        cursors[key] = new_cursor.node->values() + new_cursor.position;
+    };
+
+	btree_map<int, int, 4, std::allocator<btree_map_node<int, int, 4>>, decltype(callback)> test_btree( callback );
+    for ( int i = 0; i < random_numbers.size(); ++i )
+    {
+        auto cursor = test_btree.insert( i, random_numbers[i] );
+        cursors[i] = cursor.node->values() + cursor.position;
+    }
+
+    BOOST_TEST( test_btree.size() == num_keys );
+
+    for ( int i = 0; i < num_samples; ++i )
+    {
+        int key = rand() % random_numbers.size();
+        
+        BOOST_TEST( *cursors[key] == random_numbers[key] );
+    }
+
+    for ( int i = 0; i < num_keys; ++i )
+    {
+        BOOST_TEST( *cursors[i] == random_numbers[i] );
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE( iteration )
+{
+    constexpr int num_keys = 100;
+
+    std::vector<int> random_numbers;
+    random_numbers.reserve( num_keys );
+    for ( int i = 0; i < num_keys; ++i )
+        random_numbers.push_back( rand() );
+    
+    std::vector<int*> cursors;
+    cursors.resize(num_keys);
+
+    auto callback = [&cursors]( int key, const auto& new_cursor )
+    {
+        cursors[key] = new_cursor.node->values() + new_cursor.position;
+    };
+
+	btree_map<int, int, 4, std::allocator<btree_map_node<int, int, 4>>, decltype(callback)> test_btree( callback );
+    for ( int i = 0; i < random_numbers.size(); ++i )
+    {
+        auto cursor = test_btree.insert( i, random_numbers[i] );
+        cursors[i] = cursor.node->values() + cursor.position;
+    }
+
+    BOOST_TEST( test_btree.size() == num_keys );
+
+    auto i = test_btree.begin();
+    int prev_key = i.node->keys()[i.position];
+    i = test_btree.get_next( i );
+    size_t nelems = 1;
+    for ( ; i != test_btree.end(); i = test_btree.get_next( i ), nelems++ )
+    {
+        BOOST_TEST( i.node );
+        BOOST_TEST( i.position < i.node->num_elems );
+        int key = i.node->keys()[i.position];
+        BOOST_TEST( key > prev_key );
+        prev_key = key;
+    }
+
+    BOOST_TEST( nelems == test_btree.size() );
+}
+
 BOOST_AUTO_TEST_SUITE_END()

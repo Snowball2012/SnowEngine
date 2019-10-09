@@ -11,6 +11,8 @@ struct btree_map_cursor
 {
     btree_map_node<Key, T, F>* node;
     uint32_t position;
+
+    bool operator!= ( const btree_map_cursor& rhs ) const { return this->node != rhs.node || this->position != rhs.position; }
 };
 
 template<typename Key, typename T, uint32_t F>
@@ -58,6 +60,7 @@ public:
     ~btree_map();
 
     btree_map();
+    btree_map( const callback_t& callback );
     btree_map( allocator_t allocator );
 
     template<typename... Args>
@@ -65,6 +68,11 @@ public:
     cursor_t insert( const Key& key, T elem );
 
     cursor_t find( const Key& key ) const;
+
+    cursor_t get_next( const cursor_t& pos ) const;
+
+    cursor_t begin() const;
+    cursor_t end() const;
 
     void clear();
 

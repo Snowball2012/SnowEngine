@@ -30,6 +30,13 @@ btree_map_method_definition_constr::btree_map()
 }
 
 
+btree_map_method_definition_constr::btree_map( const callback_t& callback )
+    : m_notify_ptr_changed( callback )
+{
+    m_root = create_root();
+}
+
+
 btree_map_method_definition_constr::btree_map( allocator_t allocator )
     : m_allocator( std::move( allocator ) )
 {
@@ -101,6 +108,54 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const
 btree_map_method_definition( typename btree_map_class::cursor_t )::find( const Key& key ) const
 {
     return find_elem( key );
+}
+
+
+btree_map_method_definition( typename btree_map_class::cursor_t )::get_next( const cursor_t& pos ) const
+{
+    assert( pos.node );
+    assert( pos.position < pos.node->num_elems );
+
+    auto& node = *pos.node;
+
+    if ( node.is_leaf() )
+    {
+        if ( pos.position + 1 < node.num_elems )
+                return cursor_t{ &node, pos.position + 1 };
+
+        cursor_t parent_cursor = node.parent;
+        while ( parent_cursor.node )
+        {
+            if ( parent_cursor.node->num_elems > parent_cursor.position )
+                return parent_cursor;
+            parent_cursor = parent_cursor.node->parent;
+        }
+
+        parent_cursor.position = 0;
+        return parent_cursor;
+    }
+
+    cursor_t retval{ node.children[pos.position + 1], 0 };
+    while ( ! retval.node->is_leaf() )
+        retval.node = retval.node->children[0];
+
+    return retval;    
+}
+
+
+btree_map_method_definition( typename btree_map_class::cursor_t )::begin() const
+{
+    node_t* node = m_root;
+    while ( ! node->is_leaf() )
+        node = node->children[0];
+
+    return cursor_t{ node, 0 };
+}
+
+
+btree_map_method_definition( typename btree_map_class::cursor_t )::end() const
+{
+    return cursor_t{ nullptr, 0 };
 }
 
 
