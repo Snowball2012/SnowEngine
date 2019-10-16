@@ -13,6 +13,7 @@ struct btree_map_cursor
     uint32_t position;
 
     bool operator!= ( const btree_map_cursor& rhs ) const { return this->node != rhs.node || this->position != rhs.position; }
+    bool operator== ( const btree_map_cursor& rhs ) const { return this->node == rhs.node && this->position == rhs.position; }
 };
 
 template<typename Key, typename T, uint32_t F>
@@ -67,6 +68,8 @@ public:
     cursor_t emplace( const Key& key, Args&&... args );
     cursor_t insert( const Key& key, T elem );
 
+    cursor_t erase( const cursor_t& pos );
+
     cursor_t find( const Key& key ) const;
 
     cursor_t get_next( const cursor_t& pos ) const;
@@ -99,6 +102,14 @@ private:
     // a node must have a non-null parent (be aware of the root node) and be full
     // returns the right node
     node_t* split_node( node_t* node );
+
+    void remove_blank_val_at( node_t& node, uint32_t pos );
+
+    void update_max( node_t* parent, uint32_t child_pos, const Key* new_max );
+    cursor_t get_next_for_child( node_t* parent, uint32_t pos );
+
+    // a node must have a parent and less than F - 1 elems
+    void merge_with_neighbour( node_t* node );
 };
 
 #include "btree.hpp"

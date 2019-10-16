@@ -134,4 +134,89 @@ BOOST_AUTO_TEST_CASE( iteration )
     BOOST_TEST( nelems == test_btree.size() );
 }
 
+
+BOOST_AUTO_TEST_CASE( sequenced_deletion )
+{
+    constexpr int num_keys = 100;
+
+    std::vector<int> random_numbers;
+    random_numbers.reserve( num_keys );
+    for ( int i = 0; i < num_keys; ++i )
+        random_numbers.push_back( rand() );
+    
+    std::vector<int*> cursors;
+    cursors.resize(num_keys);
+
+    auto callback = [&cursors]( int key, const auto& new_cursor )
+    {
+        cursors[key] = new_cursor.node->values() + new_cursor.position;
+    };
+
+	btree_map<int, int, 4, std::allocator<btree_map_node<int, int, 4>>, decltype(callback)> test_btree( callback );
+    for ( int i = 0; i < random_numbers.size(); ++i )
+    {
+        auto cursor = test_btree.insert( i, random_numbers[i] );
+        cursors[i] = cursor.node->values() + cursor.position;
+    }
+
+    BOOST_TEST( test_btree.size() == num_keys );
+
+    auto i = test_btree.begin();
+    int total_size = test_btree.size();
+    int deleted_elems = 0;
+    while ( i != test_btree.end() )
+    {
+        i = test_btree.erase( i );
+        deleted_elems++;
+    }
+
+    BOOST_TEST( total_size == deleted_elems );
+    BOOST_TEST( (test_btree.begin() == test_btree.end()) );
+}
+
+
+BOOST_AUTO_TEST_CASE( randomized_deletion )
+{
+    constexpr int num_keys = 100;
+
+    std::vector<int> random_numbers;
+    random_numbers.reserve( num_keys );
+    for ( int i = 0; i < num_keys; ++i )
+        random_numbers.push_back( rand() );
+    
+    std::vector<int*> cursors;
+    cursors.resize(num_keys);
+
+    auto callback = [&cursors]( int key, const auto& new_cursor )
+    {
+        cursors[key] = new_cursor.node->values() + new_cursor.position;
+    };
+
+	btree_map<int, int, 4, std::allocator<btree_map_node<int, int, 4>>, decltype(callback)> test_btree( callback );
+    for ( int i = 0; i < random_numbers.size(); ++i )
+    {
+        auto cursor = test_btree.insert( i, random_numbers[i] );
+        cursors[i] = cursor.node->values() + cursor.position;
+    }
+
+    BOOST_TEST( test_btree.size() == num_keys );
+
+    int total_size = test_btree.size();
+    int deleted_elems = 0;
+    while ( test_btree.size() )
+    {
+        auto i = test_btree.begin();
+
+        int rand_elem = rand() % test_btree.size();
+        for ( int j = 0; j < rand_elem; j++ )
+            i = test_btree.get_next( i );
+
+        test_btree.erase( i );
+        deleted_elems++;
+    }
+
+    BOOST_TEST( total_size == deleted_elems );
+    BOOST_TEST( (test_btree.begin() == test_btree.end()) );
+}
+
 BOOST_AUTO_TEST_SUITE_END()

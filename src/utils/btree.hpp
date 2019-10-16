@@ -105,6 +105,67 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const
 }
 
 
+btree_map_method_definition( typename btree_map_class::cursor_t )::erase( const cursor_t& cursor )
+{
+    assert( cursor.node && m_size > 0 );
+
+    auto& node = *cursor.node;
+    uint32_t pos = cursor.position;
+
+    if ( node.is_leaf() )
+    {
+        m_size--;
+        remove_blank_val_at( node, pos );
+        if ( pos == node.num_elems && pos != 0 )
+            node.max_key = &node.keys()[pos - 1];
+        if ( node.num_elems >= ( F - 1 ) || ! node.parent.node )
+        {            
+            if ( cursor.position == node.num_elems )
+            {
+                if ( node.parent.node )
+                {
+                    update_max( node.parent.node, node.parent.position, &node.keys()[pos - 1] );
+                    return get_next_for_child( node.parent.node, node.parent.position );
+                }
+                else
+                {
+                    return cursor_t{ nullptr, 0 };
+                }
+            }
+
+            return cursor;
+        }
+        else
+        {
+            cursor_t next_cursor = node.num_elems > pos
+                ? cursor
+                : get_next_for_child( node.parent.node, node.parent.position );
+
+            std::optional<Key> next_key;
+            if ( next_cursor != end() )
+                next_key = next_cursor.node->keys()[next_cursor.position];
+
+            merge_with_neighbour( cursor.node );
+
+            if ( next_key )
+                return find_elem( next_key.value() );
+            else
+                return cursor_t{ nullptr, 0 };
+        }
+    }
+    else
+    {
+        // find next element, replace this one with it and remove it in the subtree
+        cursor_t next = get_next( cursor );
+        assert( next.node && next.node->is_leaf() );
+        node.keys()[pos] = std::move( next.node->keys()[pos] );
+        node.values()[pos] = std::move( next.node->values()[pos] );
+
+        return erase( next );
+    }
+}
+
+
 btree_map_method_definition( typename btree_map_class::cursor_t )::find( const Key& key ) const
 {
     return find_elem( key );
@@ -145,6 +206,9 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::get_next( con
 
 btree_map_method_definition( typename btree_map_class::cursor_t )::begin() const
 {
+    if ( m_size == 0 )
+        return end();
+
     node_t* node = m_root;
     while ( ! node->is_leaf() )
         node = node->children[0];
@@ -357,6 +421,7 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
 
     node_t* right_node = create_empty_node( cursor_t{ parent.node, parent.position + 1 } );
     parent.node->children[parent.position + 1] = right_node;
+
     for ( uint32_t i = 1; i < F; ++i )
     {
         new( &right_node->keys()[i - 1] ) Key( std::move( node->keys()[MiddleIdx + i] ) );
@@ -384,6 +449,220 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
 }
 
 
-#undef btree_map_method_definition_const
+btree_map_method_definition( void )::remove_blank_val_at( node_t& node, uint32_t pos )
+{
+    assert( node.num_elems > pos );
+    
+    for ( uint32_t i = pos + 1; i < node.num_elems; ++i )
+        node.keys()[i - 1] = std::move( node.keys()[i] );
+    
+    for ( uint32_t i = pos + 1; i < node.num_elems; ++i )
+        node.values()[i - 1] = std::move( node.values()[i] );
+
+    if ( !node.is_leaf() )
+        for ( uint32_t i = pos + 1; i < node.num_elems; ++i )
+        {
+            node.children[i] = node.children[i + 1];
+            node.children[i]->parent.position = i;
+        }
+
+    node.num_elems--;
+
+    node.keys()[node.num_elems].~Key();
+    node.values()[node.num_elems].~T();
+}
+
+
+btree_map_method_definition( void )::update_max( node_t* parent, uint32_t child_pos, const Key* new_max )
+{
+    assert( parent && ! parent->is_leaf() );
+
+    while( parent )
+    {
+        if ( parent->num_elems != child_pos )
+            return;
+        
+        parent->max_key = new_max;
+        child_pos = parent->parent.position;
+        parent = parent->parent.node;
+    }
+}
+
+btree_map_method_definition( typename btree_map_class::cursor_t )::get_next_for_child( node_t* parent, uint32_t pos )
+{
+    while ( parent )
+    {
+        if ( pos < parent->num_elems )
+            return cursor_t{ parent, pos };
+        pos = parent->parent.position;
+        parent = parent->parent.node;
+    }
+
+    return cursor_t{ nullptr, 0 };
+}
+
+btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
+{
+    assert( node->parent.node && node->num_elems < F - 1 );
+
+    node_t* parent = node->parent.node;
+    while( parent )
+    {
+        // find the biggest neighbour
+        node_t* neighbour = nullptr;
+        uint32_t split_pos = node->parent.position;
+
+        if ( split_pos < parent->num_elems )
+            neighbour = parent->children[split_pos + 1];
+
+        if ( split_pos > 0 )
+            if ( ! neighbour || neighbour->num_elems == F - 1 )
+            {
+                neighbour = node;
+                node = parent->children[--split_pos];
+            }
+
+        // neighbour is on the right, node is on the left
+        if ( neighbour->num_elems > F - 1 || node->num_elems > F - 1 )
+        {
+            if ( neighbour->num_elems == F - 2 )
+            {
+                // move 1 item from the left to the right
+                new ( &neighbour->keys()[neighbour->num_elems] ) Key( std::move( neighbour->keys()[neighbour->num_elems - 1] ) );
+                new ( &neighbour->values()[neighbour->num_elems] ) T( std::move( neighbour->values()[neighbour->num_elems - 1] ) );
+
+                for ( int i = int( neighbour->num_elems ) - 1; i > 0; --i )
+                    neighbour->keys()[i] = std::move( neighbour->keys()[i - 1] );
+                neighbour->keys()[0] = std::move( parent->keys()[split_pos] );
+
+                for ( int i = int( neighbour->num_elems ) - 1; i > 0; --i )
+                    neighbour->values()[i] = std::move( neighbour->values()[i - 1] );
+                neighbour->values()[0] = std::move( parent->values()[split_pos] );
+
+                parent->keys()[split_pos] = std::move( node->keys()[node->num_elems - 1] );
+                parent->values()[split_pos] = std::move( node->values()[node->num_elems - 1] );
+
+                node->keys()[node->num_elems - 1].~Key();
+                node->values()[node->num_elems - 1].~T();
+
+                if ( node->is_leaf() )
+                {
+                    //update max
+                    node->max_key = &node->keys()[node->num_elems - 2];
+                }
+                else
+                {
+                    // update children
+                    for ( int i = neighbour->num_elems + 1; i > 0; --i )
+                    {
+                        neighbour->children[i] = neighbour->children[i - 1];
+                        neighbour->children[i]->parent.position = i;
+                    }
+
+                    neighbour->children[0] = node->children[node->num_elems];
+                    neighbour->children[0]->parent.node = neighbour;
+                    neighbour->children[0]->parent.position = 0;
+
+                    node->max_key = node->children[node->num_elems - 1]->max_key;
+                }
+                node->num_elems--;
+                neighbour->num_elems++;
+            }
+            else
+            {
+                // move 1 item from the right to the left
+                new( &node->keys()[node->num_elems] ) Key( std::move( parent->keys()[split_pos] ) );
+                new( &node->values()[node->num_elems] ) T( std::move( parent->values()[split_pos] ) );
+
+                parent->keys()[split_pos] = std::move( neighbour->keys()[0] );
+                parent->values()[split_pos] = std::move( neighbour->values()[0] );
+
+                for ( int i = 0; i < int( neighbour->num_elems ) - 1; ++i )
+                    neighbour->keys()[i] = std::move( neighbour->keys()[i + 1] );
+                neighbour->keys()[0].~Key();
+
+                for ( int i = 0; i < int( neighbour->num_elems ) - 1; ++i )
+                    neighbour->values()[i] = std::move( neighbour->values()[i + 1] );
+                neighbour->values()[0].~T();
+
+                if ( neighbour->is_leaf() )
+                {
+                    //update max
+                    node->max_key = &node->keys()[node->num_elems];
+                }
+                else
+                {
+                    // update children
+                    node->children[node->num_elems + 1] = neighbour->children[0];
+                    node->children[node->num_elems + 1]->parent.node = node;
+                    node->children[node->num_elems + 1]->parent.position = node->num_elems + 1;
+                    for ( uint32_t i = 0; i < neighbour->num_elems; ++i )
+                    {
+                        neighbour->children[i] = neighbour->children[i + 1];
+                        neighbour->children[i]->parent.position = i;
+                    }
+
+                    node->max_key = node->children[node->num_elems + 1]->max_key;
+                }
+                
+                node->num_elems++;
+                neighbour->num_elems--;
+            }
+
+            return;
+        }
+        else
+        {
+            // merge the nodes
+            new( &node->keys()[node->num_elems] ) Key( std::move( parent->keys()[split_pos] ) );
+            new( &node->values()[node->num_elems] ) T( std::move( parent->values()[split_pos] ) );
+
+            remove_blank_val_at( *parent, split_pos );
+            
+            for ( uint32_t i = 0; i < neighbour->num_elems; ++i )
+            {
+                new (&node->keys()[node->num_elems + 1 + i]) Key( std::move( neighbour->keys()[i] ) );
+                neighbour->keys()[i].~Key();
+            }
+                
+            for ( uint32_t i = 0; i < neighbour->num_elems; ++i )
+            {
+                new (&node->values()[node->num_elems + 1 + i]) Key( std::move( neighbour->values()[i] ) );
+                neighbour->values()[i].~T();
+            }
+            if ( ! neighbour->is_leaf() )
+            {
+                for ( uint32_t i = 0; i <= neighbour->num_elems; ++i )
+                {
+                    uint32_t dst_idx = node->num_elems + 1 + i;
+                    node->children[dst_idx] = neighbour->children[i];
+                    node->children[dst_idx]->parent = cursor_t{ node, dst_idx };
+                }
+            }
+
+            node->max_key = neighbour->is_leaf() ? &node->keys()[2 * F - 3] : neighbour->max_key;
+            update_max( parent, split_pos, node->max_key );
+            node->num_elems = 2*F - 2;
+
+            m_allocator.deallocate( neighbour, 1 );
+            node = parent;
+            if ( node->num_elems >= F - 1 )
+                break;
+
+            parent = node->parent.node;
+        }
+    }
+
+    if ( node->num_elems == 0 )
+    {
+        assert( m_root == node );
+        assert( ! node->is_leaf() );
+
+        m_root = node->children[0];
+        m_root->parent = cursor_t{ nullptr, 0 };
+    }
+}
+
+#undef btree_map_method_definition_constr
 #undef btree_map_method_definition
 #undef btree_map_class
