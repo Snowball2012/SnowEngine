@@ -429,7 +429,7 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
     }
     for ( uint32_t i = 1; i < F; ++i )
     {
-        new( &right_node->values()[i - 1] ) Key( std::move( node->values()[MiddleIdx + i] ) );
+        new( &right_node->values()[i - 1] ) T( std::move( node->values()[MiddleIdx + i] ) );
         node->values()[MiddleIdx + i].~T();
     }
     if ( ! node->is_leaf() )

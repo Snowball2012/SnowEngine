@@ -254,6 +254,8 @@ copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbx
     <ClInclude Include="src\DescriptorHeap.h" />
     <ClInclude Include="src\DescriptorTableBakery.h" />
     <ClInclude Include="src\DynamicSceneBuffers.h" />
+    <ClInclude Include="src\EntityContainer.h" />
+    <ClInclude Include="src\EntityContainer.hpp" />
     <ClInclude Include="src\ForwardCBProvider.h" />
     <ClInclude Include="src\ForwardLightingPass.h" />
     <ClInclude Include="src\ForwardPassNode.h" />

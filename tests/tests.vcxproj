@@ -134,6 +134,7 @@
   <ItemGroup>
     <ClCompile Include="btree.cpp" />
     <ClCompile Include="compile_time_tests.cpp" />
+    <ClCompile Include="entity_container.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="packed_freelist.cpp" />
     <ClCompile Include="framegraph.cpp" />

@@ -84,6 +84,9 @@
     <Filter Include="core\Framegraph\FramegraphDataProviders">
       <UniqueIdentifier>{4bc63b8b-1711-4485-9079-bc20a363e44f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\ECS">
+      <UniqueIdentifier>{59295806-8cec-41d7-91fc-851d85882787}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -453,6 +456,12 @@
     </ClInclude>
     <ClInclude Include="src\utils\btree.hpp">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\EntityContainer.h">
+      <Filter>core\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="src\EntityContainer.hpp">
+      <Filter>core\ECS</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
