@@ -653,7 +653,7 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
                 
             for ( uint32_t i = 0; i < neighbour->num_elems; ++i )
             {
-                new (&node->values()[node->num_elems + 1 + i]) Key( std::move( neighbour->values()[i] ) );
+                new (&node->values()[node->num_elems + 1 + i]) T( std::move( neighbour->values()[i] ) );
                 neighbour->values()[i].~T();
             }
 

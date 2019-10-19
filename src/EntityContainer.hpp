@@ -8,7 +8,10 @@
 template<typename ... Components>
 EntityContainer<Components...>::EntityContainer()
     : m_components( BTreeCallback<Components>( *this )... )
+    , m_components_virtual_storage( std::get<ComponentBtree<Components>>( m_components ) ... )
 {
+    m_components_virtual.reserve( sizeof...( Components ) );
+    ( m_components_virtual.emplace( typeid( Components ).hash_code(), &std::get<IBtreeImpl<Components, ComponentBtree<Components>>>( m_components_virtual_storage ) ) , ... );
 }
 
 

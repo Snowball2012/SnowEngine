@@ -84,6 +84,34 @@ private:
     >;
 
     std::tuple<ComponentBtree<Components>...> m_components;
+
+    // reflection stuff to be able to remove components from entities by component typeid
+    struct IBtree
+    {
+        virtual void erase( Entity ent ) = 0;
+    };
+
+    template<typename C, typename Btree>
+    class IBtreeImpl : public IBtree
+    {
+    public:
+        virtual void erase( Entity ent ) override
+        {
+            auto i = m_components.find( ent );
+            if ( i != m_components.end() )
+                m_components.erase( i );
+        }
+
+        IBtreeImpl( Btree& components ): m_components( components ) {}
+    private:
+        Btree& m_components;
+    };
+
+    std::tuple<IBtreeImpl<Components, ComponentBtree<Components>>...> m_components_virtual_storage;
+    boost::container::flat_map<
+        size_t /*component_typeid*/,
+        IBtree* /*component_btree*/
+    > m_components_virtual;
 };
 
 #include "EntityContainer.hpp"
