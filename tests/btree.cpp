@@ -64,15 +64,20 @@ BOOST_AUTO_TEST_CASE( callback )
     std::vector<int*> cursors;
     cursors.resize(num_keys);
 
-    auto callback = [&cursors]( int key, const auto& new_cursor )
+    std::vector<char> deleted( num_keys, 1 );
+
+    auto callback = [&]( int key, const auto& new_cursor )
     {
-        cursors[key] = new_cursor.node->values() + new_cursor.position;
+        if ( new_cursor.key() != key || new_cursor.value() != random_numbers[key] )
+            bool wrk = true;
+        cursors[key] = &new_cursor.node->values()[new_cursor.position];
     };
 
 	btree_map<int, int, 4, std::allocator<btree_map_node<int, int, 4>>, decltype(callback)> test_btree( callback );
     for ( int i = 0; i < random_numbers.size(); ++i )
     {
         auto cursor = test_btree.insert( i, random_numbers[i] );
+        deleted[i] = 0;
         cursors[i] = cursor.node->values() + cursor.position;
     }
 
@@ -89,6 +94,24 @@ BOOST_AUTO_TEST_CASE( callback )
     {
         BOOST_TEST( *cursors[i] == random_numbers[i] );
     }
+
+    int total_size = test_btree.size();
+    while ( test_btree.size() > num_keys / 2 )
+    {
+        auto i = test_btree.begin();
+
+        int rand_elem = rand() % test_btree.size();
+        for ( int j = 0; j < rand_elem; j++ )
+            i = test_btree.get_next( i );
+
+        deleted[i.key()] = 1;
+        test_btree.erase( i );
+    }
+
+    for ( int i = 0; i < random_numbers.size(); ++i )
+        if ( ! deleted[i] )
+            BOOST_TEST( *cursors[i] == random_numbers[i] );
+
 }
 
 

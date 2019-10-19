@@ -44,6 +44,13 @@ btree_map_method_definition_constr::btree_map( allocator_t allocator )
 }
 
 
+btree_map_method_definition_constr::btree_map( const callback_t& callback, allocator_t allocator )
+    : m_notify_ptr_changed( callback ), m_allocator( std::move( allocator ) )
+{
+    m_root = create_root();
+}
+
+
 template<typename Key, typename T, uint32_t F,                  
          typename Allocator, typename PointerChangeCallback>             
 template<typename... Args>
@@ -158,8 +165,10 @@ btree_map_method_definition( typename btree_map_class::cursor_t )::erase( const 
         // find next element, replace this one with it and remove it in the subtree
         cursor_t next = get_next( cursor );
         assert( next.node && next.node->is_leaf() );
-        node.keys()[pos] = std::move( next.node->keys()[pos] );
-        node.values()[pos] = std::move( next.node->values()[pos] );
+        node.keys()[pos] = std::move( next.node->keys()[next.position] );
+        node.values()[pos] = std::move( next.node->values()[next.position] );
+
+        notify_cursor_change( cursor );
 
         return erase( next );
     }
@@ -393,8 +402,7 @@ btree_map_method_definition( void )::make_space_for_new_elem( node_t& node, uint
     node.values()[pos].~T();
 
     for ( uint32_t i = node.num_elems - 1; i > pos; --i )
-        m_notify_ptr_changed( node.keys()[i], cursor_t{ &node, i } );
-
+        notify_cursor_change( node, i );
 }
 
 
@@ -417,7 +425,7 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
     new( &parent.node->values()[parent.position] ) T( std::move( node->values()[MiddleIdx] ) );
     node->keys()[MiddleIdx].~Key();
     node->values()[MiddleIdx].~T();
-    m_notify_ptr_changed( parent.node->keys()[parent.position], cursor_t{ parent.node, parent.position } );
+    notify_cursor_change( parent );
 
     node_t* right_node = create_empty_node( cursor_t{ parent.node, parent.position + 1 } );
     parent.node->children[parent.position + 1] = right_node;
@@ -443,7 +451,7 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
     right_node->num_elems = F - 1;
 
     for ( uint32_t i = 0; i < MiddleIdx; ++i )
-        m_notify_ptr_changed( right_node->keys()[i], cursor_t{ right_node, i } );
+        notify_cursor_change( *right_node, i );
 
     return right_node;
 }
@@ -470,6 +478,9 @@ btree_map_method_definition( void )::remove_blank_val_at( node_t& node, uint32_t
 
     node.keys()[node.num_elems].~Key();
     node.values()[node.num_elems].~T();
+
+    for ( uint32_t i = pos; i < node.num_elems; ++i )
+        notify_cursor_change( node, i );
 }
 
 
@@ -531,6 +542,8 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
                 new ( &neighbour->keys()[neighbour->num_elems] ) Key( std::move( neighbour->keys()[neighbour->num_elems - 1] ) );
                 new ( &neighbour->values()[neighbour->num_elems] ) T( std::move( neighbour->values()[neighbour->num_elems - 1] ) );
 
+                notify_cursor_change( *neighbour, neighbour->num_elems );
+
                 for ( int i = int( neighbour->num_elems ) - 1; i > 0; --i )
                     neighbour->keys()[i] = std::move( neighbour->keys()[i - 1] );
                 neighbour->keys()[0] = std::move( parent->keys()[split_pos] );
@@ -539,8 +552,13 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
                     neighbour->values()[i] = std::move( neighbour->values()[i - 1] );
                 neighbour->values()[0] = std::move( parent->values()[split_pos] );
 
+                for ( int i = 0; i < int( neighbour->num_elems ); ++i )
+                    notify_cursor_change( *neighbour, i );
+
                 parent->keys()[split_pos] = std::move( node->keys()[node->num_elems - 1] );
                 parent->values()[split_pos] = std::move( node->values()[node->num_elems - 1] );
+
+                notify_cursor_change( *parent, split_pos );
 
                 node->keys()[node->num_elems - 1].~Key();
                 node->values()[node->num_elems - 1].~T();
@@ -574,16 +592,23 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
                 new( &node->keys()[node->num_elems] ) Key( std::move( parent->keys()[split_pos] ) );
                 new( &node->values()[node->num_elems] ) T( std::move( parent->values()[split_pos] ) );
 
+                notify_cursor_change( *node, node->num_elems );
+
                 parent->keys()[split_pos] = std::move( neighbour->keys()[0] );
                 parent->values()[split_pos] = std::move( neighbour->values()[0] );
 
+                notify_cursor_change( *parent, split_pos );
+
                 for ( int i = 0; i < int( neighbour->num_elems ) - 1; ++i )
                     neighbour->keys()[i] = std::move( neighbour->keys()[i + 1] );
-                neighbour->keys()[0].~Key();
+                neighbour->keys()[neighbour->num_elems - 1].~Key();
 
                 for ( int i = 0; i < int( neighbour->num_elems ) - 1; ++i )
                     neighbour->values()[i] = std::move( neighbour->values()[i + 1] );
-                neighbour->values()[0].~T();
+                neighbour->values()[neighbour->num_elems - 1].~T();
+                
+                for ( int i = 0; i < int( neighbour->num_elems ) - 1; ++i )
+                    notify_cursor_change( *neighbour, i );
 
                 if ( neighbour->is_leaf() )
                 {
@@ -616,6 +641,7 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
             // merge the nodes
             new( &node->keys()[node->num_elems] ) Key( std::move( parent->keys()[split_pos] ) );
             new( &node->values()[node->num_elems] ) T( std::move( parent->values()[split_pos] ) );
+            notify_cursor_change( *node, node->num_elems );
 
             remove_blank_val_at( *parent, split_pos );
             
@@ -630,6 +656,10 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
                 new (&node->values()[node->num_elems + 1 + i]) Key( std::move( neighbour->values()[i] ) );
                 neighbour->values()[i].~T();
             }
+
+            for ( uint32_t i = 0; i < neighbour->num_elems; ++i )
+                notify_cursor_change( *node, node->num_elems + 1 + i );
+
             if ( ! neighbour->is_leaf() )
             {
                 for ( uint32_t i = 0; i <= neighbour->num_elems; ++i )
@@ -661,6 +691,19 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
         m_root = node->children[0];
         m_root->parent = cursor_t{ nullptr, 0 };
     }
+}
+
+
+btree_map_method_definition( void )::notify_cursor_change( node_t& node, uint32_t pos )
+{
+    m_notify_ptr_changed( node.keys()[pos], cursor_t{ &node, pos } );
+}
+
+
+btree_map_method_definition( void )::notify_cursor_change( cursor_t new_cursor )
+{
+    assert( new_cursor.valid() );
+    notify_cursor_change( *new_cursor.node, new_cursor.position );
 }
 
 #undef btree_map_method_definition_constr

@@ -12,6 +12,13 @@ struct btree_map_cursor
     btree_map_node<Key, T, F>* node;
     uint32_t position;
 
+    bool valid() const { return node != nullptr; }
+    Key& key() { return node->keys()[position]; }
+    T& value() { return node->values()[position]; }
+
+    const Key& key() const { return node->keys()[position]; }
+    const T& value() const { return node->values()[position]; }
+
     bool operator!= ( const btree_map_cursor& rhs ) const { return this->node != rhs.node || this->position != rhs.position; }
     bool operator== ( const btree_map_cursor& rhs ) const { return this->node == rhs.node && this->position == rhs.position; }
 };
@@ -63,6 +70,7 @@ public:
     btree_map();
     btree_map( const callback_t& callback );
     btree_map( allocator_t allocator );
+    btree_map( const callback_t& callback, allocator_t allocator );
 
     template<typename... Args>
     cursor_t emplace( const Key& key, Args&&... args );
@@ -110,6 +118,9 @@ private:
 
     // a node must have a parent and less than F - 1 elems
     void merge_with_neighbour( node_t* node );
+
+    void notify_cursor_change( node_t& node, uint32_t pos );
+    void notify_cursor_change( cursor_t new_cursor );
 };
 
 #include "btree.hpp"
