@@ -45,29 +45,7 @@ class EntityContainer
 public:
     using Entity = typename Entity2Components::id;
 
-    // Noncopyable, nonmovable
-    EntityContainer();
-    EntityContainer( const EntityContainer& ) = delete;
-    EntityContainer( EntityContainer&& ) = delete;
-    EntityContainer& operator=( const EntityContainer& ) = delete;
-    EntityContainer& operator=( EntityContainer&& ) = delete;
-
-    Entity CreateEntity();
-
-    template<typename Component, typename ... Args>
-    Component& AddComponent( Entity entity, Args&&... comp_args ); // replaces the old component if it already exists
-
-    template<typename Component>
-    Component* GetComponent( Entity entity ); // returns nullptr if the component of that type doesn't exist
-    
-    template<typename Component>
-    const Component* GetComponent( Entity entity ) const;
-
-    uint64_t GetEntityCount() const;
-
 private:
-
-    Entity2Components m_entities;
 
     friend struct details::ECSBTreeCallback<EntityContainer<Components...>>;
 
@@ -83,12 +61,12 @@ private:
         BTreeCallback<Component>
     >;
 
-    std::tuple<ComponentBtree<Components>...> m_components;
-
-    // reflection stuff to be able to remove components from entities by component typeid
+     // reflection stuff to be able to remove components from entities by a component typeid
     struct IBtree
     {
         virtual void erase( Entity ent ) = 0;
+
+        virtual void erase( CursorPlaceholder cursor ) = 0;
     };
 
     template<typename C, typename Btree>
@@ -102,10 +80,90 @@ private:
                 m_components.erase( i );
         }
 
+        virtual void erase( CursorPlaceholder cursor_ph ) override
+        {
+            typename Btree::cursor_t cursor;
+            memcpy( &cursor, &cursor_ph, sizeof( cursor ) );
+            assert( cursor != m_components.end() );
+            m_components.erase( cursor );
+        }
+
+
         IBtreeImpl( Btree& components ): m_components( components ) {}
     private:
         Btree& m_components;
     };
+
+public:
+
+    // Noncopyable, nonmovable
+    EntityContainer();
+    EntityContainer( const EntityContainer& ) = delete;
+    EntityContainer( EntityContainer&& ) = delete;
+    EntityContainer& operator=( const EntityContainer& ) = delete;
+    EntityContainer& operator=( EntityContainer&& ) = delete;
+
+    Entity CreateEntity();
+    void DestroyEntity( Entity entity );
+
+    template<typename Component, typename ... Args>
+    Component& AddComponent( Entity entity, Args&&... comp_args ); // replaces the old component if it already exists
+
+    template<typename Component>
+    Component* GetComponent( Entity entity ); // returns nullptr if the component of that type doesn't exist
+    
+    template<typename Component>
+    const Component* GetComponent( Entity entity ) const;
+
+    template<typename Component>
+    void RemoveComponent( Entity entity );
+
+    uint64_t GetEntityCount() const;
+
+    // Views
+    template<typename ...ViewComponents>
+    class View
+    {
+    public:
+        class Iterator
+        {
+        public:
+            std::tuple<Entity, ViewComponents&...> operator*();
+            Iterator& operator++();
+            bool operator!=( const Iterator& rhs ) const;
+
+        private:
+            friend class View;
+            Iterator( const std::tuple<typename ComponentBtree<ViewComponents>::cursor_t...>& cursors, std::tuple<ComponentBtree<Components>...>& components )
+                : m_cursors( cursors ), m_components( components )
+            {}
+
+            void MakeCursorsEqual();
+
+            std::tuple<typename ComponentBtree<ViewComponents>::cursor_t...> m_cursors;
+            std::tuple<ComponentBtree<Components>...>& m_components;
+        };
+
+        Iterator begin();
+        Iterator end();
+
+    private:
+        friend class EntityContainer;
+        View( std::tuple<ComponentBtree<Components>...>& components )
+            : m_components( components )
+        {}
+
+        std::tuple<ComponentBtree<Components>...>& m_components;
+    };
+
+    template<typename ...ViewComponents>
+    View<ViewComponents...> CreateView();
+
+private:
+
+    Entity2Components m_entities;   
+
+    std::tuple<ComponentBtree<Components>...> m_components;
 
     std::tuple<IBtreeImpl<Components, ComponentBtree<Components>>...> m_components_virtual_storage;
     boost::container::flat_map<

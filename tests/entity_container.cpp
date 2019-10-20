@@ -48,5 +48,64 @@ BOOST_AUTO_TEST_CASE( find_component )
     BOOST_TEST( world.GetComponent<Position>( o1 ) == nullptr );
 }
 
+BOOST_AUTO_TEST_CASE( remove_component )
+{
+    EntityContainer<Position, Velocity> world;
+    using Entity = decltype( world )::Entity;
+
+    Entity o2 = world.CreateEntity();
+
+    BOOST_TEST( world.GetComponent<Position>( o2 ) == nullptr );
+
+    world.AddComponent<Position>( o2, Position{ DirectX::XMFLOAT3( 1, 2, 3 ) } );
+
+    Position* pos_comp = world.GetComponent<Position>( o2 );
+    BOOST_TEST( pos_comp != nullptr );
+    BOOST_TEST( ( ( pos_comp->v.x == 1.0f ) && ( pos_comp->v.y == 2.0f ) && ( pos_comp->v.z == 3.0f ) ) );
+    
+    world.RemoveComponent<Position>( o2 );
+    BOOST_TEST( world.GetComponent<Position>( o2 ) == nullptr );
+}
+
+BOOST_AUTO_TEST_CASE( remove_entity )
+{
+    EntityContainer<Position, Velocity> world;
+    using Entity = decltype( world )::Entity;
+
+    Entity o2 = world.CreateEntity();
+
+    BOOST_TEST( world.GetComponent<Position>( o2 ) == nullptr );
+
+    world.AddComponent<Position>( o2, Position{ DirectX::XMFLOAT3( 1, 2, 3 ) } );
+
+    Position* pos_comp = world.GetComponent<Position>( o2 );
+    BOOST_TEST( pos_comp != nullptr );
+    BOOST_TEST( ( ( pos_comp->v.x == 1.0f ) && ( pos_comp->v.y == 2.0f ) && ( pos_comp->v.z == 3.0f ) ) );
+    
+    world.DestroyEntity( o2 );
+    BOOST_TEST( world.GetEntityCount() == 0 );
+}
+
+BOOST_AUTO_TEST_CASE( iterate_over_view )
+{
+    EntityContainer<Position, Velocity> world;
+    using Entity = decltype( world )::Entity;
+
+    Entity o1 = world.CreateEntity();
+    Entity o2 = world.CreateEntity();
+    Entity o3 = world.CreateEntity();
+    
+    world.AddComponent<Position>( o2, Position{ DirectX::XMFLOAT3( 1, 2, 3 ) } );
+    world.AddComponent<Velocity>( o1, Velocity{ DirectX::XMFLOAT3( 4, 5, 6 ) } );
+    world.AddComponent<Position>( o3, Position{ DirectX::XMFLOAT3( 7, 8, 9 ) } );
+    world.AddComponent<Velocity>( o3, Velocity{ DirectX::XMFLOAT3( 10, 11, 12 ) } );
+
+    constexpr float time_step = 0.001f;
+    for ( auto& [entity, pos, vel] : world.CreateView<Position, Velocity>() )
+    {
+        BOOST_TEST( ( entity != o1 && entity != o2 ) );
+        pos.v += vel.v * time_step;
+    }
+}
 
 BOOST_AUTO_TEST_SUITE_END()
