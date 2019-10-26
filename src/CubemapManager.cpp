@@ -69,6 +69,7 @@ void CubemapManager::LoadCubemap( CubemapID cubemap_id, const std::string& path 
 
 void CubemapManager::Update( GPUTaskQueue::Timestamp current_timestamp, SceneCopyOp copy_op, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     // Todo: remove missing cubemaps
 
     for ( auto& copy : m_copy_in_progress )

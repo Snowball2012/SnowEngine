@@ -200,6 +200,7 @@ D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
 
 RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const
 {
+    OPTICK_EVENT();
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
 
@@ -222,6 +223,7 @@ RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Lig
 void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, const FrameContext& frame_ctx,
                      std::vector<CommandList>& graphics_cmd_lists )
 {
+    OPTICK_EVENT();
     assert( frame_ctx.cmd_list_pool != nullptr );
     assert( frame_ctx.resources != nullptr );
 
@@ -424,6 +426,7 @@ void Renderer::MakeObjectCB( const DirectX::XMMATRIX& obj2world, GPUObjectConsta
 
 Renderer::RenderBatchList Renderer::CreateRenderitems( const span<const RenderItem>& render_list, GPULinearAllocator& frame_allocator ) const
 {
+    OPTICK_EVENT();
     RenderBatchList items;
 
     if ( render_list.size() == 0 )

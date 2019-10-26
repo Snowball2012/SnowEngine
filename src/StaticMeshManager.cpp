@@ -70,6 +70,7 @@ void StaticMeshManager::LoadStaticMesh( StaticMeshID id, std::string name, const
 
 void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     // Finalize existing transactions
     for ( size_t i = 0; i < m_active_transactions.size(); )
     {

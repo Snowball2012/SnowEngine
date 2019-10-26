@@ -56,6 +56,7 @@ private:
 template<class Framegraph>
 inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     auto& shadow_maps = framegraph.GetRes<ShadowMaps>();
     if ( ! shadow_maps )
         NOTIMPL;
@@ -94,6 +95,9 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12Grap
     ctx.ibl.radiance_multiplier = skybox->radiance_factor;
     ctx.ibl.transform = skybox->tf_cbv;
 
+    
+    PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "ForwardLighting" );
+
     const float bgr_color[4] = { 0, 0, 0, 0 };
     cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
     cmd_list.ClearRenderTargetView( ctx.ambient_rtv, bgr_color, 0, nullptr );
@@ -107,4 +111,6 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12Grap
     m_pass.Draw( ctx );
 
     m_pass.End();
+
+    PIXEndEvent( &cmd_list );
 }

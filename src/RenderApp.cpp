@@ -60,6 +60,7 @@ void RenderApp::OnResize()
 
 void RenderApp::Update( const GameTimer& gt )
 {
+    OPTICK_EVENT();
     ReadKeyboardState( gt );
 
     UpdateGUI();
@@ -87,6 +88,7 @@ void RenderApp::Update( const GameTimer& gt )
 
 void RenderApp::UpdateGUI()
 {
+    OPTICK_EVENT();
     m_renderer->NewGUIFrame();
 
     ImGui::NewFrame();
@@ -260,6 +262,7 @@ namespace
 
 void RenderApp::UpdateLights()
 {
+    OPTICK_EVENT();
     Light* light_ptr = m_renderer->GetScene().ModifyLight( m_sun );
     if ( ! light_ptr )
         throw SnowEngineException( "no sun" );
@@ -549,6 +552,7 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& ren
 
 void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
 {
+    OPTICK_EVENT();
     Camera* cam = scene.ModifyCamera( m_camera );
     if ( ! cam )
         throw SnowEngineException( "camera not found!" );

@@ -36,6 +36,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& ssao_buffer = framegraph.GetRes<SSAOBuffer_Noisy>();
         if ( ! ssao_buffer )
             throw SnowEngineException( "missing resource" );
@@ -47,7 +48,8 @@ public:
         if ( ! normal_buffer || ! depth_buffer
              || ! forward_cb || ! settings )
             throw SnowEngineException( "missing resource" );
-
+        
+        PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "HBAO Noisy" );
         m_pass.Begin( m_state, cmd_list );
 
         const auto& storage_desc = ssao_buffer->res->GetDesc();
@@ -83,6 +85,8 @@ public:
         m_pass.Draw( ctx );
 
         m_pass.End();
+
+        PIXEndEvent( &cmd_list );
     }
 
 private:

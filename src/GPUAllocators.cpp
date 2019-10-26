@@ -10,6 +10,8 @@ GPULinearAllocator::GPULinearAllocator( ID3D12Device* device, const D3D12_HEAP_D
     , m_cur_heap_idx( 0 )
     , m_initial_desc( desc )
 {
+    OPTICK_EVENT( );
+
     assert( m_device );
 
     m_heaps.emplace_back();

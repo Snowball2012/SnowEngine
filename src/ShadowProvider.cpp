@@ -131,6 +131,7 @@ std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scen
 
 void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
 {
+    OPTICK_EVENT();
     CreateShadowProducers( lights );
 
     for ( const auto& item : renderitems )

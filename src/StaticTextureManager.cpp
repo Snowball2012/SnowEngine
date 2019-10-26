@@ -51,6 +51,7 @@ void StaticTextureManager::LoadTexture( TextureID id, std::string path )
 
 void StaticTextureManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     FinalizeCompletedTransactions( current_timestamp );
     EnqueueRemovedTexturesForDestruction();
 

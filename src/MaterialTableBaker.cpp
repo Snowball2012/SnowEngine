@@ -35,6 +35,7 @@ void MaterialTableBaker::RegisterEnvMap( EnvMapID id )
 
 void MaterialTableBaker::UpdateStagingDescriptors()
 {
+    OPTICK_EVENT();
     for ( size_t i = 0; i < m_materials.size(); )
     {
         auto& material_data = m_materials[i];
@@ -76,6 +77,7 @@ void MaterialTableBaker::UpdateStagingDescriptors()
 // DescriptorTableBakery::BakeGPUTables() must be called before this method
 void MaterialTableBaker::UpdateGPUDescriptors()
 {
+    OPTICK_EVENT();
     for ( const auto& material_data : m_materials )
     {
         assert( m_scene->AllMaterials().has( material_data.material_id ) );

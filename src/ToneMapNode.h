@@ -35,6 +35,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& sdr_buffer = framegraph.GetRes<SDRBuffer>();
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
         auto& ambient_buffer = framegraph.GetRes<AmbientBuffer>();

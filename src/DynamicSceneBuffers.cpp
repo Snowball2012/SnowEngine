@@ -18,6 +18,7 @@ DynamicSceneBuffers::DynamicSceneBuffers( Microsoft::WRL::ComPtr<ID3D12Device> d
 
 void DynamicSceneBuffers::Update()
 {
+    OPTICK_EVENT();
     if ( NeedToRebuildBuffer() )
     {
         RebuildBuffer( CurrentBuffer() );

@@ -82,6 +82,7 @@ void OldRenderer::Init()
 
 void OldRenderer::Draw()
 {
+    OPTICK_EVENT();
     // Update rendergraph
     CameraID scene_camera;
     if ( ! ( m_frustrum_cull_camera_id == CameraID::nullid ) )
@@ -418,6 +419,8 @@ void OldRenderer::EndFrame( )
 
     m_cur_frame_resource->first = m_graphics_queue->ExecuteSubmitted();
     // swap buffers
+    OPTICK_GPU_FLIP(m_swap_chain.Get());
+	OPTICK_CATEGORY("Present", Optick::Category::Wait);
     ThrowIfFailedH( m_swap_chain->Present( 0, 0 ) );
     m_curr_back_buff = ( m_curr_back_buff + 1 ) % SwapChainBufferCount;
 
@@ -434,6 +437,7 @@ void OldRenderer::EndFrame( )
 
 OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frustrum& main_frustrum )
 {
+    OPTICK_EVENT();
     if ( main_frustrum.type != RenderTask::Frustrum::Type::Perspective )
         NOTIMPL;
 

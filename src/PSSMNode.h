@@ -33,6 +33,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& lights_with_pssm = framegraph.GetRes<ShadowCascadeProducers>();
         if ( ! lights_with_pssm )
             return;
@@ -44,6 +45,8 @@ public:
         auto& pass_cb = framegraph.GetRes<ForwardPassCB>();
         if ( ! pass_cb )
             throw SnowEngineException( "missing resource" );
+        
+        PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "PSSMGenPass" );
 
         m_pass.Begin( m_state, cmd_list );
 
@@ -73,6 +76,8 @@ public:
         }
 
         m_pass.End();
+
+        PIXEndEvent( &cmd_list );
     }
 
 private:

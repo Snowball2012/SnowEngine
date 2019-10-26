@@ -33,6 +33,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
         if ( ! depth_buffer )
             throw SnowEngineException( "missing resource" );
@@ -49,6 +50,8 @@ public:
         if ( ! pass_cb )
             throw SnowEngineException( "missing resource" );
 
+        PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "DepthPrepass" );
+
         m_pass.Begin( m_state, cmd_list );
 
         cmd_list.ClearDepthStencilView( depth_buffer->dsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 0.0f, 0, 0, nullptr );
@@ -64,9 +67,12 @@ public:
         }
         m_pass.Draw( ctx );
         m_pass.End();
+
+        PIXEndEvent( &cmd_list );
     }
 
 private:
+
     DepthOnlyPass m_pass;
     DepthOnlyPass::RenderStateID m_state;
 };

@@ -31,6 +31,7 @@ DescriptorTableBakery::DescriptorTableBakery( Microsoft::WRL::ComPtr<ID3D12Devic
 
 bool DescriptorTableBakery::BakeGPUTables()
 {
+    OPTICK_EVENT();
     if ( m_gpu_tables_need_update )
     {
         m_cur_gpu_heap_idx = ( m_cur_gpu_heap_idx + 1 ) % m_gpu_heaps.size();
@@ -43,11 +44,13 @@ bool DescriptorTableBakery::BakeGPUTables()
             gpu_heap_desc.Flags |= D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
             ThrowIfFailedH( m_device->CreateDescriptorHeap( &gpu_heap_desc, IID_PPV_ARGS( cur_gpu_heap.GetAddressOf() ) ) );
         }
-
-        m_device->CopyDescriptorsSimple( UINT( m_staging_heap.heap_end ),
-                                         cur_gpu_heap->GetCPUDescriptorHandleForHeapStart(),
-                                         m_staging_heap.heap->GetCPUDescriptorHandleForHeapStart(),
-                                         cur_gpu_heap->GetDesc().Type );
+        {
+            OPTICK_EVENT( "DX12_CopyDescriptorsSimple" );
+            m_device->CopyDescriptorsSimple( UINT( m_staging_heap.heap_end ),
+                                             cur_gpu_heap->GetCPUDescriptorHandleForHeapStart(),
+                                             m_staging_heap.heap->GetCPUDescriptorHandleForHeapStart(),
+                                             cur_gpu_heap->GetDesc().Type );
+        }
 
         m_gpu_tables_need_update = false;
         return true;

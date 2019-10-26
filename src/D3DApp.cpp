@@ -75,6 +75,7 @@ int D3DApp::Run()
 
             if ( !mAppPaused )
             {
+                OPTICK_FRAME( "MainThread" );
                 CalculateFrameStats();
                 Update( mTimer );
                 Draw( mTimer );

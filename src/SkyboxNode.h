@@ -34,6 +34,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
         auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
         auto& skybox = framegraph.GetRes<Skybox>();

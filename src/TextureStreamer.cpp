@@ -116,6 +116,7 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 
 void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     FinalizeCompletedGPUUploads( current_timestamp );
 
     CheckFilledUploaders( operation_tag, cmd_list );

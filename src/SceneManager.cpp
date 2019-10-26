@@ -229,6 +229,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
 
 void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
 {
+    OPTICK_EVENT();
     SceneCopyOp cur_op = m_operation_counter++;
 
     m_copy_queue->WaitForTimestamp( m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].second );
@@ -305,6 +306,7 @@ void SceneManager::CleanModifiedItemsStatus()
 
 void SceneManager::ProcessSubmeshes()
 {
+    OPTICK_EVENT();
     for ( auto& submesh : m_scene.StaticSubmeshSpan() )
     {
         if ( submesh.IsDirty() )

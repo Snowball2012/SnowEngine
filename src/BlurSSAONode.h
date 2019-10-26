@@ -44,6 +44,7 @@ private:
 template<class Framegraph>
 inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
 {
+    OPTICK_EVENT();
     auto& blurred_ssao = framegraph.GetRes<SSAOTexture_Blurred>();
     auto& transposed_ssao = framegraph.GetRes<SSAOTexture_Transposed>();
     auto& noisy_ssao = framegraph.GetRes<SSAOBuffer_Noisy>();
@@ -56,6 +57,8 @@ inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12Graphic
 
     const auto& transposed_desc = transposed_ssao->res->GetDesc();
     const auto& blurred_desc = blurred_ssao->res->GetDesc();
+    
+    PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "HBAO Blur" );
 
     m_pass.Begin( m_state, cmd_list );
 
@@ -92,4 +95,6 @@ inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12Graphic
     m_pass.Draw( ctx );
 
     m_pass.End();
+
+    PIXEndEvent( &cmd_list );
 }

@@ -26,6 +26,8 @@ namespace bc = boost::container;
 #include "MathUtils.h"
 
 #include <dxgi1_5.h>
+#include <pix.h>
+#include <optick.h>
 
 #include "Ptr.h"
 

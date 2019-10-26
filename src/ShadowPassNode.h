@@ -32,6 +32,7 @@ public:
 
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
+        OPTICK_EVENT();
         auto& lights_with_shadow = framegraph.GetRes<ShadowProducers>();
         if ( ! lights_with_shadow )
             return;
