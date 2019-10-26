@@ -27,12 +27,12 @@ void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT
 
     XMVECTOR camera_origin= XMLoadFloat3( &camera_data.pos );
 
-    for ( const auto& mesh_instance : m_scene->StaticMeshInstanceSpan() )
+    for ( const auto& [entity, transform, drawable] : m_scene->world.CreateView<Transform, DrawableMesh>() )
     {
-        if ( ! mesh_instance.IsEnabled() )
+        if ( ! drawable.show )
             continue;
 
-        const MaterialPBR::TextureIds& material_textures = m_scene->AllMaterials()[mesh_instance.Material()].Textures();
+        const MaterialPBR::TextureIds& material_textures = m_scene->AllMaterials()[drawable.material].Textures();
         std::array<Texture*, 3> textures;
         textures[0] = m_scene->TryModifyTexture( material_textures.base_color );
         textures[1] = m_scene->TryModifyTexture( material_textures.specular );
@@ -46,14 +46,13 @@ void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT
         if ( has_unloaded_texture )
             continue;
 
-        const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[mesh_instance.Submesh()];
-        const ObjectTransform& tf = m_scene->AllTransforms()[mesh_instance.GetTransform()];
+        const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[drawable.mesh];
 
         BoundingOrientedBox bob;
         BoundingOrientedBox::CreateFromBoundingBox( bob, submesh.Box() );
 
         const float lengths2_sum_local = XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &bob.Extents ) ) );
-        bob.Transform( bob, XMLoadFloat4x4( &tf.Obj2World() ) );
+        bob.Transform( bob, transform.local2world );
 
         const float lengths2_sum_world = XMVectorGetX( XMVector3LengthSq( XMLoadFloat3( &bob.Extents ) ) );
 

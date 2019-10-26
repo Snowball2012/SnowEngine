@@ -91,7 +91,7 @@ private:
     private:
         void LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id );
 
-        MeshInstanceID m_cube = MeshInstanceID::nullid;
+        World::Entity m_cube = World::Entity::nullid;
         CameraID m_camera = CameraID::nullid;
         LightID m_light = LightID::nullid;
         float m_theta = 0;

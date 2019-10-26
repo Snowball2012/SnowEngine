@@ -2,11 +2,18 @@
 
 #include "utils/packed_freelist.h"
 
+#include "EntityContainer.h"
+
 #include "SceneItems.h"
+
+#include "World.h"
 
 class Scene
 {
 public:
+    // TEMPORARY
+    World world;
+
     // Transforms
     TransformID AddTransform( ) noexcept;
     bool RemoveTransform( TransformID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
@@ -73,17 +80,6 @@ public:
     MaterialPBR* TryModifyMaterial( MaterialID id ) noexcept; // returns nullptr if object no longer exists
 
 
-    // Static mesh instances
-    MeshInstanceID AddStaticMeshInstance( TransformID tf, StaticSubmeshID submesh, MaterialID material );
-    bool RemoveStaticMeshInstance( MeshInstanceID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
-    // read-only
-    const auto& AllStaticMeshInstances() const noexcept { return m_static_mesh_instances; }
-    auto StaticMeshInstanceSpan() const noexcept { return m_static_mesh_instances.get_elems(); }
-    // for element modification
-    auto StaticMeshInstanceSpan() noexcept { return m_static_mesh_instances.get_elems(); }
-    StaticMeshInstance* TryModifyStaticMeshInstance( MeshInstanceID id ) noexcept; // returns nullptr if object no longer exists
-
-    
     // Cameras
     CameraID AddCamera( ) noexcept;
     bool RemoveCamera( CameraID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
@@ -137,7 +133,6 @@ private:
     packed_freelist<Texture> m_textures;
     packed_freelist<Cubemap> m_cubemaps;
     packed_freelist<MaterialPBR> m_materials;
-    packed_freelist<StaticMeshInstance> m_static_mesh_instances;
     packed_freelist<Camera> m_cameras;
     packed_freelist<Light> m_lights;
     packed_freelist<EnvironmentMap> m_env_maps;

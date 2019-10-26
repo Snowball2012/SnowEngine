@@ -258,56 +258,6 @@ MaterialPBR* Scene::TryModifyMaterial( MaterialID id ) noexcept
 }
 
 
-// Static mesh instances
-
-MeshInstanceID Scene::AddStaticMeshInstance( TransformID tf_id, StaticSubmeshID submesh_id, MaterialID material_id )
-{
-    ObjectTransform* tf = m_obj_tfs.try_get( tf_id );
-    StaticSubmesh* submesh = m_static_submeshes.try_get( submesh_id );
-    MaterialPBR* material = m_materials.try_get( material_id );
-    if ( ! ( tf && submesh && material ) )
-        throw SnowEngineException( "referenced objects do not exist" );
-
-    tf->AddRef();
-    submesh->AddRef();
-    material->AddRef();
-
-    StaticMeshInstance instance;
-    instance.Material() = material_id;
-    instance.Submesh() = submesh_id;
-    instance.Transform() = tf_id;
-
-    return m_static_mesh_instances.insert( instance );
-}
-
-bool Scene::RemoveStaticMeshInstance( MeshInstanceID id ) noexcept
-{
-    StaticMeshInstance* instance = m_static_mesh_instances.try_get( id );
-    if ( ! instance )
-        return true;
-
-    ObjectTransform* tf = m_obj_tfs.try_get( instance->GetTransform() );
-    StaticSubmesh* submesh = m_static_submeshes.try_get( instance->Submesh() );
-    MaterialPBR* material = m_materials.try_get( instance->Material() );
-
-    assert( tf && submesh && material );
-    if ( tf )
-        tf->ReleaseRef();
-    if ( submesh )
-        submesh->ReleaseRef();
-    if ( material )
-        material->ReleaseRef();
-
-    m_static_mesh_instances.erase( id );
-    return true;
-}
-
-StaticMeshInstance* Scene::TryModifyStaticMeshInstance( MeshInstanceID id ) noexcept
-{
-    return m_static_mesh_instances.try_get( id );
-}
-
-
 // Cameras
 
 CameraID Scene::AddCamera() noexcept

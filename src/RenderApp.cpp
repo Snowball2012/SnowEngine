@@ -478,6 +478,8 @@ void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
 {
     auto& scene = m_renderer->GetScene();
 
+    auto& world = scene.GetWorld();
+
     for ( const auto& ext_submesh : ext_scene.submeshes )
     {
         StaticSubmeshID submesh_id = scene.AddSubmesh( ext_scene.mesh_id,
@@ -490,9 +492,10 @@ void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
             throw SnowEngineException( "no material!" );
 
         MaterialID mat = ext_scene.materials[material_idx].second.material_id;
-        TransformID tf = scene.AddTransform( ext_submesh.transform );
-
-        MeshInstanceID mesh_instance = scene.AddMeshInstance( submesh_id, tf, mat );
+        
+        auto entity = world.CreateEntity();
+        world.AddComponent<Transform>( entity, Transform{ DirectX::XMLoadFloat4x4( &ext_submesh.transform ) } );
+        world.AddComponent<DrawableMesh>( entity, DrawableMesh{ submesh_id, mat } );
     }
 }
 
@@ -530,10 +533,11 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& rend
         throw SnowEngineException( "light not found!" );
     light->IsEnabled() = true;
 
-    StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
-    if ( ! cube )
+    DrawableMesh* cube_drawable = scene.GetWorld().GetComponent<DrawableMesh>( m_cube );
+    if ( ! cube_drawable )
         throw SnowEngineException( "cube not found!" );
-    cube->IsEnabled() = true;
+
+    cube_drawable->show = true;
 }
 
 void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& renderer )
@@ -544,10 +548,11 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& ren
         throw SnowEngineException( "light not found!" );
     light->IsEnabled() = false;
 
-    StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
-    if ( ! cube )
+    DrawableMesh* cube_drawable = scene.GetWorld().GetComponent<DrawableMesh>( m_cube );
+    if ( ! cube_drawable )
         throw SnowEngineException( "cube not found!" );
-    cube->IsEnabled() = false;
+
+    cube_drawable->show = false;
 }
 
 void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
@@ -560,28 +565,26 @@ void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_widt
     auto& cam_data = cam->ModifyData();
     cam_data.aspect_ratio = screen_width / screen_height;
 
-    StaticMeshInstance* cube = scene.ModifyInstance( m_cube );
-    if ( ! cube )
-        throw SnowEngineException( "cube not found!" );
-    ObjectTransform* tf = scene.ModifyTransform( cube->GetTransform() );
-    assert( tf );
+    auto& world = scene.GetWorld();
+    
+    Transform* tf = world.GetComponent<Transform>( m_cube );
+    if ( ! tf )
+        throw SnowEngineException( "cube does not have a Transform!" );
+
     m_theta = gt.TotalTime();
     XMFLOAT3 cube_eye_dir = SphericalToCartesian( 1, XM_PIDIV2, m_theta );
-    auto& cube_local2world = tf->ModifyMat();
 
     auto scale = XMMatrixScaling( 0.1f, 0.1f, 0.1f );
     auto rotation = XMMatrixLookToLH( XMVectorZero(),
                                       XMLoadFloat3( &cube_eye_dir ),
                                       XMVectorSet( 0, 1, 0, 0 ) );
     auto translation = XMMatrixTranslation( 1.0f * cam_data.aspect_ratio, -0.3f, 0 );
-    XMStoreFloat4x4( &cube_local2world, scale * rotation * translation );
 
-    
+    tf->local2world = scale * rotation * translation;    
 }
 
 void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
 {
-    TransformID tf_id = scene.AddTransform( Identity4x4 );
     TextureID loading_cube_texture = scene.LoadStreamedTexture( "resources/textures/loading_box_base.dds" );
     MaterialID cube_material_id = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_texture, normal_tex_id, specular_tex_id },
                                                      DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), Identity4x4 );
@@ -597,5 +600,8 @@ void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID norma
     StaticMeshID mesh_id = scene.LoadStaticMesh( "loading cube", std::move( cube_vertices ), std::move( cube_indices ) );
     StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
 
-    m_cube = scene.AddMeshInstance( submesh_id, tf_id, cube_material_id );
+    auto& world = scene.GetWorld();
+    m_cube = world.CreateEntity();
+    world.AddComponent<Transform>( m_cube, Transform{ DirectX::XMMatrixIdentity() } );
+    world.AddComponent<DrawableMesh>( m_cube, DrawableMesh{ submesh_id, cube_material_id } );
 }

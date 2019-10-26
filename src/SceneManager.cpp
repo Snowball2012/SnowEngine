@@ -55,7 +55,6 @@ TransformID SceneClientView::AddTransform( const DirectX::XMFLOAT4X4& obj2world 
     TransformID tf_id = m_scene->AddTransform();
     m_scene->TryModifyTransform( tf_id )->ModifyMat() = obj2world;
 
-    m_dynamic_buffers->AddTransform( tf_id );
     return tf_id;
 }
 
@@ -79,11 +78,6 @@ StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticS
     StaticSubmeshID id = m_scene->AddStaticSubmesh( mesh_id );
     m_scene->TryModifyStaticSubmesh( id )->Modify() = data;
     return id;
-}
-
-MeshInstanceID SceneClientView::AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id )
-{
-    return m_scene->AddStaticMeshInstance( tf_id, submesh_id, mat_id );
 }
 
 EnvMapID SceneClientView::AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id )
@@ -142,11 +136,6 @@ Light* SceneClientView::ModifyLight( LightID id ) noexcept
 span<Light> SceneClientView::GetAllLights() noexcept
 {
     return m_scene->LightSpan();
-}
-
-StaticMeshInstance* SceneClientView::ModifyInstance( MeshInstanceID id ) noexcept
-{
-    return m_scene->TryModifyStaticMeshInstance( id );
 }
 
 ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept

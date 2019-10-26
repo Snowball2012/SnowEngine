@@ -33,14 +33,6 @@ void DynamicSceneBuffers::Update()
 }
 
 
-void DynamicSceneBuffers::AddTransform( TransformID id ) noexcept
-{
-    InvalidateAllBuffers();
-    m_transforms.push_back( TransformData{ id, BufferData{} } );
-    m_buffer_size += Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
-}
-
-
 void DynamicSceneBuffers::AddMaterial( MaterialID id ) noexcept
 {
     InvalidateAllBuffers();
@@ -94,21 +86,6 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
     }
 
     size_t cur_offset = 0;
-    auto update_tf = [this, &buffer, &cur_offset]( TransformData& transform_data, ObjectTransform& tf )
-    {
-        if ( tf.IsDirty() )
-            transform_data.data.dirty_buffers_cnt = m_buffers.size();
-        if ( transform_data.data.dirty_buffers_cnt > 0 )
-            transform_data.data.dirty_buffers_cnt--;
-
-        transform_data.data.offset = cur_offset;
-
-        constexpr size_t tf_gpu_size = Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
-        cur_offset += tf_gpu_size;
-
-        GPUObjectConstants src_data = CreateTransformGPUData( tf );
-        CopyToBuffer( buffer, transform_data.data, src_data );
-    };
 
     auto update_material = [this, &buffer, &cur_offset]( MaterialData& material_data, MaterialPBR& mat )
     {
@@ -127,24 +104,12 @@ void DynamicSceneBuffers::RebuildBuffer( BufferInstance& buffer )
 
     };
 
-    UpdateAllItems( buffer, update_tf, update_material );
+    UpdateAllItems( buffer, update_material );
 }
 
 
 void DynamicSceneBuffers::UpdateBufferContents( BufferInstance& buffer )
 {
-    auto update_tf = [this, &buffer]( TransformData& transform_data, ObjectTransform& tf )
-    {
-        if ( tf.IsDirty() )
-            transform_data.data.dirty_buffers_cnt = m_buffers.size();
-
-        if ( transform_data.data.dirty_buffers_cnt > 0 )
-        {
-            GPUObjectConstants src_data = CreateTransformGPUData( tf );
-            CopyToBuffer( buffer, transform_data.data, src_data );
-            transform_data.data.dirty_buffers_cnt--;
-        }
-    };
 
     auto update_material = [this, &buffer]( MaterialData& material_data, MaterialPBR& mat )
     {
@@ -159,17 +124,7 @@ void DynamicSceneBuffers::UpdateBufferContents( BufferInstance& buffer )
         }
     };
 
-    UpdateAllItems( buffer, update_tf, update_material );
-}
-
-
-GPUObjectConstants DynamicSceneBuffers::CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept
-{
-    GPUObjectConstants gpu_data;
-    DirectX::XMMATRIX obj2world = XMLoadFloat4x4( &cpu_data.Obj2World() );
-    XMStoreFloat4x4( &gpu_data.model, XMMatrixTranspose( obj2world ) );
-    XMStoreFloat4x4( &gpu_data.model_inv_transpose, XMMatrixTranspose( InverseTranspose( obj2world ) ) );
-    return gpu_data;
+    UpdateAllItems( buffer, update_material );
 }
 
 
@@ -189,8 +144,8 @@ void DynamicSceneBuffers::CopyToBuffer( BufferInstance& buffer, const BufferData
 }
 
 
-template<typename fnUseTransform, typename fnUseMaterial>
-void DynamicSceneBuffers::UpdateAllItems( const BufferInstance& buffer, const fnUseTransform& fn_tf, const fnUseMaterial& fn_mat )
+template<typename fnUseMaterial>
+void DynamicSceneBuffers::UpdateAllItems( const BufferInstance& buffer, const fnUseMaterial& fn_mat )
 {
     for ( size_t mat_idx = 0; mat_idx < m_materials.size(); )
     {
@@ -210,23 +165,4 @@ void DynamicSceneBuffers::UpdateAllItems( const BufferInstance& buffer, const fn
             mat->GPUConstantBuffer() = buffer.gpu_res->GetGPUVirtualAddress() + material_data.data.offset;
         }
     }
-
-    for ( size_t tf_idx = 0; tf_idx < m_transforms.size(); )
-    {
-        auto& transform_data = m_transforms[tf_idx];
-        ObjectTransform* tf = m_scene->TryModifyTransform( transform_data.id );
-        if ( ! tf )
-        {
-            if ( ( tf_idx + 1 ) != m_transforms.size() )
-                transform_data = std::move( m_transforms.back() );
-            m_transforms.pop_back();
-            m_buffer_size -= Utils::CalcConstantBufferByteSize( sizeof( GPUObjectConstants ) );
-        }
-        else
-        {
-            tf_idx++;
-            fn_tf( transform_data, *tf );
-            tf->GPUView() = buffer.gpu_res->GetGPUVirtualAddress() + transform_data.data.offset;
-        }
-    }	
 }

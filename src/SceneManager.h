@@ -38,6 +38,9 @@ public:
 
     const Scene& GetROScene() const noexcept { return *m_scene; }
 
+    World& GetWorld() noexcept { return m_scene->world; }
+    const World& GetWorld() const noexcept { return m_scene->world; }
+
     StaticMeshID LoadStaticMesh( std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices );
     TextureID LoadStreamedTexture( std::string path );
     TextureID LoadStaticTexture( std::string path );
@@ -46,7 +49,6 @@ public:
     TransformID AddTransform( const DirectX::XMFLOAT4X4& obj2world = Identity4x4 );
     MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT4X4& uv_transform = Identity4x4 );
     StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
-    MeshInstanceID AddMeshInstance( StaticSubmeshID submesh_id, TransformID tf_id, MaterialID mat_id );
 
     EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id );
     EnvironmentMap* ModifyEnviromentMap( EnvMapID envmap_id ) noexcept;
@@ -61,7 +63,6 @@ public:
     Light* ModifyLight( LightID id ) noexcept;
     span<Light> GetAllLights() noexcept;
 
-    StaticMeshInstance* ModifyInstance( MeshInstanceID id ) noexcept;
     ObjectTransform* ModifyTransform( TransformID id ) noexcept;
 
 private:

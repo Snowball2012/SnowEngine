@@ -120,6 +120,8 @@ public:
 
     uint64_t GetEntityCount() const;
 
+    // todo: get number of components of each type
+
     // Views
     template<typename ...ViewComponents>
     class View
@@ -158,6 +160,11 @@ public:
 
     template<typename ...ViewComponents>
     View<ViewComponents...> CreateView();
+
+    // todo: const views
+    template<typename ...ViewComponents>
+    View<const ViewComponents...> CreateView() const;
+
 
 private:
 

@@ -456,18 +456,18 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
 
     RenderLists lists;
 
-    lists.opaque_items.reserve( scene.StaticMeshInstanceSpan().size() );
-    lists.shadow_items.reserve( scene.StaticMeshInstanceSpan().size() );
+    lists.opaque_items.reserve( scene.world.GetEntityCount() );
+    lists.shadow_items.reserve( scene.world.GetEntityCount() );
 
     m_num_renderitems_total = 0;
     m_num_renderitems_to_draw = 0;
 
-    for ( const auto& mesh_instance : scene.StaticMeshInstanceSpan() )
+    for ( const auto& [entity, transform, drawable] : GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
     {
-        if ( ! mesh_instance.IsEnabled() )
+        if ( ! drawable.show )
             continue;
 
-        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[mesh_instance.Submesh()];
+        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[drawable.mesh];
         const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
         if ( ! geom.IsLoaded() )
             continue;
@@ -482,7 +482,7 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
         item.index_offset = submesh_draw_args.start_index_loc;
         item.vertex_offset = submesh_draw_args.base_vertex_loc;
 
-        const MaterialPBR& material = scene.AllMaterials()[mesh_instance.Material()];
+        const MaterialPBR& material = scene.AllMaterials()[drawable.material];
 
         item.material = &material;
 
@@ -500,13 +500,12 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
         if ( has_unloaded_texture )
             continue;
 
-        const ObjectTransform& tf = scene.AllTransforms()[mesh_instance.GetTransform()];
-        item.local2world = tf.Obj2World();
+        DirectX::XMStoreFloat4x4( &item.local2world, transform.local2world );
 
         DirectX::BoundingOrientedBox item_box;
         DirectX::BoundingOrientedBox::CreateFromBoundingBox( item_box, submesh.Box() );
 
-        item_box.Transform( item_box, DirectX::XMLoadFloat4x4( &tf.Obj2World() ) );
+        item_box.Transform( item_box, transform.local2world );
 
         m_num_renderitems_total++;
         if ( item_box.Intersects( main_bf ) )

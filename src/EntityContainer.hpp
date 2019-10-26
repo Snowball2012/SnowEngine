@@ -128,6 +128,16 @@ typename EntityContainer<Components...>::View<ViewComponents...>
 
 template<typename ...Components>
 template<typename ...ViewComponents>
+typename EntityContainer<Components...>::View<const ViewComponents...>
+    EntityContainer<Components...>::CreateView() const
+{
+    View<const ViewComponents...> retval( const_cast<std::remove_const_t<decltype( m_components )>&>( m_components ) );
+    return retval;
+}
+
+
+template<typename ...Components>
+template<typename ...ViewComponents>
 typename EntityContainer<Components...>::View<ViewComponents...>::Iterator
     EntityContainer<Components...>::View<ViewComponents...>::begin()
 {

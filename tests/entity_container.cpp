@@ -106,6 +106,12 @@ BOOST_AUTO_TEST_CASE( iterate_over_view )
         BOOST_TEST( ( entity != o1 && entity != o2 ) );
         pos.v += vel.v * time_step;
     }
+
+    const auto& const_world = world;
+    for ( const auto& [entity, pos, vel] : const_world.CreateView<Position, Velocity>() )
+    {
+        BOOST_TEST( ( entity != o1 && entity != o2 ) );
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END()

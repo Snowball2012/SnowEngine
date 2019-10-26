@@ -47,8 +47,6 @@ public:
     const DirectX::XMFLOAT4X4& Obj2World() const noexcept { return m_obj2world; }
 
     // properties
-    D3D12_GPU_VIRTUAL_ADDRESS& GPUView() noexcept { return m_gpu; }
-    const D3D12_GPU_VIRTUAL_ADDRESS& GPUView() const noexcept { return m_gpu; }
     bool IsDirty() const noexcept { return m_is_dirty; }
     void Clean() noexcept { m_is_dirty = false; }
 private:
@@ -56,7 +54,6 @@ private:
     ObjectTransform() {}
 
     DirectX::XMFLOAT4X4 m_obj2world;
-    D3D12_GPU_VIRTUAL_ADDRESS m_gpu;
 
     bool m_is_dirty = false;
 };
@@ -246,36 +243,6 @@ private:
     virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const override;
 };
 using MaterialID = typename packed_freelist<MaterialPBR>::id;
-
-
-class StaticMeshInstance
-{
-public:
-    TransformID GetTransform() const noexcept { return m_transform; }
-    MaterialID Material() const noexcept { return m_material; }
-    StaticSubmeshID Submesh() const noexcept { return m_submesh; }
-
-    bool HasShadow() const noexcept { return m_has_shadow; }
-    bool& HasShadow() noexcept { return m_has_shadow; }
-
-    bool IsEnabled() const noexcept { return m_is_enabled; }
-    bool& IsEnabled() noexcept { return m_is_enabled; }
-
-private:
-    friend class Scene;
-    StaticMeshInstance() {}
-    TransformID& Transform() noexcept { return m_transform; }
-    MaterialID& Material() noexcept { return m_material; }
-    StaticSubmeshID& Submesh() noexcept { return m_submesh; }
-
-    TransformID m_transform;
-    MaterialID m_material;
-    StaticSubmeshID m_submesh;
-
-    bool m_has_shadow = false;
-    bool m_is_enabled = true;
-};
-using MeshInstanceID = typename packed_freelist<StaticMeshInstance>::id;
 
 
 class EnvironmentMap : public RefCounter

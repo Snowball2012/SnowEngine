@@ -13,7 +13,6 @@ public:
 
     void Update();
 
-    void AddTransform( TransformID id ) noexcept;
     void AddMaterial( MaterialID id ) noexcept;
 
 private:
@@ -22,12 +21,6 @@ private:
     {
         size_t offset;
         size_t dirty_buffers_cnt;
-    };
-
-    struct TransformData
-    {
-        TransformID id;
-        BufferData data;
     };
 
     struct MaterialData
@@ -51,16 +44,14 @@ private:
     void UpdateBufferContents( BufferInstance& buffer );
 
     // fnUse_Item is a functor with void( Item_Data&, Item& ) signature
-    template<typename fnUseTransform, typename fnUseMaterial>
-    void UpdateAllItems( const BufferInstance& buffer, const fnUseTransform& fn_tf, const fnUseMaterial& fn_mat );
+    template<typename fnUseMaterial>
+    void UpdateAllItems( const BufferInstance& buffer, const fnUseMaterial& fn_mat );
 
-    GPUObjectConstants CreateTransformGPUData( const ObjectTransform& cpu_data ) const noexcept;
     MaterialConstants CreateMaterialGPUData( const MaterialPBR& cpu_data ) const noexcept;
 
     template<typename Data>
     void CopyToBuffer( BufferInstance& buffer, const BufferData& dst, const Data& src ) const noexcept;
 
-    std::vector<TransformData> m_transforms;
     std::vector<MaterialData> m_materials;
     
     std::vector<BufferInstance> m_buffers;

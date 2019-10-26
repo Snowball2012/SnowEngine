@@ -87,6 +87,9 @@
     <Filter Include="core\ECS">
       <UniqueIdentifier>{59295806-8cec-41d7-91fc-851d85882787}</UniqueIdentifier>
     </Filter>
+    <Filter Include="core\ECSInstance">
+      <UniqueIdentifier>{c0479342-e1f0-42f6-8999-1b924e995892}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -462,6 +465,12 @@
     </ClInclude>
     <ClInclude Include="src\EntityContainer.hpp">
       <Filter>core\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="src\World.h">
+      <Filter>core\ECSInstance</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Components.h">
+      <Filter>core\ECSInstance</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
