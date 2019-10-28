@@ -2,10 +2,10 @@
 
 #include "FramegraphResource.h"
 
-#include "ToneMappingPass.h"
+#include "LightComposePass.h"
 
 template<class Framegraph>
-class ToneMapNode : public BaseRenderNode<Framegraph>
+class LightComposeNode : public BaseRenderNode<Framegraph>
 {
 public:
     using OpenRes = std::tuple
@@ -13,19 +13,19 @@ public:
         >;
     using WriteRes = std::tuple
         <
-        ResourceInState<SDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
+        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
         >;
     using ReadRes = std::tuple
         <
-        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-        TonemapNodeSettings,
+        ResourceInState<AmbientBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<SSAOTexture_Blurred, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
         ScreenConstants
         >;
     using CloseRes = std::tuple
         <
         >;
 
-    ToneMapNode( DXGI_FORMAT rtv_format, ID3D12Device& device )
+    LightComposeNode( DXGI_FORMAT rtv_format, ID3D12Device& device )
         : m_pass( device )
     {
         m_state = m_pass.BuildRenderState( rtv_format, device );
@@ -34,21 +34,21 @@ public:
     virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
     {
         OPTICK_EVENT();
-        auto& sdr_buffer = framegraph.GetRes<SDRBuffer>();
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
-        auto& settings = framegraph.GetRes<TonemapNodeSettings>();
+        auto& ambient_buffer = framegraph.GetRes<AmbientBuffer>();
+        auto& ssao = framegraph.GetRes<SSAOTexture_Blurred>();
         auto& screen_constants = framegraph.GetRes<ScreenConstants>();
 
-        if ( ! sdr_buffer || ! hdr_buffer
-             || ! settings || ! screen_constants )
+        if ( ! hdr_buffer || ! ambient_buffer
+             || ! ssao || ! screen_constants )
             throw SnowEngineException( "missing resource" );
 
         m_pass.Begin( m_state, cmd_list );
 
-        ToneMappingPass::Context ctx;
-        ctx.gpu_data = settings->data;
-        ctx.frame_rtv = sdr_buffer->rtv;
-        ctx.frame_srv = hdr_buffer->srv;
+        LightComposePass::Context ctx;
+        ctx.frame_rtv = hdr_buffer->rtv;
+        ctx.ambient_srv = ambient_buffer->srv;
+        ctx.ssao_srv = ssao->srv;
 
         cmd_list.RSSetViewports( 1, &screen_constants->viewport );
         cmd_list.RSSetScissorRects( 1, &screen_constants->scissor_rect );
@@ -58,7 +58,6 @@ public:
     }
 
 private:
-    ToneMappingPass m_pass;
-    ToneMappingPass::RenderStateID m_state;
-    
+    LightComposePass m_pass;
+    LightComposePass::RenderStateID m_state;    
 };

@@ -71,6 +71,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->Resource()->GetDesc().Format, *m_device );
     m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
     m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_device );
+    m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_back_buffer_format, *m_device );
 
     if ( m_framegraph.IsRebuildNeeded() )
         m_framegraph.Rebuild();

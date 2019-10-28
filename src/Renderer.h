@@ -14,6 +14,7 @@
 #include "BlurSSAONode.h"
 #include "ToneMapNode.h"
 #include "HBAONode.h"
+#include "LightComposeNode.h"
 
 #include "Scene.h"
 
@@ -146,6 +147,7 @@ private:
             SkyboxNode,
             HBAONode,
             BlurSSAONode,
+            LightComposeNode,
             ToneMapNode
         >;
     FramegraphInstance m_framegraph;

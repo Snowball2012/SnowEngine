@@ -5,25 +5,21 @@
 
 #include "Ptr.h"
 
-class ToneMappingPass : public RenderPass
+
+// Takes an HDR target as input along with ambient lighting and ssao and combines them to one buffer
+// Uses point sampler so it's better to use textures of the same resolution
+class LightComposePass : public RenderPass
 {
 public:
-    ToneMappingPass( ID3D12Device& device );
+    LightComposePass( ID3D12Device& device );
 
     RenderStateID BuildRenderState( DXGI_FORMAT rtv_format, ID3D12Device& device );
 
-    struct ShaderData
-    {
-        float upper_luminance_bound = 2.e4f;
-        float lower_luminance_bound = 1.e-2f;
-        bool blend_luminance = false;
-    };
-
     struct Context
     {
-        D3D12_GPU_DESCRIPTOR_HANDLE frame_srv;
+        D3D12_GPU_DESCRIPTOR_HANDLE ambient_srv;
+        D3D12_GPU_DESCRIPTOR_HANDLE ssao_srv;
         D3D12_CPU_DESCRIPTOR_HANDLE frame_rtv;
-        ShaderData gpu_data;
     };
 
     void Draw( const Context& context );

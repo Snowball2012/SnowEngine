@@ -242,6 +242,9 @@
     <ClCompile Include="src\RenderTask.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\LightComposePass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -472,6 +475,12 @@
     <ClInclude Include="src\Components.h">
       <Filter>core\ECSInstance</Filter>
     </ClInclude>
+    <ClInclude Include="src\LightComposePass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\LightComposeNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">
@@ -518,6 +527,9 @@
     </FxCompile>
     <FxCompile Include="shaders\forward_ps.hlsl">
       <Filter>shaders\forward_lighting</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\postprocess\light_compose.hlsl">
+      <Filter>shaders\postprocess</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

@@ -201,6 +201,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\LightComposePass.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\MaterialTableBaker.cpp" />
     <ClCompile Include="src\ParallelSplitShadowMapping.cpp" />
@@ -278,6 +279,8 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     <ClInclude Include="src\HBAOPass.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
+    <ClInclude Include="src\LightComposeNode.h" />
+    <ClInclude Include="src\LightComposePass.h" />
     <ClInclude Include="src\MaterialTableBaker.h" />
     <ClInclude Include="src\ParallelSplitShadowMapping.h" />
     <ClInclude Include="src\Renderer.h" />
@@ -400,6 +403,14 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\postprocess\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\postprocess\%(Filename).cso</ObjectFileOutput>
+    </FxCompile>
+    <FxCompile Include="shaders\postprocess\light_compose.hlsl">
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="shaders\postprocess\separable_blur.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
