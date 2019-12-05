@@ -52,7 +52,7 @@ public:
 
         SkyboxPass::Context ctx;
         ctx.frame_dsv = depth_buffer->dsv;
-        ctx.frame_rtv = hdr_buffer->rtv;
+        ctx.frame_rtv = hdr_buffer->rtv[0];
         ctx.skybox_srv = skybox->srv_skybox;
         ctx.skybox_cb = skybox->tf_cbv;
         ctx.pass_cb = forward_cb->pass_cb;

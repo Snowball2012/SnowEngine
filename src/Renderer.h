@@ -163,7 +163,7 @@ private:
     int32_t m_shadow_bias = 5000;
 
     std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
-    std::unique_ptr<DynamicTexture> m_hdr_backbuffer = nullptr;
+    std::unique_ptr<DynamicTextureWithMips> m_hdr_backbuffer = nullptr;
     std::unique_ptr<DynamicTexture> m_hdr_ambient = nullptr;
     std::unique_ptr<DynamicTexture> m_normals = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao = nullptr;

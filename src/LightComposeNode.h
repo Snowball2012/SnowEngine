@@ -42,11 +42,12 @@ public:
         if ( ! hdr_buffer || ! ambient_buffer
              || ! ssao || ! screen_constants )
             throw SnowEngineException( "missing resource" );
-
+        
+        PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "Light composition" );
         m_pass.Begin( m_state, cmd_list );
 
         LightComposePass::Context ctx;
-        ctx.frame_rtv = hdr_buffer->rtv;
+        ctx.frame_rtv = hdr_buffer->rtv[0];
         ctx.ambient_srv = ambient_buffer->srv;
         ctx.ssao_srv = ssao->srv;
 
@@ -55,6 +56,8 @@ public:
         m_pass.Draw( ctx );
 
         m_pass.End();
+
+        PIXEndEvent( &cmd_list );
     }
 
 private:

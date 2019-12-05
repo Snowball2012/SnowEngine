@@ -224,8 +224,8 @@ BOOST_AUTO_TEST_CASE( randomized_deletion )
 
     BOOST_TEST( test_btree.size() == num_keys );
 
-    int total_size = test_btree.size();
-    int deleted_elems = 0;
+    size_t total_size = test_btree.size();
+    size_t deleted_elems = 0;
     while ( test_btree.size() )
     {
         auto i = test_btree.begin();

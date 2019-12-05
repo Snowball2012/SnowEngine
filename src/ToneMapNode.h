@@ -48,7 +48,7 @@ public:
         ToneMappingPass::Context ctx;
         ctx.gpu_data = settings->data;
         ctx.frame_rtv = sdr_buffer->rtv;
-        ctx.frame_srv = hdr_buffer->srv;
+        ctx.frame_srv = hdr_buffer->srv[0];
 
         cmd_list.RSSetViewports( 1, &screen_constants->viewport );
         cmd_list.RSSetScissorRects( 1, &screen_constants->scissor_rect );

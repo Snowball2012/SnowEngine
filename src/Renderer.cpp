@@ -22,7 +22,7 @@ Renderer Renderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t he
 Renderer::~Renderer()
 {
     if ( m_depth_stencil_buffer ) m_depth_stencil_buffer->DSV().reset();
-    if ( m_hdr_backbuffer ) m_hdr_backbuffer->RTV().reset();
+    if ( m_hdr_backbuffer ) m_hdr_backbuffer->RTV().clear();
     if ( m_hdr_ambient ) m_hdr_ambient->RTV().reset();
     if ( m_normals ) m_normals->RTV().reset();
     if ( m_ssao ) m_ssao->RTV().reset();
@@ -134,6 +134,7 @@ void Renderer::CreateTransientResources()
         if ( create_dsv_desc )
             tex->DSV() = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
     };
+
 
     create_tex( m_hdr_backbuffer, m_hdr_format, true, false, true, false );
     create_tex( m_hdr_ambient, m_hdr_format, true, false, true, false );
@@ -299,9 +300,20 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         m_framegraph.SetRes( pass_cb );
 
         HDRBuffer hdr_buffer;
-        hdr_buffer.res = m_hdr_backbuffer->Resource();
-        hdr_buffer.rtv = m_hdr_backbuffer->RTV()->HandleCPU();
-        hdr_buffer.srv = GetGPUHandle( m_hdr_backbuffer->SRV() );
+        {
+            hdr_buffer.res = m_hdr_backbuffer->Resource();
+            hdr_buffer.nmips = m_hdr_backbuffer->Resource()->GetDesc().MipLevels;
+            hdr_buffer.rtv.resize( hdr_buffer.nmips );
+            hdr_buffer.srv.resize( hdr_buffer.nmips );
+            hdr_buffer.rtv[0] = m_hdr_backbuffer->RTV()[0].HandleCPU();
+            hdr_buffer.rtv[1] = m_hdr_backbuffer->RTV()[1].HandleCPU();
+            hdr_buffer.srv[0] = GetGPUHandle( m_hdr_backbuffer->SRV() );
+            hdr_buffer.srv[1] = CD3DX12_GPU_DESCRIPTOR_HANDLE(
+                GetGPUHandle( m_hdr_backbuffer->SRV() ),
+                1,
+                m_descriptor_tables->GetDescriptorIncrementSize()
+            );
+        }
         m_framegraph.SetRes( hdr_buffer );
 
         AmbientBuffer ambient_buffer;

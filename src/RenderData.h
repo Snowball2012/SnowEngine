@@ -38,6 +38,31 @@ private:
     std::unique_ptr<Descriptor> m_dsv = nullptr;
 };
 
+class DynamicTextureWithMips : public ResizableTexture
+{
+    public:
+    DynamicTextureWithMips( ComPtr<ID3D12Resource>&& texture, ID3D12Device* device,
+                    D3D12_RESOURCE_STATES initial_state, const D3D12_CLEAR_VALUE* opt_clear_value ) noexcept
+        : ResizableTexture( std::move( texture ), device, initial_state, opt_clear_value )
+    {}
+
+    DescriptorTableBakery::TableID SRV() const { return m_srv; }
+    DescriptorTableBakery::TableID UAV() const { return m_uav; }
+    const bc::small_vector<Descriptor, 12>& RTV() const { return m_rtv; }
+    const Descriptor* DSV() const { return m_dsv.get(); }
+
+    DescriptorTableBakery::TableID& SRV() { return m_srv; }
+    DescriptorTableBakery::TableID& UAV() { return m_uav; }
+    bc::small_vector<Descriptor, 12>& RTV() { return m_rtv; }
+    std::unique_ptr<Descriptor>& DSV() { return m_dsv; }
+
+private:
+    DescriptorTableBakery::TableID m_srv = DescriptorTableBakery::TableID::nullid;
+    DescriptorTableBakery::TableID m_uav = DescriptorTableBakery::TableID::nullid;
+    bc::small_vector<Descriptor, 12> m_rtv;
+    std::unique_ptr<Descriptor> m_dsv;
+};
+
 enum class FramegraphTechnique
 {
     ShadowGenPass,

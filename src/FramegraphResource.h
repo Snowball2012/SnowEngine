@@ -42,8 +42,10 @@ struct ForwardPassCB
 
 struct HDRBuffer : TrackedResource
 {
-    D3D12_GPU_DESCRIPTOR_HANDLE srv;
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+    DirectX::XMUINT2 size;
+    uint32_t nmips;
+    bc::small_vector<D3D12_GPU_DESCRIPTOR_HANDLE, 12> srv; // per mip level, non cumulative
+    bc::small_vector<D3D12_CPU_DESCRIPTOR_HANDLE, 12> rtv;
 };
 
 struct AmbientBuffer : TrackedResource

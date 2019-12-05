@@ -12,6 +12,33 @@ constexpr T ceil_integer_div( T val, T divisor ) { return ( val + divisor - 1 ) 
 template<class T>
 constexpr T lerp( T v0, T v1, T t ) { return std::fma( t, v1, std::fma( -t, v0, v0 ) ); }
 
+constexpr uint32_t upper_power_of_two(uint32_t v)
+{
+    assert( v != 0 );
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
+constexpr uint64_t upper_power_of_two(uint64_t v)
+{
+    assert( v != 0 );
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v |= v >> 32;
+    v++;
+    return v;
+}
+
 DirectX::XMFLOAT3 operator-( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator+( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3& operator+=( DirectX::XMFLOAT3& op, const DirectX::XMFLOAT3& rhs );

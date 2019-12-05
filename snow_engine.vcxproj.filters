@@ -245,6 +245,12 @@
     <ClCompile Include="src\LightComposePass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
+    <ClCompile Include="src\DownscalePass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\DynamicTexture.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -481,6 +487,15 @@
     <ClInclude Include="src\LightComposeNode.h">
       <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
+    <ClInclude Include="src\DownscalePass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\HDRDownscaleNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DynamicTexture.h">
+      <Filter>core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\temporal_blend_ps.hlsl">
@@ -530,6 +545,9 @@
     </FxCompile>
     <FxCompile Include="shaders\postprocess\light_compose.hlsl">
       <Filter>shaders\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="shaders\postprocess\downscale.hlsl">
+      <Filter>shaders</Filter>
     </FxCompile>
   </ItemGroup>
   <ItemGroup>

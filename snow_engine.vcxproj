@@ -179,7 +179,9 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     <ClCompile Include="src\DepthOnlyPass.cpp" />
     <ClCompile Include="src\DescriptorHeap.cpp" />
     <ClCompile Include="src\DescriptorTableBakery.cpp" />
+    <ClCompile Include="src\DownscalePass.cpp" />
     <ClCompile Include="src\DynamicSceneBuffers.cpp" />
+    <ClCompile Include="src\DynamicTexture.cpp" />
     <ClCompile Include="src\ForwardCBProvider.cpp" />
     <ClCompile Include="src\ForwardLightingPass.cpp" />
     <ClCompile Include="src\GPUResourceHolder.cpp" />
@@ -257,7 +259,9 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     <ClInclude Include="src\DepthPrepassNode.h" />
     <ClInclude Include="src\DescriptorHeap.h" />
     <ClInclude Include="src\DescriptorTableBakery.h" />
+    <ClInclude Include="src\DownscalePass.h" />
     <ClInclude Include="src\DynamicSceneBuffers.h" />
+    <ClInclude Include="src\DynamicTexture.h" />
     <ClInclude Include="src\EntityContainer.h" />
     <ClInclude Include="src\EntityContainer.hpp" />
     <ClInclude Include="src\ForwardCBProvider.h" />
@@ -277,6 +281,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     <ClInclude Include="src\GPUTaskQueue.h" />
     <ClInclude Include="src\HBAONode.h" />
     <ClInclude Include="src\HBAOPass.h" />
+    <ClInclude Include="src\HDRDownscaleNode.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
     <ClInclude Include="src\LightComposeNode.h" />
@@ -394,6 +399,16 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     <None Include="shaders\bindings\light_cb.hlsli" />
     <None Include="shaders\bindings\material_cb.hlsli" />
     <None Include="shaders\bindings\object_cb.hlsli" />
+    <FxCompile Include="shaders\postprocess\downscale.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
+    </FxCompile>
     <FxCompile Include="shaders\postprocess\hbao_generation.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>

@@ -11,7 +11,7 @@
 //
 // Typical use scenario:
 // 1. Derive from it
-// 2. Create neccessary render states with a derived class
+// 2. Create neccessary render states with the derived class
 // 3. Begin( state, cmd_list )
 // 4. Record some commands with a derived class
 // 5. End()

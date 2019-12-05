@@ -83,7 +83,7 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12Grap
     auto& skybox = framegraph.GetRes<Skybox>();
 
     ForwardLightingPass::Context ctx;
-    ctx.back_buffer_rtv = hdr_buffer->rtv;
+    ctx.back_buffer_rtv = hdr_buffer->rtv[0];
     ctx.depth_stencil_view = depth_buffer->dsv;
     ctx.renderitems = renderitems->items;
     ctx.shadow_map_srv = shadow_maps->srv;
