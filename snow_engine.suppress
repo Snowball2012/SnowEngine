@@ -855,4 +855,28 @@
     <CodeCurrent>2817222228</CodeCurrent>
     <CodeNext>123</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>RenderTask.cpp</FileName>
+    <ErrorCode>V813</ErrorCode>
+    <Message>Decreased performance. The 'batches' argument should probably be rendered as a constant reference.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>314646164</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>RenderTask.cpp</FileName>
+    <ErrorCode>V813</ErrorCode>
+    <Message>Decreased performance. The 'batches' argument should probably be rendered as a constant reference.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>1943147982</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
+  <snow_engine>
+    <FileName>RenderTask.cpp</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the constructor. Consider inspecting: m_main_frustrum, m_mode, m_main_camera.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>1714940875</CodeCurrent>
+    <CodeNext>2966823578</CodeNext>
+  </snow_engine>
 </NewDataSet>

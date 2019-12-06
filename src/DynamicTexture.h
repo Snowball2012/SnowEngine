@@ -23,6 +23,7 @@ public:
     };
 
     DynamicTexture(
+        std::wstring name,
         uint32_t width, uint32_t height, DXGI_FORMAT format, bool has_mips,
         const ViewsToCreate& views_to_create,
         ID3D12Device& device, DescriptorTableBakery* dtb,
@@ -55,12 +56,26 @@ public:
     span<const Descriptor> GetRtvPerMip() const;
     span<const Descriptor> GetDsvPerMip() const;
 
+    ID3D12Resource* GetResource() const;
+    DXGI_FORMAT GetFormat() const;
+
 private:
+
+    bool RecreateTexture(
+        DXGI_FORMAT format,
+        uint32_t width, uint32_t height,
+        ID3D12Device& device, DescriptorTableBakery* dtb,
+        StagingDescriptorHeap* rtv_heap, StagingDescriptorHeap* dsv_heap
+    );
+
+    std::wstring m_name;
 
     ComPtr<ID3D12Resource> m_gpu_res;
 
     bool m_has_mips;
     ViewsToCreate m_views_to_create;
+    std::optional<D3D12_CLEAR_VALUE> m_optimized_clear_value;
+
 
     int m_srv_per_mip_offset;
     int m_srv_cumulative_offset;

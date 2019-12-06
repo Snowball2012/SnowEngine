@@ -163,7 +163,7 @@ private:
     int32_t m_shadow_bias = 5000;
 
     std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
-    std::unique_ptr<DynamicTextureWithMips> m_hdr_backbuffer = nullptr;
+    std::unique_ptr<DynamicTexture> m_hdr_backbuffer = nullptr;
     std::unique_ptr<DynamicTexture> m_hdr_ambient = nullptr;
     std::unique_ptr<DynamicTexture> m_normals = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao = nullptr;
@@ -196,4 +196,5 @@ private:
     ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DynamicTexture::TextureView view, int mip ) const;
 };

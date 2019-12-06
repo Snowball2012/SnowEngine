@@ -251,6 +251,9 @@
     <ClCompile Include="src\DynamicTexture.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="src\CGUtils.cpp">
+      <Filter>utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\RenderApp.h">
@@ -495,6 +498,9 @@
     </ClInclude>
     <ClInclude Include="src\DynamicTexture.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\CGUtils.h">
+      <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -534,7 +534,7 @@ btree_map_method_definition( void )::merge_with_neighbour( node_t* node )
             }
 
         // neighbour is on the right, node is on the left
-        if ( neighbour->num_elems > F - 1 || node->num_elems > F - 1 )
+        if ( neighbour->num_elems > F - 1 || node->num_elems > F - 1 ) //-V522
         {
             if ( neighbour->num_elems == F - 2 )
             {
