@@ -39,6 +39,10 @@ float4 make_float4( float val )
     return float4( val, val, val, val );
 }
 
+float2 tc_from_ndc(float2 ndc)
+{
+    return ((ndc * 0.5f) + (float2)0.5f) * float2(1, -1) + float2(0,1);
+}
 
 void renormalize_tbn( inout float3 n, inout float3 t, out float3 b )
 {

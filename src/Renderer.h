@@ -15,6 +15,7 @@
 #include "ToneMapNode.h"
 #include "HBAONode.h"
 #include "LightComposeNode.h"
+#include "HDRDownscaleNode.h"
 
 #include "Scene.h"
 
@@ -148,7 +149,8 @@ private:
             HBAONode,
             BlurSSAONode,
             LightComposeNode,
-            ToneMapNode
+            ToneMapNode,
+            HDRDownscaleNode
         >;
     FramegraphInstance m_framegraph;
     ShadowProvider m_shadow_provider;
@@ -196,5 +198,5 @@ private:
     ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
-    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DynamicTexture::TextureView view, int mip ) const;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( const DynamicTexture::TextureView& view, int mip ) const;
 };

@@ -99,6 +99,7 @@ private:
 
     base_container<T> m_packed_data;
     base_container<freelist_elem> m_freelist;
+    base_container<uint32_t> m_backlinks;
     uint32_t m_free_head = FREE_END;
 };
 

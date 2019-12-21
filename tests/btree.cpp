@@ -95,7 +95,6 @@ BOOST_AUTO_TEST_CASE( callback )
         BOOST_TEST( *cursors[i] == random_numbers[i] );
     }
 
-    int total_size = test_btree.size();
     while ( test_btree.size() > num_keys / 2 )
     {
         auto i = test_btree.begin();
@@ -185,8 +184,8 @@ BOOST_AUTO_TEST_CASE( sequenced_deletion )
     BOOST_TEST( test_btree.size() == num_keys );
 
     auto i = test_btree.begin();
-    int total_size = test_btree.size();
-    int deleted_elems = 0;
+    size_t total_size = test_btree.size();
+    size_t deleted_elems = 0;
     while ( i != test_btree.end() )
     {
         i = test_btree.erase( i );

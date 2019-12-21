@@ -24,21 +24,19 @@ public:
 
     DynamicTexture(
         std::wstring name,
-        uint32_t width, uint32_t height, DXGI_FORMAT format, bool has_mips,
+        uint32_t width, uint32_t height, DXGI_FORMAT format, bool has_mips, D3D12_RESOURCE_STATES initial_state,
         const ViewsToCreate& views_to_create,
         ID3D12Device& device, DescriptorTableBakery* dtb,
         StagingDescriptorHeap* rtv_heap,
         StagingDescriptorHeap* dsv_heap,
-        const D3D12_CLEAR_VALUE* optimized_clear_value
-    ); // dtb, rtv_heap or dsv_heap may be nullptr if the texture doesn't have correspondiong views
+        const D3D12_CLEAR_VALUE* optimized_clear_value ); // dtb, rtv_heap or dsv_heap may be nullptr if the texture doesn't have correspondiong views
     
     // no gpu access is allowed for the texture when you call this method
     bool Resize(
         uint32_t width, uint32_t height,
         ID3D12Device& device, DescriptorTableBakery* dtb,
         StagingDescriptorHeap* rtv_heap,
-        StagingDescriptorHeap* dsv_heap
-    ); // dtb, rtv_heap or dsv_heap may be nullptr if the texture doesn't have correspondiong views
+        StagingDescriptorHeap* dsv_heap ); // dtb, rtv_heap or dsv_heap may be nullptr if the texture doesn't have correspondiong views
 
     int GetMipCount() const;
 
@@ -65,8 +63,7 @@ private:
         DXGI_FORMAT format,
         uint32_t width, uint32_t height,
         ID3D12Device& device, DescriptorTableBakery* dtb,
-        StagingDescriptorHeap* rtv_heap, StagingDescriptorHeap* dsv_heap
-    );
+        StagingDescriptorHeap* rtv_heap, StagingDescriptorHeap* dsv_heap );
 
     std::wstring m_name;
 
@@ -75,6 +72,7 @@ private:
     bool m_has_mips;
     ViewsToCreate m_views_to_create;
     std::optional<D3D12_CLEAR_VALUE> m_optimized_clear_value;
+    D3D12_RESOURCE_STATES m_initial_state;
 
 
     int m_srv_per_mip_offset;

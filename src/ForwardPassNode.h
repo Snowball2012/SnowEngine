@@ -18,7 +18,8 @@ public:
         <
         ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
         ResourceInState<AmbientBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
-        ResourceInState<NormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
+        ResourceInState<NormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+        HDRLightingMain
         >;
     using ReadRes = std::tuple
         <

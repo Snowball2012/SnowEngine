@@ -13,7 +13,8 @@ public:
         >;
     using WriteRes = std::tuple
         <
-        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>
+        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+        HDRLightingMain
         >;
     using ReadRes = std::tuple
         <

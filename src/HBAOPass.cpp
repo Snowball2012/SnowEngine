@@ -132,6 +132,8 @@ ComPtr<ID3D12RootSignature> HBAOPass::BuildRootSignature( ID3D12Device& device )
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
 
+    rootsig->SetName( L"HBAO Rootsig" );
+
     return rootsig;
 }
 

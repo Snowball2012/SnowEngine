@@ -423,14 +423,14 @@ void RenderApp::LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_t
 {
     auto& scene = m_renderer->GetScene();
     for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
-        ext_scene.textures[i].second = scene.LoadStreamedTexture( ext_scene.textures[i].first );
+        ext_scene.textures[i].second = scene.LoadStaticTexture( ext_scene.textures[i].first );
 }
 
 void RenderApp::LoadPlaceholderTextures()
 {
     auto& scene = m_renderer->GetScene();
-    m_ph_normal_texture = scene.LoadStreamedTexture( "resources/textures/default_deriv_normal.dds" );
-    m_ph_specular_texture = scene.LoadStreamedTexture( "resources/textures/default_spec.dds" );
+    m_ph_normal_texture = scene.LoadStaticTexture( "resources/textures/default_deriv_normal.dds" );
+    m_ph_specular_texture = scene.LoadStaticTexture( "resources/textures/default_spec.dds" );
     TextureID skybox_tex = scene.LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
     m_brdf_lut = scene.LoadStaticTexture( "D:/scenes/bistro/ibl/brdf_lut.DDS" );
     m_skybox_tf = scene.AddTransform();
@@ -585,7 +585,7 @@ void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_widt
 
 void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id )
 {
-    TextureID loading_cube_texture = scene.LoadStreamedTexture( "resources/textures/loading_box_base.dds" );
+    TextureID loading_cube_texture = scene.LoadStaticTexture( "resources/textures/loading_box_base.dds" );
     MaterialID cube_material_id = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_texture, normal_tex_id, specular_tex_id },
                                                      DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), Identity4x4 );
 

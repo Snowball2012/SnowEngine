@@ -144,6 +144,8 @@ inline ComPtr<ID3D12RootSignature> ForwardLightingPass::BuildRootSignature( cons
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
 
+    rootsig->SetName( L"Forward lighting Rootsig" );
+
     return rootsig;
 }
 

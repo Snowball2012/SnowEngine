@@ -6,5 +6,6 @@
 
 uint32_t CalcMipNumber( uint32_t resolution )
 {
-    return upper_power_of_two( resolution );
+    
+    return _mm_popcnt_u32(upper_power_of_two( resolution ) - 1) + 1;
 }

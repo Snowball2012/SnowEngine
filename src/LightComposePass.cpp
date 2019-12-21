@@ -86,9 +86,9 @@ ComPtr<ID3D12RootSignature> LightComposePass::BuildRootSignature( ID3D12Device& 
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
     CD3DX12_DESCRIPTOR_RANGE desc_table[2];
-    desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
+    desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, 0 );
     slot_root_parameter[0].InitAsDescriptorTable( 1, desc_table );
-    desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );
+    desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1, 0, 0 );
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table + 1 );
 
 
@@ -114,6 +114,8 @@ ComPtr<ID3D12RootSignature> LightComposePass::BuildRootSignature( ID3D12Device& 
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
+    
+    rootsig->SetName( L"Light Compose Rootsig" );
 
     return rootsig;
 }

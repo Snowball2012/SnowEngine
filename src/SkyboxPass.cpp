@@ -118,6 +118,7 @@ ComPtr<ID3D12RootSignature> SkyboxPass::BuildRootSignature( ID3D12Device & devic
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
+    rootsig->SetName( L"Skybox Rootsig" );
 
     return rootsig;
 }

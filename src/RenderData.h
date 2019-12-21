@@ -8,8 +8,6 @@
 
 #include "DescriptorTableBakery.h"
 
-#include "ResizableTexture.h"
-
 #include "MathUtils.h"
 
 #include "DynamicTexture.h"

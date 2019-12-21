@@ -8,17 +8,19 @@
 
 DynamicTexture::DynamicTexture(
     std::wstring name,
-    uint32_t width, uint32_t height, DXGI_FORMAT format, bool has_mips,
+    uint32_t width, uint32_t height, DXGI_FORMAT format, bool has_mips, D3D12_RESOURCE_STATES initial_state,
     const ViewsToCreate& views_to_create,
     ID3D12Device& device, DescriptorTableBakery* dtb,
     StagingDescriptorHeap* rtv_heap, StagingDescriptorHeap* dsv_heap,
     const D3D12_CLEAR_VALUE* optimized_clear_value )
     : m_name( std::move( name ) )
 {
+    m_initial_state = initial_state;
     m_has_mips = has_mips;
     m_views_to_create = views_to_create;
     if ( optimized_clear_value )
         m_optimized_clear_value = *optimized_clear_value;
+    m_table = DescriptorTableID::nullid;
 
     if ( !RecreateTexture( format, width, height, device, dtb, rtv_heap, dsv_heap ) )
         throw SnowEngineException( "Could not create dynamic texture!" );
@@ -193,7 +195,7 @@ bool DynamicTexture::RecreateTexture(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
         D3D12_HEAP_FLAG_NONE,
         &tex_desc,
-        D3D12_RESOURCE_STATE_COMMON,
+        m_initial_state,
         opt_clear_val_ptr,
         IID_PPV_ARGS( m_gpu_res.GetAddressOf() )
     ) )
@@ -221,7 +223,7 @@ bool DynamicTexture::RecreateTexture(
             srv_desc.Texture2D.ResourceMinLODClamp = 0;
             device.CreateShaderResourceView(
                 m_gpu_res.Get(), &srv_desc,
-                CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_main_offset, dtb->GetDescriptorIncrementSize() )
+                CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_main_offset, UINT(dtb->GetDescriptorIncrementSize()) )
             );
         }
         if ( m_views_to_create.srv_per_mip )
@@ -238,7 +240,7 @@ bool DynamicTexture::RecreateTexture(
                 srv_desc.Texture2D.ResourceMinLODClamp = float(i);
                 device.CreateShaderResourceView(
                     m_gpu_res.Get(), &srv_desc,
-                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_per_mip_offset + i, dtb->GetDescriptorIncrementSize() )
+                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_per_mip_offset + i, UINT(dtb->GetDescriptorIncrementSize()) )
                 );
             }
         }
@@ -257,7 +259,7 @@ bool DynamicTexture::RecreateTexture(
                 srv_desc.Texture2D.ResourceMinLODClamp = float(i);
                 device.CreateShaderResourceView(
                     m_gpu_res.Get(), &srv_desc,
-                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_cumulative_offset + i, dtb->GetDescriptorIncrementSize() )
+                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_srv_cumulative_offset + i, UINT(dtb->GetDescriptorIncrementSize()) )
                 );
             }
         }
@@ -272,7 +274,7 @@ bool DynamicTexture::RecreateTexture(
                 uav_desc.Texture2D.MipSlice = i;
                 device.CreateUnorderedAccessView(
                     m_gpu_res.Get(), nullptr, &uav_desc,
-                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_uav_per_mip_offset + i, dtb->GetDescriptorIncrementSize() )
+                    CD3DX12_CPU_DESCRIPTOR_HANDLE( *table_start, m_uav_per_mip_offset + i, UINT(dtb->GetDescriptorIncrementSize()) )
                 );
             }
         }

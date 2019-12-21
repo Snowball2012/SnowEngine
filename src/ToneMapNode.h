@@ -42,19 +42,21 @@ public:
         if ( ! sdr_buffer || ! hdr_buffer
              || ! settings || ! screen_constants )
             throw SnowEngineException( "missing resource" );
-
+        
+        PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "Tonemapping" );
         m_pass.Begin( m_state, cmd_list );
 
         ToneMappingPass::Context ctx;
         ctx.gpu_data = settings->data;
         ctx.frame_rtv = sdr_buffer->rtv;
-        ctx.frame_srv = hdr_buffer->srv[0];
+        ctx.frame_srv = hdr_buffer->srv_all_mips;
 
         cmd_list.RSSetViewports( 1, &screen_constants->viewport );
         cmd_list.RSSetScissorRects( 1, &screen_constants->scissor_rect );
         m_pass.Draw( ctx );
 
         m_pass.End();
+        PIXEndEvent( &cmd_list );
     }
 
 private:

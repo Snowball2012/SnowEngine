@@ -146,6 +146,8 @@ ComPtr<ID3D12RootSignature> DepthOnlyPass::BuildRootSignature( ID3D12Device& dev
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
 
+    rootsig->SetName( L"DepthOnlyPass Rootsig" );
+
     return rootsig;
 }
 

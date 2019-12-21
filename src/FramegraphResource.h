@@ -44,6 +44,7 @@ struct HDRBuffer : TrackedResource
 {
     DirectX::XMUINT2 size;
     uint32_t nmips;
+    D3D12_GPU_DESCRIPTOR_HANDLE srv_all_mips;
     bc::small_vector<D3D12_GPU_DESCRIPTOR_HANDLE, 12> srv; // per mip level, non cumulative
     bc::small_vector<D3D12_CPU_DESCRIPTOR_HANDLE, 12> rtv;
 };
@@ -127,3 +128,5 @@ struct SkyboxData
     D3D12_GPU_DESCRIPTOR_HANDLE cubemap_srv = {};
     DirectX::XMFLOAT4X4 obj2world_mat = {};
 };
+
+struct HDRLightingMain {};

@@ -71,7 +71,9 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->GetFormat(), *m_device );
     m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
     m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_device );
-    m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_back_buffer_format, *m_device );
+    m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device );
+    m_framegraph.ConstructAndEnableNode<HDRDownscaleNode>( m_hdr_format, *m_device );
+
 
     if ( m_framegraph.IsRebuildNeeded() )
         m_framegraph.Rebuild();
@@ -82,20 +84,25 @@ void Renderer::CreateTransientResources()
 {
     // little hack here, create 1x1 textures and resize them right after
 
-    auto create_tex = [&]( const wchar_t* name, std::unique_ptr<DynamicTexture>& tex, DXGI_FORMAT texture_format,
-                           bool create_srv_table, bool create_uav_table, bool create_rtv_desc, bool create_dsv_desc )
+    auto create_tex = [&]( const wchar_t* name, std::unique_ptr<DynamicTexture>& tex, DXGI_FORMAT texture_format, bool has_mips,
+                           bool srv_main, bool srv_per_mip, bool uav, bool rtv, bool dsv )
     {
+        const D3D12_RESOURCE_STATES initial_state = dsv ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_COMMON;
         DynamicTexture::ViewsToCreate views_to_create;
-        views_to_create
-        tex = std::make_unique<DynamicTexture>( name, 1, 1, texture_format, )
-
-        CD3DX12_RESOURCE_DESC desc( CD3DX12_RESOURCE_DESC::Tex2D( texture_format,
-                                                                  /*width=*/1, /*height=*/1,
-                                                                  /*depth=*/1, /*mip_levels=*/1 ) );
+        if ( dsv )
+            views_to_create.dsv_per_mip = m_depth_stencil_format_dsv;
+        if ( srv_main )
+            views_to_create.srv_main = dsv ? m_depth_stencil_format_srv : texture_format;
+        if ( srv_per_mip )
+            views_to_create.srv_per_mip = dsv ? m_depth_stencil_format_srv : texture_format;
+        if ( uav )
+            views_to_create.uav_per_mip = texture_format;
+        if ( rtv )
+            views_to_create.rtv_per_mip = texture_format;
 
         D3D12_CLEAR_VALUE clear_value;
-        clear_value.Format = create_dsv_desc ? m_depth_stencil_format_dsv : texture_format;
-        if ( create_dsv_desc )
+        clear_value.Format = dsv ? m_depth_stencil_format_dsv : texture_format;
+        if ( dsv )
         {
             clear_value.DepthStencil.Depth = 0.0f;
             clear_value.DepthStencil.Stencil = 0;
@@ -107,46 +114,21 @@ void Renderer::CreateTransientResources()
             clear_value.Color[2] = 0;
             clear_value.Color[3] = 0;
         }
+        const auto* opt_clear_ptr = (rtv || dsv) ? &clear_value : nullptr;
 
-        if ( create_uav_table )
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        if ( create_rtv_desc )
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-        if ( create_dsv_desc )
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
-        // create resource (maybe create it in DynamicTexture?)
-        {
-            const D3D12_RESOURCE_STATES initial_state = create_dsv_desc ? D3D12_RESOURCE_STATE_DEPTH_WRITE : D3D12_RESOURCE_STATE_COMMON;
-
-            const auto* opt_clear_ptr = (create_rtv_desc || create_dsv_desc) ? &clear_value : nullptr;
-            ComPtr<ID3D12Resource> res;
-            ThrowIfFailedH( m_device->CreateCommittedResource( &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ), D3D12_HEAP_FLAG_NONE,
-                                                              &desc, initial_state,
-                                                              opt_clear_ptr,
-                                                              IID_PPV_ARGS( res.GetAddressOf() ) ) );
-
-            tex = std::make_unique<DynamicTexture>( std::move( res ), m_device, initial_state, opt_clear_ptr );
-        }
-
-        if ( create_srv_table )
-            tex->SRV() = m_descriptor_tables->AllocateTable( 1 );
-        if ( create_uav_table )
-            tex->UAV() = m_descriptor_tables->AllocateTable( 1 );
-        if ( create_rtv_desc )
-            tex->RTV() = std::make_unique<Descriptor>( std::move( m_rtv_heap.AllocateDescriptor() ) );
-        if ( create_dsv_desc )
-            tex->DSV() = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
+        tex = std::make_unique<DynamicTexture>(
+            name, 1, 1, texture_format, has_mips, initial_state, views_to_create,
+            *m_device, m_descriptor_tables, &m_rtv_heap, &m_dsv_heap, opt_clear_ptr );
     };
 
 
-    create_tex( m_hdr_backbuffer, m_hdr_format, true, false, true, false );
-    create_tex( m_hdr_ambient, m_hdr_format, true, false, true, false );
-    create_tex( m_normals, m_normals_format, true, false, true, false );
-    create_tex( m_ssao, m_ssao_format, true, false, true, false );
-    create_tex( m_ssao_blurred, m_ssao_format, true, true, false, false );
-    create_tex( m_ssao_blurred_transposed, m_ssao_format, true, true, false, false );
-    create_tex( m_depth_stencil_buffer, m_depth_stencil_format_resource, true, false, false, true );
+    create_tex( L"hdr buffer", m_hdr_backbuffer, m_hdr_format, true, true, true, false, true, false );
+    create_tex( L"hdr ambient", m_hdr_ambient, m_hdr_format, false, true, false, false, true, false );
+    create_tex( L"normal buffer", m_normals, m_normals_format, false, true, false, false, true, false );
+    create_tex( L"ssao", m_ssao, m_ssao_format, false, true, false, false, true, false );
+    create_tex( L"blurred ssao", m_ssao_blurred, m_ssao_format, false, true, false, true, false, false );
+    create_tex( L"transposed ssao", m_ssao_blurred_transposed, m_ssao_format, false, true, false, true, false, false );
+    create_tex( L"depth stencil buffer", m_depth_stencil_buffer, m_depth_stencil_format_resource, false, true, false, false, false, true );
 
     ResizeTransientResources();
 }
@@ -154,47 +136,19 @@ void Renderer::CreateTransientResources()
 
 void Renderer::ResizeTransientResources()
 {
-    auto resize_tex = [&]( const wchar_t* name, auto& tex, uint32_t width, uint32_t height, bool make_srv, bool make_uav, bool make_rtv )
+    auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height )
     {
-        tex.Resize( width, height );
-        if ( make_srv )
-            m_device->CreateShaderResourceView( tex.Resource(), nullptr, *m_descriptor_tables->ModifyTable( tex.SRV() ) );
-        if ( make_uav )
-            m_device->CreateUnorderedAccessView( tex.Resource(), nullptr, nullptr, *m_descriptor_tables->ModifyTable( tex.UAV() ) );
-        if ( make_rtv )
-            m_device->CreateRenderTargetView( tex.Resource(), nullptr, tex.RTV()->HandleCPU() );
-
-        tex.Resource()->SetName( name );
+        tex.Resize( width, height, *m_device, m_descriptor_tables, &m_rtv_heap, &m_dsv_heap );
     };
 
-    resize_tex( L"hdr buffer", *m_hdr_backbuffer, m_resolution_width, m_resolution_height, true, false, true );
-    resize_tex( L"hdr ambient", *m_hdr_ambient, m_resolution_width, m_resolution_height, true, false, true );
-    resize_tex( L"normal buffer", *m_normals, m_resolution_width, m_resolution_height, true, false, true );
-    resize_tex( L"ssao", *m_ssao, m_resolution_width / 2, m_resolution_height / 2, true, false, true );
-    resize_tex( L"blurred ssao", *m_ssao_blurred, m_resolution_width, m_resolution_height, true, true, false );
-    resize_tex( L"transposed ssao", *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width, true, true, false );
-
-    resize_tex( L"depth stencil buffer", *m_depth_stencil_buffer, m_resolution_width, m_resolution_height, false, false, false );
-    {
-        auto& tex = *m_depth_stencil_buffer;
-        D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc;
-        dsv_desc.Format = m_depth_stencil_format_dsv;
-        dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-        dsv_desc.Texture2D.MipSlice = 0;
-        dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
-
-        m_device->CreateDepthStencilView( tex.Resource(), &dsv_desc, tex.DSV()->HandleCPU() );
-
-        D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc;
-        srv_desc.Format = m_depth_stencil_format_srv;
-        srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srv_desc.Texture2D.MostDetailedMip = 0;
-        srv_desc.Texture2D.MipLevels = 1;
-        srv_desc.Texture2D.PlaneSlice = 0;
-        srv_desc.Texture2D.ResourceMinLODClamp = 0.0f;
-        m_device->CreateShaderResourceView( tex.Resource(), &srv_desc, *m_descriptor_tables->ModifyTable( tex.SRV() ) );
-    }
+    resize_tex( *m_hdr_backbuffer, m_resolution_width, m_resolution_height );
+    resize_tex( *m_hdr_ambient, m_resolution_width, m_resolution_height );
+    resize_tex( *m_normals, m_resolution_width, m_resolution_height );
+    resize_tex( *m_ssao, m_resolution_width / 2, m_resolution_height / 2 );
+    resize_tex( *m_ssao_blurred, m_resolution_width, m_resolution_height );
+    resize_tex( *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width );
+    resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height );
+    
 }
 
 D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
@@ -288,7 +242,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
             throw SnowEngineException( "missing resource" );
         rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
     }
-    rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+    rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->GetResource(), D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
 
     list_iface->ResourceBarrier( nbarriers, rtv_barriers );
     ID3D12DescriptorHeap* heaps[] = { m_descriptor_tables->CurrentGPUHeap().Get() };
@@ -306,14 +260,17 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         HDRBuffer hdr_buffer;
         {
             hdr_buffer.res = m_hdr_backbuffer->GetResource();
+            hdr_buffer.srv_all_mips = GetGPUHandle(*m_hdr_backbuffer->GetSrvMain(), 0 );
             hdr_buffer.nmips = m_hdr_backbuffer->GetMipCount();
             hdr_buffer.rtv.resize( hdr_buffer.nmips );
             hdr_buffer.srv.resize( hdr_buffer.nmips );
-            hdr_buffer.rtv[0] = m_hdr_backbuffer->GetRtvPerMip()[0].HandleCPU();
-            hdr_buffer.rtv[1] = m_hdr_backbuffer->GetRtvPerMip()[1].HandleCPU();
             auto srv_per_mip = m_hdr_backbuffer->GetSrvPerMip();
-            hdr_buffer.srv[0] = GetGPUHandle( *srv_per_mip, 0 );
-            hdr_buffer.srv[1] = GetGPUHandle( *srv_per_mip, 1 );
+            for ( uint32_t i = 0; i < hdr_buffer.nmips; ++i )
+            {
+                hdr_buffer.rtv[i] = m_hdr_backbuffer->GetRtvPerMip()[i].HandleCPU();
+                hdr_buffer.srv[i] = GetGPUHandle( *srv_per_mip, i );
+            }
+            hdr_buffer.size = DirectX::XMUINT2( hdr_buffer.res->GetDesc().Width, hdr_buffer.res->GetDesc().Height );
         }
         m_framegraph.SetRes( hdr_buffer );
 
@@ -344,6 +301,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         ssao_texture.res = m_ssao->GetResource();
         ssao_texture.rtv = m_ssao->GetRtvPerMip()[0].HandleCPU();
         ssao_texture.srv = GetGPUHandle( *m_ssao->GetSrvMain(), 0 );
+        //std::cout << "ssao srv ptr " << ssao_texture.srv.ptr << std::endl;
         m_framegraph.SetRes( ssao_texture );
 
         SSAOTexture_Blurred ssao_blurred_texture;
@@ -529,11 +487,11 @@ ComPtr<ID3D12Resource> Renderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2
     return std::move( res );
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Renderer::GetGPUHandle( DynamicTexture::TextureView view, int mip ) const
+D3D12_GPU_DESCRIPTOR_HANDLE Renderer::GetGPUHandle( const DynamicTexture::TextureView& view, int mip ) const
 {
     return CD3DX12_GPU_DESCRIPTOR_HANDLE(
         m_descriptor_tables->GetTable( view.table )->gpu_handle,
         view.table_offset + mip,
-        m_descriptor_tables->GetDescriptorIncrementSize()
+        UINT( m_descriptor_tables->GetDescriptorIncrementSize() )
     );
 }

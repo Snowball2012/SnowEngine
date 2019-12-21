@@ -82,9 +82,9 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
 
 
-    CD3DX12_STATIC_SAMPLER_DESC linear_wrap_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT );
+    CD3DX12_STATIC_SAMPLER_DESC linear_clamp_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP );
     CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,
-                                               1, &linear_wrap_sampler );
+                                               1, &linear_clamp_sampler );
 
     ComPtr<ID3DBlob> serialized_root_sig = nullptr;
     ComPtr<ID3DBlob> error_blob = nullptr;
@@ -104,6 +104,8 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
         serialized_root_sig->GetBufferPointer(),
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
+
+    rootsig->SetName( L"Tonemapping Rootsig" );
 
     return rootsig;
 }

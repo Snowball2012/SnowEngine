@@ -110,6 +110,8 @@ ComPtr<ID3D12RootSignature> DepthAwareBlurPass::BuildRootSignature( ID3D12Device
         serialized_root_sig->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
 
+    rootsig->SetName( L"DepthAwareBlurPass Rootsig" );
+
     return rootsig;
 }
 

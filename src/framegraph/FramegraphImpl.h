@@ -390,17 +390,17 @@ namespace details
                 if ( layer_idx > 0 )
                 {
                     auto& barriers = m_barriers[layer_idx - 1];
-                    if ( barriers.empty() )
-                        continue;
+                    if ( ! barriers.empty() )
+                    {
+                        auto& resources = m_barrier_resources[layer_idx - 1];
+                        if ( barriers.size() != resources.size() )
+                            throw SnowEngineException( "corrupted resource barriers in Framegraph" );
 
-                    auto& resources = m_barrier_resources[layer_idx - 1];
-                    if ( barriers.size() != resources.size() )
-                        throw SnowEngineException( "corrupted resource barriers in Framegraph" );
+                        for ( int i = 0; i < barriers.size(); ++i )
+                            barriers[i].Transition.pResource = resources[i]->res;
 
-                    for ( int i = 0; i < barriers.size(); ++i )
-                        barriers[i].Transition.pResource = resources[i]->res;
-
-                    cmd_list.ResourceBarrier( UINT( barriers.size() ), barriers.data() );
+                        cmd_list.ResourceBarrier( UINT( barriers.size() ), barriers.data() );
+                    }
                 }
 
                 auto& nodes = m_node_layers[layer_idx];
