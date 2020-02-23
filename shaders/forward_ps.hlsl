@@ -150,7 +150,7 @@ PixelOut main(PixelIn pin)
     
     res.ambient_lighting.rgb = float3( ibl_radiance_multiplier * diffuse_albedo * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz );
     
-    float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, roughness ) * 6.0f ).xyz;
+    float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, pow( roughness, 0.5f ) ) * 6.0f ).xyz;
     float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( cos_nv, roughness ) ).xy;
 
     res.ambient_lighting.rgb += ibl_radiance_multiplier * prefiltered_spec_radiance

@@ -22,7 +22,7 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
     uint MipLevel; float Width; float Height; float NumberOfLevels;
     frame.GetDimensions( 0, Width, Height, NumberOfLevels );
 
-    float avg_mip = NumberOfLevels - 2;
+    float avg_mip = NumberOfLevels - 3;
     float4 avg_radiance[9];
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,0) );
     avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,0) );
@@ -47,8 +47,16 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
     float cur_luminance = photopic_luminance( cur_radiance.rgb );
     float avg_luminance = photopic_luminance( avg_radiance_gauss.rgb );
 
-    float max_local_luminance = avg_luminance * 8;
-    float linear_brightness = saturate( (cur_luminance - min_luminance) / (max_local_luminance - min_luminance) );
+    //const float max_average_luminance = 2.0e+2;
+    //const float min_average_luminance = 1.0e-1;
+    //
+    //avg_luminance = clamp(avg_luminance, min_average_luminance, max_average_luminance);
+
+    const float display_max_luminance = 350.0f; // nits
+
+    float max_local_luminance = max( avg_luminance * 8.3f, display_max_luminance ); // +9.2 dB todo: function of absolute luminance ? (at least clamp max_luminance at a monitor level)
+    float min_local_luminance = avg_luminance / 31.6f; // -15 dB
+    float linear_brightness = saturate( (cur_luminance - min_local_luminance) / (max_local_luminance - min_local_luminance) );
 
     return float4( radiance2gamma_rgb( cur_radiance.rgb, linear_brightness ), cur_radiance.a );
 }
