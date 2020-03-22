@@ -180,10 +180,12 @@ namespace
 
                     FbxSubmesh& submesh = prepass_data.submeshes.find( std::make_pair( fbmesh, material_idx ) )->second;
 
+                    int out_triangle_indices[3] = { -1,-1,-1 };
                     for ( int fb_idx_in_poly = 0; fb_idx_in_poly < 3; ++fb_idx_in_poly )
                     {
                         int cp_idx = fbmesh->GetPolygonVertex( fb_polygon_idx, fb_idx_in_poly );
                         int out_idx = submesh.index_offset + submesh.triangle_count * 3 + (2 - fb_idx_in_poly);
+                        out_triangle_indices[fb_idx_in_poly] = out_idx;
 
                         auto& vpos = res.vertices[out_idx].pos;
                         vpos.x = -ctrl_pts[cp_idx][0];
@@ -206,10 +208,22 @@ namespace
                         res.vertices[out_idx].uv.x = uv[0];
                         res.vertices[out_idx].uv.y = 1.0f - uv[1];
                     }
+
+                    DirectX::XMFLOAT3 dp1 = res.vertices[out_triangle_indices[1]].pos - res.vertices[out_triangle_indices[0]].pos;
+                    DirectX::XMFLOAT3 dp2 = res.vertices[out_triangle_indices[2]].pos - res.vertices[out_triangle_indices[0]].pos;
+
+                    DirectX::XMFLOAT2 duv1 = res.vertices[out_triangle_indices[1]].uv - res.vertices[out_triangle_indices[0]].uv;
+                    DirectX::XMFLOAT2 duv2 = res.vertices[out_triangle_indices[2]].uv - res.vertices[out_triangle_indices[0]].uv;
+
+                    float inv_det = 1.0f / ( duv1.x * duv2.y - duv1.y * duv2.x );
+                    DirectX::XMFLOAT3 triangle_tangent = ( inv_det * ( dp1 * duv2.y - dp2 * duv1.y ) );
+                    XMFloat3Normalize( triangle_tangent );
+                    for (int i = 0; i < 3; ++i )
+                        res.vertices[out_triangle_indices[i]].tangent = triangle_tangent;
+
                     submesh.triangle_count++;
                 }
             }
-
 
             return res;
         }

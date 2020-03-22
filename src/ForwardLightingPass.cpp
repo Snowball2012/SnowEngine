@@ -39,12 +39,6 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
         shaders.ps->GetBufferSize()
     };
 
-    pso_desc.GS =
-    {
-        reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
-        shaders.gs->GetBufferSize()
-    };
-
     pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
     pso_desc.BlendState = CD3DX12_BLEND_DESC( D3D12_DEFAULT );
     pso_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC( D3D12_DEFAULT );
@@ -121,7 +115,6 @@ ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
     return Shaders
     {
         Utils::LoadBinary( L"shaders/forward_vs.cso" ),
-        Utils::LoadBinary( L"shaders/forward_gs.cso" ),
         Utils::LoadBinary( L"shaders/forward_ps.cso" )
     };
 }

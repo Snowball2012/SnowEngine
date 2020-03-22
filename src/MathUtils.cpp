@@ -8,6 +8,11 @@
 
 using namespace DirectX;
 
+XMFLOAT2 operator-( const XMFLOAT2& lhs, const XMFLOAT2& rhs )
+{
+    return  XMFLOAT2( lhs.x - rhs.x, lhs.y - rhs.y );
+}
+
 XMFLOAT3 operator-( const  XMFLOAT3& lhs, const  XMFLOAT3& rhs )
 {
     return  XMFLOAT3( lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z );

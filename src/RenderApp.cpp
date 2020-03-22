@@ -194,7 +194,8 @@ void RenderApp::UpdateGUI()
         if ( m_is_console_opened )
         {
             m_console.Draw( "Console", &m_is_console_opened );
-            m_renderer->SetSkybox( m_console.Skybox );
+            if (m_cur_state != State::Loading)
+                m_renderer->SetSkybox( m_console.Skybox );
         }
     }
     ImGui::Render();
@@ -537,6 +538,8 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& rend
     if ( ! cube_drawable )
         throw SnowEngineException( "cube not found!" );
 
+    renderer.SetSkybox(false);
+
     cube_drawable->show = true;
 }
 
@@ -551,6 +554,8 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& ren
     DrawableMesh* cube_drawable = scene.GetWorld().GetComponent<DrawableMesh>( m_cube );
     if ( ! cube_drawable )
         throw SnowEngineException( "cube not found!" );
+
+    renderer.SetSkybox(true);
 
     cube_drawable->show = false;
 }

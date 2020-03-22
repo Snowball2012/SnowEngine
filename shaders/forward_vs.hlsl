@@ -20,6 +20,7 @@ struct VertexIn
 {
     float3 pos : POSITION;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
     float2 uv : TEXCOORD;
 };
 
@@ -29,6 +30,7 @@ struct VertexOut
     float4 pos : SV_POSITION;
     float3 pos_v : POSITION;
     float3 normal : NORMAL;
+    float3 tangent : TANGENT;
     float2 uv : TEXCOORD;
 };
 
@@ -41,6 +43,7 @@ VertexOut main( VertexIn vin )
     vout.pos_v = pos_v.xyz / pos_v.w;
 
     vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
+    vout.tangent = normalize( mul( mul( float4( vin.tangent, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
     vout.uv = vin.uv;
     vout.view2env = mul( pass_params.view_inv_mat, ibl.world2env_mat );
     return vout;

@@ -18,37 +18,37 @@ namespace GeomGeneration
     constexpr std::array<Vertex, 24> CubeVertices =
     {
         // yz front side
-        Vertex{ DirectX::XMFLOAT3{ 1, -1, -1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 0
-        Vertex{ DirectX::XMFLOAT3{ 1,  1, -1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 1
-        Vertex{ DirectX::XMFLOAT3{ 1,  1,  1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 2
-        Vertex{ DirectX::XMFLOAT3{ 1, -1,  1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 3
+        Vertex{ DirectX::XMFLOAT3{ 1, -1, -1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, 1 }, DirectX::XMFLOAT2{ 0, 1 } }, // 0
+        Vertex{ DirectX::XMFLOAT3{ 1,  1, -1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, 1 }, DirectX::XMFLOAT2{ 0, 0 } }, // 1
+        Vertex{ DirectX::XMFLOAT3{ 1,  1,  1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, 1 }, DirectX::XMFLOAT2{ 1, 0 } }, // 2
+        Vertex{ DirectX::XMFLOAT3{ 1, -1,  1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, 1 }, DirectX::XMFLOAT2{ 1, 1 } }, // 3
         // yz back side
-        Vertex{ DirectX::XMFLOAT3{-1, -1,  1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 4
-        Vertex{ DirectX::XMFLOAT3{-1,  1,  1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 5
-        Vertex{ DirectX::XMFLOAT3{-1,  1, -1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 6
-        Vertex{ DirectX::XMFLOAT3{-1, -1, -1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 7
+        Vertex{ DirectX::XMFLOAT3{-1, -1,  1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 1, 1 } }, // 4
+        Vertex{ DirectX::XMFLOAT3{-1,  1,  1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 1, 0 } }, // 5
+        Vertex{ DirectX::XMFLOAT3{-1,  1, -1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 0, 0 } }, // 6
+        Vertex{ DirectX::XMFLOAT3{-1, -1, -1 }, DirectX::XMFLOAT3{ -1, 0, 0 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 0, 1 } }, // 7
 
         // xy back side
-        Vertex{ DirectX::XMFLOAT3{ -1, -1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 0, 1 } }, // 8
-        Vertex{ DirectX::XMFLOAT3{ -1,  1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 0, 0 } }, // 9
-        Vertex{ DirectX::XMFLOAT3{  1,  1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 1, 0 } }, // 10
-        Vertex{ DirectX::XMFLOAT3{  1, -1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT2{ 1, 1 } }, // 11
+        Vertex{ DirectX::XMFLOAT3{ -1, -1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT3{  -1, 0, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 8
+        Vertex{ DirectX::XMFLOAT3{ -1,  1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT3{  -1, 0, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 9
+        Vertex{ DirectX::XMFLOAT3{  1,  1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT3{  -1, 0, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 10
+        Vertex{ DirectX::XMFLOAT3{  1, -1, -1 }, DirectX::XMFLOAT3{  0, 0, -1 }, DirectX::XMFLOAT3{  -1, 0, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 11
         // xy front side
-        Vertex{ DirectX::XMFLOAT3{  1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT2{ 1, 1 } }, // 12
-        Vertex{ DirectX::XMFLOAT3{  1,  1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT2{ 1, 0 } }, // 13
-        Vertex{ DirectX::XMFLOAT3{ -1,  1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT2{ 0, 0 } }, // 14
-        Vertex{ DirectX::XMFLOAT3{ -1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT2{ 0, 1 } }, // 15
+        Vertex{ DirectX::XMFLOAT3{  1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 12
+        Vertex{ DirectX::XMFLOAT3{  1,  1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 13
+        Vertex{ DirectX::XMFLOAT3{ -1,  1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 14
+        Vertex{ DirectX::XMFLOAT3{ -1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, 1 }, DirectX::XMFLOAT3{  1, 0, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 15
 
         // xz front side
-        Vertex{ DirectX::XMFLOAT3{ -1,  1, -1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 16
-        Vertex{ DirectX::XMFLOAT3{ -1,  1,  1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 17
-        Vertex{ DirectX::XMFLOAT3{  1,  1,  1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 18
-        Vertex{ DirectX::XMFLOAT3{  1,  1, -1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 19
+        Vertex{ DirectX::XMFLOAT3{ -1,  1, -1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 0, 1 } }, // 16
+        Vertex{ DirectX::XMFLOAT3{ -1,  1,  1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 17
+        Vertex{ DirectX::XMFLOAT3{  1,  1,  1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 18
+        Vertex{ DirectX::XMFLOAT3{  1,  1, -1 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT3{  0, 1, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 19
         // xz back side
-        Vertex{ DirectX::XMFLOAT3{  1, -1, -1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT2{ 1, 1 } }, // 20
-        Vertex{ DirectX::XMFLOAT3{  1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT2{ 1, 0 } }, // 21
-        Vertex{ DirectX::XMFLOAT3{ -1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT2{ 0, 0 } }, // 22
-        Vertex{ DirectX::XMFLOAT3{ -1, -1, -1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT2{ 0, 1 } } // 23
+        Vertex{ DirectX::XMFLOAT3{  1, -1, -1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT3{  0, -1, 0 }, DirectX::XMFLOAT2{ 1, 1 } }, // 20
+        Vertex{ DirectX::XMFLOAT3{  1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT3{  0, -1, 0 }, DirectX::XMFLOAT2{ 1, 0 } }, // 21
+        Vertex{ DirectX::XMFLOAT3{ -1, -1,  1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT3{  0, -1, 0 }, DirectX::XMFLOAT2{ 0, 0 } }, // 22
+        Vertex{ DirectX::XMFLOAT3{ -1, -1, -1 }, DirectX::XMFLOAT3{ 0, 0, -1 }, DirectX::XMFLOAT3{  0, -1, 0 }, DirectX::XMFLOAT2{ 0, 1 } } // 23
     };
 
     constexpr std::array<uint32_t, 36> CubeIndices =
