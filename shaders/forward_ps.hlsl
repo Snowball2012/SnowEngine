@@ -66,19 +66,19 @@ void unpack_specular( float3 specular_sample, out float roughness, out float met
 }
 
 
-int csm_get_frustrum( float depth, int num_split_positions, float split_positions[MAX_CASCADE_SIZE-1] )
+int csm_get_frustum( float depth, int num_split_positions, float split_positions[MAX_CASCADE_SIZE-1] )
 {
-    int frustrum = 0;
+    int frustum = 0;
     for ( int i = 0; i < num_split_positions; i++ )
-        frustrum += depth > split_positions[i]; // no branching, since num_split_positions should be ~[2..4]
-    return frustrum;
+        frustum += depth > split_positions[i]; // no branching, since num_split_positions should be ~[2..4]
+    return frustum;
 }
 
 float csm_shadow_factor( float3 pos_v, ParallelLight light, Texture2DArray shadow_cascade,
                          float split_positions[MAX_CASCADE_SIZE-1], SamplerComparisonState shadow_map_sampler )
 {
-    int frustrum = csm_get_frustrum( pos_v.z, light.csm_num_split_positions, split_positions );
-    return shadow_factor_array( pos_v, light.shadow_map_mat[frustrum], shadow_cascade, frustrum, shadow_map_sampler );
+    int frustum = csm_get_frustum( pos_v.z, light.csm_num_split_positions, split_positions );
+    return shadow_factor_array( pos_v, light.shadow_map_mat[frustum], shadow_cascade, frustum, shadow_map_sampler );
 }
 
 

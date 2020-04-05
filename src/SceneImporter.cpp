@@ -70,10 +70,6 @@ namespace
         {
             ImportedScene res;
 
-            /*FbxAxisSystem axis_system( FbxAxisSystem::EUpVector::eYAxis, FbxAxisSystem::EFrontVector::eParityOdd, FbxAxisSystem::ECoordSystem::eLeftHanded );
-
-            axis_system.ConvertScene( &scene );*/
-
             int ntextures = scene.GetTextureCount();
             int nmaterials = scene.GetMaterialCount();
             res.textures.reserve( ntextures );
@@ -82,15 +78,6 @@ namespace
             {
                 FbxFileTexture* tex = FbxCast<FbxFileTexture>( scene.GetTexture( i ) );
                 tex->SetUserDataPtr( (void*)i );
-                {
-                    double ru = tex->GetRotationU();
-                    double rv = tex->GetRotationV();
-                    double su = tex->GetScaleU();
-                    double sv = tex->GetScaleV();
-                    double tu = tex->GetTranslationU();
-                    double tv = tex->GetTranslationV();
-                    double wrk = 0;
-                }
                 res.textures.emplace_back( tex->GetFileName(), TextureID::nullid );
             }
 
@@ -132,98 +119,9 @@ namespace
             }
 
             FbxSceneTraverser traverser;
-            FbxPrepass prepass;
+            FbxPrepass prepass( res );
             if ( ! traverser.TraverseFbxScene( scene, prepass ) )
                 throw SnowEngineException( "fail in TraverseFbxScene" );
-
-            PrepassData prepass_data = prepass.MoveData();
-
-            int cur_idx_offset = 0;
-
-            for ( auto& submesh : prepass_data.submeshes )
-            {
-                submesh.second.index_offset = cur_idx_offset;
-                cur_idx_offset += submesh.second.triangle_count * 3;
-            }
-
-            res.indices.resize( cur_idx_offset );
-            for ( int i = 0; i < cur_idx_offset; ++i )
-                res.indices[i] = i;
-
-            res.submeshes.reserve( prepass_data.num_renderitems );
-
-            if ( ! traverser.TraverseFbxScene( scene, FbxRenderitemPass( prepass_data, res ) ) )
-                throw SnowEngineException( "fail in TraverseFbxScene" );
-                
-            res.vertices.resize( cur_idx_offset );
-
-            for ( auto& submesh : prepass_data.submeshes )
-                submesh.second.triangle_count = 0;
-
-            for ( auto& mesh : prepass_data.mesh2submeshes )
-            {
-                const FbxMesh* fbmesh = mesh.first;
-
-                FbxStringList uv_names;
-                fbmesh->GetUVSetNames( uv_names );
-                const char* uv_name = uv_names[0];
-
-                const FbxVector4* ctrl_pts = fbmesh->GetControlPoints();
-
-                auto* mesh_element_material = fbmesh->GetElementMaterial();
-                FbxLayerElementArrayTemplate<int>* materials = &mesh_element_material->GetIndexArray();
-
-                for ( int fb_polygon_idx = 0; fb_polygon_idx < fbmesh->GetPolygonCount(); ++fb_polygon_idx )
-                {
-                    int material_idx = materials->GetAt( fb_polygon_idx );
-                    material_idx = reinterpret_cast<int>( fbmesh->GetNode()->GetMaterial( material_idx )->GetUserDataPtr() );
-
-                    FbxSubmesh& submesh = prepass_data.submeshes.find( std::make_pair( fbmesh, material_idx ) )->second;
-
-                    int out_triangle_indices[3] = { -1,-1,-1 };
-                    for ( int fb_idx_in_poly = 0; fb_idx_in_poly < 3; ++fb_idx_in_poly )
-                    {
-                        int cp_idx = fbmesh->GetPolygonVertex( fb_polygon_idx, fb_idx_in_poly );
-                        int out_idx = submesh.index_offset + submesh.triangle_count * 3 + (2 - fb_idx_in_poly);
-                        out_triangle_indices[fb_idx_in_poly] = out_idx;
-
-                        auto& vpos = res.vertices[out_idx].pos;
-                        vpos.x = -ctrl_pts[cp_idx][0];
-                        vpos.y = ctrl_pts[cp_idx][1];
-                        vpos.z = ctrl_pts[cp_idx][2];
-
-                        FbxVector4 normal;
-                        if ( ! fbmesh->GetPolygonVertexNormal( fb_polygon_idx, fb_idx_in_poly, normal ) )
-                            throw SnowEngineException( "failed to extract normal" );
-                        auto& vnormal = res.vertices[out_idx].normal;
-                        vnormal.x = -normal[0];
-                        vnormal.y = normal[1];
-                        vnormal.z = normal[2];
-
-                        FbxVector2 uv;
-                        bool unused;
-                        if ( ! fbmesh->GetPolygonVertexUV( fb_polygon_idx, fb_idx_in_poly, uv_name, uv, unused ) )
-                            throw SnowEngineException( "failed to extract uv" );
-
-                        res.vertices[out_idx].uv.x = uv[0];
-                        res.vertices[out_idx].uv.y = 1.0f - uv[1];
-                    }
-
-                    DirectX::XMFLOAT3 dp1 = res.vertices[out_triangle_indices[1]].pos - res.vertices[out_triangle_indices[0]].pos;
-                    DirectX::XMFLOAT3 dp2 = res.vertices[out_triangle_indices[2]].pos - res.vertices[out_triangle_indices[0]].pos;
-
-                    DirectX::XMFLOAT2 duv1 = res.vertices[out_triangle_indices[1]].uv - res.vertices[out_triangle_indices[0]].uv;
-                    DirectX::XMFLOAT2 duv2 = res.vertices[out_triangle_indices[2]].uv - res.vertices[out_triangle_indices[0]].uv;
-
-                    float inv_det = 1.0f / ( duv1.x * duv2.y - duv1.y * duv2.x );
-                    DirectX::XMFLOAT3 triangle_tangent = ( inv_det * ( dp1 * duv2.y - dp2 * duv1.y ) );
-                    XMFloat3Normalize( triangle_tangent );
-                    for (int i = 0; i < 3; ++i )
-                        res.vertices[out_triangle_indices[i]].tangent = triangle_tangent;
-
-                    submesh.triangle_count++;
-                }
-            }
 
             return res;
         }
@@ -232,6 +130,7 @@ namespace
         struct FbxSubmesh
         {
             const FbxMesh* mesh = nullptr;
+            int mesh_idx = -1;
             int material_idx = -1;
             int triangle_count = 0;
             int index_offset = 0;
@@ -247,13 +146,20 @@ namespace
 
             std::unordered_map<SubmeshKey, FbxSubmesh, boost::hash<SubmeshKey>> submeshes;
             std::unordered_map<const FbxMesh*, std::unordered_set<int>> mesh2submeshes;
+
+            std::unordered_map<fbxsdk::FbxUInt64, int> mesh_id2index;
             int num_renderitems = 0;
             int triangle_count_total = 0;
+            int num_meshes = 0;
         };
 
         class FbxPrepass: public FbxSceneVisitor
         {
         public:
+            FbxPrepass(ImportedScene& scene)
+                : m_scene( scene )
+            {
+            }
             // Inherited via FbxSceneVisitor
             virtual bool VisitNode( FbxNode* node, bool& visit_children ) override
             {
@@ -262,28 +168,51 @@ namespace
                     return true;
 
                 FbxMesh* mesh = node->GetMesh();
-                if ( m_data.mesh2submeshes.count( mesh ) == 0 )
-                    VisitMesh( mesh );
+                const fbxsdk::FbxUInt64 mesh_id = mesh->GetUniqueID();
+                int mesh_idx = -1;
+                if ( auto mesh2idx = m_data.mesh_id2index.find(mesh_id); mesh2idx == m_data.mesh_id2index.end() )
+                {
+                    mesh_idx = int( m_scene.meshes.size() );
+                    m_data.mesh_id2index[mesh_id] = mesh_idx;
 
-                m_data.num_renderitems += int( m_data.mesh2submeshes[mesh].size() );
+                    auto& new_mesh = m_scene.meshes.emplace_back();
+                    LoadMesh( mesh, new_mesh );
+                    mesh2idx = m_data.mesh_id2index.find(mesh_id);
+                }
+                else
+                {
+                    mesh_idx = mesh2idx->second;
+                }
+
+                if (mesh_idx < 0)
+                    throw SnowEngineException( "[Error][SceneImporter]: failed to load mesh for the node" );
+
+                auto& new_node = m_scene.nodes.emplace_back();
+                new_node.mesh_idx = mesh_idx;
+                const auto& transform = node->EvaluateGlobalTransform();
+                DirectX::XMFLOAT4X4 dxtf( transform.Get( 0, 0 ), transform.Get( 0, 1 ), transform.Get( 0, 2 ), transform.Get( 0, 3 ),
+                                          transform.Get( 1, 0 ), transform.Get( 1, 1 ), transform.Get( 1, 2 ), transform.Get( 1, 3 ), 
+                                          transform.Get( 2, 0 ), transform.Get( 2, 1 ), transform.Get( 2, 2 ), transform.Get( 2, 3 ), 
+                                          transform.Get( 3, 0 ), transform.Get( 3, 1 ), transform.Get( 3, 2 ), transform.Get( 3, 3 ) );
+                new_node.transform = dxtf;
 
                 return true;
             }
 
-            PrepassData MoveData()
-            {
-                return std::move( m_data );
-            }
         private:
-            void VisitMesh( FbxMesh* mesh )
-            {
-                const int mesh_polygon_count = mesh->GetPolygonCount();
 
-                // Count the polygon count of each material
+            void LoadMesh( FbxMesh* fbx_mesh, ImportedScene::Mesh& out_mesh )
+            {
+                assert( fbx_mesh );
+                out_mesh.name = fbx_mesh->GetName();
+
+                const int mesh_polygon_count = fbx_mesh->GetPolygonCount();
+                out_mesh.indices.reserve( mesh_polygon_count );
+
                 FbxLayerElementArrayTemplate<int>* materials = nullptr;
                 FbxGeometryElement::EMappingMode material_mapping_mode = FbxGeometryElement::eNone;
 
-                auto* mesh_element_material = mesh->GetElementMaterial();
+                auto* mesh_element_material = fbx_mesh->GetElementMaterial();
                 if ( mesh_element_material )
                 {
                     materials = &mesh_element_material->GetIndexArray();
@@ -293,62 +222,157 @@ namespace
                         if ( materials->GetCount() != mesh_polygon_count )
                             throw SnowEngineException( "per-polygon material mapping is invalid" );
 
+                        std::unordered_map<int/*material_idx*/, uint32_t/*submesh_idx*/> mat2submesh;
+
                         for ( int polygon_idx = 0; polygon_idx < mesh_polygon_count; ++polygon_idx )
                         {
                             int material_idx = materials->GetAt( polygon_idx );
-                            material_idx = reinterpret_cast<int>( mesh->GetNode()->GetMaterial( material_idx )->GetUserDataPtr() );
-                            auto& submesh = m_data.submeshes[std::make_pair( mesh, material_idx )];
-                            submesh.material_idx = material_idx;
-                            submesh.mesh = mesh;
-                            submesh.triangle_count++;
-                            m_data.mesh2submeshes[mesh].insert( material_idx );
+                            material_idx = reinterpret_cast<int>( fbx_mesh->GetNode()->GetMaterial( material_idx )->GetUserDataPtr() );
+
+                            uint32_t submesh_idx = -1;
+                            if ( auto mat_submesh_idx_it = mat2submesh.find( material_idx ); mat_submesh_idx_it == mat2submesh.end() )
+                            {
+                                submesh_idx = out_mesh.submeshes.size();
+                                mat2submesh[material_idx] = submesh_idx;
+                                auto& new_submesh = out_mesh.submeshes.emplace_back();
+                                new_submesh.material_idx = material_idx;
+                                new_submesh.name = out_mesh.name + "_" + m_scene.materials[material_idx].first;
+                                new_submesh.index_offset = 0;
+                                new_submesh.nindices = 0;
+                            }
+                            else
+                            {
+                                submesh_idx = mat_submesh_idx_it->second;
+                            }
+
+                            auto& submesh = out_mesh.submeshes[submesh_idx];
+                            submesh.nindices += 3;
                         }
+
+                        uint32_t nindices = 0;
+                        for ( auto& submesh : out_mesh.submeshes )
+                        {
+                            submesh.index_offset = nindices;
+                            nindices += submesh.nindices;
+                            submesh.nindices = 0;
+                        }
+
+                        FbxStringList uv_names;
+                        fbx_mesh->GetUVSetNames( uv_names );
+                        const char* uv_name = uv_names[0];
+
+                        const FbxVector4* ctrl_pts = fbx_mesh->GetControlPoints();
+                        out_mesh.vertices.resize( nindices );
+                        out_mesh.indices.resize( nindices );
+                        for ( uint32_t i = 0; i < nindices; ++i )
+                            out_mesh.indices[i] = i;
+
+                        for ( int polygon_idx = 0; polygon_idx < mesh_polygon_count; ++polygon_idx )
+                        {
+                            int material_idx = materials->GetAt( polygon_idx );
+                            material_idx = reinterpret_cast<int>( fbx_mesh->GetNode()->GetMaterial( material_idx )->GetUserDataPtr() );
+
+                            auto& submesh = out_mesh.submeshes[mat2submesh[material_idx]];
+
+                            int out_triangle_indices[3] = { -1,-1,-1 };
+                            for ( int fb_idx_in_poly = 0; fb_idx_in_poly < 3; ++fb_idx_in_poly )
+                            {
+                                int cp_idx = fbx_mesh->GetPolygonVertex( polygon_idx, fb_idx_in_poly );
+                                int out_idx = submesh.index_offset + submesh.nindices + (2 - fb_idx_in_poly);
+                                out_triangle_indices[fb_idx_in_poly] = out_idx;
+
+                                auto& vpos = out_mesh.vertices[out_idx].pos;
+                                vpos.x = -ctrl_pts[cp_idx][0];
+                                vpos.y = ctrl_pts[cp_idx][1];
+                                vpos.z = ctrl_pts[cp_idx][2];
+
+                                FbxVector4 normal;
+                                if ( ! fbx_mesh->GetPolygonVertexNormal( polygon_idx, fb_idx_in_poly, normal ) )
+                                    throw SnowEngineException( "failed to extract normal" );
+                                auto& vnormal = out_mesh.vertices[out_idx].normal;
+                                vnormal.x = -normal[0];
+                                vnormal.y = normal[1];
+                                vnormal.z = normal[2];
+
+                                FbxVector2 uv;
+                                bool unused;
+                                if ( ! fbx_mesh->GetPolygonVertexUV( polygon_idx, fb_idx_in_poly, uv_name, uv, unused ) )
+                                    throw SnowEngineException( "failed to extract uv" );
+
+                                out_mesh.vertices[out_idx].uv.x = uv[0];
+                                out_mesh.vertices[out_idx].uv.y = 1.0f - uv[1];
+                            }
+
+                            DirectX::XMFLOAT3 dp1 = out_mesh.vertices[out_triangle_indices[1]].pos - out_mesh.vertices[out_triangle_indices[0]].pos;
+                            DirectX::XMFLOAT3 dp2 = out_mesh.vertices[out_triangle_indices[2]].pos - out_mesh.vertices[out_triangle_indices[0]].pos;
+
+                            DirectX::XMFLOAT2 duv1 = out_mesh.vertices[out_triangle_indices[1]].uv - out_mesh.vertices[out_triangle_indices[0]].uv;
+                            DirectX::XMFLOAT2 duv2 = out_mesh.vertices[out_triangle_indices[2]].uv - out_mesh.vertices[out_triangle_indices[0]].uv;
+
+                            float inv_det = 1.0f / ( duv1.x * duv2.y - duv1.y * duv2.x );
+                            DirectX::XMFLOAT3 triangle_tangent = ( inv_det * ( dp1 * duv2.y - dp2 * duv1.y ) );
+                            XMFloat3Normalize( triangle_tangent );
+                            for (int i = 0; i < 3; ++i )
+                                out_mesh.vertices[out_triangle_indices[i]].tangent = triangle_tangent;
+
+                            submesh.nindices += 3;							
+                        }
+
+						static int k = 0;
+						if (!k)
+							DeduplicateVertices( out_mesh.vertices, out_mesh.indices );
+						k++;
                     }
                 }
-                m_data.triangle_count_total += mesh_polygon_count;
             }
 
-            PrepassData m_data;			
-        };
+			bool DeduplicateVertices( std::vector<Vertex>& vertices, std::vector<uint32_t>& indices )
+			{
+				if ( vertices.empty() )
+					return true;
 
-        class FbxRenderitemPass: public FbxSceneVisitor
-        {
-        public:
-            FbxRenderitemPass( const PrepassData& prepass_data, ImportedScene& scene )
-                : m_scene( scene ), m_data( prepass_data )
-            {}
+				std::vector<uint32_t> replacements;
+				replacements.resize(vertices.size());
+				for ( uint32_t i = 0; i < replacements.size(); ++i )
+					replacements[i] = i;
 
-            // Inherited via FbxSceneVisitor
-            virtual bool VisitNode( FbxNode* node, bool& visit_children ) override
-            {
-                FbxNodeAttribute* main_attrib = node->GetNodeAttribute();
-                if ( ! main_attrib || main_attrib->GetAttributeType() != FbxNodeAttribute::eMesh )
-                    return true;
-                
-                std::string name = node->GetName();
-                name += node->GetMesh()->GetName();
-                
-                const auto& transform = node->EvaluateGlobalTransform();
-                DirectX::XMFLOAT4X4 dxtf( transform.Get( 0, 0 ), transform.Get( 0, 1 ), transform.Get( 0, 2 ), transform.Get( 0, 3 ),
-                                          transform.Get( 1, 0 ), transform.Get( 1, 1 ), transform.Get( 1, 2 ), transform.Get( 1, 3 ), 
-                                          transform.Get( 2, 0 ), transform.Get( 2, 1 ), transform.Get( 2, 2 ), transform.Get( 2, 3 ), 
-                                          transform.Get( 3, 0 ), transform.Get( 3, 1 ), transform.Get( 3, 2 ), transform.Get( 3, 3 ) );
 
-                for ( int material_idx : m_data.mesh2submeshes.find( node->GetMesh() )->second )
-                {
-                    const auto& submesh = m_data.submeshes.find( std::make_pair( node->GetMesh(), material_idx ) )->second;
-                    name += std::to_string( material_idx );
-                    m_scene.submeshes.push_back( { name, size_t( submesh.triangle_count * 3 ), size_t( submesh.index_offset ), material_idx, dxtf } );
-                }
+				// terrible O(n^2) deduplication. improve this if you have some time
+				uint32_t unique_vertices = 1;
+				for ( uint32_t i = 1; i < vertices.size(); ++i )
+				{
+					uint32_t j = 0;
+					for ( ; j < unique_vertices; ++j )
+					{
+						const auto& rhs = vertices[i];
+						const auto& lhs = vertices[j];
+						if ( lhs.pos == rhs.pos
+							&& lhs.normal == rhs.normal
+							&& lhs.tangent == rhs.tangent
+							&& lhs.uv == rhs.uv)
+						{
+							break;
+						}
+					}
+					replacements[i] = j;
 
-                return true;
-            }
+					if ( j == unique_vertices )
+						vertices[unique_vertices++] = vertices[i];
+				}
 
-        private:
+				vertices.resize(unique_vertices);
 
-            const PrepassData& m_data;
+				for ( auto& idx: indices )
+					idx = replacements[idx];
+
+				return true;
+			}
+
+            PrepassData m_data;
             ImportedScene& m_scene;
         };
+
+        
 
     };
 

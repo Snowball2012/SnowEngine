@@ -42,11 +42,11 @@ void ParallelSplitShadowMapping::CalcSplitPositionsVS( float near_z, float far_z
 }
 
 
-void ParallelSplitShadowMapping::CalcShadowMatrixForFrustrumLH( const span<XMVECTOR>& frustrum_vertices,
+void ParallelSplitShadowMapping::CalcShadowMatrixForFrustumLH( const span<XMVECTOR>& frustum_vertices,
                                                                 const XMVECTOR& light_dir, float additional_height,
                                                                 XMMATRIX& shadow_matrix ) noexcept
 {
-    assert( frustrum_vertices.size() == 8 );
+    assert( frustum_vertices.size() == 8 );
 
     // Try 2 different box orientations, pick the one with minimal side
 
@@ -68,11 +68,11 @@ void ParallelSplitShadowMapping::CalcShadowMatrixForFrustrumLH( const span<XMVEC
 
     for ( int i = 0; i < 2; ++i )
     {
-        min_coords[i] = max_coords[i] = DirectX::XMVector3Transform( frustrum_vertices[0], light_space[i] );
+        min_coords[i] = max_coords[i] = DirectX::XMVector3Transform( frustum_vertices[0], light_space[i] );
 
-        for ( int j = 1; j < frustrum_vertices.size(); j++ )
+        for ( int j = 1; j < frustum_vertices.size(); j++ )
         {
-            DirectX::XMVECTOR vertex_ls = DirectX::XMVector3Transform( frustrum_vertices[j], light_space[i] );
+            DirectX::XMVECTOR vertex_ls = DirectX::XMVector3Transform( frustum_vertices[j], light_space[i] );
             min_coords[i] = DirectX::XMVectorMin( min_coords[i], vertex_ls );
             max_coords[i] = DirectX::XMVectorMax( max_coords[i], vertex_ls );
         }
@@ -140,39 +140,39 @@ span<DirectX::XMMATRIX> ParallelSplitShadowMapping::CalcShadowMatricesWS( const 
 
     float last_z = camera.near_plane;
 
-    DirectX::XMVECTOR frustrum_vertices[8];
+    DirectX::XMVECTOR frustum_vertices[8];
     DirectX::XMVECTOR light_dir = XMLoadFloat3( &light.GetData().dir );
 
     for ( uint32_t i = 0; i < shadow_desc.num_cascades; ++i )
     {
         const float new_z = ( i < shadow_desc.num_cascades - 1 ) ? split_positions[i] : camera.far_plane;
 
-        DirectX::XMMATRIX frustrum_matrix = DirectX::XMMatrixLookToLH( XMLoadFloat3( &camera.pos ), XMLoadFloat3( &camera.dir ), XMLoadFloat3( &camera.up ) )
+        DirectX::XMMATRIX frustum_matrix = DirectX::XMMatrixLookToLH( XMLoadFloat3( &camera.pos ), XMLoadFloat3( &camera.dir ), XMLoadFloat3( &camera.up ) )
                                             * DirectX::XMMatrixPerspectiveFovLH( camera.fov_y, camera.aspect_ratio, last_z, new_z );
         last_z = new_z;
         DirectX::XMVECTOR det;
-        frustrum_matrix = DirectX::XMMatrixInverse( &det, frustrum_matrix );
+        frustum_matrix = DirectX::XMMatrixInverse( &det, frustum_matrix );
 
         if ( i == 0 )
         {
-            frustrum_vertices[0] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1, -1, 0, 1 ), frustrum_matrix ) );
-            frustrum_vertices[1] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1,  1, 0, 1 ), frustrum_matrix ) );
-            frustrum_vertices[2] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1, -1, 0, 1 ), frustrum_matrix ) );
-            frustrum_vertices[3] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1,  1, 0, 1 ), frustrum_matrix ) );
+            frustum_vertices[0] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1, -1, 0, 1 ), frustum_matrix ) );
+            frustum_vertices[1] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1,  1, 0, 1 ), frustum_matrix ) );
+            frustum_vertices[2] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1, -1, 0, 1 ), frustum_matrix ) );
+            frustum_vertices[3] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1,  1, 0, 1 ), frustum_matrix ) );
         }
 
-        frustrum_vertices[4] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1, -1, 1, 1 ), frustrum_matrix ) );
-        frustrum_vertices[5] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1,  1, 1, 1 ), frustrum_matrix ) );
-        frustrum_vertices[6] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1, -1, 1, 1 ), frustrum_matrix ) );
-        frustrum_vertices[7] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1,  1, 1, 1 ), frustrum_matrix ) );
+        frustum_vertices[4] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1, -1, 1, 1 ), frustum_matrix ) );
+        frustum_vertices[5] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet( -1,  1, 1, 1 ), frustum_matrix ) );
+        frustum_vertices[6] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1, -1, 1, 1 ), frustum_matrix ) );
+        frustum_vertices[7] = NormalizeByW( DirectX::XMVector4Transform( DirectX::XMVectorSet(  1,  1, 1, 1 ), frustum_matrix ) );
 
-        CalcShadowMatrixForFrustrumLH( make_span( frustrum_vertices ),
+        CalcShadowMatrixForFrustumLH( make_span( frustum_vertices ),
                                        light_dir,
                                        shadow_desc.orthogonal_ws_height,
                                        matrices_storage[i] );
 
         for ( uint32_t j = 0; j < 4; ++j )
-            frustrum_vertices[j] = frustrum_vertices[j + 4];
+            frustum_vertices[j] = frustum_vertices[j + 4];
     }
 
     return make_span( matrices_storage );

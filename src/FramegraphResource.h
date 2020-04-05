@@ -31,7 +31,7 @@ struct ShadowMaps : TrackedResource
 
 struct ShadowCascade : TrackedResource
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE dsv;
+    span<const D3D12_CPU_DESCRIPTOR_HANDLE> dsvs;
     D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 

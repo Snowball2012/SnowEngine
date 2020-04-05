@@ -82,5 +82,5 @@ void main( uint3 thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupT
         weight_sum += weight;
     }
 
-    output[thread.yx] = min16float( saturate( sum / weight_sum ) );
+    output[thread.yx] = saturate( min16float( sum / weight_sum ) );
 }

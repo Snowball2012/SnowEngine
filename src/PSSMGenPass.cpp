@@ -30,12 +30,6 @@ PSSMGenPass::RenderStateID PSSMGenPass::BuildRenderState( DXGI_FORMAT dsv_format
         shaders.vs->GetBufferSize()
     };
 
-    pso_desc.GS =
-    {
-        reinterpret_cast<BYTE*>( shaders.gs->GetBufferPointer() ),
-        shaders.gs->GetBufferSize()
-    };
-
     pso_desc.PS =
     {
         reinterpret_cast<BYTE*>( shaders.ps->GetBufferPointer() ),
@@ -72,26 +66,32 @@ PSSMGenPass::RenderStateID PSSMGenPass::BuildRenderState( DXGI_FORMAT dsv_format
 
 void PSSMGenPass::Draw( const Context& context )
 {
-    m_cmd_list->OMSetRenderTargets( 0, nullptr, false, &context.depth_stencil_view );
-
     m_cmd_list->SetGraphicsRoot32BitConstant( 2, context.light_idx, 0 );
     m_cmd_list->SetGraphicsRootConstantBufferView( 3, context.pass_cbv );
+	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
-    for ( const auto& item_span : context.renderitems )
-    {
-        for ( const auto& render_item : item_span )
-        {
-            if ( ! render_item.material->BindDataToPipeline( FramegraphTechnique::ShadowGenPass, render_item.item_id, *m_cmd_list ) )
-                throw SnowEngineException( "couldn't bind a material to the pipeline" );
+	for ( uint32_t dsv_idx = 0; dsv_idx < context.depth_stencil_views.size(); ++dsv_idx )
+	{
+		const auto& dsv = context.depth_stencil_views[dsv_idx];
 
-            m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.per_object_cb );            
+		m_cmd_list->OMSetRenderTargets( 0, nullptr, false, &dsv );
+		m_cmd_list->SetGraphicsRoot32BitConstant( 2, dsv_idx, 1 );
 
-            m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
-            m_cmd_list->IASetIndexBuffer( &render_item.ibv );
-            m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
-            m_cmd_list->DrawIndexedInstanced( render_item.index_count, render_item.instance_count, render_item.index_offset, render_item.vertex_offset, 0 );
-        }
-    }
+		for ( const auto& item_span : context.renderitems )
+		{
+			for ( const auto& render_item : item_span )
+			{
+				if ( ! render_item.material->BindDataToPipeline( FramegraphTechnique::ShadowGenPass, render_item.item_id, *m_cmd_list ) )
+					throw SnowEngineException( "couldn't bind a material to the pipeline" );
+
+				m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.per_object_cb );            
+
+				m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
+				m_cmd_list->IASetIndexBuffer( &render_item.ibv );
+				m_cmd_list->DrawIndexedInstanced( render_item.index_count, render_item.instance_count, render_item.index_offset, render_item.vertex_offset, 0 );
+			}
+		}
+	}
 }
 
 
@@ -101,7 +101,7 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
         pssm generation pass root sig
          0 - object cbv
          1 - base color map
-         2 - light index
+         2 - light index, cascade index
          3 - pass cbv
 
          Shader register bindings
@@ -123,7 +123,7 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
     desc_table.Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC );
     slot_root_parameter[1].InitAsDescriptorTable( 1, &desc_table, D3D12_SHADER_VISIBILITY_PIXEL );
 
-    slot_root_parameter[2].InitAsConstants( 1, 1, D3D12_SHADER_VISIBILITY_GEOMETRY );
+    slot_root_parameter[2].InitAsConstants( 2, 1, 0, D3D12_SHADER_VISIBILITY_VERTEX );
     slot_root_parameter[3].InitAsConstantBufferView( 2, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC );
 
     const CD3DX12_STATIC_SAMPLER_DESC anisotropicWrap(
@@ -164,7 +164,7 @@ ComPtr<ID3D12RootSignature> PSSMGenPass::BuildRootSignature( ID3D12Device& devic
 
 PSSMGenPass::Shaders PSSMGenPass::LoadAndCompileShaders()
 {
-    return Shaders{ Utils::LoadBinary( L"shaders/pssm_vs.cso" ), Utils::LoadBinary( L"shaders/pssm_gs.cso" ), Utils::LoadBinary( L"shaders/depth_prepass_ps.cso" ) };
+    return Shaders{ Utils::LoadBinary( L"shaders/pssm_vs.cso" ), Utils::LoadBinary( L"shaders/depth_prepass_ps.cso" ) };
 }
 
 

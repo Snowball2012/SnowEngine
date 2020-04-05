@@ -47,8 +47,8 @@ Component& EntityContainer<Components...>::AddComponent( Entity entity, Args&&..
 {
     assert( entity != Entity::nullid );
     assert( m_entities.has( entity ) );
-
-    auto new_cursor = std::get<ComponentBtree<Component>>( m_components ).emplace( entity, std::forward<Args>( comp_args )... );
+	auto& btree = std::get<ComponentBtree<Component>>( m_components );
+    auto new_cursor = btree.emplace( entity, std::forward<Args>( comp_args )... );
 
     assert( new_cursor.node );
 
@@ -66,8 +66,9 @@ Component* EntityContainer<Components...>::GetComponent( Entity entity )
 {
     assert( entity != Entity::nullid );
     assert( m_entities.has( entity ) );
-
-    auto i = std::get<ComponentBtree<Component>>( m_components ).find( entity );
+	
+	auto& btree = std::get<ComponentBtree<Component>>( m_components );
+    auto i = btree.find( entity );
 
     if ( i.valid() )
         return &i.value();

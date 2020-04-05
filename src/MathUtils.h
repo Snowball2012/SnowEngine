@@ -39,8 +39,10 @@ constexpr uint64_t upper_power_of_two(uint64_t v)
     return v;
 }
 
+bool operator==( const DirectX::XMFLOAT2& lhs, const DirectX::XMFLOAT2& rhs );
 DirectX::XMFLOAT2 operator-( const DirectX::XMFLOAT2& lhs, const DirectX::XMFLOAT2& rhs );
 
+bool operator==( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator-( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3 operator+( const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs );
 DirectX::XMFLOAT3& operator+=( DirectX::XMFLOAT3& op, const DirectX::XMFLOAT3& rhs );

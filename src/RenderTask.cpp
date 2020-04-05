@@ -4,14 +4,14 @@
 
 #include "RenderTask.h"
 
-const RenderTask::Frustrum& RenderTask::GetMainPassFrustrum() const
+const RenderTask::Frustum& RenderTask::GetMainPassFrustum() const
 {
-    return m_main_frustrum;
+    return m_main_frustum;
 }
 
-const span<const RenderTask::ShadowFrustrum> RenderTask::GetShadowFrustrums() const
+const span<const RenderTask::ShadowFrustum> RenderTask::GetShadowFrustums() const
 {
-    return make_span( m_shadow_frustrums );
+    return make_span( m_shadow_frustums );
 }
 
 void RenderTask::AddShadowBatches( span<const RenderBatch> batches, uint32_t list_idx )

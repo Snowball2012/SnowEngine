@@ -76,7 +76,7 @@ private:
     TextureID m_brdf_lut = TextureID::nullid;
 
     CameraID m_camera = CameraID::nullid;
-    CameraID m_dbg_frustrum_camera = CameraID::nullid;
+    CameraID m_dbg_frustum_camera = CameraID::nullid;
     bool m_dbg_use_separate_camera = false;
     LightID m_sun = LightID::nullid;
 

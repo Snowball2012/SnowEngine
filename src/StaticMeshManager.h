@@ -30,6 +30,7 @@ private:
         StaticMeshID id;
         Microsoft::WRL::ComPtr<ID3D12Resource> gpu_vb;
         Microsoft::WRL::ComPtr<ID3D12Resource> gpu_ib;
+        Microsoft::WRL::ComPtr<ID3D12Resource> gpu_rt_as; // raytracing accel structure
         D3D12_VERTEX_BUFFER_VIEW vbv;
         D3D12_INDEX_BUFFER_VIEW ibv;
         D3D_PRIMITIVE_TOPOLOGY topology;

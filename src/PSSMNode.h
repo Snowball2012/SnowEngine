@@ -50,7 +50,8 @@ public:
 
         m_pass.Begin( m_state, cmd_list );
 
-        cmd_list.ClearDepthStencilView( shadow_cascade->dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
+		for ( const auto& dsv : shadow_cascade->dsvs )
+			cmd_list.ClearDepthStencilView( dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 
         for ( const auto& producer : lights_with_pssm->arr )
         {
@@ -67,7 +68,7 @@ public:
             const auto caster_span = make_span( producer.casters );
             PSSMGenPass::Context ctx;
             {
-                ctx.depth_stencil_view = shadow_cascade->dsv;
+                ctx.depth_stencil_views = shadow_cascade->dsvs;
                 ctx.pass_cbv = pass_cb->pass_cb;
                 ctx.renderitems = make_single_elem_span( caster_span );
                 ctx.light_idx = producer.light_idx_in_cb;

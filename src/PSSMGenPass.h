@@ -17,7 +17,7 @@ public:
     struct Context
     {
         span<const span<const RenderBatch>> renderitems;
-        D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
+        span<const D3D12_CPU_DESCRIPTOR_HANDLE> depth_stencil_views;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
         uint32_t light_idx;
     };
@@ -29,7 +29,6 @@ private:
     struct Shaders
     {
         ComPtr<ID3DBlob> vs;
-        ComPtr<ID3DBlob> gs;
         ComPtr<ID3DBlob> ps;
     };
 

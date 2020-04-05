@@ -72,6 +72,11 @@ public:
     btree_map( allocator_t allocator );
     btree_map( const callback_t& callback, allocator_t allocator );
 
+	btree_map( const btree_map& ) = delete;
+	btree_map& operator=( const btree_map& ) = delete;
+	btree_map( btree_map&& ) = delete;
+	btree_map& operator=( btree_map&& ) = delete;
+
     template<typename... Args>
     cursor_t emplace( const Key& key, Args&&... args );
     cursor_t insert( const Key& key, T elem );
@@ -85,15 +90,18 @@ public:
     cursor_t begin() const;
     cursor_t end() const;
 
+	template<typename Visitor>
+	void for_each(Visitor&& visitor);
+
     void clear();
 
     size_t size() const noexcept { return m_size; }
 
 private:
-    allocator_t m_allocator;
     node_t* m_root = nullptr;
     callback_t m_notify_ptr_changed;
     size_t m_size = 0;
+    allocator_t m_allocator;
 
     // a node must not be null
     void destroy_node_recursive( node_t* node ) noexcept;
@@ -121,6 +129,9 @@ private:
 
     void notify_cursor_change( node_t& node, uint32_t pos );
     void notify_cursor_change( cursor_t new_cursor );
+	
+	template<typename Visitor>
+	void for_each(node_t& node, Visitor&& visitor);
 };
 
 #include "btree.hpp"

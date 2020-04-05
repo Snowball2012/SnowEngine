@@ -18,7 +18,7 @@ class ShadowProvider
 public:
     ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv_tables );
 
-    static std::vector<RenderTask::ShadowFrustrum> Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
+    static std::vector<RenderTask::ShadowFrustum> Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
     void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems,
                                    ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,
@@ -35,7 +35,8 @@ private:
     Microsoft::WRL::ComPtr<ID3D12Resource> m_sm_res;
 
     std::vector<ShadowCascadeProducer> m_pssm_producers;
-    std::unique_ptr<Descriptor> m_pssm_dsv = nullptr;
+    std::vector<Descriptor> m_pssm_dsvs;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_pssm_dsvs_for_framegraph;
     SrvID m_pssm_srv = SrvID::nullid;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_pssm_res;
 

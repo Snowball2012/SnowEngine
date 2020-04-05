@@ -138,16 +138,16 @@ void RenderApp::UpdateGUI()
         ImGui::SliderFloat( "PSSM uniform split factor", &pssm_interpolator,0 , 1, "%.2f" );
         m_renderer->PSSM().SetUniformFactor( pssm_interpolator );
 
-        ImGui::Checkbox( "Separate camera for frustrum culling", &m_dbg_use_separate_camera );
+        ImGui::Checkbox( "Separate camera for frustum culling", &m_dbg_use_separate_camera );
         if ( m_dbg_use_separate_camera )
         {
-            m_renderer->SetMainCamera( m_dbg_frustrum_camera );
-            m_renderer->SetFrustrumCullCamera( m_camera );
+            m_renderer->SetMainCamera( m_dbg_frustum_camera );
+            m_renderer->SetFrustumCullCamera( m_camera );
         }
         else
         {
             m_renderer->SetMainCamera( m_camera );
-            m_renderer->SetFrustrumCullCamera( CameraID::nullid );
+            m_renderer->SetFrustumCullCamera( CameraID::nullid );
         }
 
         ImGui::NewLine();
@@ -222,7 +222,7 @@ void RenderApp::UpdateCamera()
 
     // debug camera
     {
-        Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_dbg_frustrum_camera );
+        Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_dbg_frustum_camera );
         if ( ! cam_ptr )
             throw SnowEngineException( "no debug camera" );
 
@@ -414,9 +414,9 @@ void RenderApp::InitScene( ImportedScene imported_scene )
     sun_data.type = Light::LightType::Parallel;
     m_sun = scene.AddLight( sun_data );
 
-    Camera::Data dbg_frustrum_cam_data;
+    Camera::Data dbg_frustum_cam_data;
     camera_data.type = Camera::Type::Perspective;
-    m_dbg_frustrum_camera = scene.AddCamera( dbg_frustrum_cam_data );
+    m_dbg_frustum_camera = scene.AddCamera( dbg_frustum_cam_data );
 }
 
 
@@ -424,7 +424,7 @@ void RenderApp::LoadAndBuildTextures( ImportedScene& ext_scene, bool flush_per_t
 {
     auto& scene = m_renderer->GetScene();
     for ( size_t i = 0; i < ext_scene.textures.size(); ++i )
-        ext_scene.textures[i].second = scene.LoadStaticTexture( ext_scene.textures[i].first );
+        ext_scene.textures[i].second = scene.LoadStreamedTexture( ext_scene.textures[i].first );
 }
 
 void RenderApp::LoadPlaceholderTextures()
@@ -447,10 +447,21 @@ void RenderApp::BuildGeometry( ImportedScene& ext_scene )
 {
     auto& scene = m_renderer->GetScene();
 
-    ext_scene.mesh_id = scene.LoadStaticMesh(
-        "main",
-        ext_scene.vertices,
-        ext_scene.indices );
+    for ( auto& mesh : ext_scene.meshes )
+    {
+        mesh.mesh_id = scene.LoadStaticMesh(
+            mesh.name,
+            mesh.vertices,
+            mesh.indices );
+
+        for ( auto& submesh : mesh.submeshes )
+        {
+            submesh.submesh_id = scene.AddSubmesh( mesh.mesh_id,
+                                                   StaticSubmesh::Data{ uint32_t( submesh.nindices ),
+                                                                        uint32_t( submesh.index_offset ),
+                                                                        0 } );
+        }
+    }
 }
 
 void RenderApp::BuildMaterials( ImportedScene& ext_scene )
@@ -481,22 +492,21 @@ void RenderApp::BuildRenderItems( const ImportedScene& ext_scene )
 
     auto& world = scene.GetWorld();
 
-    for ( const auto& ext_submesh : ext_scene.submeshes )
+    for ( const auto& ext_node : ext_scene.nodes )
     {
-        StaticSubmeshID submesh_id = scene.AddSubmesh( ext_scene.mesh_id,
-                                                       StaticSubmesh::Data{ uint32_t( ext_submesh.nindices ),
-                                                                            uint32_t( ext_submesh.index_offset ),
-                                                                            0 } );
+        DirectX::XMMATRIX tf = DirectX::XMLoadFloat4x4( &ext_node.transform );
+        for ( const auto& ext_submesh : ext_scene.meshes[ext_node.mesh_idx].submeshes )
+        {
+            const int material_idx = ext_submesh.material_idx;
+            if ( material_idx < 0 )
+                throw SnowEngineException( "no material!" );
 
-        const int material_idx = ext_submesh.material_idx;
-        if ( material_idx < 0 )
-            throw SnowEngineException( "no material!" );
-
-        MaterialID mat = ext_scene.materials[material_idx].second.material_id;
+            MaterialID mat = ext_scene.materials[material_idx].second.material_id;
         
-        auto entity = world.CreateEntity();
-        world.AddComponent<Transform>( entity, Transform{ DirectX::XMLoadFloat4x4( &ext_submesh.transform ) } );
-        world.AddComponent<DrawableMesh>( entity, DrawableMesh{ submesh_id, mat } );
+            auto entity = world.CreateEntity();
+            world.AddComponent<Transform>( entity, Transform{ tf } );
+            world.AddComponent<DrawableMesh>( entity, DrawableMesh{ ext_submesh.submesh_id, mat } );
+        }
     }
 }
 
@@ -527,7 +537,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 
 void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& renderer )
 {
-    renderer.SetFrustrumCullCamera( CameraID::nullid );
+    renderer.SetFrustumCullCamera( CameraID::nullid );
     renderer.SetMainCamera( m_camera );
     Light* light = scene.ModifyLight( m_light );
     if ( ! light )

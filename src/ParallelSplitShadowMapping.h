@@ -12,8 +12,8 @@ public:
     // positions_storage.size() determines the number of splits (splits_num = position_starage.size() + 1)
     static void CalcSplitPositionsVS( float near_z, float far_z, float uniform_factor, const span<float>& positions_storage ) noexcept;
 
-    // frustrum_vertices must contain exactly 8 vertices
-    static void CalcShadowMatrixForFrustrumLH( const span<DirectX::XMVECTOR>& frustrum_vertices,
+    // frustum_vertices must contain exactly 8 vertices
+    static void CalcShadowMatrixForFrustumLH( const span<DirectX::XMVECTOR>& frustum_vertices,
                                                const DirectX::XMVECTOR& light_dir, float additional_height,
                                                DirectX::XMMATRIX& shadow_matrix ) noexcept;
 

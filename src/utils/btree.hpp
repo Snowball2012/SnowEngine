@@ -3,6 +3,7 @@
 #include "btree.h"
 
 #include <assert.h>
+#include <optional>
 
 #define btree_map_class btree_map<Key, T, F, Allocator, PointerChangeCallback>
 
@@ -64,7 +65,7 @@ typename btree_map_class::cursor_t btree_map_class::emplace( const Key& key, Arg
 
     auto* new_key = &node.keys()[pos];
     auto* new_value = &node.values()[pos];
-    if ( *new_key != key )
+    if ( *new_key != key || pos == node.num_elems )
     {
         make_space_for_new_elem( node, pos );
         new( new_key ) Key( key );
@@ -82,6 +83,32 @@ typename btree_map_class::cursor_t btree_map_class::emplace( const Key& key, Arg
     return cursor_t{ &node, pos };
 }
 
+template<typename Key, typename T, uint32_t F,                  
+         typename Allocator, typename PointerChangeCallback>             
+template<typename Visitor>
+void btree_map_class::for_each( Visitor&& visitor )
+{
+	assert( m_root );
+	for_each( *m_root, visitor );
+}
+
+template<typename Key, typename T, uint32_t F,                  
+         typename Allocator, typename PointerChangeCallback>             
+template<typename Visitor>
+void btree_map_class::for_each( node_t& node, Visitor&& visitor )
+{
+	for ( uint32_t i = 0; i < node.num_elems; ++i )
+		visitor(node.keys()[i], node.values()[i]);
+
+	if ( !node.is_leaf() )
+	{
+		for ( uint32_t i = 0; i < node.num_elems + 1; ++i )
+		{
+			assert( node.children[i] );
+			for_each( *node.children[i], visitor );
+		}
+	}
+}
 
 btree_map_method_definition( typename btree_map_class::cursor_t )::insert( const Key& key, T elem )
 {
@@ -388,16 +415,16 @@ btree_map_method_definition( void )::make_space_for_new_elem( node_t& node, uint
     if ( pos == node.num_elems - 1 )
         return;
 
-    const auto& last_key = node.keys()[node.num_elems-1];
-    const auto& last_val = node.values()[node.num_elems-1];
+    const auto& last_key = node.keys()[node.num_elems-2];
+    const auto& last_val = node.values()[node.num_elems-2];
 
-    new( &node.keys()[node.num_elems] ) Key( std::move( last_key ) );
-    for ( uint32_t i = node.num_elems - 1; i > pos; --i )
+    new( &node.keys()[node.num_elems - 1] ) Key( std::move( last_key ) );
+    for ( uint32_t i = node.num_elems - 2; i > pos; --i )
         node.keys()[i] = std::move( node.keys()[i - 1] );
     node.keys()[pos].~Key();
     
-    new( &node.values()[node.num_elems] ) T( std::move( last_val ) );
-    for ( uint32_t i = node.num_elems - 1; i > pos; --i )
+    new( &node.values()[node.num_elems - 1] ) T( std::move( last_val ) );
+    for ( uint32_t i = node.num_elems - 2; i > pos; --i )
         node.values()[i] = std::move( node.values()[i - 1] );
     node.values()[pos].~T();
 
@@ -412,10 +439,10 @@ btree_map_method_definition( typename btree_map_class::node_t* )::split_node( no
     assert( ! node->parent.node->is_filled() );
     assert( node->is_filled() );
 
-    auto& parent = node->parent;
+    auto parent = node->parent;
 
     make_space_for_new_elem( *parent.node, parent.position );
-    for ( uint32_t i = parent.node->num_elems - 1; i > parent.position; i-- )
+    for ( uint32_t i = parent.node->num_elems; i > parent.position + 1; i-- )
     {
         parent.node->children[i] = parent.node->children[i-1];
         parent.node->children[i]->parent.position++;

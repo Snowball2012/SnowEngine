@@ -8,6 +8,16 @@
 
 using namespace DirectX;
 
+bool operator==( const XMFLOAT2& lhs, const XMFLOAT2& rhs )
+{
+	return ( lhs.x == rhs.x ) && ( lhs.y == rhs.y );
+}
+
+bool operator==( const XMFLOAT3& lhs, const XMFLOAT3& rhs )
+{
+	return ( lhs.x == rhs.x ) && ( lhs.y == rhs.y ) && ( lhs.z == rhs.z );
+}
+
 XMFLOAT2 operator-( const XMFLOAT2& lhs, const XMFLOAT2& rhs )
 {
     return  XMFLOAT2( lhs.x - rhs.x, lhs.y - rhs.y );

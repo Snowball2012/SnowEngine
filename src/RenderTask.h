@@ -16,7 +16,7 @@ public:
     RenderTask( RenderTask&& ) = default;
     RenderTask& operator=( RenderTask&& ) = default;
 
-    struct Frustrum
+    struct Frustum
     {
         enum class Type
         {
@@ -28,15 +28,15 @@ public:
         DirectX::XMMATRIX viewproj;
     };
 
-    struct ShadowFrustrum
+    struct ShadowFrustum
     {
-        Frustrum frustrum;
+        Frustum frustum;
         Light* light;
     };
 
-    const Frustrum& GetMainPassFrustrum() const;;
+    const Frustum& GetMainPassFrustum() const;;
 
-    const span<const ShadowFrustrum> GetShadowFrustrums() const;
+    const span<const ShadowFrustum> GetShadowFrustums() const;
 
     void AddShadowBatches( span<const RenderBatch> batches, uint32_t list_idx );
     void AddOpaqueBatches( span<const RenderBatch> batches );
@@ -50,8 +50,8 @@ private:
     std::vector<std::vector<span<const RenderBatch>>> m_shadow_renderlists;
     std::vector<span<const RenderBatch>> m_opaque_renderlist;
 
-    Frustrum m_main_frustrum;
-    std::vector<ShadowFrustrum> m_shadow_frustrums;
+    Frustum m_main_frustum;
+    std::vector<ShadowFrustum> m_shadow_frustums;
 
     RenderMode m_mode;
 

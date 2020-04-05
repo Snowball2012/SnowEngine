@@ -85,8 +85,8 @@ void OldRenderer::Draw()
     OPTICK_EVENT();
     // Update rendergraph
     CameraID scene_camera;
-    if ( ! ( m_frustrum_cull_camera_id == CameraID::nullid ) )
-        scene_camera = m_frustrum_cull_camera_id;
+    if ( ! ( m_frustum_cull_camera_id == CameraID::nullid ) )
+        scene_camera = m_frustum_cull_camera_id;
     else
         scene_camera = m_main_camera_id;
 
@@ -157,7 +157,7 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
-    RenderLists render_lists = CreateRenderItems( task.GetMainPassFrustrum() );
+    RenderLists render_lists = CreateRenderItems( task.GetMainPassFrustum() );
     auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists.opaque_items ), allocator );
     auto shadow_list = m_renderer->CreateRenderitems( make_span( render_lists.shadow_items ), allocator );
 
@@ -224,11 +224,11 @@ bool OldRenderer::SetMainCamera( CameraID id )
     return true;
 }
 
-bool OldRenderer::SetFrustrumCullCamera( CameraID id )
+bool OldRenderer::SetFrustumCullCamera( CameraID id )
 {
     if ( ! GetScene().GetROScene().AllCameras().has( id ) )
         return false;
-    m_frustrum_cull_camera_id = id;
+    m_frustum_cull_camera_id = id;
     return true;
 }
 
@@ -435,19 +435,19 @@ void OldRenderer::EndFrame( )
     m_cur_frame_resource->second.Clear();
 }
 
-OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frustrum& main_frustrum )
+OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frustum& main_frustum )
 {
     OPTICK_EVENT();
-    if ( main_frustrum.type != RenderTask::Frustrum::Type::Perspective )
+    if ( main_frustum.type != RenderTask::Frustum::Type::Perspective )
         NOTIMPL;
 
-    const DirectX::XMMATRIX& proj = main_frustrum.proj;
+    const DirectX::XMMATRIX& proj = main_frustum.proj;
 
     DirectX::BoundingFrustum main_bf( proj );
     if ( main_bf.Far < main_bf.Near ) // reversed z
         std::swap( main_bf.Far, main_bf.Near );
 
-    const DirectX::XMMATRIX& view = main_frustrum.view;
+    const DirectX::XMMATRIX& view = main_frustum.view;
 
     DirectX::XMVECTOR det;
     main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );

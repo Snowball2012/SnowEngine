@@ -5,6 +5,7 @@
 #include <Windows.h>
 #include <DirectXMath.h>
 
+#include "../src/stdafx.h"
 #include "../src/ParallelSplitShadowMapping.h"
 
 BOOST_AUTO_TEST_SUITE( pssm )

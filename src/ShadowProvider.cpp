@@ -72,22 +72,26 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv
         }
         m_device->CreateShaderResourceView( m_pssm_res.Get(), &srv_desc, *m_descriptor_tables->ModifyTable( m_pssm_srv ) );
 
-        m_pssm_dsv = std::make_unique<Descriptor>( std::move( m_dsv_heap.AllocateDescriptor() ) );
-        D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc{};
-        {
-            dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-            dsv_desc.Format = ShadowMapDSVFormat;
-            dsv_desc.Texture2DArray.ArraySize = MAX_CASCADE_SIZE;
-            dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
-        }
-        m_device->CreateDepthStencilView( m_pssm_res.Get(), &dsv_desc, m_pssm_dsv->HandleCPU() );
+		for ( int i = 0; i < MAX_CASCADE_SIZE; ++i )
+		{
+			auto& descriptor = m_pssm_dsvs.emplace_back( std::move( m_dsv_heap.AllocateDescriptor() ) );
+			D3D12_DEPTH_STENCIL_VIEW_DESC dsv_desc{};
+			{
+				dsv_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+				dsv_desc.Format = ShadowMapDSVFormat;
+				dsv_desc.Texture2DArray.ArraySize = 1;
+				dsv_desc.Texture2DArray.FirstArraySlice = i;
+				dsv_desc.Flags = D3D12_DSV_FLAG_NONE;
+			}
+			m_device->CreateDepthStencilView( m_pssm_res.Get(), &dsv_desc, descriptor.HandleCPU() );
+		}
     }
 }
 
 
-std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
+std::vector<RenderTask::ShadowFrustum> ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
-    std::vector<RenderTask::ShadowFrustrum> frustrums;
+    std::vector<RenderTask::ShadowFrustum> frustums;
 
     std::array<float, MAX_CASCADE_SIZE - 1> split_positions_storage;
 
@@ -115,8 +119,8 @@ std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scen
             if ( use_csm )
                 pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
 
-            frustrums.emplace_back( RenderTask::ShadowFrustrum{ {
-                                        RenderTask::Frustrum::Type::Orthographic,
+            frustums.emplace_back( RenderTask::ShadowFrustum{ {
+                                        RenderTask::Frustum::Type::Orthographic,
                                         DirectX::XMMatrixIdentity(),
                                         DirectX::XMMatrixIdentity(),
                                         shadow_matrices.back() },
@@ -125,7 +129,7 @@ std::vector<RenderTask::ShadowFrustrum> ShadowProvider::Update( span<Light> scen
         }
     }
 
-    return std::move( frustrums );
+    return std::move( frustums );
 }
 
 
@@ -133,6 +137,10 @@ void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& ligh
 {
     OPTICK_EVENT();
     CreateShadowProducers( lights );
+
+	m_pssm_dsvs_for_framegraph.clear();
+	for ( const auto& dsv_desc : m_pssm_dsvs )
+		m_pssm_dsvs_for_framegraph.push_back( dsv_desc.HandleCPU() );
 
     for ( const auto& item : renderitems )
     {
@@ -152,7 +160,8 @@ void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& ligh
     pssm_producers.arr = make_span( m_pssm_producers );
 
     pssm_storage.res = m_pssm_res.Get();
-    pssm_storage.dsv = m_pssm_dsv->HandleCPU();
+
+    pssm_storage.dsvs = make_span( m_pssm_dsvs_for_framegraph );
     pssm_storage.srv = m_descriptor_tables->GetTable( m_pssm_srv )->gpu_handle;
 }
 

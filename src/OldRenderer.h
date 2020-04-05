@@ -53,7 +53,7 @@ public:
 
     // returns false if camera doesn't exist
     bool SetMainCamera( CameraID id );
-    bool SetFrustrumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
+    bool SetFrustumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
 
     bool SetIrradianceMap( CubemapID id );
     bool SetReflectionProbe( CubemapID id );
@@ -101,7 +101,7 @@ private:
     StaticMeshID m_geom_id = StaticMeshID::nullid;
     MaterialID m_placeholder_material = MaterialID::nullid;
     CameraID m_main_camera_id = CameraID::nullid;
-    CameraID m_frustrum_cull_camera_id = CameraID::nullid;
+    CameraID m_frustum_cull_camera_id = CameraID::nullid;
 
     CubemapID m_irradiance_map = CubemapID::nullid;
     CubemapID m_reflection_probe = CubemapID::nullid;
@@ -151,7 +151,7 @@ private:
         std::vector<RenderItem> opaque_items;
         std::vector<RenderItem> shadow_items;
     };
-    RenderLists CreateRenderItems( const RenderTask::Frustrum& main_frustrum );
+    RenderLists CreateRenderItems( const RenderTask::Frustum& main_frustum );
 
     ID3D12Resource* CurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;
