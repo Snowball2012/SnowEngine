@@ -5,6 +5,8 @@
 
 #include "../src/utils/btree.h"
 
+#include <random>
+
 BOOST_AUTO_TEST_SUITE( btree_tests )
 
 BOOST_AUTO_TEST_CASE( creation )
@@ -239,6 +241,57 @@ BOOST_AUTO_TEST_CASE( randomized_deletion )
 
     BOOST_TEST( total_size == deleted_elems );
     BOOST_TEST( (test_btree.begin() == test_btree.end()) );
+}
+
+BOOST_AUTO_TEST_CASE( stress_test )
+{
+	constexpr int TEST_SIZE = 50000;
+
+	struct useful
+	{
+		int id;
+		useful( int new_id = 0 ) : id( new_id ) { }
+	};
+
+	std::vector<useful*> g_vector;
+	
+	btree_map<useful*, int, 30> g_btree;
+	
+	useful g_pool[TEST_SIZE];
+	for ( int i = 0; i < TEST_SIZE; ++i )
+		g_pool[i].id = i + 1;
+
+	std::vector<int> insert_order;
+	insert_order.resize(TEST_SIZE);
+	for ( int i = 0; i < TEST_SIZE; i++ )
+		insert_order[i] = i;
+	
+	std::random_device rd;
+	std::mt19937 g( rd() );
+ 
+	std::shuffle(insert_order.begin(), insert_order.end(), g);
+	for ( int i = 0; i < TEST_SIZE; ++i )
+	{
+		g_btree.insert( g_pool + insert_order[i], 0 );
+	}
+
+	
+	uint64_t sum = 0;
+	g_btree.for_each( [&sum]( const auto& key, const auto& v )
+	{
+		uint64_t val;
+		val = reinterpret_cast<uint64_t>( key );
+		sum++;
+		sum *= ( val * val + val ) % 15 * ( val - 1 ) + 1;
+	} );
+
+	for ( int i = 0; i < TEST_SIZE; ++i )
+	{
+		auto cursor = g_btree.find( g_pool + i );
+		g_btree.erase( cursor );
+	}
+
+	BOOST_TEST( g_btree.size() == 0 );
 }
 
 BOOST_AUTO_TEST_SUITE_END()

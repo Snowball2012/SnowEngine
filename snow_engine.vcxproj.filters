@@ -525,9 +525,6 @@
     <FxCompile Include="shaders\postprocess\separable_blur.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
-    <FxCompile Include="shaders\pssm_gs.hlsl">
-      <Filter>shaders\pssm</Filter>
-    </FxCompile>
     <FxCompile Include="shaders\pssm_vs.hlsl">
       <Filter>shaders\pssm</Filter>
     </FxCompile>
