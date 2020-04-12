@@ -119,13 +119,16 @@ std::vector<RenderTask::ShadowFrustum> ShadowProvider::Update( span<Light> scene
             if ( use_csm )
                 pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
 
-            frustums.emplace_back( RenderTask::ShadowFrustum{ {
-                                        RenderTask::Frustum::Type::Orthographic,
-                                        DirectX::XMMatrixIdentity(),
-                                        DirectX::XMMatrixIdentity(),
-                                        shadow_matrices.back() },
-                                        &light
-                                    } );
+			RenderTask::ShadowFrustum shadow_frustum;
+			for ( const auto& vp_matrix : shadow_matrices )
+			{
+				shadow_frustum.frustum.emplace_back( RenderTask::Frustum{
+					RenderTask::Frustum::Type::Orthographic,
+					DirectX::XMMatrixIdentity(),
+					DirectX::XMMatrixIdentity(), vp_matrix } );
+			}
+			shadow_frustum.light = &light;
+            frustums.push_back( shadow_frustum );
         }
     }
 
@@ -133,7 +136,7 @@ std::vector<RenderTask::ShadowFrustum> ShadowProvider::Update( span<Light> scene
 }
 
 
-void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
+void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderTask::ShadowRenderList>& renderlists, ShadowProducers& producers, ShadowCascadeProducers& pssm_producers, ShadowMaps& storage, ShadowCascade& pssm_storage )
 {
     OPTICK_EVENT();
     CreateShadowProducers( lights );
@@ -142,14 +145,32 @@ void ShadowProvider::FillFramegraphStructures( const span<const LightInCB>& ligh
 	for ( const auto& dsv_desc : m_pssm_dsvs )
 		m_pssm_dsvs_for_framegraph.push_back( dsv_desc.HandleCPU() );
 
-    for ( const auto& item : renderitems )
-    {
-        for ( auto& producer : m_pssm_producers )
-            producer.casters.push_back( item );
-
-        for ( auto& producer : m_producers )
-            producer.casters.push_back( item );
-    }
+	for ( const auto& list : renderlists )
+	{
+		if ( list.cascade_renderlists.size() > 1 ) // cascade shadows
+		{
+			// find a producer
+			auto light_it = std::find_if( lights.begin(), lights.end(), [&]( const auto& i ) { return i.light == list.light; } );
+			if ( light_it != lights.end() )
+			{
+				const uint32_t producer_idx = std::distance( lights.begin(), light_it );
+				auto& producer = m_pssm_producers[producer_idx];
+				producer.casters.resize( list.cascade_renderlists.size() );
+				for ( int i = 0; i < producer.casters.size(); ++i )
+					for ( const auto& item : list.cascade_renderlists[i] )
+						for ( const auto& batch : item)
+							producer.casters[i].push_back( batch );
+			}
+			else
+			{
+				throw SnowEngineException( "found shadow items for unexpected light" );
+			}
+		}
+		else
+		{
+			NOTIMPL; // repair regular non-cascade shadows
+		}
+	}
 
     producers.arr = make_span( m_producers );
 

@@ -162,7 +162,9 @@ void OldRenderer::Draw()
     auto shadow_list = m_renderer->CreateRenderitems( make_span( render_lists.shadow_items ), allocator );
 
     task.AddOpaqueBatches( make_span( opaque_list.batches ) );
-    task.AddShadowBatches( make_span( shadow_list.batches ), 0 );
+	for ( uint32_t light_idx = 0; light_idx < task.GetShadowFrustums().size(); ++light_idx )
+		for ( uint32_t cascade_idx = 0; cascade_idx < task.GetShadowFrustums()[light_idx].frustum.size(); ++cascade_idx )
+			task.AddShadowBatches( make_span( shadow_list.batches ), light_idx, cascade_idx );
 
     Renderer::FrameContext frame_ctx;
     frame_ctx.cmd_list_pool = m_cmd_lists.get();

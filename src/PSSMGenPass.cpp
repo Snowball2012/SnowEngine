@@ -66,31 +66,35 @@ PSSMGenPass::RenderStateID PSSMGenPass::BuildRenderState( DXGI_FORMAT dsv_format
 
 void PSSMGenPass::Draw( const Context& context )
 {
+	assert( context.depth_stencil_views.size() == context.renderitems_per_dsv.size() );
+
     m_cmd_list->SetGraphicsRoot32BitConstant( 2, context.light_idx, 0 );
     m_cmd_list->SetGraphicsRootConstantBufferView( 3, context.pass_cbv );
 	m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
 
 	for ( uint32_t dsv_idx = 0; dsv_idx < context.depth_stencil_views.size(); ++dsv_idx )
 	{
+		if ( context.renderitems_per_dsv[dsv_idx].empty() )
+			continue;
+
+		PIXBeginEvent( m_cmd_list, PIX_COLOR( 200, 210, 230 ), "Cascade # %d", dsv_idx );
 		const auto& dsv = context.depth_stencil_views[dsv_idx];
 
 		m_cmd_list->OMSetRenderTargets( 0, nullptr, false, &dsv );
 		m_cmd_list->SetGraphicsRoot32BitConstant( 2, dsv_idx, 1 );
 
-		for ( const auto& item_span : context.renderitems )
+		for ( const auto& render_item : context.renderitems_per_dsv[dsv_idx] )
 		{
-			for ( const auto& render_item : item_span )
-			{
-				if ( ! render_item.material->BindDataToPipeline( FramegraphTechnique::ShadowGenPass, render_item.item_id, *m_cmd_list ) )
-					throw SnowEngineException( "couldn't bind a material to the pipeline" );
+			if ( ! render_item.material->BindDataToPipeline( FramegraphTechnique::ShadowGenPass, render_item.item_id, *m_cmd_list ) )
+				throw SnowEngineException( "couldn't bind a material to the pipeline" );
 
-				m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.per_object_cb );            
+			m_cmd_list->SetGraphicsRootConstantBufferView( 0, render_item.per_object_cb );            
 
-				m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
-				m_cmd_list->IASetIndexBuffer( &render_item.ibv );
-				m_cmd_list->DrawIndexedInstanced( render_item.index_count, render_item.instance_count, render_item.index_offset, render_item.vertex_offset, 0 );
-			}
+			m_cmd_list->IASetVertexBuffers( 0, 1, &render_item.vbv );
+			m_cmd_list->IASetIndexBuffer( &render_item.ibv );
+			m_cmd_list->DrawIndexedInstanced( render_item.index_count, render_item.instance_count, render_item.index_offset, render_item.vertex_offset, 0 );
 		}
+		PIXEndEvent( m_cmd_list );
 	}
 }
 

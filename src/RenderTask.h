@@ -30,7 +30,7 @@ public:
 
     struct ShadowFrustum
     {
-        Frustum frustum;
+        bc::small_vector<Frustum, 4> frustum; // multiple frustums for CSM
         Light* light;
     };
 
@@ -38,8 +38,14 @@ public:
 
     const span<const ShadowFrustum> GetShadowFrustums() const;
 
-    void AddShadowBatches( span<const RenderBatch> batches, uint32_t list_idx );
+    void AddShadowBatches( span<const RenderBatch> batches, uint32_t list_idx, uint32_t cascade_idx );
     void AddOpaqueBatches( span<const RenderBatch> batches );
+
+	struct ShadowRenderList
+	{
+		bc::small_vector<std::vector<span<const RenderBatch>>, 4> cascade_renderlists;
+		const Light* light;
+	};
 
 private:
 
@@ -47,7 +53,7 @@ private:
 
     RenderTask( ForwardCBProvider&& forward_cb );
 
-    std::vector<std::vector<span<const RenderBatch>>> m_shadow_renderlists;
+    std::vector<ShadowRenderList> m_shadow_renderlists;
     std::vector<span<const RenderBatch>> m_opaque_renderlist;
 
     Frustum m_main_frustum;

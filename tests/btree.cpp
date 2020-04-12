@@ -274,7 +274,6 @@ BOOST_AUTO_TEST_CASE( stress_test )
 	{
 		g_btree.insert( g_pool + insert_order[i], 0 );
 	}
-
 	
 	uint64_t sum = 0;
 	g_btree.for_each( [&sum]( const auto& key, const auto& v )

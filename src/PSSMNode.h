@@ -47,14 +47,15 @@ public:
             throw SnowEngineException( "missing resource" );
         
         PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "PSSMGenPass" );
-
         m_pass.Begin( m_state, cmd_list );
 
 		for ( const auto& dsv : shadow_cascade->dsvs )
 			cmd_list.ClearDepthStencilView( dsv, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr );
 
+		int light_idx = 0;
         for ( const auto& producer : lights_with_pssm->arr )
         {
+			PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "Light # %d", light_idx );
             cmd_list.RSSetViewports( 1, &producer.viewport );
             D3D12_RECT sm_scissor;
             {
@@ -65,15 +66,16 @@ public:
             }
             cmd_list.RSSetScissorRects( 1, &sm_scissor );
 
-            const auto caster_span = make_span( producer.casters );
             PSSMGenPass::Context ctx;
             {
                 ctx.depth_stencil_views = shadow_cascade->dsvs;
                 ctx.pass_cbv = pass_cb->pass_cb;
-                ctx.renderitems = make_single_elem_span( caster_span );
+                ctx.renderitems_per_dsv = make_span( producer.casters );
                 ctx.light_idx = producer.light_idx_in_cb;
             }
             m_pass.Draw( ctx );
+			PIXEndEvent( &cmd_list );
+			light_idx++;
         }
 
         m_pass.End();

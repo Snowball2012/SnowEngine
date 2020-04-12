@@ -20,7 +20,7 @@ public:
 
     static std::vector<RenderTask::ShadowFrustum> Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data );
 
-    void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderBatch>& renderitems,
+    void FillFramegraphStructures( const span<const LightInCB>& lights, const span<const RenderTask::ShadowRenderList>& renderlists,
                                    ShadowProducers& producers, ShadowCascadeProducers& pssm_producers,
                                    ShadowMaps& storage, ShadowCascade& pssm_storage );
 

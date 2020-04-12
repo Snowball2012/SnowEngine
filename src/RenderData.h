@@ -77,7 +77,7 @@ struct ShadowCascadeProducer
 {
     D3D12_VIEWPORT viewport;
     uint32_t light_idx_in_cb;
-    std::vector<RenderBatch> casters;
+    bc::small_vector<std::vector<RenderBatch>, 4> casters;
 };
 
 struct GPUObjectConstants

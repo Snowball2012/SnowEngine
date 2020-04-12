@@ -171,6 +171,10 @@ RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Lig
 
     new_task.m_shadow_frustums = ShadowProvider::Update( light_list, m_pssm, main_camera );
 
+	new_task.m_shadow_renderlists.resize( new_task.m_shadow_frustums.size() );
+	for ( uint32_t i = 0; i < new_task.m_shadow_renderlists.size(); ++i )
+		new_task.m_shadow_renderlists[i].light = new_task.m_shadow_frustums[i].light;
+
     new_task.m_main_frustum = RenderTask::Frustum{ RenderTask::Frustum::Type::Perspective,
                                                      forward_cb.GetProj(),
                                                      forward_cb.GetView(),
@@ -202,7 +206,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         ShadowMaps sm_storage;
         ShadowCascadeProducers pssm_producers;
         ShadowCascade pssm_storage;
-        m_shadow_provider.FillFramegraphStructures( task.m_forward_cb_provider.GetLightsInCB(), make_span( task.m_shadow_renderlists[0][0] ),
+        m_shadow_provider.FillFramegraphStructures( task.m_forward_cb_provider.GetLightsInCB(), make_span( task.m_shadow_renderlists ),
                                                     producers, pssm_producers, sm_storage, pssm_storage );
         m_framegraph.SetRes( producers );
         m_framegraph.SetRes( sm_storage );

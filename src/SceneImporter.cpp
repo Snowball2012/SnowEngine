@@ -278,7 +278,7 @@ namespace
                             for ( int fb_idx_in_poly = 0; fb_idx_in_poly < 3; ++fb_idx_in_poly )
                             {
                                 int cp_idx = fbx_mesh->GetPolygonVertex( polygon_idx, fb_idx_in_poly );
-                                int out_idx = submesh.index_offset + submesh.nindices + (2 - fb_idx_in_poly);
+                                int out_idx = int( submesh.index_offset + submesh.nindices ) + 2 - fb_idx_in_poly;
                                 out_triangle_indices[fb_idx_in_poly] = out_idx;
 
                                 auto& vpos = out_mesh.vertices[out_idx].pos;

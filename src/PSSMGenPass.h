@@ -16,7 +16,7 @@ public:
 
     struct Context
     {
-        span<const span<const RenderBatch>> renderitems;
+        span<const std::vector<RenderBatch>> renderitems_per_dsv;
         span<const D3D12_CPU_DESCRIPTOR_HANDLE> depth_stencil_views;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cbv;
         uint32_t light_idx;
