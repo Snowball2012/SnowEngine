@@ -157,14 +157,28 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
-    RenderLists render_lists = CreateRenderItems( task.GetMainPassFrustum() );
-    auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists.opaque_items ), allocator );
-    auto shadow_list = m_renderer->CreateRenderitems( make_span( render_lists.shadow_items ), allocator );
+    RenderItemStorage render_lists = CreateRenderItems( task );
 
-    task.AddOpaqueBatches( make_span( opaque_list.batches ) );
-	for ( uint32_t light_idx = 0; light_idx < task.GetShadowFrustums().size(); ++light_idx )
-		for ( uint32_t cascade_idx = 0; cascade_idx < task.GetShadowFrustums()[light_idx].frustum.size(); ++cascade_idx )
-			task.AddShadowBatches( make_span( shadow_list.batches ), light_idx, cascade_idx );
+	auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists[0] ), allocator );
+	task.AddOpaqueBatches( make_span( opaque_list.batches ) );
+
+	std::vector<Renderer::RenderBatchList> shadow_lists;
+	shadow_lists.resize( render_lists.size() - 1 );
+	size_t list_idx = 0;
+	size_t shadow_idx = 0;
+	for ( const auto& shadow : task.GetShadowFrustums() )
+	{
+		size_t split_idx = 0;
+		for ( const auto& split : shadow.frustum )
+		{
+			shadow_lists[list_idx] = m_renderer->CreateRenderitems( make_span( render_lists[list_idx + 1] ), allocator );
+			task.AddShadowBatches( make_span( shadow_lists[list_idx].batches ), uint32_t( shadow_idx ), uint32_t( split_idx ) ); 
+
+			list_idx++;
+			split_idx++;
+		}
+		shadow_idx++;
+	}
 
     Renderer::FrameContext frame_ctx;
     frame_ctx.cmd_list_pool = m_cmd_lists.get();
@@ -176,7 +190,8 @@ void OldRenderer::Draw()
 
     frame_ctx.resources->AddAllocators( make_single_elem_span( allocator ) );
     frame_ctx.resources->AddResources( make_single_elem_span( opaque_list.per_obj_cb ) );
-    frame_ctx.resources->AddResources( make_single_elem_span( shadow_list.per_obj_cb ) );
+	for ( auto& shadow_list : shadow_lists )
+		frame_ctx.resources->AddResources( make_single_elem_span( shadow_list.per_obj_cb ) );
 
     m_renderer->SetHBAOSettings( Renderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
     m_renderer->SetTonemapSettings( Renderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
@@ -437,12 +452,32 @@ void OldRenderer::EndFrame( )
     m_cur_frame_resource->second.Clear();
 }
 
-OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frustum& main_frustum )
+OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask& task )
 {
     OPTICK_EVENT();
+	
+	const auto& main_frustum = task.GetMainPassFrustum();
     if ( main_frustum.type != RenderTask::Frustum::Type::Perspective )
         NOTIMPL;
 
+	const span<const RenderTask::ShadowFrustum> shadow_frustums = task.GetShadowFrustums();
+	
+    const Scene& scene = GetScene().GetROScene();
+
+	RenderItemStorage lists;
+	{
+		// count lists
+		size_t nlists = 1; // main frustum
+		for ( const auto& shadow_frustum : task.GetShadowFrustums() )
+			nlists += shadow_frustum.frustum.size();
+		lists.resize( nlists );
+		// reserve mem. Probably too conservative
+		const size_t nentities = scene.world.GetEntityCount();
+		for ( auto& list : lists )
+			list.reserve( nentities );
+	}
+
+	// prepare frustum culling data
     const DirectX::XMMATRIX& proj = main_frustum.proj;
 
     DirectX::BoundingFrustum main_bf( proj );
@@ -454,15 +489,10 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
     DirectX::XMVECTOR det;
     main_bf.Transform( main_bf, DirectX::XMMatrixInverse( &det, view ) );
 
-    const Scene& scene = GetScene().GetROScene();
-
-    RenderLists lists;
-
-    lists.opaque_items.reserve( scene.world.GetEntityCount() );
-    lists.shadow_items.reserve( scene.world.GetEntityCount() );
-
     m_num_renderitems_total = 0;
     m_num_renderitems_to_draw = 0;
+
+	auto& opaque_list = lists[0];
 
     for ( const auto& [entity, transform, drawable] : GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
     {
@@ -511,14 +541,77 @@ OldRenderer::RenderLists OldRenderer::CreateRenderItems( const RenderTask::Frust
 
         m_num_renderitems_total++;
         if ( item_box.Intersects( main_bf ) )
-            lists.opaque_items.push_back( item );
+            opaque_list.push_back( item );
 
-        lists.shadow_items.push_back( item );
+		// Shadow culling
+		const DirectX::XMFLOAT3 center = item_box.Center;
+		const float radius = std::sqrt( XMFloat3LenSquared( item_box.Extents ) );
+
+		size_t list_idx = 1;
+		for ( size_t shadow_idx = 0; shadow_idx < shadow_frustums.size(); ++shadow_idx )
+		{
+			const auto& shadow = shadow_frustums[shadow_idx];
+			assert( !shadow.frustum.empty() );
+			assert( shadow.frustum[0].type == RenderTask::Frustum::Type::Orthographic );
+			DirectX::XMFLOAT3 shadow_center;
+			DirectX::XMVECTOR sc;
+				sc.m128_f32[0] = 0;
+				sc.m128_f32[1] = 0;
+				sc.m128_f32[2] = 0;
+				sc.m128_f32[3] = 1;
+			sc = DirectX::XMVector4Transform( sc, DirectX::XMMatrixInverse( &det, main_frustum.view ) );
+			sc = XMVectorDivide(sc, XMVectorReplicate(XMVectorGetW(sc)));
+			XMStoreFloat3( &shadow_center, sc ); // view matrix for shadow is orthogonal
+			DirectX::XMFLOAT3 shadow_dir;
+			{
+				DirectX::XMVECTOR sd;
+				sd.m128_f32[0] = 0;
+				sd.m128_f32[1] = 0;
+				sd.m128_f32[2] = 1;
+				sd.m128_f32[3] = 0;
+
+				sd = XMVector4Transform( sd, DirectX::XMMatrixInverse( &det, shadow.frustum[0].viewproj ) );
+				XMStoreFloat3( &shadow_dir, sd );
+			}
+			//XMStoreFloat3( &shadow_dir, shadow.frustum[0].viewproj.r[2] ); // shadow view space (0,0,1) vec in world space
+			//shadow_dir *= -1;
+			XMFloat3Normalize( shadow_dir );
+
+			DirectX::XMFLOAT3 center_to_shadow_axis = center - shadow_center;
+			center_to_shadow_axis += shadow_dir * -XMVector3Dot(XMLoadFloat3(&center_to_shadow_axis), XMLoadFloat3(&shadow_dir)).m128_f32[0];
+			
+			const float center_to_axis_dist = std::sqrt( XMFloat3LenSquared( center_to_shadow_axis ) );
+			const float min_dist = std::max( 0.0f, center_to_axis_dist - radius );
+			const float max_dist = center_to_axis_dist + radius;
+
+			bool completely_in_split = false;
+			for ( size_t split_idx = 0; split_idx < shadow.split_positions.size(); ++split_idx )
+			{
+				const float split_pos = shadow.split_positions[split_idx];
+				if ( min_dist < split_pos )
+					lists[list_idx + split_idx].push_back( item );
+				if ( max_dist <= split_pos )
+				{
+					completely_in_split = true;
+					break;
+				}
+			}
+
+			list_idx += shadow.split_positions.size();
+
+			if ( ! completely_in_split )
+			{
+				// add to the last split
+				lists[list_idx].push_back( item );
+			}
+			list_idx++;
+		}
     }
 
-    boost::sort( lists.opaque_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
-    boost::sort( lists.shadow_items, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
-    m_num_renderitems_to_draw = lists.opaque_items.size();
+	for ( auto& list : lists )
+		boost::sort( list, []( const auto& lhs, const auto& rhs ) { return lhs.material < rhs.material; } );
+
+    m_num_renderitems_to_draw = lists[0].size();
 
     return std::move( lists );
 }

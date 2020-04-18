@@ -31,6 +31,7 @@ public:
     struct ShadowFrustum
     {
         bc::small_vector<Frustum, 4> frustum; // multiple frustums for CSM
+		bc::small_vector<float, 3> split_positions;
         Light* light;
     };
 

@@ -146,12 +146,8 @@ private:
 
     void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
-    struct RenderLists
-    {
-        std::vector<RenderItem> opaque_items;
-        std::vector<RenderItem> shadow_items;
-    };
-    RenderLists CreateRenderItems( const RenderTask::Frustum& main_frustum );
+	using RenderItemStorage = std::vector<std::vector<RenderItem>>;
+    RenderItemStorage CreateRenderItems( const RenderTask& task ); // returs a storage for renderitems, keep it until the data is submitted to GPU
 
     ID3D12Resource* CurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;

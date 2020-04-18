@@ -120,6 +120,10 @@ std::vector<RenderTask::ShadowFrustum> ShadowProvider::Update( span<Light> scene
                 pssm.CalcShadowMatricesWS( main_camera_data, light, split_positions, make_span( shadow_matrices ) );
 
 			RenderTask::ShadowFrustum shadow_frustum;
+			shadow_frustum.split_positions.reserve( split_positions.size() );
+			for ( const float pos : split_positions )
+				shadow_frustum.split_positions.push_back( pos );
+
 			for ( const auto& vp_matrix : shadow_matrices )
 			{
 				shadow_frustum.frustum.emplace_back( RenderTask::Frustum{
