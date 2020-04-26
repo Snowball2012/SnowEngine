@@ -12,6 +12,8 @@
 
 #include "GPUResourceHolder.h"
 
+#include <utils/CGUtils.h>
+
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>
 #include <dxtk12/ResourceUploadBatch.h>
@@ -157,7 +159,7 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
-    RenderItemStorage render_lists = CreateRenderItems( task );
+    RenderItemStorage render_lists = CreateRenderItems( task, DirectX::XMLoadFloat3( &main_camera->GetData().pos ) );
 
 	auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists[0] ), allocator );
 	task.AddOpaqueBatches( make_span( opaque_list.batches ) );
@@ -452,7 +454,7 @@ void OldRenderer::EndFrame( )
     m_cur_frame_resource->second.Clear();
 }
 
-OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask& task )
+OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask& task, const DirectX::XMVECTOR& camera_pos )
 {
     OPTICK_EVENT();
 	
@@ -491,6 +493,8 @@ OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask&
 
     m_num_renderitems_total = 0;
     m_num_renderitems_to_draw = 0;
+	
+	bc::small_vector<bool, MAX_CASCADE_SIZE> splits;
 
 	auto& opaque_list = lists[0];
 
@@ -546,6 +550,7 @@ OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask&
 		// Shadow culling
 		const DirectX::XMFLOAT3 center = item_box.Center;
 		const float radius = std::sqrt( XMFloat3LenSquared( item_box.Extents ) );
+		DirectX::XMVECTOR center_to_camera = DirectX::XMLoadFloat3(&center) - camera_pos;
 
 		size_t list_idx = 1;
 		for ( size_t shadow_idx = 0; shadow_idx < shadow_frustums.size(); ++shadow_idx )
@@ -553,58 +558,23 @@ OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask&
 			const auto& shadow = shadow_frustums[shadow_idx];
 			assert( !shadow.frustum.empty() );
 			assert( shadow.frustum[0].type == RenderTask::Frustum::Type::Orthographic );
-			DirectX::XMFLOAT3 shadow_center;
-			DirectX::XMVECTOR sc;
-				sc.m128_f32[0] = 0;
-				sc.m128_f32[1] = 0;
-				sc.m128_f32[2] = 0;
-				sc.m128_f32[3] = 1;
-			sc = DirectX::XMVector4Transform( sc, DirectX::XMMatrixInverse( &det, main_frustum.view ) );
-			sc = XMVectorDivide(sc, XMVectorReplicate(XMVectorGetW(sc)));
-			XMStoreFloat3( &shadow_center, sc ); // view matrix for shadow is orthogonal
-			DirectX::XMFLOAT3 shadow_dir;
+			assert( shadow.light != nullptr );
+
+			splits.resize( shadow.split_positions.size() + 1 );
+			for ( bool& in_split : splits )
+				in_split = false;
+
+			FindPSSMFrustumsForItem(
+				center_to_camera, radius,
+				XMLoadFloat3( &shadow.light->GetData().dir ), make_span( shadow.split_positions ),
+				make_span( splits ) );
+
+			for ( size_t split_idx = 0; split_idx < splits.size(); ++split_idx )
 			{
-				DirectX::XMVECTOR sd;
-				sd.m128_f32[0] = 0;
-				sd.m128_f32[1] = 0;
-				sd.m128_f32[2] = 1;
-				sd.m128_f32[3] = 0;
-
-				sd = XMVector4Transform( sd, DirectX::XMMatrixInverse( &det, shadow.frustum[0].viewproj ) );
-				XMStoreFloat3( &shadow_dir, sd );
-			}
-			//XMStoreFloat3( &shadow_dir, shadow.frustum[0].viewproj.r[2] ); // shadow view space (0,0,1) vec in world space
-			//shadow_dir *= -1;
-			XMFloat3Normalize( shadow_dir );
-
-			DirectX::XMFLOAT3 center_to_shadow_axis = center - shadow_center;
-			center_to_shadow_axis += shadow_dir * -XMVector3Dot(XMLoadFloat3(&center_to_shadow_axis), XMLoadFloat3(&shadow_dir)).m128_f32[0];
-			
-			const float center_to_axis_dist = std::sqrt( XMFloat3LenSquared( center_to_shadow_axis ) );
-			const float min_dist = std::max( 0.0f, center_to_axis_dist - radius );
-			const float max_dist = center_to_axis_dist + radius;
-
-			bool completely_in_split = false;
-			for ( size_t split_idx = 0; split_idx < shadow.split_positions.size(); ++split_idx )
-			{
-				const float split_pos = shadow.split_positions[split_idx];
-				if ( min_dist < split_pos )
+				if ( splits[split_idx] )
 					lists[list_idx + split_idx].push_back( item );
-				if ( max_dist <= split_pos )
-				{
-					completely_in_split = true;
-					break;
-				}
 			}
-
-			list_idx += shadow.split_positions.size();
-
-			if ( ! completely_in_split )
-			{
-				// add to the last split
-				lists[list_idx].push_back( item );
-			}
-			list_idx++;
+			list_idx += splits.size();
 		}
     }
 

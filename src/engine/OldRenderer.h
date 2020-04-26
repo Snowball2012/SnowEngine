@@ -147,7 +147,7 @@ private:
     void EndFrame(); // call at the end of the frame to wait for next available frame resource
 
 	using RenderItemStorage = std::vector<std::vector<RenderItem>>;
-    RenderItemStorage CreateRenderItems( const RenderTask& task ); // returs a storage for renderitems, keep it until the data is submitted to GPU
+    RenderItemStorage CreateRenderItems( const RenderTask& task, const DirectX::XMVECTOR& camera_pos ); // returs a storage for renderitems, keep it until the data is submitted to GPU
 
     ID3D12Resource* CurrentBackBuffer();
     D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const;

@@ -39,6 +39,11 @@ constexpr uint64_t upper_power_of_two(uint64_t v)
     return v;
 }
 
+inline bool is_close(float lhs, float rhs, float eps)
+{
+	return std::abs(lhs - rhs) <= eps;
+}
+
 bool operator==( const DirectX::XMFLOAT2& lhs, const DirectX::XMFLOAT2& rhs );
 DirectX::XMFLOAT2 operator-( const DirectX::XMFLOAT2& lhs, const DirectX::XMFLOAT2& rhs );
 

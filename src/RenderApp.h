@@ -10,10 +10,10 @@
 #include <DirectXMath.h>
 
 #include "D3DApp.h"
-#include "DescriptorHeap.h"
+#include <engine/DescriptorHeap.h>
 #include "SceneImporter.h"
 
-#include "OldRenderer.h"
+#include <engine/OldRenderer.h>
 
 class RenderApp: public D3DApp
 {

@@ -2,8 +2,8 @@
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include <boost/test/unit_test.hpp>
 
-#include "../src/stdafx.h"
-#include "../src/Scene.h"
+#include <engine/stdafx.h>
+#include <engine/Scene.h>
 
 BOOST_AUTO_TEST_SUITE( scene )
 

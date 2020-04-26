@@ -3,8 +3,8 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "../src/stdafx.h"
-#include "../src/framegraph/Framegraph.h"
+#include <engine/stdafx.h>
+#include <framegraph/Framegraph.h>
 
 // Specify resource handlers for framegraph to use
 // resource handles here must be lightweight. Try not to store the data itself here, only copyable handles/pointers with default constructors

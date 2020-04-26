@@ -1,16 +1,16 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-#include "stdafx.h"
+#include <engine/stdafx.h>
 
 #include "RenderApp.h"
 
-#include "GeomGeneration.h"
+#include <engine/GeomGeneration.h>
 
-#include "ForwardLightingPass.h"
-#include "DepthOnlyPass.h"
-#include "TemporalBlendPass.h"
+#include <engine/ForwardLightingPass.h>
+#include <engine/DepthOnlyPass.h>
+#include <engine/TemporalBlendPass.h>
 
-#include "SceneItems.h"
+#include <engine/SceneItems.h>
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>

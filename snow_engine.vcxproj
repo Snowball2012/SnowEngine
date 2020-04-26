@@ -23,6 +23,7 @@
     <ProjectGuid>{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}</ProjectGuid>
     <RootNamespace>snow_engine</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>snow_engine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -147,7 +148,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include;3rdparty\optick\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>src;3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include;3rdparty\optick\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -170,28 +171,60 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\CGUtils.cpp" />
-    <ClCompile Include="src\CommandListPool.cpp" />
-    <ClCompile Include="src\CubemapConverter.cpp" />
-    <ClCompile Include="src\CubemapManager.cpp" />
-    <ClCompile Include="src\DepthAwareBlurPass.cpp" />
-    <ClCompile Include="src\CircularUploadBuffer.cpp" />
-    <ClCompile Include="src\D3DApp.cpp" />
-    <ClCompile Include="src\DepthOnlyPass.cpp" />
-    <ClCompile Include="src\DescriptorHeap.cpp" />
-    <ClCompile Include="src\DescriptorTableBakery.cpp" />
-    <ClCompile Include="src\DownscalePass.cpp" />
-    <ClCompile Include="src\DynamicSceneBuffers.cpp" />
-    <ClCompile Include="src\DynamicTexture.cpp" />
-    <ClCompile Include="src\ForwardCBProvider.cpp" />
-    <ClCompile Include="src\ForwardLightingPass.cpp" />
-    <ClCompile Include="src\GPUResourceHolder.cpp" />
-    <ClCompile Include="src\GameTimer.cpp" />
-    <ClCompile Include="src\GeomGeneration.cpp" />
-    <ClCompile Include="src\GPUAllocators.cpp" />
-    <ClCompile Include="src\GPUPagedAllocator.cpp" />
-    <ClCompile Include="src\GPUTaskQueue.cpp" />
-    <ClCompile Include="src\HBAOPass.cpp" />
+    <ClCompile Include="src\D3DApp.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\engine\CircularUploadBuffer.cpp" />
+    <ClCompile Include="src\engine\CommandListPool.cpp" />
+    <ClCompile Include="src\engine\CubemapConverter.cpp" />
+    <ClCompile Include="src\engine\CubemapManager.cpp" />
+    <ClCompile Include="src\engine\DepthAwareBlurPass.cpp" />
+    <ClCompile Include="src\engine\DepthOnlyPass.cpp" />
+    <ClCompile Include="src\engine\DescriptorHeap.cpp" />
+    <ClCompile Include="src\engine\DescriptorTableBakery.cpp" />
+    <ClCompile Include="src\engine\DownscalePass.cpp" />
+    <ClCompile Include="src\engine\DynamicSceneBuffers.cpp" />
+    <ClCompile Include="src\engine\DynamicTexture.cpp" />
+    <ClCompile Include="src\engine\ForwardCBProvider.cpp" />
+    <ClCompile Include="src\engine\ForwardLightingPass.cpp" />
+    <ClCompile Include="src\engine\GeomGeneration.cpp" />
+    <ClCompile Include="src\engine\GPUAllocators.cpp" />
+    <ClCompile Include="src\engine\GPUPagedAllocator.cpp" />
+    <ClCompile Include="src\engine\GPUResourceHolder.cpp" />
+    <ClCompile Include="src\engine\GPUTaskQueue.cpp" />
+    <ClCompile Include="src\engine\HBAOPass.cpp" />
+    <ClCompile Include="src\engine\LightComposePass.cpp" />
+    <ClCompile Include="src\engine\MaterialTableBaker.cpp" />
+    <ClCompile Include="src\engine\OldRenderer.cpp" />
+    <ClCompile Include="src\engine\ParallelSplitShadowMapping.cpp" />
+    <ClCompile Include="src\engine\PSSMGenPass.cpp" />
+    <ClCompile Include="src\engine\Renderer.cpp" />
+    <ClCompile Include="src\engine\RenderPass.cpp" />
+    <ClCompile Include="src\engine\RenderTask.cpp" />
+    <ClCompile Include="src\engine\RenderUtils.cpp" />
+    <ClCompile Include="src\engine\ResizableTexture.cpp" />
+    <ClCompile Include="src\engine\Scene.cpp" />
+    <ClCompile Include="src\engine\SceneItems.cpp" />
+    <ClCompile Include="src\engine\SceneManager.cpp" />
+    <ClCompile Include="src\engine\ShadowProvider.cpp" />
+    <ClCompile Include="src\engine\SkyboxPass.cpp" />
+    <ClCompile Include="src\engine\StagingDescriptorHeap.cpp" />
+    <ClCompile Include="src\engine\StaticMeshManager.cpp" />
+    <ClCompile Include="src\engine\StaticTextureManager.cpp" />
+    <ClCompile Include="src\engine\stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="src\engine\TemporalAA.cpp" />
+    <ClCompile Include="src\engine\TemporalBlendPass.cpp" />
+    <ClCompile Include="src\engine\TextureStreamer.cpp" />
+    <ClCompile Include="src\engine\ToneMappingPass.cpp" />
+    <ClCompile Include="src\engine\UVScreenDensityCalculator.cpp" />
+    <ClCompile Include="src\GameTimer.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -204,134 +237,105 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\LightComposePass.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\MaterialTableBaker.cpp" />
-    <ClCompile Include="src\ParallelSplitShadowMapping.cpp" />
-    <ClCompile Include="src\PSSMGenPass.cpp" />
-    <ClCompile Include="src\OldRenderer.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    <ClCompile Include="src\SceneImporter.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\RenderTask.cpp" />
-    <ClCompile Include="src\SceneItems.cpp" />
-    <ClCompile Include="src\Renderer.cpp" />
-    <ClCompile Include="src\RenderPass.cpp" />
-    <ClCompile Include="src\ResizableTexture.cpp" />
-    <ClCompile Include="src\Scene.cpp" />
-    <ClCompile Include="src\SceneImporter.cpp" />
     <ClCompile Include="src\RenderApp.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\RenderUtils.cpp" />
-    <ClCompile Include="src\SceneManager.cpp" />
-    <ClCompile Include="src\ShadowProvider.cpp" />
-    <ClCompile Include="src\SkyboxPass.cpp" />
-    <ClCompile Include="src\StagingDescriptorHeap.cpp" />
-    <ClCompile Include="src\StaticMeshManager.cpp" />
-    <ClCompile Include="src\StaticTextureManager.cpp" />
-    <ClCompile Include="src\stdafx.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="src\TemporalAA.cpp" />
-    <ClCompile Include="src\TemporalBlendPass.cpp" />
-    <ClCompile Include="src\TextureStreamer.cpp" />
-    <ClCompile Include="src\ToneMappingPass.cpp" />
+    <ClCompile Include="src\utils\CGUtils.cpp" />
+    <ClCompile Include="src\utils\MathUtils.cpp" />
     <ClCompile Include="src\utils\MemoryMappedFile.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="src\UVScreenDensityCalculator.cpp" />
-    <ClCompile Include="src\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\BlurSSAONode.h" />
-    <ClInclude Include="src\CGUtils.h" />
-    <ClInclude Include="src\CommandListPool.h" />
-    <ClInclude Include="src\Components.h" />
     <ClInclude Include="src\Console.h" />
-    <ClInclude Include="src\CubemapConverter.h" />
-    <ClInclude Include="src\CubemapManager.h" />
-    <ClInclude Include="src\DepthAwareBlurPass.h" />
-    <ClInclude Include="src\CircularUploadBuffer.h" />
     <ClInclude Include="src\D3DApp.h" />
-    <ClInclude Include="src\DepthOnlyPass.h" />
-    <ClInclude Include="src\DepthPrepassNode.h" />
-    <ClInclude Include="src\DescriptorHeap.h" />
-    <ClInclude Include="src\DescriptorTableBakery.h" />
-    <ClInclude Include="src\DownscalePass.h" />
-    <ClInclude Include="src\DynamicSceneBuffers.h" />
-    <ClInclude Include="src\DynamicTexture.h" />
-    <ClInclude Include="src\EntityContainer.h" />
-    <ClInclude Include="src\EntityContainer.hpp" />
-    <ClInclude Include="src\ForwardCBProvider.h" />
-    <ClInclude Include="src\ForwardLightingPass.h" />
-    <ClInclude Include="src\ForwardPassNode.h" />
+    <ClInclude Include="src\ecs\EntityContainer.h" />
+    <ClInclude Include="src\ecs\EntityContainer.hpp" />
+    <ClInclude Include="src\engine\BlurSSAONode.h" />
+    <ClInclude Include="src\engine\CircularUploadBuffer.h" />
+    <ClInclude Include="src\engine\CommandListPool.h" />
+    <ClInclude Include="src\engine\Components.h" />
+    <ClInclude Include="src\engine\CubemapConverter.h" />
+    <ClInclude Include="src\engine\CubemapManager.h" />
+    <ClInclude Include="src\engine\DepthAwareBlurPass.h" />
+    <ClInclude Include="src\engine\DepthOnlyPass.h" />
+    <ClInclude Include="src\engine\DepthPrepassNode.h" />
+    <ClInclude Include="src\engine\DescriptorHeap.h" />
+    <ClInclude Include="src\engine\DescriptorTableBakery.h" />
+    <ClInclude Include="src\engine\DownscalePass.h" />
+    <ClInclude Include="src\engine\DynamicSceneBuffers.h" />
+    <ClInclude Include="src\engine\DynamicTexture.h" />
+    <ClInclude Include="src\engine\ForwardCBProvider.h" />
+    <ClInclude Include="src\engine\ForwardLightingPass.h" />
+    <ClInclude Include="src\engine\ForwardPassNode.h" />
+    <ClInclude Include="src\engine\FramegraphResource.h" />
+    <ClInclude Include="src\engine\GeomGeneration.h" />
+    <ClInclude Include="src\engine\GeomGeneration.hpp" />
+    <ClInclude Include="src\engine\GPUAllocators.h" />
+    <ClInclude Include="src\engine\GPUPagedAllocator.h" />
+    <ClInclude Include="src\engine\GPUResourceHolder.h" />
+    <ClInclude Include="src\engine\GPUTaskQueue.h" />
+    <ClInclude Include="src\engine\HBAONode.h" />
+    <ClInclude Include="src\engine\HBAOPass.h" />
+    <ClInclude Include="src\engine\HDRDownscaleNode.h" />
+    <ClInclude Include="src\engine\LightComposeNode.h" />
+    <ClInclude Include="src\engine\LightComposePass.h" />
+    <ClInclude Include="src\engine\MaterialTableBaker.h" />
+    <ClInclude Include="src\engine\OldRenderer.h" />
+    <ClInclude Include="src\engine\ParallelSplitShadowMapping.h" />
+    <ClInclude Include="src\engine\PSSMGenPass.h" />
+    <ClInclude Include="src\engine\PSSMNode.h" />
+    <ClInclude Include="src\engine\Ptr.h" />
+    <ClInclude Include="src\engine\RenderData.h" />
+    <ClInclude Include="src\engine\Renderer.h" />
+    <ClInclude Include="src\engine\RenderPass.h" />
+    <ClInclude Include="src\engine\RenderTask.h" />
+    <ClInclude Include="src\engine\RenderUtils.h" />
+    <ClInclude Include="src\engine\ResizableTexture.h" />
+    <ClInclude Include="src\engine\Scene.h" />
+    <ClInclude Include="src\engine\SceneItems.h" />
+    <ClInclude Include="src\engine\SceneManager.h" />
+    <ClInclude Include="src\engine\SceneSystemData.h" />
+    <ClInclude Include="src\engine\ShadowPassNode.h" />
+    <ClInclude Include="src\engine\ShadowProvider.h" />
+    <ClInclude Include="src\engine\SkyboxNode.h" />
+    <ClInclude Include="src\engine\SkyboxPass.h" />
+    <ClInclude Include="src\engine\StagingDescriptorHeap.h" />
+    <ClInclude Include="src\engine\StaticMeshManager.h" />
+    <ClInclude Include="src\engine\StaticTextureManager.h" />
+    <ClInclude Include="src\engine\stdafx.h" />
+    <ClInclude Include="src\engine\TemporalAA.h" />
+    <ClInclude Include="src\engine\TemporalBlendPass.h" />
+    <ClInclude Include="src\engine\TextureStreamer.h" />
+    <ClInclude Include="src\engine\ToneMapNode.h" />
+    <ClInclude Include="src\engine\ToneMappingPass.h" />
+    <ClInclude Include="src\engine\UVScreenDensityCalculator.h" />
+    <ClInclude Include="src\engine\World.h" />
     <ClInclude Include="src\framegraph\Framegraph.h" />
     <ClInclude Include="src\framegraph\FramegraphImpl.h" />
     <ClInclude Include="src\framegraph\utils\OptionalTuple.h" />
     <ClInclude Include="src\framegraph\utils\UniqueTuple.h" />
     <ClInclude Include="src\FrameResource.h" />
-    <ClInclude Include="src\GPUResourceHolder.h" />
     <ClInclude Include="src\GameTimer.h" />
-    <ClInclude Include="src\GeomGeneration.h" />
-    <ClInclude Include="src\GeomGeneration.hpp" />
-    <ClInclude Include="src\GPUAllocators.h" />
-    <ClInclude Include="src\GPUPagedAllocator.h" />
-    <ClInclude Include="src\GPUTaskQueue.h" />
-    <ClInclude Include="src\HBAONode.h" />
-    <ClInclude Include="src\HBAOPass.h" />
-    <ClInclude Include="src\HDRDownscaleNode.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
-    <ClInclude Include="src\LightComposeNode.h" />
-    <ClInclude Include="src\LightComposePass.h" />
-    <ClInclude Include="src\MaterialTableBaker.h" />
-    <ClInclude Include="src\ParallelSplitShadowMapping.h" />
-    <ClInclude Include="src\Renderer.h" />
-    <ClInclude Include="src\RenderTask.h" />
-    <ClInclude Include="src\SkyboxNode.h" />
-    <ClInclude Include="src\SkyboxPass.h" />
-    <ClInclude Include="src\StaticTextureManager.h" />
-    <ClInclude Include="src\FramegraphResource.h" />
-    <ClInclude Include="src\PSSMGenPass.h" />
-    <ClInclude Include="src\PSSMNode.h" />
-    <ClInclude Include="src\Ptr.h" />
-    <ClInclude Include="src\OldRenderer.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-    </ClInclude>
-    <ClInclude Include="src\RenderPass.h" />
-    <ClInclude Include="src\ResizableTexture.h" />
-    <ClInclude Include="src\Scene.h" />
     <ClInclude Include="src\SceneImporter.h" />
     <ClInclude Include="src\RenderApp.h" />
-    <ClInclude Include="src\RenderData.h" />
-    <ClInclude Include="src\RenderUtils.h" />
-    <ClInclude Include="src\SceneItems.h" />
-    <ClInclude Include="src\SceneManager.h" />
-    <ClInclude Include="src\SceneSystemData.h" />
-    <ClInclude Include="src\ShadowPassNode.h" />
-    <ClInclude Include="src\ShadowProvider.h" />
-    <ClInclude Include="src\StagingDescriptorHeap.h" />
-    <ClInclude Include="src\StaticMeshManager.h" />
-    <ClInclude Include="src\stdafx.h" />
-    <ClInclude Include="src\TemporalAA.h" />
-    <ClInclude Include="src\TemporalBlendPass.h" />
-    <ClInclude Include="src\TextureStreamer.h" />
-    <ClInclude Include="src\ToneMapNode.h" />
-    <ClInclude Include="src\ToneMappingPass.h" />
     <ClInclude Include="src\utils\btree.h" />
     <ClInclude Include="src\utils\btree.hpp" />
+    <ClInclude Include="src\utils\CGUtils.h" />
+    <ClInclude Include="src\utils\MathUtils.h" />
     <ClInclude Include="src\utils\MemoryMappedFile.h" />
     <ClInclude Include="src\utils\packed_freelist.h" />
     <ClInclude Include="src\utils\packed_freelist.hpp" />
     <ClInclude Include="src\utils\span.h" />
-    <ClInclude Include="src\UVScreenDensityCalculator.h" />
-    <ClInclude Include="src\MathUtils.h" />
-    <ClInclude Include="src\World.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="shaders\cubemap_gen_ps.hlsl">

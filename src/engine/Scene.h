@@ -1,8 +1,8 @@
 #pragma once
 
-#include "utils/packed_freelist.h"
+#include <utils/packed_freelist.h>
 
-#include "EntityContainer.h"
+#include <ecs/EntityContainer.h>
 
 #include "SceneItems.h"
 

@@ -4,7 +4,7 @@
 
 #include "DynamicTexture.h"
 
-#include "CGUtils.h"
+#include <utils/CGUtils.h>
 
 DynamicTexture::DynamicTexture(
     std::wstring name,

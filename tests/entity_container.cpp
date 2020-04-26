@@ -1,8 +1,8 @@
 #include <boost/test/unit_test.hpp>
 
-#include "../src/EntityContainer.h"
+#include <ecs/EntityContainer.h>
 
-#include "../src/MathUtils.h"
+#include <utils/MathUtils.h>
 
 
 BOOST_AUTO_TEST_SUITE( entity_container )

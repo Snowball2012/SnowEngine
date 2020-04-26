@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GeomGeneration.h"
-#include "MathUtils.h"
+#include <utils/MathUtils.h>
 
 namespace GeomGeneration
 {

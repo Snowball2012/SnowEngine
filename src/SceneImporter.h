@@ -1,9 +1,9 @@
 #pragma once
 
 #include <DirectXMath.h>
-#include "RenderData.h"
+#include <engine/RenderData.h>
 
-#include "SceneItems.h"
+#include <engine/SceneItems.h>
 
 struct ImportedScene
 {

@@ -5,7 +5,7 @@
 //***************************************************************************************
 
 // Todo: make your own app class ( qt maybe? )
-#include "stdafx.h"
+#include <engine/stdafx.h>
 
 #include "D3DApp.h"
 #include <WindowsX.h>

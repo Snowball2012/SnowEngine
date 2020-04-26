@@ -98,29 +98,11 @@
     <ClCompile Include="src\RenderApp.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="src\stdafx.cpp">
-      <Filter>precompiled_header</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GeomGeneration.cpp">
-      <Filter>content_generation</Filter>
-    </ClCompile>
-    <ClCompile Include="src\RenderUtils.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
     <ClCompile Include="src\D3DApp.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GameTimer.cpp">
       <Filter>core</Filter>
     </ClCompile>
     <ClCompile Include="src\SceneImporter.cpp">
       <Filter>serialization</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ForwardLightingPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DepthOnlyPass.cpp">
-      <Filter>core\RenderPasses</Filter>
     </ClCompile>
     <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
       <Filter>imgui_impl</Filter>
@@ -131,127 +113,145 @@
     <ClCompile Include="src\imgui_impl\imgui_link.cpp">
       <Filter>imgui_impl</Filter>
     </ClCompile>
-    <ClCompile Include="src\TemporalBlendPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TemporalAA.cpp">
-      <Filter>core\Effects</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ToneMappingPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\HBAOPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DescriptorHeap.cpp">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClCompile>
-    <ClCompile Include="src\StagingDescriptorHeap.cpp">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Scene.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SceneManager.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DescriptorTableBakery.cpp">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DynamicSceneBuffers.cpp">
-      <Filter>core\SceneSystems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\MaterialTableBaker.cpp">
-      <Filter>core\SceneSystems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\StaticMeshManager.cpp">
-      <Filter>core\SceneSystems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\TextureStreamer.cpp">
-      <Filter>core\SceneSystems</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ForwardCBProvider.cpp">
-      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
-    </ClCompile>
-    <ClCompile Include="src\ShadowProvider.cpp">
-      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
-    </ClCompile>
-    <ClCompile Include="src\UVScreenDensityCalculator.cpp">
-      <Filter>core\SceneSystems</Filter>
-    </ClCompile>
     <ClCompile Include="src\utils\MemoryMappedFile.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="src\DepthAwareBlurPass.cpp">
-      <Filter>core\RenderPasses</Filter>
+    <ClCompile Include="src\engine\GeomGeneration.cpp">
+      <Filter>content_generation</Filter>
     </ClCompile>
-    <ClCompile Include="src\ResizableTexture.cpp">
-      <Filter>core</Filter>
+    <ClCompile Include="src\engine\DescriptorHeap.cpp">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
     </ClCompile>
-    <ClCompile Include="src\ParallelSplitShadowMapping.cpp">
+    <ClCompile Include="src\engine\DescriptorTableBakery.cpp">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\StagingDescriptorHeap.cpp">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\ParallelSplitShadowMapping.cpp">
       <Filter>core\Effects</Filter>
     </ClCompile>
-    <ClCompile Include="src\PSSMGenPass.cpp">
+    <ClCompile Include="src\engine\TemporalAA.cpp">
+      <Filter>core\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\CircularUploadBuffer.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\CommandListPool.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\GPUAllocators.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\GPUPagedAllocator.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\GPUResourceHolder.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\GPUTaskQueue.cpp">
+      <Filter>core\APILayer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\ForwardCBProvider.cpp">
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\ShadowProvider.cpp">
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\PSSMGenPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="src\RenderPass.cpp">
+    <ClCompile Include="src\engine\DepthAwareBlurPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="src\SkyboxPass.cpp">
+    <ClCompile Include="src\engine\ForwardLightingPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="src\StaticTextureManager.cpp">
+    <ClCompile Include="src\engine\DownscalePass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\ToneMappingPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\LightComposePass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\SkyboxPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\HBAOPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\DepthOnlyPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\TemporalBlendPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\RenderPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\DynamicSceneBuffers.cpp">
       <Filter>core\SceneSystems</Filter>
     </ClCompile>
-    <ClCompile Include="src\CubemapConverter.cpp">
+    <ClCompile Include="src\engine\MaterialTableBaker.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\StaticMeshManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\StaticTextureManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\TextureStreamer.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\UVScreenDensityCalculator.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\CubemapConverter.cpp">
       <Filter>core\Tools</Filter>
     </ClCompile>
-    <ClCompile Include="src\OldRenderer.cpp">
+    <ClCompile Include="src\engine\CubemapManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\DynamicTexture.cpp">
       <Filter>core</Filter>
     </ClCompile>
-    <ClCompile Include="src\MathUtils.cpp">
+    <ClCompile Include="src\GameTimer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\OldRenderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\Scene.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\SceneItems.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\SceneManager.cpp">
+      <Filter>core\SceneSystems</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\Renderer.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\RenderTask.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\RenderUtils.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\ResizableTexture.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\engine\stdafx.cpp">
+      <Filter>precompiled_header</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\CGUtils.cpp">
       <Filter>utils</Filter>
     </ClCompile>
-    <ClCompile Include="src\CircularUploadBuffer.cpp">
-      <Filter>core\APILayer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUPagedAllocator.cpp">
-      <Filter>core\APILayer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUTaskQueue.cpp">
-      <Filter>core\APILayer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\CubemapManager.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\CommandListPool.cpp">
-      <Filter>core\APILayer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUResourceHolder.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Renderer.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\GPUAllocators.cpp">
-      <Filter>core\APILayer</Filter>
-    </ClCompile>
-    <ClCompile Include="src\SceneItems.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\RenderTask.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\LightComposePass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DownscalePass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
-    <ClCompile Include="src\DynamicTexture.cpp">
-      <Filter>core</Filter>
-    </ClCompile>
-    <ClCompile Include="src\CGUtils.cpp">
+    <ClCompile Include="src\utils\MathUtils.cpp">
       <Filter>utils</Filter>
     </ClCompile>
   </ItemGroup>
@@ -259,38 +259,14 @@
     <ClInclude Include="src\RenderApp.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\stdafx.h">
-      <Filter>precompiled_header</Filter>
-    </ClInclude>
-    <ClInclude Include="src\RenderData.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GeomGeneration.h">
-      <Filter>content_generation</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GeomGeneration.hpp">
-      <Filter>content_generation</Filter>
-    </ClInclude>
     <ClInclude Include="src\FrameResource.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\RenderUtils.h">
       <Filter>core</Filter>
     </ClInclude>
     <ClInclude Include="src\D3DApp.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\GameTimer.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ForwardLightingPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
     <ClInclude Include="src\SceneImporter.h">
       <Filter>serialization</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DepthOnlyPass.h">
-      <Filter>core\RenderPasses</Filter>
     </ClInclude>
     <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h">
       <Filter>imgui_impl</Filter>
@@ -298,152 +274,23 @@
     <ClInclude Include="src\imgui_impl\imgui_impl_win32.h">
       <Filter>imgui_impl</Filter>
     </ClInclude>
-    <ClInclude Include="src\TemporalBlendPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\TemporalAA.h">
-      <Filter>core\Effects</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ToneMappingPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\HBAOPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\StagingDescriptorHeap.h">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DescriptorHeap.h">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\packed_freelist.h">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\packed_freelist.hpp">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\Scene.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SceneItems.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SceneManager.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DescriptorTableBakery.h">
-      <Filter>core\APILayer\DescriptorUtils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DynamicSceneBuffers.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\MaterialTableBaker.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\StaticMeshManager.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\TextureStreamer.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SceneSystemData.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ForwardCBProvider.h">
-      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\span.h">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\ShadowProvider.h">
-      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
-    </ClInclude>
-    <ClInclude Include="src\UVScreenDensityCalculator.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Ptr.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\MemoryMappedFile.h">
       <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DepthAwareBlurPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ResizableTexture.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ParallelSplitShadowMapping.h">
-      <Filter>core\Effects</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PSSMGenPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\RenderPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ForwardPassNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\BlurSSAONode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\DepthPrepassNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ShadowPassNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PSSMNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\HBAONode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ToneMapNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SkyboxPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SkyboxNode.h">
-      <Filter>core\FramegraphInstance\Nodes</Filter>
-    </ClInclude>
-    <ClInclude Include="src\StaticTextureManager.h">
-      <Filter>core\SceneSystems</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CubemapConverter.h">
-      <Filter>core\Tools</Filter>
-    </ClInclude>
-    <ClInclude Include="src\OldRenderer.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\MathUtils.h">
-      <Filter>utils</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CircularUploadBuffer.h">
-      <Filter>core\APILayer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GPUPagedAllocator.h">
-      <Filter>core\APILayer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GPUTaskQueue.h">
-      <Filter>core\APILayer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CubemapManager.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\CommandListPool.h">
-      <Filter>core\APILayer</Filter>
     </ClInclude>
     <ClInclude Include="src\framegraph\Framegraph.h">
       <Filter>core\Framegraph</Filter>
     </ClInclude>
     <ClInclude Include="src\framegraph\FramegraphImpl.h">
       <Filter>core\Framegraph</Filter>
-    </ClInclude>
-    <ClInclude Include="src\FramegraphResource.h">
-      <Filter>core\FramegraphInstance</Filter>
     </ClInclude>
     <ClInclude Include="src\framegraph\utils\OptionalTuple.h">
       <Filter>core\Framegraph\utils</Filter>
@@ -454,52 +301,205 @@
     <ClInclude Include="src\Console.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\GPUAllocators.h">
-      <Filter>core\APILayer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\GPUResourceHolder.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Renderer.h">
-      <Filter>core</Filter>
-    </ClInclude>
-    <ClInclude Include="src\RenderTask.h">
-      <Filter>core</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\btree.h">
       <Filter>utils</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\btree.hpp">
       <Filter>utils</Filter>
     </ClInclude>
-    <ClInclude Include="src\EntityContainer.h">
+    <ClInclude Include="src\ecs\EntityContainer.h">
       <Filter>core\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="src\EntityContainer.hpp">
+    <ClInclude Include="src\ecs\EntityContainer.hpp">
       <Filter>core\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="src\World.h">
+    <ClInclude Include="src\engine\GeomGeneration.h">
+      <Filter>content_generation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\GeomGeneration.hpp">
+      <Filter>content_generation</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DescriptorHeap.h">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DescriptorTableBakery.h">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\StagingDescriptorHeap.h">
+      <Filter>core\APILayer\DescriptorUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\Components.h">
       <Filter>core\ECSInstance</Filter>
     </ClInclude>
-    <ClInclude Include="src\Components.h">
+    <ClInclude Include="src\engine\World.h">
       <Filter>core\ECSInstance</Filter>
     </ClInclude>
-    <ClInclude Include="src\LightComposePass.h">
-      <Filter>core\RenderPasses</Filter>
+    <ClInclude Include="src\engine\ParallelSplitShadowMapping.h">
+      <Filter>core\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="src\LightComposeNode.h">
+    <ClInclude Include="src\engine\TemporalAA.h">
+      <Filter>core\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\CircularUploadBuffer.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\CommandListPool.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\GPUAllocators.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\GPUPagedAllocator.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\GPUResourceHolder.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\GPUTaskQueue.h">
+      <Filter>core\APILayer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ForwardCBProvider.h">
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ShadowProvider.h">
+      <Filter>core\Framegraph\FramegraphDataProviders</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\PSSMNode.h">
       <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="src\DownscalePass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
-    <ClInclude Include="src\HDRDownscaleNode.h">
+    <ClInclude Include="src\engine\ToneMapNode.h">
       <Filter>core\FramegraphInstance\Nodes</Filter>
     </ClInclude>
-    <ClInclude Include="src\DynamicTexture.h">
+    <ClInclude Include="src\engine\HDRDownscaleNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ForwardPassNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\SkyboxNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\LightComposeNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ShadowPassNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\HBAONode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\BlurSSAONode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DepthPrepassNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\FramegraphResource.h">
+      <Filter>core\FramegraphInstance</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\PSSMGenPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DepthAwareBlurPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ForwardLightingPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\RenderPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DownscalePass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ToneMappingPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\LightComposePass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DepthOnlyPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\HBAOPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\SkyboxPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\TemporalBlendPass.h">
+      <Filter>core\RenderPasses</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DynamicSceneBuffers.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\MaterialTableBaker.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\StaticMeshManager.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\StaticTextureManager.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\TextureStreamer.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\UVScreenDensityCalculator.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\SceneSystemData.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\CubemapConverter.h">
+      <Filter>core\Tools</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\CubemapManager.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\DynamicTexture.h">
       <Filter>core</Filter>
     </ClInclude>
-    <ClInclude Include="src\CGUtils.h">
+    <ClInclude Include="src\GameTimer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\OldRenderer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\Ptr.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\Scene.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\SceneItems.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\SceneManager.h">
+      <Filter>core\SceneSystems</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\RenderData.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\Renderer.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\RenderTask.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\RenderUtils.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\ResizableTexture.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\engine\stdafx.h">
+      <Filter>precompiled_header</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\CGUtils.h">
+      <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\MathUtils.h">
       <Filter>utils</Filter>
     </ClInclude>
   </ItemGroup>

@@ -19,6 +19,8 @@ public:
     size_t size() const noexcept { return m_end - m_begin; }
 
     T& operator[]( size_t idx ) const noexcept { assert( m_begin + idx < m_end ); return m_begin[idx]; }
+
+	T& back() const noexcept { assert( m_begin < m_end ); return *( m_end - 1 ); }
 private:
     T* m_begin;
     T* m_end;
