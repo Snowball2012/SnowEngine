@@ -18,29 +18,29 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="..\src\tests\btree.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="packed_freelist.cpp">
+    <ClCompile Include="..\src\tests\compile_time_tests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="scene.cpp">
+    <ClCompile Include="..\src\tests\entity_container.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pssm.cpp">
+    <ClCompile Include="..\src\tests\framegraph.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="framegraph.cpp">
+    <ClCompile Include="..\src\tests\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="compile_time_tests.cpp">
+    <ClCompile Include="..\src\tests\packed_freelist.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="btree.cpp">
+    <ClCompile Include="..\src\tests\pssm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="entity_container.cpp">
-      <Filter>Source Files\ecs</Filter>
+    <ClCompile Include="..\src\tests\scene.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

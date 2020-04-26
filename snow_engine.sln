@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.10
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snow_engine", "snow_engine.vcxproj", "{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snow_engine", "msvs\snow_engine.vcxproj", "{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "tests\tests.vcxproj", "{770175B2-6AEE-4AF3-A018-DDDD8240245E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "msvs\tests.vcxproj", "{770175B2-6AEE-4AF3-A018-DDDD8240245E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -81,12 +81,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\intermediate\$(Configuration)\</IntDir>
     <SourcePath>$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>intermediate\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\intermediate\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <SourcePath>$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
@@ -106,24 +106,24 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include;3rdparty\optick\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_67_0\lib64-msvc-14.1;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration);3rdparty\optick\lib\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\boost_1_67_0\lib64-msvc-14.1;$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
-copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
-copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
+      <Command>copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
+copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(ProjectDir)$(IntermediateOutputPath)*.obj</Command>
+      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(IntermediateOutputPath)*.obj</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -148,7 +148,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>src;3rdparty;3rdparty\directxtk12_include;3rdparty\boost_1_67_0;3rdparty\d3dx12;3rdparty\cetonia\include;3rdparty\tinyobjloader;3rdparty\fbx_sdk\2019.0\include;3rdparty\optick\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -157,188 +157,188 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Windows</SubSystem>
-      <AdditionalLibraryDirectories>3rdparty\boost_1_67_0\lib64-msvc-14.1;3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);3rdparty\cetonia\bin\x64\$(Configuration);3rdparty\optick\lib\x64\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\boost_1_67_0\lib64-msvc-14.1;$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration)</AdditionalLibraryDirectories>
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(ProjectDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
-copy $(ProjectDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
-copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
+      <Command>copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
+copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(ProjectDir)$(IntermediateOutputPath)*.obj</Command>
+      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(IntermediateOutputPath)*.obj</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\D3DApp.cpp">
+    <ClCompile Include="..\src\D3DApp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\engine\CircularUploadBuffer.cpp" />
-    <ClCompile Include="src\engine\CommandListPool.cpp" />
-    <ClCompile Include="src\engine\CubemapConverter.cpp" />
-    <ClCompile Include="src\engine\CubemapManager.cpp" />
-    <ClCompile Include="src\engine\DepthAwareBlurPass.cpp" />
-    <ClCompile Include="src\engine\DepthOnlyPass.cpp" />
-    <ClCompile Include="src\engine\DescriptorHeap.cpp" />
-    <ClCompile Include="src\engine\DescriptorTableBakery.cpp" />
-    <ClCompile Include="src\engine\DownscalePass.cpp" />
-    <ClCompile Include="src\engine\DynamicSceneBuffers.cpp" />
-    <ClCompile Include="src\engine\DynamicTexture.cpp" />
-    <ClCompile Include="src\engine\ForwardCBProvider.cpp" />
-    <ClCompile Include="src\engine\ForwardLightingPass.cpp" />
-    <ClCompile Include="src\engine\GeomGeneration.cpp" />
-    <ClCompile Include="src\engine\GPUAllocators.cpp" />
-    <ClCompile Include="src\engine\GPUPagedAllocator.cpp" />
-    <ClCompile Include="src\engine\GPUResourceHolder.cpp" />
-    <ClCompile Include="src\engine\GPUTaskQueue.cpp" />
-    <ClCompile Include="src\engine\HBAOPass.cpp" />
-    <ClCompile Include="src\engine\LightComposePass.cpp" />
-    <ClCompile Include="src\engine\MaterialTableBaker.cpp" />
-    <ClCompile Include="src\engine\OldRenderer.cpp" />
-    <ClCompile Include="src\engine\ParallelSplitShadowMapping.cpp" />
-    <ClCompile Include="src\engine\PSSMGenPass.cpp" />
-    <ClCompile Include="src\engine\Renderer.cpp" />
-    <ClCompile Include="src\engine\RenderPass.cpp" />
-    <ClCompile Include="src\engine\RenderTask.cpp" />
-    <ClCompile Include="src\engine\RenderUtils.cpp" />
-    <ClCompile Include="src\engine\ResizableTexture.cpp" />
-    <ClCompile Include="src\engine\Scene.cpp" />
-    <ClCompile Include="src\engine\SceneItems.cpp" />
-    <ClCompile Include="src\engine\SceneManager.cpp" />
-    <ClCompile Include="src\engine\ShadowProvider.cpp" />
-    <ClCompile Include="src\engine\SkyboxPass.cpp" />
-    <ClCompile Include="src\engine\StagingDescriptorHeap.cpp" />
-    <ClCompile Include="src\engine\StaticMeshManager.cpp" />
-    <ClCompile Include="src\engine\StaticTextureManager.cpp" />
-    <ClCompile Include="src\engine\stdafx.cpp">
+    <ClCompile Include="..\src\engine\CircularUploadBuffer.cpp" />
+    <ClCompile Include="..\src\engine\CommandListPool.cpp" />
+    <ClCompile Include="..\src\engine\CubemapConverter.cpp" />
+    <ClCompile Include="..\src\engine\CubemapManager.cpp" />
+    <ClCompile Include="..\src\engine\DepthAwareBlurPass.cpp" />
+    <ClCompile Include="..\src\engine\DepthOnlyPass.cpp" />
+    <ClCompile Include="..\src\engine\DescriptorHeap.cpp" />
+    <ClCompile Include="..\src\engine\DescriptorTableBakery.cpp" />
+    <ClCompile Include="..\src\engine\DownscalePass.cpp" />
+    <ClCompile Include="..\src\engine\DynamicSceneBuffers.cpp" />
+    <ClCompile Include="..\src\engine\DynamicTexture.cpp" />
+    <ClCompile Include="..\src\engine\ForwardCBProvider.cpp" />
+    <ClCompile Include="..\src\engine\ForwardLightingPass.cpp" />
+    <ClCompile Include="..\src\engine\GeomGeneration.cpp" />
+    <ClCompile Include="..\src\engine\GPUAllocators.cpp" />
+    <ClCompile Include="..\src\engine\GPUPagedAllocator.cpp" />
+    <ClCompile Include="..\src\engine\GPUResourceHolder.cpp" />
+    <ClCompile Include="..\src\engine\GPUTaskQueue.cpp" />
+    <ClCompile Include="..\src\engine\HBAOPass.cpp" />
+    <ClCompile Include="..\src\engine\LightComposePass.cpp" />
+    <ClCompile Include="..\src\engine\MaterialTableBaker.cpp" />
+    <ClCompile Include="..\src\engine\OldRenderer.cpp" />
+    <ClCompile Include="..\src\engine\ParallelSplitShadowMapping.cpp" />
+    <ClCompile Include="..\src\engine\PSSMGenPass.cpp" />
+    <ClCompile Include="..\src\engine\Renderer.cpp" />
+    <ClCompile Include="..\src\engine\RenderPass.cpp" />
+    <ClCompile Include="..\src\engine\RenderTask.cpp" />
+    <ClCompile Include="..\src\engine\RenderUtils.cpp" />
+    <ClCompile Include="..\src\engine\ResizableTexture.cpp" />
+    <ClCompile Include="..\src\engine\Scene.cpp" />
+    <ClCompile Include="..\src\engine\SceneItems.cpp" />
+    <ClCompile Include="..\src\engine\SceneManager.cpp" />
+    <ClCompile Include="..\src\engine\ShadowProvider.cpp" />
+    <ClCompile Include="..\src\engine\SkyboxPass.cpp" />
+    <ClCompile Include="..\src\engine\StagingDescriptorHeap.cpp" />
+    <ClCompile Include="..\src\engine\StaticMeshManager.cpp" />
+    <ClCompile Include="..\src\engine\StaticTextureManager.cpp" />
+    <ClCompile Include="..\src\engine\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\engine\TemporalAA.cpp" />
-    <ClCompile Include="src\engine\TemporalBlendPass.cpp" />
-    <ClCompile Include="src\engine\TextureStreamer.cpp" />
-    <ClCompile Include="src\engine\ToneMappingPass.cpp" />
-    <ClCompile Include="src\engine\UVScreenDensityCalculator.cpp" />
-    <ClCompile Include="src\GameTimer.cpp">
+    <ClCompile Include="..\src\engine\TemporalAA.cpp" />
+    <ClCompile Include="..\src\engine\TemporalBlendPass.cpp" />
+    <ClCompile Include="..\src\engine\TextureStreamer.cpp" />
+    <ClCompile Include="..\src\engine\ToneMappingPass.cpp" />
+    <ClCompile Include="..\src\engine\UVScreenDensityCalculator.cpp" />
+    <ClCompile Include="..\src\GameTimer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\imgui_impl\imgui_impl_dx12.cpp">
+    <ClCompile Include="..\src\imgui_impl\imgui_impl_dx12.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\imgui_impl\imgui_impl_win32.cpp">
+    <ClCompile Include="..\src\imgui_impl\imgui_impl_win32.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\imgui_impl\imgui_link.cpp">
+    <ClCompile Include="..\src\imgui_impl\imgui_link.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\SceneImporter.cpp">
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\SceneImporter.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\RenderApp.cpp">
+    <ClCompile Include="..\src\RenderApp.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="src\utils\CGUtils.cpp" />
-    <ClCompile Include="src\utils\MathUtils.cpp" />
-    <ClCompile Include="src\utils\MemoryMappedFile.cpp">
+    <ClCompile Include="..\src\utils\CGUtils.cpp" />
+    <ClCompile Include="..\src\utils\MathUtils.cpp" />
+    <ClCompile Include="..\src\utils\MemoryMappedFile.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Console.h" />
-    <ClInclude Include="src\D3DApp.h" />
-    <ClInclude Include="src\ecs\EntityContainer.h" />
-    <ClInclude Include="src\ecs\EntityContainer.hpp" />
-    <ClInclude Include="src\engine\BlurSSAONode.h" />
-    <ClInclude Include="src\engine\CircularUploadBuffer.h" />
-    <ClInclude Include="src\engine\CommandListPool.h" />
-    <ClInclude Include="src\engine\Components.h" />
-    <ClInclude Include="src\engine\CubemapConverter.h" />
-    <ClInclude Include="src\engine\CubemapManager.h" />
-    <ClInclude Include="src\engine\DepthAwareBlurPass.h" />
-    <ClInclude Include="src\engine\DepthOnlyPass.h" />
-    <ClInclude Include="src\engine\DepthPrepassNode.h" />
-    <ClInclude Include="src\engine\DescriptorHeap.h" />
-    <ClInclude Include="src\engine\DescriptorTableBakery.h" />
-    <ClInclude Include="src\engine\DownscalePass.h" />
-    <ClInclude Include="src\engine\DynamicSceneBuffers.h" />
-    <ClInclude Include="src\engine\DynamicTexture.h" />
-    <ClInclude Include="src\engine\ForwardCBProvider.h" />
-    <ClInclude Include="src\engine\ForwardLightingPass.h" />
-    <ClInclude Include="src\engine\ForwardPassNode.h" />
-    <ClInclude Include="src\engine\FramegraphResource.h" />
-    <ClInclude Include="src\engine\GeomGeneration.h" />
-    <ClInclude Include="src\engine\GeomGeneration.hpp" />
-    <ClInclude Include="src\engine\GPUAllocators.h" />
-    <ClInclude Include="src\engine\GPUPagedAllocator.h" />
-    <ClInclude Include="src\engine\GPUResourceHolder.h" />
-    <ClInclude Include="src\engine\GPUTaskQueue.h" />
-    <ClInclude Include="src\engine\HBAONode.h" />
-    <ClInclude Include="src\engine\HBAOPass.h" />
-    <ClInclude Include="src\engine\HDRDownscaleNode.h" />
-    <ClInclude Include="src\engine\LightComposeNode.h" />
-    <ClInclude Include="src\engine\LightComposePass.h" />
-    <ClInclude Include="src\engine\MaterialTableBaker.h" />
-    <ClInclude Include="src\engine\OldRenderer.h" />
-    <ClInclude Include="src\engine\ParallelSplitShadowMapping.h" />
-    <ClInclude Include="src\engine\PSSMGenPass.h" />
-    <ClInclude Include="src\engine\PSSMNode.h" />
-    <ClInclude Include="src\engine\Ptr.h" />
-    <ClInclude Include="src\engine\RenderData.h" />
-    <ClInclude Include="src\engine\Renderer.h" />
-    <ClInclude Include="src\engine\RenderPass.h" />
-    <ClInclude Include="src\engine\RenderTask.h" />
-    <ClInclude Include="src\engine\RenderUtils.h" />
-    <ClInclude Include="src\engine\ResizableTexture.h" />
-    <ClInclude Include="src\engine\Scene.h" />
-    <ClInclude Include="src\engine\SceneItems.h" />
-    <ClInclude Include="src\engine\SceneManager.h" />
-    <ClInclude Include="src\engine\SceneSystemData.h" />
-    <ClInclude Include="src\engine\ShadowPassNode.h" />
-    <ClInclude Include="src\engine\ShadowProvider.h" />
-    <ClInclude Include="src\engine\SkyboxNode.h" />
-    <ClInclude Include="src\engine\SkyboxPass.h" />
-    <ClInclude Include="src\engine\StagingDescriptorHeap.h" />
-    <ClInclude Include="src\engine\StaticMeshManager.h" />
-    <ClInclude Include="src\engine\StaticTextureManager.h" />
-    <ClInclude Include="src\engine\stdafx.h" />
-    <ClInclude Include="src\engine\TemporalAA.h" />
-    <ClInclude Include="src\engine\TemporalBlendPass.h" />
-    <ClInclude Include="src\engine\TextureStreamer.h" />
-    <ClInclude Include="src\engine\ToneMapNode.h" />
-    <ClInclude Include="src\engine\ToneMappingPass.h" />
-    <ClInclude Include="src\engine\UVScreenDensityCalculator.h" />
-    <ClInclude Include="src\engine\World.h" />
-    <ClInclude Include="src\framegraph\Framegraph.h" />
-    <ClInclude Include="src\framegraph\FramegraphImpl.h" />
-    <ClInclude Include="src\framegraph\utils\OptionalTuple.h" />
-    <ClInclude Include="src\framegraph\utils\UniqueTuple.h" />
-    <ClInclude Include="src\FrameResource.h" />
-    <ClInclude Include="src\GameTimer.h" />
-    <ClInclude Include="src\imgui_impl\imgui_impl_dx12.h" />
-    <ClInclude Include="src\imgui_impl\imgui_impl_win32.h" />
-    <ClInclude Include="src\SceneImporter.h" />
-    <ClInclude Include="src\RenderApp.h" />
-    <ClInclude Include="src\utils\btree.h" />
-    <ClInclude Include="src\utils\btree.hpp" />
-    <ClInclude Include="src\utils\CGUtils.h" />
-    <ClInclude Include="src\utils\MathUtils.h" />
-    <ClInclude Include="src\utils\MemoryMappedFile.h" />
-    <ClInclude Include="src\utils\packed_freelist.h" />
-    <ClInclude Include="src\utils\packed_freelist.hpp" />
-    <ClInclude Include="src\utils\span.h" />
+    <ClInclude Include="..\src\Console.h" />
+    <ClInclude Include="..\src\D3DApp.h" />
+    <ClInclude Include="..\src\ecs\EntityContainer.h" />
+    <ClInclude Include="..\src\ecs\EntityContainer.hpp" />
+    <ClInclude Include="..\src\engine\BlurSSAONode.h" />
+    <ClInclude Include="..\src\engine\CircularUploadBuffer.h" />
+    <ClInclude Include="..\src\engine\CommandListPool.h" />
+    <ClInclude Include="..\src\engine\Components.h" />
+    <ClInclude Include="..\src\engine\CubemapConverter.h" />
+    <ClInclude Include="..\src\engine\CubemapManager.h" />
+    <ClInclude Include="..\src\engine\DepthAwareBlurPass.h" />
+    <ClInclude Include="..\src\engine\DepthOnlyPass.h" />
+    <ClInclude Include="..\src\engine\DepthPrepassNode.h" />
+    <ClInclude Include="..\src\engine\DescriptorHeap.h" />
+    <ClInclude Include="..\src\engine\DescriptorTableBakery.h" />
+    <ClInclude Include="..\src\engine\DownscalePass.h" />
+    <ClInclude Include="..\src\engine\DynamicSceneBuffers.h" />
+    <ClInclude Include="..\src\engine\DynamicTexture.h" />
+    <ClInclude Include="..\src\engine\ForwardCBProvider.h" />
+    <ClInclude Include="..\src\engine\ForwardLightingPass.h" />
+    <ClInclude Include="..\src\engine\ForwardPassNode.h" />
+    <ClInclude Include="..\src\engine\FramegraphResource.h" />
+    <ClInclude Include="..\src\engine\GeomGeneration.h" />
+    <ClInclude Include="..\src\engine\GeomGeneration.hpp" />
+    <ClInclude Include="..\src\engine\GPUAllocators.h" />
+    <ClInclude Include="..\src\engine\GPUPagedAllocator.h" />
+    <ClInclude Include="..\src\engine\GPUResourceHolder.h" />
+    <ClInclude Include="..\src\engine\GPUTaskQueue.h" />
+    <ClInclude Include="..\src\engine\HBAONode.h" />
+    <ClInclude Include="..\src\engine\HBAOPass.h" />
+    <ClInclude Include="..\src\engine\HDRDownscaleNode.h" />
+    <ClInclude Include="..\src\engine\LightComposeNode.h" />
+    <ClInclude Include="..\src\engine\LightComposePass.h" />
+    <ClInclude Include="..\src\engine\MaterialTableBaker.h" />
+    <ClInclude Include="..\src\engine\OldRenderer.h" />
+    <ClInclude Include="..\src\engine\ParallelSplitShadowMapping.h" />
+    <ClInclude Include="..\src\engine\PSSMGenPass.h" />
+    <ClInclude Include="..\src\engine\PSSMNode.h" />
+    <ClInclude Include="..\src\engine\Ptr.h" />
+    <ClInclude Include="..\src\engine\RenderData.h" />
+    <ClInclude Include="..\src\engine\Renderer.h" />
+    <ClInclude Include="..\src\engine\RenderPass.h" />
+    <ClInclude Include="..\src\engine\RenderTask.h" />
+    <ClInclude Include="..\src\engine\RenderUtils.h" />
+    <ClInclude Include="..\src\engine\ResizableTexture.h" />
+    <ClInclude Include="..\src\engine\Scene.h" />
+    <ClInclude Include="..\src\engine\SceneItems.h" />
+    <ClInclude Include="..\src\engine\SceneManager.h" />
+    <ClInclude Include="..\src\engine\SceneSystemData.h" />
+    <ClInclude Include="..\src\engine\ShadowPassNode.h" />
+    <ClInclude Include="..\src\engine\ShadowProvider.h" />
+    <ClInclude Include="..\src\engine\SkyboxNode.h" />
+    <ClInclude Include="..\src\engine\SkyboxPass.h" />
+    <ClInclude Include="..\src\engine\StagingDescriptorHeap.h" />
+    <ClInclude Include="..\src\engine\StaticMeshManager.h" />
+    <ClInclude Include="..\src\engine\StaticTextureManager.h" />
+    <ClInclude Include="..\src\engine\stdafx.h" />
+    <ClInclude Include="..\src\engine\TemporalAA.h" />
+    <ClInclude Include="..\src\engine\TemporalBlendPass.h" />
+    <ClInclude Include="..\src\engine\TextureStreamer.h" />
+    <ClInclude Include="..\src\engine\ToneMapNode.h" />
+    <ClInclude Include="..\src\engine\ToneMappingPass.h" />
+    <ClInclude Include="..\src\engine\UVScreenDensityCalculator.h" />
+    <ClInclude Include="..\src\engine\World.h" />
+    <ClInclude Include="..\src\framegraph\Framegraph.h" />
+    <ClInclude Include="..\src\framegraph\FramegraphImpl.h" />
+    <ClInclude Include="..\src\framegraph\utils\OptionalTuple.h" />
+    <ClInclude Include="..\src\framegraph\utils\UniqueTuple.h" />
+    <ClInclude Include="..\src\FrameResource.h" />
+    <ClInclude Include="..\src\GameTimer.h" />
+    <ClInclude Include="..\src\imgui_impl\imgui_impl_dx12.h" />
+    <ClInclude Include="..\src\imgui_impl\imgui_impl_win32.h" />
+    <ClInclude Include="..\src\SceneImporter.h" />
+    <ClInclude Include="..\src\RenderApp.h" />
+    <ClInclude Include="..\src\utils\btree.h" />
+    <ClInclude Include="..\src\utils\btree.hpp" />
+    <ClInclude Include="..\src\utils\CGUtils.h" />
+    <ClInclude Include="..\src\utils\MathUtils.h" />
+    <ClInclude Include="..\src\utils\MemoryMappedFile.h" />
+    <ClInclude Include="..\src\utils\packed_freelist.h" />
+    <ClInclude Include="..\src\utils\packed_freelist.hpp" />
+    <ClInclude Include="..\src\utils\span.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders\cubemap_gen_ps.hlsl">
+    <FxCompile Include="..\shaders\cubemap_gen_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -350,7 +350,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\cubemap_gen_vs.hlsl">
+    <FxCompile Include="..\shaders\cubemap_gen_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -362,7 +362,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\depth_only_vs.hlsl">
+    <FxCompile Include="..\shaders\depth_only_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
@@ -372,7 +372,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shaders\depth_prepass_ps.hlsl">
+    <FxCompile Include="..\shaders\depth_prepass_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -382,7 +382,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shaders\fullscreen_quad_vs.hlsl">
+    <FxCompile Include="..\shaders\fullscreen_quad_vs.hlsl">
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
@@ -390,7 +390,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\forward_gs.hlsl">
+    <FxCompile Include="..\shaders\forward_gs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Geometry</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Geometry</ShaderType>
@@ -402,10 +402,10 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <None Include="shaders\bindings\light_cb.hlsli" />
-    <None Include="shaders\bindings\material_cb.hlsli" />
-    <None Include="shaders\bindings\object_cb.hlsli" />
-    <FxCompile Include="shaders\postprocess\downscale.hlsl">
+    <None Include="..\shaders\bindings\light_cb.hlsli" />
+    <None Include="..\shaders\bindings\material_cb.hlsli" />
+    <None Include="..\shaders\bindings\object_cb.hlsli" />
+    <FxCompile Include="..\shaders\postprocess\downscale.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -415,7 +415,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shaders\postprocess\hbao_generation.hlsl">
+    <FxCompile Include="..\shaders\postprocess\hbao_generation.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -425,7 +425,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\postprocess\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\postprocess\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\postprocess\light_compose.hlsl">
+    <FxCompile Include="..\shaders\postprocess\light_compose.hlsl">
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -433,7 +433,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="shaders\postprocess\separable_blur.hlsl">
+    <FxCompile Include="..\shaders\postprocess\separable_blur.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -445,7 +445,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\forward_ps.hlsl">
+    <FxCompile Include="..\shaders\forward_ps.hlsl">
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -455,7 +455,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <DisableOptimizations Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</DisableOptimizations>
       <EnableDebuggingInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</EnableDebuggingInformation>
     </FxCompile>
-    <FxCompile Include="shaders\pssm_vs.hlsl">
+    <FxCompile Include="..\shaders\pssm_vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Geometry</ShaderType>
@@ -467,7 +467,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\skybox_ps.hlsl">
+    <FxCompile Include="..\shaders\skybox_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Compute</ShaderType>
@@ -479,7 +479,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
     </FxCompile>
-    <FxCompile Include="shaders\temporal_blend_ps.hlsl">
+    <FxCompile Include="..\shaders\temporal_blend_ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -489,7 +489,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shaders\tonemap.hlsl">
+    <FxCompile Include="..\shaders\tonemap.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -499,7 +499,7 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">5.1</ShaderModel>
     </FxCompile>
-    <FxCompile Include="shaders\forward_vs.hlsl">
+    <FxCompile Include="..\shaders\forward_vs.hlsl">
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)\shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">5.1</ShaderModel>
@@ -507,11 +507,11 @@ copy $(ProjectDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Targ
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
-    <None Include="shaders\bindings\pass_cb.hlsli" />
-    <None Include="shaders\lib\colorspaces.hlsli" />
-    <None Include="shaders\lib\lighting.hlsli" />
-    <None Include="shaders\lib\math_utils.hlsli" />
-    <None Include="shaders\lib\shadows.hlsli" />
+    <None Include="..\shaders\bindings\pass_cb.hlsli" />
+    <None Include="..\shaders\lib\colorspaces.hlsli" />
+    <None Include="..\shaders\lib\lighting.hlsli" />
+    <None Include="..\shaders\lib\math_utils.hlsli" />
+    <None Include="..\shaders\lib\shadows.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
