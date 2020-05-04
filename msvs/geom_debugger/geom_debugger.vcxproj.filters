@@ -13,34 +13,21 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\ecs">
-      <UniqueIdentifier>{c3ad1898-261a-42a2-af94-65e121a28430}</UniqueIdentifier>
+    <Filter Include="precompiled_header">
+      <UniqueIdentifier>{14844c99-4045-4986-a332-28ba13a914c5}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\tests\btree.cpp">
+    <ClCompile Include="..\..\src\geom_debugger\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\compile_time_tests.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\..\src\geom_debugger\stdafx.cpp">
+      <Filter>precompiled_header</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\framegraph.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\packed_freelist.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\pssm.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\scene.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\tests\entity_container.cpp">
-      <Filter>Source Files\ecs</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\geom_debugger\stdafx.h">
+      <Filter>precompiled_header</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

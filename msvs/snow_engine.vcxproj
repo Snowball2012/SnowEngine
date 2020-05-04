@@ -40,7 +40,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -81,12 +81,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\intermediate\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\intermediate\$(ProjectName)\$(Configuration)\</IntDir>
     <SourcePath>$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)\intermediate\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\intermediate\$(ProjectName)\$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
     <SourcePath>$(VC_SourcePath)</SourcePath>
   </PropertyGroup>
@@ -123,7 +123,8 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(IntermediateOutputPath)*.obj</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -167,7 +168,8 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
 </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>lib.exe /VERBOSE /OUT:$(SolutionDir)bin\$(Configuration)\snow_engine_test.lib $(IntermediateOutputPath)*.obj</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

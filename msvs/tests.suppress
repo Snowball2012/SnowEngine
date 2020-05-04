@@ -127,4 +127,28 @@
     <CodeCurrent>72777</CodeCurrent>
     <CodeNext>123</CodeNext>
   </tests>
+  <tests>
+    <FileName>btree.cpp</FileName>
+    <ErrorCode>V609</ErrorCode>
+    <Message>Mod by zero. Denominator range [_.._].</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>134046716</CodeCurrent>
+    <CodeNext>3906210321</CodeNext>
+  </tests>
+  <tests>
+    <FileName>btree.cpp</FileName>
+    <ErrorCode>V609</ErrorCode>
+    <Message>Mod by zero. Denominator range [_.._].</Message>
+    <CodePrev>123</CodePrev>
+    <CodeCurrent>134046716</CodeCurrent>
+    <CodeNext>0</CodeNext>
+  </tests>
+  <tests>
+    <FileName>btree.h</FileName>
+    <ErrorCode>V802</ErrorCode>
+    <Message>Instantiation of btree_map &lt; int, int, _ &gt;: On _-bit platform, structure size can be reduced from _ to _ bytes by rearranging the fields according to their sizes in decreasing order.</Message>
+    <CodePrev>577422</CodePrev>
+    <CodeCurrent>123</CodeCurrent>
+    <CodeNext>131684806</CodeNext>
+  </tests>
 </NewDataSet>

@@ -879,4 +879,12 @@
     <CodeCurrent>1714940875</CodeCurrent>
     <CodeNext>2966823578</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>SceneImporter.cpp</FileName>
+    <ErrorCode>V807</ErrorCode>
+    <Message>Decreased performance. Consider creating a reference to avoid using the same expression repeatedly.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>1793121223</CodeCurrent>
+    <CodeNext>3928021958</CodeNext>
+  </snow_engine>
 </NewDataSet>

@@ -6,8 +6,20 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "snow_engine", "msvs\snow_engine.vcxproj", "{EB59A200-985F-4FE9-B1CB-AA4C528CD62E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tests", "msvs\tests.vcxproj", "{770175B2-6AEE-4AF3-A018-DDDD8240245E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E} = {EB59A200-985F-4FE9-B1CB-AA4C528CD62E}
+		{E8C9AF06-9047-4306-A468-A26FD27F35C2} = {E8C9AF06-9047-4306-A468-A26FD27F35C2}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "viewer", "msvs\viewer.vcxproj", "{E8C9AF06-9047-4306-A468-A26FD27F35C2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E} = {EB59A200-985F-4FE9-B1CB-AA4C528CD62E}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "geom_debugger", "msvs\geom_debugger\geom_debugger.vcxproj", "{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}"
+	ProjectSection(ProjectDependencies) = postProject
+		{EB59A200-985F-4FE9-B1CB-AA4C528CD62E} = {EB59A200-985F-4FE9-B1CB-AA4C528CD62E}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +53,14 @@ Global
 		{E8C9AF06-9047-4306-A468-A26FD27F35C2}.Release|x64.Build.0 = Release|x64
 		{E8C9AF06-9047-4306-A468-A26FD27F35C2}.Release|x86.ActiveCfg = Release|Win32
 		{E8C9AF06-9047-4306-A468-A26FD27F35C2}.Release|x86.Build.0 = Release|Win32
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Debug|x64.ActiveCfg = Debug|x64
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Debug|x64.Build.0 = Debug|x64
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Debug|x86.ActiveCfg = Debug|Win32
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Debug|x86.Build.0 = Debug|Win32
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Release|x64.ActiveCfg = Release|x64
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Release|x64.Build.0 = Release|x64
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Release|x86.ActiveCfg = Release|Win32
+		{4E5A98E6-A66E-4612-8FAE-9E9ECC37F7B6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

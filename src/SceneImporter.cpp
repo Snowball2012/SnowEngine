@@ -281,7 +281,8 @@ namespace
                                 int out_idx = int( submesh.index_offset + submesh.nindices ) + 2 - fb_idx_in_poly;
                                 out_triangle_indices[fb_idx_in_poly] = out_idx;
 
-                                auto& vpos = out_mesh.vertices[out_idx].pos;
+								auto& out_vertex = out_mesh.vertices[out_idx];
+                                auto& vpos = out_vertex.pos;
                                 vpos.x = -ctrl_pts[cp_idx][0];
                                 vpos.y = ctrl_pts[cp_idx][1];
                                 vpos.z = ctrl_pts[cp_idx][2];
@@ -299,8 +300,8 @@ namespace
                                 if ( ! fbx_mesh->GetPolygonVertexUV( polygon_idx, fb_idx_in_poly, uv_name, uv, unused ) )
                                     throw SnowEngineException( "failed to extract uv" );
 
-                                out_mesh.vertices[out_idx].uv.x = uv[0];
-                                out_mesh.vertices[out_idx].uv.y = 1.0f - uv[1];
+                                out_vertex.uv.x = uv[0];
+                                out_vertex.uv.y = 1.0f - uv[1];
                             }
 
                             DirectX::XMFLOAT3 dp1 = out_mesh.vertices[out_triangle_indices[1]].pos - out_mesh.vertices[out_triangle_indices[0]].pos;

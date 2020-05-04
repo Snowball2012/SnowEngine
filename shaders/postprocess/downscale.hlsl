@@ -40,7 +40,7 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
             float2 offset = float2( 1 + 2 * i, 1 + 2 * j);
             float2 rotated_offset = rotate_direction( offset, rotation );
             float2 normalized_offset = normalize( rotated_offset );
-            float angle = asin( normalized_offset );
+            float angle = asin( normalized_offset.y );
             float2 star_rotation;
             sincos( angle * 2, star_rotation.x, star_rotation.y );
 

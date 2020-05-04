@@ -12,7 +12,7 @@ VertexOut main( uint id : SV_VertexID )
         res.pos = float4( -1, -1, 0.5f, 1 );
     else if ( id == 1 )
         res.pos = float4( -1, 3, 0.5f, 1 );
-    else if ( id == 2 )
+    else
         res.pos = float4( 3, -1, 0.5f, 1 );
     res.pos_ndc = res.pos;
     res.split_idx = 0;
