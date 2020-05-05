@@ -24,10 +24,16 @@
     <ClCompile Include="..\..\src\geom_debugger\stdafx.cpp">
       <Filter>precompiled_header</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\geom_debugger\Application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\geom_debugger\stdafx.h">
       <Filter>precompiled_header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\geom_debugger\Application.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

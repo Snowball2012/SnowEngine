@@ -148,6 +148,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\geom_debugger\Application.cpp" />
     <ClCompile Include="..\..\src\geom_debugger\main.cpp" />
     <ClCompile Include="..\..\src\geom_debugger\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -155,6 +156,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\geom_debugger\Application.h" />
     <ClInclude Include="..\..\src\geom_debugger\stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
