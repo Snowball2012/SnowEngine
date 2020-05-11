@@ -152,7 +152,17 @@ typename EntityContainer<Components...>::View<ViewComponents...>::Iterator
     Iterator retval( std::apply( make_cursor_tuples, view_btrees ), m_components );
     retval.MakeCursorsEqual();
 
-    const bool everything_is_equal = ( ( std::get<0>( retval.m_cursors ).key() == std::get<typename ComponentBtree<ViewComponents>::cursor_t>( retval.m_cursors ).key() ) && ... );
+	auto are_cursors_equal = []( const auto& lhs, const auto& rhs )
+	{
+		return ( ( lhs.node == nullptr && rhs.node == nullptr ) || ( lhs.key() == rhs.key() ) );
+	};
+
+    const bool everything_is_equal = (
+		are_cursors_equal(
+			std::get<0>( retval.m_cursors ),
+			std::get<typename ComponentBtree<ViewComponents>::cursor_t>( retval.m_cursors ) )
+		&& ... );
+
     if ( ! everything_is_equal )
         ++retval;
 

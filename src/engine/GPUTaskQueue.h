@@ -2,6 +2,8 @@
 
 #include "Ptr.h"
 
+#include "stdafx.h"
+
 #include "CommandListPool.h"
 
 #include "utils/span.h"

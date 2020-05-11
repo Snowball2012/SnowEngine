@@ -3,6 +3,7 @@
 #include "Application.h"
 
 #include <optick.h>
+#include <imgui/imgui.h>
 
 #include <WindowsX.h>
 
@@ -88,6 +89,30 @@ bool Application::Initialize()
 
     ShowWindow( m_main_wnd, SW_SHOW );
     UpdateWindow( m_main_wnd );
+
+
+	m_renderer = std::make_unique<OldRenderer>( m_main_wnd, m_main_width, m_main_height );
+    m_renderer->Init();
+
+	auto& scene = m_renderer->GetScene();
+
+    TextureID skybox_tex = scene.LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
+    TransformID skybox_tf = scene.AddTransform();
+    CubemapID skybox_cubemap = scene.AddCubemapFromTexture( skybox_tex );
+    m_skybox = scene.AddEnviromentMap( skybox_cubemap, skybox_tf );
+
+    Camera::Data camera_data;
+    camera_data.type = Camera::Type::Perspective;
+	camera_data.aspect_ratio = float( m_main_width ) / float( m_main_height );
+	camera_data.dir = DirectX::XMFLOAT3( 0, 0, 1 );
+	camera_data.near_plane = 0.1f;
+	camera_data.far_plane = 1000.0f;
+	camera_data.fov_y = DirectX::XM_PIDIV4;
+	camera_data.pos = DirectX::XMFLOAT3( 0, 0, 0 );
+	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
+    m_main_camera = scene.AddCamera( camera_data );
+    m_renderer->SetMainCamera( m_main_camera );
+    scene.ModifyCamera( m_main_camera )->SetSkybox() = m_skybox;
 
     return true;
 }
@@ -285,4 +310,28 @@ void Application::UpdateFrameStats( const GameTimer& timer, FrameStats& stats )
         stats.frame_cnt = 0;
         stats.time_elapsed += 1.0f;
     }
+}
+
+
+void Application::OnResize()
+{
+    if ( m_renderer )
+	{
+        m_renderer->Resize( m_main_width, m_main_height );
+		if ( auto* camera = m_renderer->GetScene().ModifyCamera( m_main_camera ) )
+			camera->ModifyData().aspect_ratio = float( m_main_width) / float( m_main_height );
+	}
+}
+
+
+void Application::Draw( const GameTimer& timer )
+{
+	if ( ! m_renderer )
+		return;
+
+	m_renderer->NewGUIFrame();
+
+    ImGui::NewFrame();
+    ImGui::Render();
+	m_renderer->Draw( );
 }

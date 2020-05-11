@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GameTimer.h>
+#include <engine/OldRenderer.h>
 
 #include <Windows.h>
 
@@ -31,6 +32,10 @@ private:
 
 	std::string m_cmd_line;
 
+	std::unique_ptr<OldRenderer> m_renderer;
+	CameraID m_main_camera = CameraID::nullid;
+	EnvMapID m_skybox = EnvMapID::nullid;
+
 	struct FrameStats
 	{
 		uint64_t frame_cnt = 0;
@@ -39,9 +44,9 @@ private:
 
     void UpdateFrameStats( const GameTimer& timer, FrameStats& stats );
 
-	void OnResize() {}
+	void OnResize();
 	void Update( const GameTimer& timer ) {}
-	void Draw( const GameTimer& timer ) {}
+	void Draw(const GameTimer& timer);
 
 	void OnMouseDown( WPARAM btnState, int x, int y ) {}
 	void OnMouseUp( WPARAM btnState, int x, int y ) {}
