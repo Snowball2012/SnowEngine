@@ -138,17 +138,20 @@ void RenderApp::UpdateGUI()
         ImGui::SliderFloat( "PSSM uniform split factor", &pssm_interpolator,0 , 1, "%.2f" );
         m_renderer->PSSM().SetUniformFactor( pssm_interpolator );
 
-        ImGui::Checkbox( "Separate camera for frustum culling", &m_dbg_use_separate_camera );
-        if ( m_dbg_use_separate_camera )
-        {
-            m_renderer->SetMainCamera( m_dbg_frustum_camera );
-            m_renderer->SetFrustumCullCamera( m_camera );
-        }
-        else
-        {
-            m_renderer->SetMainCamera( m_camera );
-            m_renderer->SetFrustumCullCamera( CameraID::nullid );
-        }
+		if ( m_dbg_frustum_camera.valid() && m_camera.valid() )
+		{
+			bool use_separate_camera_old = m_dbg_use_separate_camera;
+			ImGui::Checkbox( "Freeze camera for frustum culling (does not work right now)", &m_dbg_use_separate_camera );
+			if ( !use_separate_camera_old && m_dbg_use_separate_camera )
+			{
+				// Freeze camera
+				auto* main_cam = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_camera );
+				auto* dbg_cam = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_dbg_frustum_camera );
+				if ( !SE_ENSURE( main_cam ) || !SE_ENSURE( dbg_cam ) )
+					dbg_cam->ModifyData() = main_cam->GetData();
+			}
+		}
+
 
         ImGui::NewLine();
         {
@@ -205,7 +208,7 @@ void RenderApp::UpdateCamera()
 {
     // main camera
     {
-        Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_camera );
+        Camera* cam_ptr = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_camera );
         if ( ! cam_ptr )
             throw SnowEngineException( "no main camera" );
 
@@ -222,7 +225,7 @@ void RenderApp::UpdateCamera()
 
     // debug camera
     {
-        Camera* cam_ptr = m_renderer->GetScene().ModifyCamera( m_dbg_frustum_camera );
+        Camera* cam_ptr = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_dbg_frustum_camera );
         if ( ! cam_ptr )
             throw SnowEngineException( "no debug camera" );
 
@@ -237,6 +240,17 @@ void RenderApp::UpdateCamera()
         cam_data.far_plane = 100.0f;
         cam_data.near_plane = 0.1f;
     }
+
+	if ( m_dbg_use_separate_camera )
+	{
+		m_renderer->SetMainCamera( m_camera );
+		m_renderer->SetFrustumCullCamera( m_dbg_frustum_camera );
+	}
+	else
+	{
+		m_renderer->SetMainCamera( m_camera );
+		m_renderer->SetFrustumCullCamera( World::Entity::nullid );
+	}
 }
 
 namespace
@@ -407,16 +421,18 @@ void RenderApp::InitScene( ImportedScene imported_scene )
 
     Camera::Data camera_data;
     camera_data.type = Camera::Type::Perspective;
-    m_camera = scene.AddCamera( camera_data );
-    scene.ModifyCamera( m_camera )->SetSkybox() = m_ph_skybox;
+    m_camera = scene.GetWorld().CreateEntity();
+	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( m_camera );
+	cam_component.ModifyData() = camera_data;
+    cam_component.SetSkybox() = m_ph_skybox;
+
     m_renderer->SetMainCamera( m_camera );
     Light::Data sun_data;
     sun_data.type = Light::LightType::Parallel;
     m_sun = scene.AddLight( sun_data );
 
-    Camera::Data dbg_frustum_cam_data;
-    camera_data.type = Camera::Type::Perspective;
-    m_dbg_frustum_camera = scene.AddCamera( dbg_frustum_cam_data );
+	m_dbg_frustum_camera = scene.GetWorld().CreateEntity();
+	Camera& dbg_cam_component = scene.GetWorld().AddComponent<Camera>( m_dbg_frustum_camera );
 }
 
 
@@ -521,8 +537,11 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
     camera_data.fov_y = XM_PIDIV4;
     camera_data.far_plane = 10000.0f;
     camera_data.near_plane = 0.1f;
-    m_camera = scene.AddCamera( camera_data );
-    scene.ModifyCamera( m_camera )->SetSkybox() = skybox_id;
+
+	m_camera = scene.GetWorld().CreateEntity();
+	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( m_camera );
+	cam_component.ModifyData() = camera_data;
+    cam_component.SetSkybox() = skybox_id;
 
     Light::Data light_data;
     light_data.type = Light::LightType::Parallel;
@@ -537,7 +556,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 
 void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& renderer )
 {
-    renderer.SetFrustumCullCamera( CameraID::nullid );
+    renderer.SetFrustumCullCamera( World::Entity::nullid );
     renderer.SetMainCamera( m_camera );
     Light* light = scene.ModifyLight( m_light );
     if ( ! light )
@@ -555,7 +574,7 @@ void RenderApp::LoadingScreen::Enable( SceneClientView& scene, OldRenderer& rend
 
 void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& renderer )
 {
-    renderer.SetMainCamera( CameraID::nullid );
+    renderer.SetMainCamera( World::Entity::nullid );
     Light* light = scene.ModifyLight( m_light );
     if ( ! light )
         throw SnowEngineException( "light not found!" );
@@ -573,14 +592,14 @@ void RenderApp::LoadingScreen::Disable( SceneClientView& scene, OldRenderer& ren
 void RenderApp::LoadingScreen::Update( SceneClientView& scene, float screen_width, float screen_height, const GameTimer& gt )
 {
     OPTICK_EVENT();
-    Camera* cam = scene.ModifyCamera( m_camera );
+    auto& world = scene.GetWorld();
+
+    Camera* cam = world.GetComponent<Camera>( m_camera );
     if ( ! cam )
         throw SnowEngineException( "camera not found!" );
 
     auto& cam_data = cam->ModifyData();
     cam_data.aspect_ratio = screen_width / screen_height;
-
-    auto& world = scene.GetWorld();
     
     Transform* tf = world.GetComponent<Transform>( m_cube );
     if ( ! tf )

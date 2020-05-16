@@ -6,5 +6,6 @@
 
 using World = EntityContainer<
     Transform,
-    DrawableMesh
+    DrawableMesh,
+	Camera
 >;

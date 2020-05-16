@@ -86,11 +86,7 @@ void OldRenderer::Draw()
 {
     OPTICK_EVENT();
     // Update rendergraph
-    CameraID scene_camera;
-    if ( ! ( m_frustum_cull_camera_id == CameraID::nullid ) )
-        scene_camera = m_frustum_cull_camera_id;
-    else
-        scene_camera = m_main_camera_id;
+    World::Entity scene_camera = m_main_camera;
 
     const Scene& scene = GetScene().GetROScene();
 
@@ -117,8 +113,9 @@ void OldRenderer::Draw()
     m_scene_manager->UpdateFramegraphBindings( scene_camera, m_renderer->GetPSSM(), m_screen_viewport );
 
     // Draw scene
-    const Camera* main_camera = GetScene().GetCamera( m_main_camera_id );
-    if ( ! main_camera )
+    const Camera* main_camera = GetScene().GetWorld().GetComponent<Camera>( scene_camera );
+
+	if ( ! SE_ENSURE( main_camera ) )
         throw SnowEngineException( "no main camera" );
 
     std::vector<CommandList> lists_to_execute;
@@ -235,19 +232,25 @@ void OldRenderer::Resize( uint32_t new_width, uint32_t new_height )
 
 ParallelSplitShadowMapping& OldRenderer::PSSM() noexcept { return m_renderer->GetPSSM(); }
 
-bool OldRenderer::SetMainCamera( CameraID id )
+bool OldRenderer::SetMainCamera( World::Entity camera )
 {
-    if ( ! GetScene().GetROScene().AllCameras().has( id ) )
-        return false;
-    m_main_camera_id = id;
+	// Can accept nullid
+	if ( camera.valid() )
+		if ( ! SE_ENSURE( GetScene().GetWorld().GetComponent<Camera>( camera ) ) )
+			return false;
+
+    m_main_camera = camera;
     return true;
 }
 
-bool OldRenderer::SetFrustumCullCamera( CameraID id )
+bool OldRenderer::SetFrustumCullCamera( World::Entity camera )
 {
-    if ( ! GetScene().GetROScene().AllCameras().has( id ) )
-        return false;
-    m_frustum_cull_camera_id = id;
+	// Can accept nullid
+	if ( camera.valid() )
+		if ( ! SE_ENSURE( GetScene().GetWorld().GetComponent<Camera>( camera ) ) )
+			return false;
+
+    m_frustum_cull_camera = camera;
     return true;
 }
 

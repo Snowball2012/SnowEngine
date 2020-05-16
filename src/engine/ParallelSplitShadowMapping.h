@@ -3,6 +3,7 @@
 #include "utils/span.h"
 
 #include "SceneItems.h"
+#include "Components.h"
 
 class ParallelSplitShadowMapping
 {

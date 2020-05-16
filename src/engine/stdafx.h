@@ -24,6 +24,7 @@
 namespace bc = boost::container;
 
 #include <utils/MathUtils.h>
+#include <utils/Assertions.h>
 
 #include <dxgi1_5.h>
 #include <pix.h>

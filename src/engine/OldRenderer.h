@@ -52,8 +52,8 @@ public:
     SceneClientView& GetScene() { return m_scene_manager->GetScene(); }
 
     // returns false if camera doesn't exist
-    bool SetMainCamera( CameraID id );
-    bool SetFrustumCullCamera( CameraID id ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
+    bool SetMainCamera( World::Entity camera );
+    bool SetFrustumCullCamera( World::Entity camera ); // Renderer will use main camera if this one is not specified, mainly for debug purposes
 
     bool SetIrradianceMap( CubemapID id );
     bool SetReflectionProbe( CubemapID id );
@@ -100,8 +100,8 @@ private:
 
     StaticMeshID m_geom_id = StaticMeshID::nullid;
     MaterialID m_placeholder_material = MaterialID::nullid;
-    CameraID m_main_camera_id = CameraID::nullid;
-    CameraID m_frustum_cull_camera_id = CameraID::nullid;
+    World::Entity m_main_camera = World::Entity::nullid;
+    World::Entity m_frustum_cull_camera = World::Entity::nullid;
 
     CubemapID m_irradiance_map = CubemapID::nullid;
     CubemapID m_reflection_probe = CubemapID::nullid;

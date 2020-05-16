@@ -44,7 +44,7 @@ private:
 
 	struct SceneObjects
 	{
-		CameraID main_camera = CameraID::nullid;
+		World::Entity main_camera = World::Entity::nullid;
 		World::Entity demo_cube = World::Entity::nullid;
 	} m_sceneobjects;
 

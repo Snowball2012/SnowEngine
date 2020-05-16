@@ -80,17 +80,6 @@ public:
     MaterialPBR* TryModifyMaterial( MaterialID id ) noexcept; // returns nullptr if object no longer exists
 
 
-    // Cameras
-    CameraID AddCamera( ) noexcept;
-    bool RemoveCamera( CameraID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.
-    // read-only
-    const auto& AllCameras() const noexcept { return m_cameras; }
-    auto CameraSpan() const noexcept { return m_cameras.get_elems(); }
-    // for element modification
-    auto CameraSpan() noexcept { return m_cameras.get_elems(); }
-    Camera* TryModifyCamera( CameraID id ) noexcept; // returns nullptr if object no longer exists
-
-
     // Lights
     LightID AddLight() noexcept;
     bool RemoveLight( LightID id ) noexcept; // returns true if remove was successful or object with this id no longer exists. Can fail if the object still has refs from other scene components.

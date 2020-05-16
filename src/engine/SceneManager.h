@@ -53,10 +53,6 @@ public:
     EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id );
     EnvironmentMap* ModifyEnviromentMap( EnvMapID envmap_id ) noexcept;
     const EnvironmentMap* GetEnviromentMap( EnvMapID envmap_id ) const noexcept;
-    
-    CameraID AddCamera( const Camera::Data& data ) noexcept;
-    const Camera* GetCamera( CameraID id ) const noexcept;
-    Camera* ModifyCamera( CameraID id ) noexcept;
 
     LightID AddLight( const Light::Data& data ) noexcept;
     const Light* GetLight( LightID id ) const noexcept;
@@ -90,7 +86,7 @@ public:
     const DescriptorTableBakery& GetDescriptorTables() const noexcept;
     DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-    void UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
+    void UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
 
     void FlushAllOperations();
 
@@ -127,7 +123,4 @@ private:
 
     std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, GPUTaskQueue::Timestamp>> m_graphics_cmd_allocators;
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_graphics_cmd_list;
-
-    // temporary
-    CameraID m_main_camera_id = CameraID::nullid;
 };

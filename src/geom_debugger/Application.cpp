@@ -305,7 +305,7 @@ void Application::OnResize()
     if ( m_renderer )
 	{
         m_renderer->Resize( m_main_width, m_main_height );
-		if ( auto* camera = m_renderer->GetScene().ModifyCamera( m_sceneobjects.main_camera ) )
+		if ( auto* camera = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_sceneobjects.main_camera ) )
 			camera->ModifyData().aspect_ratio = float( m_main_width) / float( m_main_height );
 	}
 }
@@ -407,11 +407,11 @@ bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& 
 	camera_data.fov_y = DirectX::XM_PIDIV4;
 	camera_data.pos = DirectX::XMFLOAT3( 0, 0, -5 );
 	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
-	objects.main_camera = scene.AddCamera( camera_data );
-	if ( !objects.main_camera.valid() )
-		return false;
 
-    scene.ModifyCamera( objects.main_camera )->SetSkybox() = assets.skybox;
+	objects.main_camera = scene.GetWorld().CreateEntity();
+	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( objects.main_camera );
+	cam_component.ModifyData() = camera_data;
+    cam_component.SetSkybox() = assets.skybox;
 	
     auto& world = scene.GetWorld();
     objects.demo_cube = world.CreateEntity();

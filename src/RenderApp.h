@@ -75,8 +75,8 @@ private:
     CubemapID m_irradiance_map = CubemapID::nullid;
     TextureID m_brdf_lut = TextureID::nullid;
 
-    CameraID m_camera = CameraID::nullid;
-    CameraID m_dbg_frustum_camera = CameraID::nullid;
+    World::Entity m_camera = World::Entity::nullid;
+    World::Entity m_dbg_frustum_camera = World::Entity::nullid;
     bool m_dbg_use_separate_camera = false;
     LightID m_sun = LightID::nullid;
 
@@ -92,7 +92,7 @@ private:
         void LoadCube( SceneClientView& scene, TextureID normal_tex_id, TextureID specular_tex_id );
 
         World::Entity m_cube = World::Entity::nullid;
-        CameraID m_camera = CameraID::nullid;
+        World::Entity m_camera = World::Entity::nullid;
         LightID m_light = LightID::nullid;
         float m_theta = 0;
     } m_loading_screen;

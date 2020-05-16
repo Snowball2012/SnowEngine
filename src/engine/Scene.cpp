@@ -258,26 +258,6 @@ MaterialPBR* Scene::TryModifyMaterial( MaterialID id ) noexcept
 }
 
 
-// Cameras
-
-CameraID Scene::AddCamera() noexcept
-{
-    return m_cameras.emplace();
-}
-
-bool Scene::RemoveCamera( CameraID id ) noexcept
-{
-    bool has_camera = m_cameras.has( id );
-    m_cameras.erase( id );
-    return has_camera;
-}
-
-Camera* Scene::TryModifyCamera( CameraID id ) noexcept
-{
-    return m_cameras.try_get( id );
-}
-
-
 // Lights
 
 LightID Scene::AddLight() noexcept

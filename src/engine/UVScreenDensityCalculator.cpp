@@ -12,14 +12,14 @@ UVScreenDensityCalculator::UVScreenDensityCalculator( Scene* scene )
 }
 
 
-void UVScreenDensityCalculator::Update( CameraID camera_id, const D3D12_VIEWPORT& viewport )
+void UVScreenDensityCalculator::Update( const Camera& camera, const D3D12_VIEWPORT& viewport )
 {
     OPTICK_EVENT();
     // For each mesh instance
     // 1. Find distance to camera
     // 2. Calc approximate number of pixels per uv coord
 
-    const Camera::Data& camera_data = m_scene->AllCameras()[camera_id].GetData();
+    const Camera::Data& camera_data = camera.GetData();
     if ( camera_data.type != Camera::Type::Perspective )
         NOTIMPL;
 

@@ -7,6 +7,7 @@
 
 #include "RenderData.h"
 #include "SceneItems.h"
+#include "Components.h"
 
 #include "GPUAllocators.h"
 

@@ -101,23 +101,6 @@ const EnvironmentMap* SceneClientView::GetEnviromentMap( EnvMapID envmap_id ) co
     return m_scene->AllEnviromentMaps().try_get( envmap_id );
 }
 
-CameraID SceneClientView::AddCamera( const Camera::Data& data ) noexcept
-{
-    CameraID id = m_scene->AddCamera();
-    m_scene->TryModifyCamera(id)->ModifyData() = data;
-    return id;
-}
-
-const Camera* SceneClientView::GetCamera( CameraID id ) const noexcept
-{
-    return m_scene->AllCameras().try_get( id );
-}
-
-Camera* SceneClientView::ModifyCamera( CameraID id ) noexcept
-{
-    return m_scene->TryModifyCamera( id );
-}
-
 LightID SceneClientView::AddLight( const Light::Data& data ) noexcept
 {
     LightID id = m_scene->AddLight();
@@ -218,7 +201,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
     return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
+void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
 {
     OPTICK_EVENT();
     SceneCopyOp cur_op = m_operation_counter++;
@@ -231,13 +214,15 @@ void SceneManager::UpdateFramegraphBindings( CameraID main_camera_id, const Para
     ThrowIfFailedH( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first->Reset() );
     m_graphics_cmd_list->Reset( m_graphics_cmd_allocators[cur_op % m_nframes_to_buffer].first.Get(), nullptr );
 
-    m_main_camera_id = main_camera_id;
+    const auto* camera_component = m_scene.world.GetComponent<Camera>( main_camera );
+	if ( ! SE_ENSURE( camera_component ) )
+		throw SnowEngineException( "camera entity doesn't have a camera component" );
 
     GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
     m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
     ProcessSubmeshes();
-    m_uv_density_calculator.Update( main_camera_id, main_viewport );
+    m_uv_density_calculator.Update( *camera_component, main_viewport );
     m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );
     m_static_texture_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
     m_cubemap_mgr.Update( current_copy_time, cur_op, *m_copy_cmd_list.Get() );

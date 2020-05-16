@@ -3,7 +3,7 @@
 #include <DirectXMath.h>
 #include <engine/RenderData.h>
 
-#include <engine/SceneItems.h>
+#include <engine/Components.h>
 
 struct ImportedScene
 {
