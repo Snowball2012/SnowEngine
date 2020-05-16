@@ -133,6 +133,7 @@ MaterialConstants DynamicSceneBuffers::CreateMaterialGPUData( const MaterialPBR&
     MaterialConstants gpu_data;
     gpu_data.mat_transform = cpu_data.GetData().transform;
     gpu_data.diffuse_fresnel = cpu_data.GetData().diffuse_fresnel;
+	gpu_data.albedo_color = cpu_data.GetData().albedo_color;
     return gpu_data;
 }
 

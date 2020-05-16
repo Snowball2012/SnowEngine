@@ -2,12 +2,12 @@
 
 #include "Application.h"
 
+#include <engine/GeomGeneration.h>
+
 #include <optick.h>
 #include <imgui/imgui.h>
 
 #include <WindowsX.h>
-
-#include <assert.h>
 
 namespace
 {
@@ -24,8 +24,7 @@ namespace
 			case WM_NCCREATE:
 			{
 				CREATESTRUCT* createstruct = reinterpret_cast<CREATESTRUCT*>( lParam );
-				assert( createstruct != nullptr );
-				if ( ! createstruct )
+				if ( !SE_ENSURE( createstruct != nullptr ) )
 					return FALSE;
 
 				app = reinterpret_cast<Application*>( createstruct->lpCreateParams );
@@ -94,25 +93,13 @@ bool Application::Initialize()
 	m_renderer = std::make_unique<OldRenderer>( m_main_wnd, m_main_width, m_main_height );
     m_renderer->Init();
 
-	auto& scene = m_renderer->GetScene();
+	if ( !InitSceneAssets( m_renderer->GetScene(), m_assets ) )
+		return false;
+	
+	if ( !InitSceneObjects( m_assets, m_renderer->GetScene(), m_sceneobjects ) )
+		return false;
 
-    TextureID skybox_tex = scene.LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
-    TransformID skybox_tf = scene.AddTransform();
-    CubemapID skybox_cubemap = scene.AddCubemapFromTexture( skybox_tex );
-    m_skybox = scene.AddEnviromentMap( skybox_cubemap, skybox_tf );
-
-    Camera::Data camera_data;
-    camera_data.type = Camera::Type::Perspective;
-	camera_data.aspect_ratio = float( m_main_width ) / float( m_main_height );
-	camera_data.dir = DirectX::XMFLOAT3( 0, 0, 1 );
-	camera_data.near_plane = 0.1f;
-	camera_data.far_plane = 1000.0f;
-	camera_data.fov_y = DirectX::XM_PIDIV4;
-	camera_data.pos = DirectX::XMFLOAT3( 0, 0, 0 );
-	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
-    m_main_camera = scene.AddCamera( camera_data );
-    m_renderer->SetMainCamera( m_main_camera );
-    scene.ModifyCamera( m_main_camera )->SetSkybox() = m_skybox;
+    m_renderer->SetMainCamera( m_sceneobjects.main_camera );
 
     return true;
 }
@@ -318,7 +305,7 @@ void Application::OnResize()
     if ( m_renderer )
 	{
         m_renderer->Resize( m_main_width, m_main_height );
-		if ( auto* camera = m_renderer->GetScene().ModifyCamera( m_main_camera ) )
+		if ( auto* camera = m_renderer->GetScene().ModifyCamera( m_sceneobjects.main_camera ) )
 			camera->ModifyData().aspect_ratio = float( m_main_width) / float( m_main_height );
 	}
 }
@@ -334,4 +321,102 @@ void Application::Draw( const GameTimer& timer )
     ImGui::NewFrame();
     ImGui::Render();
 	m_renderer->Draw( );
+}
+
+
+bool Application::InitSceneAssets( SceneClientView& scene, SceneAssets& assets ) const
+{
+	// Sky
+    TextureID skybox_tex = scene.LoadStaticTexture( "D:/scenes/bistro/green_point_park_4k.DDS" );
+	if ( !skybox_tex.valid() )
+		return false;
+
+    TransformID skybox_tf = scene.AddTransform();
+	if ( !skybox_tf.valid() )
+		return false;
+
+    CubemapID skybox_cubemap = scene.AddCubemapFromTexture( skybox_tex );
+	if ( !skybox_cubemap.valid() )
+		return false;
+
+    assets.skybox = scene.AddEnviromentMap( skybox_cubemap, skybox_tf );
+	if ( !assets.skybox.valid() )
+		return false;
+	scene.ModifyEnviromentMap( assets.skybox )->SetRadianceFactor() = 18.0f;
+
+	// Environment probes
+    TextureID irradiance_map_tex = scene.LoadStaticTexture( "D:/scenes/bistro/ibl/irradiance.DDS" );
+    m_renderer->SetIrradianceMap( scene.AddCubemapFromTexture( irradiance_map_tex ) );
+    m_renderer->SetReflectionProbe( scene.LoadCubemap( "D:/scenes/bistro/ibl/reflection_probe_cm.dds" ) );
+
+	// Material
+	TextureID gray_tex = scene.LoadStaticTexture( "resources/textures/gray.dds" );
+	TextureID preintegrated_brdf = scene.LoadStaticTexture( "resources/textures/brdf_lut.dds" );
+	TextureID default_normal = scene.LoadStaticTexture( "resources/textures/default_deriv_normal.dds" );
+	if ( !gray_tex.valid() || !preintegrated_brdf.valid() || !default_normal.valid() )
+		return false;
+
+	MaterialPBR::TextureIds mat_textures;
+	{
+		mat_textures.base_color = gray_tex;
+		mat_textures.specular = gray_tex;
+		mat_textures.normal = default_normal;
+		mat_textures.preintegrated_brdf = preintegrated_brdf;
+	}
+	assets.default_material = scene.AddMaterial(
+		mat_textures,
+		DirectX::XMFLOAT3( 0.04f, 0.04f, 0.04f ), // fresnel
+		DirectX::XMFLOAT3( 1, 1, 1 )); // albedo
+
+	if ( !assets.default_material.valid() )
+		return false;
+
+	// Meshes
+	std::vector<Vertex> cube_vertices;
+    std::vector<uint32_t> cube_indices;
+    {
+        cube_vertices.reserve( GeomGeneration::CubeVertices.size() );
+        cube_vertices.assign( GeomGeneration::CubeVertices.cbegin(), GeomGeneration::CubeVertices.cend() );
+        cube_indices.reserve( GeomGeneration::CubeIndices.size() );
+        cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
+    }
+	assets.cube = scene.LoadStaticMesh( "cube", cube_vertices, cube_indices );
+	StaticSubmesh::Data submesh_data;
+	{
+		submesh_data.base_vertex_loc = 0;
+		submesh_data.idx_cnt = uint32_t( cube_indices.size() );
+		submesh_data.start_index_loc = 0;
+	}
+	assets.cube_submesh = scene.AddSubmesh( assets.cube, submesh_data );
+	if ( !assets.cube.valid() || !assets.cube_submesh.valid() )
+		return false;
+	
+	return true;
+}
+
+
+bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& scene, SceneObjects& objects ) const
+{
+	// Camera
+    Camera::Data camera_data;
+    camera_data.type = Camera::Type::Perspective;
+	camera_data.aspect_ratio = float( m_main_width ) / float( m_main_height );
+	camera_data.dir = DirectX::XMFLOAT3( 0, 0, 1 );
+	camera_data.near_plane = 0.1f;
+	camera_data.far_plane = 1000.0f;
+	camera_data.fov_y = DirectX::XM_PIDIV4;
+	camera_data.pos = DirectX::XMFLOAT3( 0, 0, -5 );
+	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
+	objects.main_camera = scene.AddCamera( camera_data );
+	if ( !objects.main_camera.valid() )
+		return false;
+
+    scene.ModifyCamera( objects.main_camera )->SetSkybox() = assets.skybox;
+	
+    auto& world = scene.GetWorld();
+    objects.demo_cube = world.CreateEntity();
+    world.AddComponent<Transform>( objects.demo_cube, Transform{ DirectX::XMMatrixIdentity() } );
+    world.AddComponent<DrawableMesh>( objects.demo_cube, DrawableMesh{ assets.cube_submesh, assets.default_material } );
+
+	return true;
 }

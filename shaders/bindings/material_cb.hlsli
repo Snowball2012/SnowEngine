@@ -4,6 +4,7 @@
 struct MaterialConstants
 {
     float4x4 transform;
+    float4 albedo_color;
     float3 diffuse_fresnel;
 };
 

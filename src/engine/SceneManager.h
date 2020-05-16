@@ -47,7 +47,7 @@ public:
     CubemapID LoadCubemap( std::string path );
     CubemapID AddCubemapFromTexture( TextureID tex_id );
     TransformID AddTransform( const DirectX::XMFLOAT4X4& obj2world = Identity4x4 );
-    MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT4X4& uv_transform = Identity4x4 );
+    MaterialID AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT3& albedo_color, const DirectX::XMFLOAT4X4& uv_transform = Identity4x4 );
     StaticSubmeshID AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data );
 
     EnvMapID AddEnviromentMap( CubemapID cubemap_id, TransformID transform_id );

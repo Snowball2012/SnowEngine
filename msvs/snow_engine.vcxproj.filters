@@ -499,6 +499,9 @@
     <ClInclude Include="..\src\utils\MathUtils.h">
       <Filter>utils</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\utils\Assertions.h">
+      <Filter>utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\shaders\temporal_blend_ps.hlsl">

@@ -58,13 +58,15 @@ TransformID SceneClientView::AddTransform( const DirectX::XMFLOAT4X4& obj2world 
     return tf_id;
 }
 
-MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT4X4& uv_transform )
+MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures, const DirectX::XMFLOAT3& diffuse_fresnel, const DirectX::XMFLOAT3& albedo_color, const DirectX::XMFLOAT4X4& uv_transform )
 {
     MaterialID mat_id = m_scene->AddMaterial( textures );
 
     MaterialPBR::Data& material_data = m_scene->TryModifyMaterial( mat_id )->Modify();
     material_data.diffuse_fresnel = diffuse_fresnel;
     material_data.transform = uv_transform;
+	material_data.albedo_color = DirectX::XMFLOAT4(
+		albedo_color.x, albedo_color.y, albedo_color.z, 1.0f );
 
     m_dynamic_buffers->AddMaterial( mat_id );
 

@@ -110,7 +110,7 @@ PixelOut main(PixelIn pin)
     float lod = base_color_map.CalculateLevelOfDetail( anisotropic_wrap_sampler, pin.uv );
     base_color = dbg_get_lod_color( base_color, lod );
 #endif
-    base_color = gamma2linear_std( base_color );
+    base_color = gamma2linear_std( base_color ) * material.albedo_color;
 
     float3 bitangent;
     renormalize_tbn( pin.normal, pin.tangent, bitangent );

@@ -205,6 +205,7 @@ public:
     struct Data
     {
         DirectX::XMFLOAT4X4 transform;
+		DirectX::XMFLOAT4 albedo_color;
         DirectX::XMFLOAT3 diffuse_fresnel;
     };
 

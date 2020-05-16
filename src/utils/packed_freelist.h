@@ -20,14 +20,23 @@ class packed_freelist
 public:
     struct alignas( 8 ) id
     {
-        uint32_t idx;
-        uint32_t inner_id;
-        bool operator==( const id& rhs ) const noexcept { return this->idx == rhs.idx && this->inner_id == rhs.inner_id; }
-        bool operator!=( const id& rhs ) const noexcept { return this->idx != rhs.idx || this->inner_id != rhs.inner_id; }
+		union
+		{
+			struct
+			{
+				uint32_t idx;
+				uint32_t inner_id;
+			};
+			uint64_t comparator;
+		};
+        bool operator==( const id& rhs ) const noexcept { return this->comparator == rhs.comparator; }
+        bool operator!=( const id& rhs ) const noexcept { return this->comparator != rhs.comparator; }
         bool operator<( const id& rhs ) const noexcept { return this->idx < rhs.idx || this->idx == rhs.idx && this->inner_id < rhs.inner_id; }
         bool operator>( const id& rhs ) const noexcept { return this->idx > rhs.idx || this->idx == rhs.idx && this->inner_id > rhs.inner_id; }
 
         static const id nullid;
+
+		bool valid() const { return *this != nullid; }
     };
 
 

@@ -89,6 +89,7 @@ struct GPUObjectConstants
 struct MaterialConstants
 {
     DirectX::XMFLOAT4X4 mat_transform;
+	DirectX::XMFLOAT4 albedo_color;
     DirectX::XMFLOAT3 diffuse_fresnel;
 };
 

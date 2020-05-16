@@ -482,7 +482,7 @@ void RenderApp::BuildMaterials( ImportedScene& ext_scene )
 
         textures.preintegrated_brdf = m_brdf_lut;
 
-        ext_material.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ) );
+		ext_material.material_id = scene.AddMaterial( textures, XMFLOAT3( 0.03f, 0.03f, 0.03f ), XMFLOAT3( 1, 1, 1 ) );
     }
 }
 
@@ -602,7 +602,7 @@ void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID norma
 {
     TextureID loading_cube_texture = scene.LoadStaticTexture( "resources/textures/loading_box_base.dds" );
     MaterialID cube_material_id = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_texture, normal_tex_id, specular_tex_id },
-                                                     DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), Identity4x4 );
+                                                     DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), DirectX::XMFLOAT3( 1, 1, 1 ), Identity4x4 );
 
     std::vector<Vertex> cube_vertices;
     std::vector<uint32_t> cube_indices;
