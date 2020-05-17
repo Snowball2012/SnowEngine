@@ -137,6 +137,7 @@
     <ClCompile Include="..\src\tests\btree.cpp" />
     <ClCompile Include="..\src\tests\compile_time_tests.cpp" />
     <ClCompile Include="..\src\tests\entity_container.cpp" />
+    <ClCompile Include="..\src\tests\intersections.cpp" />
     <ClCompile Include="..\src\tests\main.cpp" />
     <ClCompile Include="..\src\tests\packed_freelist.cpp" />
     <ClCompile Include="..\src\tests\framegraph.cpp" />

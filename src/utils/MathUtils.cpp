@@ -110,3 +110,36 @@ float DistanceToBoxSqr( const XMVECTOR& point, const BoundingOrientedBox& box )
     
     return dist2;
 }
+
+RayTriangleIntersection IntersectRayTriangle(const float triangle_vertices[9], const float ray_origin[3], const float ray_direction[3])
+{
+	// a, b, c - triangle vertices
+	// d - ray direction
+	// o - ray origin
+	// q - intersection matrix
+	//
+	// q = |c - a|
+	//	   |c - b|
+	//	   |  d  |
+	//
+	// [u v t] * q = [c - o]
+	// [u v t] = [c - o] * q_inv;
+
+	XMVECTOR c = XMLoadFloat3( &XMFLOAT3( triangle_vertices + 6 ) );
+
+	XMMATRIX q;
+	q.r[0] = c - XMLoadFloat3( &XMFLOAT3( triangle_vertices ) );
+	q.r[1] = c - XMLoadFloat3( &XMFLOAT3( triangle_vertices + 3 ) );
+	q.r[2] = XMLoadFloat3( &XMFLOAT3( ray_direction ) );
+	q.r[3] = XMVectorSetW( XMVectorZero(), 1 );
+
+	XMVECTOR q_det;
+	XMMATRIX q_inv = XMMatrixInverse( &q_det, q );
+
+	RayTriangleIntersection res;
+	res.coords = c - XMLoadFloat3( &XMFLOAT3( ray_origin ) );
+	res.coords = XMVector4Transform( res.coords, q_inv );
+	res.coords.m128_f32[3] = q_det.m128_f32[0];
+
+	return res;
+}

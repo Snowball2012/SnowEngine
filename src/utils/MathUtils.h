@@ -85,3 +85,25 @@ constexpr float HaltonSequence23[8][2] =
     { 7.f / 8.f, 5.f / 9.f },
     { 1.f / 16.f, 8.f / 9.f }
 };
+
+struct RayTriangleIntersection
+{
+	// x, y - u, v triangle barycentrics
+	// z - t
+	// w - intersection matrix determinant
+	DirectX::XMVECTOR coords;
+	bool IsDegenerate( float tolerance ) const { return std::abs( coords.m128_f32[3] ) <= tolerance; }
+	bool HitDetected(
+		float onplane_tolerance, float rayorigin_tolerance, float triangle_tolerance ) const
+	{
+		return !IsDegenerate( onplane_tolerance )
+			&& coords.m128_f32[2] >= -rayorigin_tolerance
+			&& coords.m128_f32[0] >= -triangle_tolerance
+			&& coords.m128_f32[1] >= -triangle_tolerance
+			&& coords.m128_f32[0] <= 1.0f + triangle_tolerance
+			&& coords.m128_f32[1] <= 1.0f + triangle_tolerance;
+	}
+	bool RayEntersTriangle() const { return coords.m128_f32[3] > 0; } // otherwise exits
+};
+
+RayTriangleIntersection IntersectRayTriangle(const float triangle_vertices[9], const float ray_origin[3], const float ray_direction[3]);

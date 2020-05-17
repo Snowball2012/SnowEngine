@@ -42,5 +42,8 @@
     <ClCompile Include="..\src\tests\entity_container.cpp">
       <Filter>Source Files\ecs</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\tests\intersections.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
