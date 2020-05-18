@@ -83,6 +83,7 @@ void RenderApp::Update( const GameTimer& gt )
     {
         UpdateCamera();
         UpdateLights();
+		UpdateHighlightedObject();
     }
 }
 
@@ -129,7 +130,7 @@ void RenderApp::UpdateGUI()
         ImGui::NewLine();		
 
         ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
-        ImGui::End();		
+        ImGui::End();
     }
 
     {
@@ -152,6 +153,8 @@ void RenderApp::UpdateGUI()
 			}
 		}
 
+		ImGui::NewLine();
+		ImGui::Checkbox( "Highlight object", &m_highlight_object );
 
         ImGui::NewLine();
         {
@@ -294,6 +297,94 @@ void RenderApp::UpdateLights()
         sun_shadow.num_cascades = MAX_CASCADE_SIZE;
     }
     light_ptr->ModifyShadow() = sun_shadow;
+}
+
+void RenderApp::UpdateHighlightedObject()
+{
+	if ( ! m_highlight_object )
+	{
+		if ( m_highlighted_material.valid() )
+		{
+			if ( auto* material = m_renderer->GetScene().ModifyMaterial( m_highlighted_material ) )
+				material->Modify().albedo_color = m_highlighted_diffuse;
+			m_highlighted_material = MaterialID::nullid;
+		}
+	}
+	else
+	{
+		auto& scene = m_renderer->GetScene();
+		Camera* cam_ptr = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_camera );
+        if ( ! cam_ptr )
+            throw SnowEngineException( "no main camera" );
+
+        const Camera::Data& cam_data = cam_ptr->GetData();
+
+		DirectX::XMVECTOR camera_pos_ws = XMLoadFloat3( &cam_data.pos );
+		camera_pos_ws.m128_f32[3] = 1.0f;
+		DirectX::XMVECTOR camera_dir_ws = XMLoadFloat3( &cam_data.dir );
+		float closest_dist = FLT_MAX;
+		MaterialID closest_material = MaterialID::nullid;
+		for ( const auto& [id, transform, mesh_with_material] : m_renderer->GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
+		{
+			if ( !mesh_with_material.show )
+				continue;
+
+			DirectX::XMVECTOR det;
+			DirectX::XMMATRIX world2local = DirectX::XMMatrixInverse( &det, transform.local2world );
+			DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( camera_pos_ws, world2local );
+			DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( camera_dir_ws, world2local );
+
+			const StaticSubmesh* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
+			if ( ! submesh )
+				continue;
+
+			const StaticMesh* mesh = scene.GetROScene().AllStaticMeshes().try_get( submesh->GetMesh() );
+			if ( ! mesh )
+				continue;
+
+			const auto& vertices = mesh->Vertices();
+			const auto& indices = mesh->Indices();
+
+			for ( size_t i = 0; i < indices.size(); i += 3 )
+			{
+				auto intersection_res = IntersectRayTriangle(
+					&vertices[indices[i]].pos.x,  &vertices[indices[i+1]].pos.x,  &vertices[indices[i+2]].pos.x,
+					camera_pos_local.m128_f32, camera_dir_local.m128_f32);
+
+				if ( intersection_res.HitDetected( std::sqrt(FLT_EPSILON), FLT_EPSILON, FLT_EPSILON ) )
+				{
+					const float distance = intersection_res.coords.m128_f32[2];
+					if ( closest_dist > distance )
+					{
+						closest_dist = distance;
+						closest_material = mesh_with_material.material;
+					}
+				}
+			}
+		}
+
+		if ( closest_material != m_highlighted_material )
+		{
+			if ( m_highlighted_material.valid() )
+			{
+				if ( auto* material = m_renderer->GetScene().ModifyMaterial( m_highlighted_material ) )
+					material->Modify().albedo_color = m_highlighted_diffuse;
+				m_highlighted_material = MaterialID::nullid;
+			}
+
+			m_highlighted_material = closest_material;
+			if ( m_highlighted_material.valid() )
+			{
+				if ( auto* material = m_renderer->GetScene().ModifyMaterial( m_highlighted_material ) )
+				{
+					m_highlighted_diffuse = material->Modify().albedo_color;
+					material->Modify().albedo_color.x = 2.0f;
+					material->Modify().albedo_color.y = 0.1f;
+					material->Modify().albedo_color.z = 2.0f;
+				}
+			}
+		}		
+	}
 }
 
 void RenderApp::ReadKeyboardState( const GameTimer& gt )

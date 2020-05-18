@@ -106,4 +106,6 @@ struct RayTriangleIntersection
 	bool RayEntersTriangle() const { return coords.m128_f32[3] > 0; } // otherwise exits
 };
 
-RayTriangleIntersection IntersectRayTriangle(const float triangle_vertices[9], const float ray_origin[3], const float ray_direction[3]);
+RayTriangleIntersection IntersectRayTriangle(
+	const float v1[3], const float v2[3], const float v3[3],
+	const float ray_origin[3], const float ray_direction[3]);

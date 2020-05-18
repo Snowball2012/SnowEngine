@@ -75,6 +75,11 @@ MaterialID SceneClientView::AddMaterial( const MaterialPBR::TextureIds& textures
     return mat_id;
 }
 
+MaterialPBR* SceneClientView::ModifyMaterial( MaterialID mat ) noexcept
+{
+    return m_scene->TryModifyMaterial( mat );
+}
+
 StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data )
 {
     StaticSubmeshID id = m_scene->AddStaticSubmesh( mesh_id );

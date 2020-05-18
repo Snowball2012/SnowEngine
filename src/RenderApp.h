@@ -35,6 +35,7 @@ private:
     void UpdateGUI();
     void UpdateCamera();
     void UpdateLights();
+	void UpdateHighlightedObject();
 
     // input
     void ReadKeyboardState( const GameTimer& gt );
@@ -116,6 +117,10 @@ private:
     bool m_is_console_opened = true;
     bool m_tilda_was_pressed_last_frame = false;
     ExampleAppConsole m_console;
+
+	bool m_highlight_object = false;
+	MaterialID m_highlighted_material = MaterialID::nullid;
+	DirectX::XMFLOAT4 m_highlighted_diffuse;
 
     // inputs
     std::unique_ptr<DirectX::Keyboard> m_keyboard;

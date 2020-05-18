@@ -21,7 +21,7 @@ BOOST_AUTO_TEST_CASE( ray_triangle_simple )
 		float ray_origin[3] = { 0, 0, -1 };
 		float ray_dir[3] = { 0, 0, 1 };
 
-		auto intersection_result = IntersectRayTriangle( triangle, ray_origin, ray_dir );
+		auto intersection_result = IntersectRayTriangle( triangle, triangle + 3, triangle + 6, ray_origin, ray_dir );
 		float tolerance = std::sqrt( FLT_EPSILON );
 
 		BOOST_TEST( intersection_result.HitDetected( tolerance, tolerance, tolerance ) == true );
@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( ray_triangle_simple )
 		float ray_origin[3] = { 0, 0, -1 };
 		float ray_dir[3] = { 1, 0, 0 };
 
-		auto intersection_result = IntersectRayTriangle( triangle, ray_origin, ray_dir );
+		auto intersection_result = IntersectRayTriangle( triangle, triangle + 3, triangle + 6, ray_origin, ray_dir );
 		float tolerance = std::sqrt( FLT_EPSILON );
 
 		BOOST_TEST( intersection_result.HitDetected( tolerance, tolerance, tolerance ) == false );
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE( ray_triangle_simple )
 		float ray_origin[3] = { 0, 0, -1 };
 		float ray_dir[3] = { 1, 0, 0 };
 
-		auto intersection_result = IntersectRayTriangle( triangle, ray_origin, ray_dir );
+		auto intersection_result = IntersectRayTriangle( triangle, triangle + 3, triangle + 6, ray_origin, ray_dir );
 		float tolerance = std::sqrt( FLT_EPSILON );
 
 		BOOST_TEST( intersection_result.HitDetected( tolerance, tolerance, tolerance ) == false );
