@@ -101,9 +101,14 @@ struct RayTriangleIntersection
 			&& coords.m128_f32[0] >= -triangle_tolerance
 			&& coords.m128_f32[1] >= -triangle_tolerance
 			&& coords.m128_f32[0] <= 1.0f + triangle_tolerance
-			&& coords.m128_f32[1] <= 1.0f + triangle_tolerance;
+			&& coords.m128_f32[1] <= 1.0f + triangle_tolerance
+			&& ( coords.m128_f32[0] + coords.m128_f32[1] ) <= 1.0f + triangle_tolerance;
 	}
 	bool RayEntersTriangle() const { return coords.m128_f32[3] > 0; } // otherwise exits
+	bool Validate(
+		const float v1[3], const float v2[3], const float v3[3],
+		const float ray_origin[3], const float ray_direction[3],
+		float tolerance ) const; // for convinient testing
 };
 
 RayTriangleIntersection IntersectRayTriangle(

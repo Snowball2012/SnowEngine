@@ -145,3 +145,34 @@ RayTriangleIntersection IntersectRayTriangle(
 
 	return res;
 }
+
+bool RayTriangleIntersection::Validate(
+	const float v1[3], const float v2[3], const float v3[3],
+	const float ray_origin[3], const float ray_direction[3],
+	float tolerance ) const // for convinient testing
+{
+	if ( ! HitDetected( tolerance, tolerance, tolerance ) )
+		return true;
+
+	if ( coords.m128_f32[0] + coords.m128_f32[1] > 1.0f + tolerance )
+		return false;
+
+	float w = 1.0f - (coords.m128_f32[0] + coords.m128_f32[1]);
+
+	XMVECTOR triangle_pt = XMLoadFloat3( &XMFLOAT3( v1 ) );
+	triangle_pt = XMVectorMultiply( triangle_pt, XMVectorReplicate( coords.m128_f32[0] ) );
+	triangle_pt = XMVectorMultiplyAdd( XMLoadFloat3( &XMFLOAT3( v2 ) ), XMVectorReplicate( coords.m128_f32[1] ), triangle_pt );
+	triangle_pt = XMVectorMultiplyAdd( XMLoadFloat3( &XMFLOAT3( v3 ) ), XMVectorReplicate( w ), triangle_pt );
+
+	
+	XMVECTOR ray_pt = XMVectorMultiplyAdd(
+		XMLoadFloat3( &XMFLOAT3( ray_direction ) ),
+		XMVectorReplicate( coords.m128_f32[2] ),
+		XMLoadFloat3( &XMFLOAT3( ray_origin ) ) );
+
+	XMVECTOR diff = XMVectorSubtract( triangle_pt, ray_pt );
+
+	return std::abs( diff.m128_f32[0] ) <= tolerance
+		&& std::abs( diff.m128_f32[1] ) <= tolerance
+		&& std::abs( diff.m128_f32[2] ) <= tolerance;
+}
