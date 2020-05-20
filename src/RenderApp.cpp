@@ -328,6 +328,7 @@ void RenderApp::UpdateHighlightedObject()
 	}
 	else
 	{
+		OPTICK_EVENT();
 		auto& scene = m_renderer->GetScene();
 		Camera* cam_ptr = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_camera );
         if ( ! cam_ptr )
@@ -357,6 +358,10 @@ void RenderApp::UpdateHighlightedObject()
 			if ( ! submesh )
 				continue;
 
+			float ray_to_box_dist;
+			if ( ! submesh->Box().Intersects(camera_pos_local, DirectX::XMVector3Normalize( camera_dir_local ), ray_to_box_dist ) )
+				continue;
+
 			const StaticMesh* mesh = scene.GetROScene().AllStaticMeshes().try_get( submesh->GetMesh() );
 			if ( ! mesh )
 				continue;
@@ -369,12 +374,6 @@ void RenderApp::UpdateHighlightedObject()
 				auto intersection_res = IntersectRayTriangle(
 					&vertices[indices[i]].pos.x,  &vertices[indices[i+1]].pos.x,  &vertices[indices[i+2]].pos.x,
 					camera_pos_local.m128_f32, camera_dir_local.m128_f32);
-
-				if ( !SE_ENSURE( intersection_res.Validate(
-					&vertices[indices[i]].pos.x,  &vertices[indices[i+1]].pos.x,  &vertices[indices[i+2]].pos.x,
-					camera_pos_local.m128_f32, camera_dir_local.m128_f32,
-					1.e-1f ) ) )
-					MessageBoxA( NULL, "Bad ray!", "Bad ray", MB_OK );
 
 				if ( intersection_res.HitDetected( std::sqrt(FLT_EPSILON), FLT_EPSILON, FLT_EPSILON ) )
 				{
