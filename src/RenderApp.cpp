@@ -72,6 +72,7 @@ void RenderApp::Update( const GameTimer& gt )
             m_cur_state = State::Main;
             m_loading_screen.Disable( m_renderer->GetScene(), *m_renderer );
             InitScene( m_is_scene_loaded.get() );
+			InitHighlightCube();
         }
     }
 
@@ -301,6 +302,19 @@ void RenderApp::UpdateLights()
 
 void RenderApp::UpdateHighlightedObject()
 {
+	DrawableMesh* cube_mesh = nullptr;
+	Transform* cube_tf = nullptr;
+	if ( m_highlight_cube.valid() )
+	{
+		cube_mesh = m_renderer->GetScene().GetWorld().GetComponent<DrawableMesh>( m_highlight_cube );
+		if ( ! SE_ENSURE( cube_mesh ) )
+			throw SnowEngineException( "no drawable on highlight cube" );
+
+		cube_tf = m_renderer->GetScene().GetWorld().GetComponent<Transform>( m_highlight_cube );
+		if ( ! SE_ENSURE( cube_mesh ) )
+			throw SnowEngineException( "no transform on highlight cube" );
+	}
+
 	if ( ! m_highlight_object )
 	{
 		if ( m_highlighted_material.valid() )
@@ -309,6 +323,8 @@ void RenderApp::UpdateHighlightedObject()
 				material->Modify().albedo_color = m_highlighted_diffuse;
 			m_highlighted_material = MaterialID::nullid;
 		}
+		if ( cube_mesh )
+			cube_mesh->show = false;
 	}
 	else
 	{
@@ -327,6 +343,9 @@ void RenderApp::UpdateHighlightedObject()
 		for ( const auto& [id, transform, mesh_with_material] : m_renderer->GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
 		{
 			if ( !mesh_with_material.show )
+				continue;
+
+			if ( id == m_highlight_cube )
 				continue;
 
 			DirectX::XMVECTOR det;
@@ -367,6 +386,22 @@ void RenderApp::UpdateHighlightedObject()
 					}
 				}
 			}
+		}
+
+		if ( closest_material.valid() )
+		{
+			if ( cube_mesh )
+				cube_mesh->show = true;
+			if ( cube_tf )
+				cube_tf->local2world =
+					DirectX::XMMatrixScaling( 0.1f, 0.1f, 0.1f )
+					* DirectX::XMMatrixTranslationFromVector(
+						DirectX::XMVectorMultiplyAdd( camera_dir_ws, DirectX::XMVectorReplicate( closest_dist ), camera_pos_ws ) );
+		}
+		else
+		{
+			if ( cube_mesh )
+				cube_mesh->show = false;
 		}
 
 		if ( closest_material != m_highlighted_material )
@@ -530,6 +565,39 @@ void RenderApp::InitScene( ImportedScene imported_scene )
 
 	m_dbg_frustum_camera = scene.GetWorld().CreateEntity();
 	Camera& dbg_cam_component = scene.GetWorld().AddComponent<Camera>( m_dbg_frustum_camera );
+}
+
+
+bool RenderApp::InitHighlightCube()
+{
+	if ( !SE_ENSURE( m_renderer ) )
+		return false;
+
+	auto& scene = m_renderer->GetScene();
+	auto& world = scene.GetWorld();
+
+	
+    TextureID loading_cube_texture = scene.LoadStaticTexture( "resources/textures/loading_box_base.dds" );
+    MaterialID cube_material_id = scene.AddMaterial( MaterialPBR::TextureIds{ loading_cube_texture, m_ph_normal_texture, m_ph_specular_texture },
+                                                     DirectX::XMFLOAT3( 0.3f, 0.3f, 0.3f ), DirectX::XMFLOAT3( 0.5f, 1, 0.5f ), Identity4x4 );
+
+    std::vector<Vertex> cube_vertices;
+    std::vector<uint32_t> cube_indices;
+    {
+        cube_vertices.reserve( GeomGeneration::CubeVertices.size() );
+        cube_vertices.assign( GeomGeneration::CubeVertices.cbegin(), GeomGeneration::CubeVertices.cend() );
+        cube_indices.reserve( GeomGeneration::CubeIndices.size() );
+        cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
+    }
+    StaticMeshID mesh_id = scene.LoadStaticMesh( "highlight_cube", std::move( cube_vertices ), std::move( cube_indices ) );
+    StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
+
+    m_highlight_cube = world.CreateEntity();
+    world.AddComponent<Transform>( m_highlight_cube, Transform{ DirectX::XMMatrixIdentity() } );
+    auto& drawable = world.AddComponent<DrawableMesh>( m_highlight_cube, DrawableMesh{ submesh_id, cube_material_id } );
+	drawable.show = false;
+
+	return true;
 }
 
 

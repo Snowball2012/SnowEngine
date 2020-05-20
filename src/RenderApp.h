@@ -51,6 +51,7 @@ private:
     // scene loading
     ImportedScene LoadScene( const std::string& filename );
     void InitScene( ImportedScene scene );
+	bool InitHighlightCube();
 
     void BuildGeometry( ImportedScene& ext_scene );
     void BuildMaterials( ImportedScene& ext_scene );
@@ -121,6 +122,7 @@ private:
 	bool m_highlight_object = false;
 	MaterialID m_highlighted_material = MaterialID::nullid;
 	DirectX::XMFLOAT4 m_highlighted_diffuse;
+	World::Entity m_highlight_cube = World::Entity::nullid;
 
     // inputs
     std::unique_ptr<DirectX::Keyboard> m_keyboard;
