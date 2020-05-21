@@ -96,7 +96,7 @@ bool Application::Initialize()
 	if ( !InitSceneAssets( m_renderer->GetScene(), m_assets ) )
 		return false;
 	
-	if ( !InitSceneObjects( m_assets, m_renderer->GetScene(), m_sceneobjects ) )
+	if ( !InitSceneObjects( m_assets, m_renderer->GetScene(), m_sceneobjects, m_camera_controller ) )
 		return false;
 
     m_renderer->SetMainCamera( m_sceneobjects.main_camera );
@@ -311,6 +311,110 @@ void Application::OnResize()
 }
 
 
+void Application::Update( const GameTimer& timer )
+{
+	if ( ! SE_ENSURE( m_renderer ) )
+        throw SnowEngineException( "no renderer" );
+
+	auto& scene = m_renderer->GetScene();
+	Camera* cam_ptr = scene.GetWorld().GetComponent<Camera>( m_sceneobjects.main_camera );
+    if ( ! cam_ptr )
+        throw SnowEngineException( "no main camera" );
+
+	if ( m_orbit_change_request && ! m_orbit_mode )
+	{
+		// create a ray from camera and trace it into the scene
+		DirectX::XMVECTOR camera_ray_local = DirectX::XMVectorZero();
+		const float near_plane_halfheight = std::tan( cam_ptr->GetData().fov_y / 2.0f ) * cam_ptr->GetData().near_plane;
+		const float near_plane_halfwidth = near_plane_halfheight * cam_ptr->GetData().aspect_ratio;
+		camera_ray_local.m128_f32[0] = 0;//( m_orbit_change_request->first * 2.0f - 1.0f ) * near_plane_halfwidth;
+		camera_ray_local.m128_f32[1] = 0;//( 2.0f - m_orbit_change_request->second * 2.0f ) * near_plane_halfheight;
+		camera_ray_local.m128_f32[2] = cam_ptr->GetData().near_plane;
+
+		DirectX::XMMATRIX cam_tf = DirectX::XMMatrixLookToLH(
+			DirectX::XMLoadFloat3( &cam_ptr->GetData().pos ),
+			DirectX::XMLoadFloat3( &cam_ptr->GetData().dir ),
+			DirectX::XMLoadFloat3( &cam_ptr->GetData().up ) ); // transpose?
+
+		cam_tf = DirectX::XMMatrixTranspose( cam_tf );
+
+		DirectX::XMVECTOR camera_ray_dir_ws = DirectX::XMVector4Transform( camera_ray_local, cam_tf );
+		DirectX::XMVECTOR camera_ray_pos_ws = DirectX::XMLoadFloat3( &cam_ptr->GetData().pos );
+		camera_ray_pos_ws.m128_f32[3] = 1.0f;
+
+		float closest_dist = FLT_MAX;
+		bool pt_found = false;
+		for ( const auto& [id, transform, mesh_with_material] : m_renderer->GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
+		{
+			if ( !mesh_with_material.show )
+				continue;
+
+			DirectX::XMVECTOR det;
+			DirectX::XMMATRIX world2local = DirectX::XMMatrixInverse( &det, transform.local2world );
+			DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( camera_ray_pos_ws, world2local );
+			DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( camera_ray_dir_ws, world2local );
+
+			const StaticSubmesh* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
+			if ( ! submesh )
+				continue;
+
+			float ray_to_box_dist;
+			if ( ! submesh->Box().Intersects(camera_pos_local, DirectX::XMVector3Normalize( camera_dir_local ), ray_to_box_dist ) )
+				continue;
+
+			const StaticMesh* mesh = scene.GetROScene().AllStaticMeshes().try_get( submesh->GetMesh() );
+			if ( ! mesh )
+				continue;
+
+			const auto& vertices = mesh->Vertices();
+			const auto& indices = mesh->Indices();
+
+			for ( size_t i = 0; i < indices.size(); i += 3 )
+			{
+				auto intersection_res = IntersectRayTriangle(
+					&vertices[indices[i]].pos.x,  &vertices[indices[i+1]].pos.x,  &vertices[indices[i+2]].pos.x,
+					camera_pos_local.m128_f32, camera_dir_local.m128_f32);
+
+				if ( intersection_res.HitDetected( std::sqrt(FLT_EPSILON), FLT_EPSILON, FLT_EPSILON ) )
+				{
+					const float distance = intersection_res.coords.m128_f32[2];
+					if ( closest_dist > distance )
+					{
+						closest_dist = distance;
+						pt_found = true;
+					}
+				}
+			}
+		}
+
+		if ( pt_found )
+		{
+			DirectX::XMVECTOR orbit_pt = DirectX::XMVectorMultiplyAdd(
+				camera_ray_dir_ws, DirectX::XMVectorReplicate( closest_dist ),
+				camera_ray_pos_ws );
+			m_camera_controller.SetOrbitPoint( orbit_pt.m128_f32 );
+			m_orbit_mode = true;
+		}
+
+	}
+	else
+	{
+		m_camera_controller.Rotate( m_pending_rotation[0], m_pending_rotation[1] );
+		m_camera_controller.Zoom( m_pending_zoom );
+	}
+	
+	m_orbit_change_request.reset();
+	m_pending_zoom = 0;
+	m_pending_rotation[0] = 0;
+	m_pending_rotation[1] = 0;
+
+    Camera::Data& cam_data = cam_ptr->ModifyData();
+	DirectX::XMStoreFloat3( &cam_data.pos, m_camera_controller.GetPosition() );
+	DirectX::XMStoreFloat3( &cam_data.dir, m_camera_controller.GetEyeDir() );
+	DirectX::XMStoreFloat3( &cam_data.up, m_camera_controller.GetUp() );
+}
+
+
 void Application::Draw( const GameTimer& timer )
 {
 	if ( ! m_renderer )
@@ -321,6 +425,41 @@ void Application::Draw( const GameTimer& timer )
     ImGui::NewFrame();
     ImGui::Render();
 	m_renderer->Draw( );
+}
+
+
+void Application::OnMouseDown(WPARAM btnState, int x, int y)
+{
+	if ( ( btnState & MK_LBUTTON ) && !m_orbit_mode )
+	{
+		m_orbit_change_request = std::make_pair(
+			float( x ) / float( m_main_width ),
+			float( y ) / float( m_main_height ) );
+
+		m_last_mouse_pos[0] = x;
+		m_last_mouse_pos[1] = y;
+
+	}
+	::SetCapture( m_main_wnd );
+}
+
+
+void Application::OnMouseUp(WPARAM btnState, int x, int y)
+{
+	m_orbit_mode = false;
+	::ReleaseCapture();
+}
+
+
+void Application::OnMouseMove(WPARAM btnState, int x, int y)
+{
+	if ( ( btnState & MK_LBUTTON ) && m_orbit_mode )
+	{
+		m_pending_rotation[0] += float( x - m_last_mouse_pos[0] );
+		m_pending_rotation[1] += float( y - m_last_mouse_pos[1] );
+		m_last_mouse_pos[0] = x;
+		m_last_mouse_pos[1] = y;
+	}
 }
 
 
@@ -395,7 +534,7 @@ bool Application::InitSceneAssets( SceneClientView& scene, SceneAssets& assets )
 }
 
 
-bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& scene, SceneObjects& objects ) const
+bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& scene, SceneObjects& objects, OrbitCameraController& camera_controller ) const
 {
 	// Camera
     Camera::Data camera_data;
@@ -407,6 +546,12 @@ bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& 
 	camera_data.fov_y = DirectX::XM_PIDIV4;
 	camera_data.pos = DirectX::XMFLOAT3( 0, 0, -5 );
 	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
+
+	camera_controller.SetAngleSpeed( 1.e-2f );
+	camera_controller.SetZoomSpeed( 1.2f );
+	camera_controller.SetEye( &camera_data.dir.x );
+	camera_controller.SetPosition( &camera_data.pos.x );
+	camera_controller.SetUp( &camera_data.up.x );
 
 	objects.main_camera = scene.GetWorld().CreateEntity();
 	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( objects.main_camera );
