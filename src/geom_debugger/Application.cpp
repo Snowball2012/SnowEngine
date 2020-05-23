@@ -327,8 +327,8 @@ void Application::Update( const GameTimer& timer )
 		DirectX::XMVECTOR camera_ray_local = DirectX::XMVectorZero();
 		const float near_plane_halfheight = std::tan( cam_ptr->GetData().fov_y / 2.0f ) * cam_ptr->GetData().near_plane;
 		const float near_plane_halfwidth = near_plane_halfheight * cam_ptr->GetData().aspect_ratio;
-		camera_ray_local.m128_f32[0] = 0;//( m_orbit_change_request->first * 2.0f - 1.0f ) * near_plane_halfwidth;
-		camera_ray_local.m128_f32[1] = 0;//( 2.0f - m_orbit_change_request->second * 2.0f ) * near_plane_halfheight;
+		camera_ray_local.m128_f32[0] = ( m_orbit_change_request->first * 2.0f - 1.0f ) * near_plane_halfwidth;
+		camera_ray_local.m128_f32[1] = ( 1.0f - m_orbit_change_request->second * 2.0f ) * near_plane_halfheight;
 		camera_ray_local.m128_f32[2] = cam_ptr->GetData().near_plane;
 
 		DirectX::XMMATRIX cam_tf = DirectX::XMMatrixLookToLH(
@@ -397,7 +397,7 @@ void Application::Update( const GameTimer& timer )
 		}
 
 	}
-	else
+	else if ( m_orbit_mode )
 	{
 		m_camera_controller.Rotate( m_pending_rotation[0], m_pending_rotation[1] );
 		m_camera_controller.Zoom( m_pending_zoom );
