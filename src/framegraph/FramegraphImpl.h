@@ -228,6 +228,8 @@ namespace details
                 return m_need_to_rebuild_framegraph;
             }
 
+            using RuntimeNodeInfo = framegraph::RuntimeNodeInfo<FramegraphInstance>;
+
         private:
 
             using FramegraphResources = UniqueTuple<
@@ -237,7 +239,6 @@ namespace details
             >;
 
             using ResourceUsers = framegraph::ResourceUsers<FramegraphInstance>;
-            using RuntimeNodeInfo = framegraph::RuntimeNodeInfo<FramegraphInstance>;
             using BaseNode = framegraph::BaseNode<FramegraphInstance>;
 
             using NodeStorage = std::tuple<OptionalFgNode<Nodes<FramegraphInstance>>...>;

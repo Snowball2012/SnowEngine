@@ -6,7 +6,7 @@
 
 
 template<typename T, template <typename...> typename base_container>
-const typename packed_freelist<T, base_container>::id packed_freelist<T, base_container>::id::nullid = id{ std::numeric_limits<uint32_t>::max(), 0 };
+const typename packed_freelist<T, base_container>::id packed_freelist<T, base_container>::id::nullid{ std::numeric_limits<uint32_t>::max(), 0 };
 
 
 template<typename T, template <typename...> typename base_container>
