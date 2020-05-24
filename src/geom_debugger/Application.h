@@ -73,6 +73,7 @@ private:
 	void OnMouseDown( WPARAM btnState, int x, int y );
 	void OnMouseUp( WPARAM btnState, int x, int y );
 	void OnMouseMove( WPARAM btnState, int x, int y );
+	void OnMouseWheel( int scroll_amount, WPARAM btnState, int x, int y );
 
 	bool InitSceneAssets( SceneClientView& renderer_scene, SceneAssets& assets ) const;
 	bool InitSceneObjects( const SceneAssets& assets, SceneClientView& renderer_scene, SceneObjects& objects, OrbitCameraController& camera_controller ) const;

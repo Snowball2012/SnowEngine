@@ -226,6 +226,10 @@ LRESULT Application::MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_MOUSEMOVE:
             OnMouseMove( wParam, GET_X_LPARAM( lParam ), GET_Y_LPARAM( lParam ) );
             return 0;
+        case WM_MOUSEWHEEL:
+            OnMouseWheel( GET_WHEEL_DELTA_WPARAM(wParam), GET_KEYSTATE_WPARAM(wParam), GET_X_LPARAM( lParam ), GET_Y_LPARAM( lParam ) );
+            return 0;
+
     }
 
     return DefWindowProc( hwnd, msg, wParam, lParam );
@@ -455,11 +459,19 @@ void Application::OnMouseMove(WPARAM btnState, int x, int y)
 {
 	if ( ( btnState & MK_LBUTTON ) && m_orbit_mode )
 	{
-		m_pending_rotation[0] += float( x - m_last_mouse_pos[0] );
-		m_pending_rotation[1] += float( y - m_last_mouse_pos[1] );
+		m_pending_rotation[0] -= float( x - m_last_mouse_pos[0] );
+		m_pending_rotation[1] -= float( y - m_last_mouse_pos[1] );
 		m_last_mouse_pos[0] = x;
 		m_last_mouse_pos[1] = y;
 	}
+}
+
+void Application::OnMouseWheel( int scroll_amount, WPARAM btnState, int x, int y )
+{
+	if ( m_orbit_mode )
+    {
+        m_pending_zoom -= float( scroll_amount ) / float( 120 );
+    }
 }
 
 

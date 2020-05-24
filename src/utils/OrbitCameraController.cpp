@@ -11,11 +11,8 @@ void OrbitCameraController::Rotate(float yaw, float pitch)
 	{
 		m_cached_orbit.emplace();
 
-		DirectX::XMVECTOR world2local_quat = DirectX::XMVector3Cross( m_eye, DirectX::XMVectorSet( 0, 0, 1, 0 ) );
-		world2local_quat.m128_f32[3] = m_eye.m128_f32[2] + 1.0f;
-		world2local_quat = DirectX::XMQuaternionNormalize( world2local_quat );
-
-		m_cached_orbit->orbit_to_pos_cs = DirectX::XMVector3Rotate( orbit_to_pos, world2local_quat );
+		DirectX::XMMATRIX world2local_mat = DirectX::XMMatrixLookToLH( DirectX::XMVectorZero(), m_eye, m_up );
+		m_cached_orbit->orbit_to_pos_cs = DirectX::XMVector3Transform( orbit_to_pos, world2local_mat );
 	}
 
 	const DirectX::XMVECTOR eye_dot_up = DirectX::XMVector3Dot( m_eye, m_up );
@@ -44,6 +41,9 @@ void OrbitCameraController::Zoom( float units )
 	DirectX::XMVECTOR orbit_to_pos = DirectX::XMVectorSubtract( m_pos, m_orbit_center );
 
 	float increase = std::powf( m_zoom_per_unit, units );
+
+	if ( m_cached_orbit )
+		m_cached_orbit->orbit_to_pos_cs = DirectX::XMVectorMultiply( m_cached_orbit->orbit_to_pos_cs, DirectX::XMVectorReplicate( increase ) );
 
 	m_pos = DirectX::XMVectorMultiplyAdd( orbit_to_pos, DirectX::XMVectorReplicate( increase ), m_orbit_center );
 }
