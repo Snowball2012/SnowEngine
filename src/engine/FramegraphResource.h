@@ -100,7 +100,7 @@ struct HBAOSettings
 
 struct SDRBuffer : TrackedResource
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+    D3D12_GPU_DESCRIPTOR_HANDLE uav;
     D3D12_VIEWPORT viewport;
     D3D12_RECT scissor_rect;
 };

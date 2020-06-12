@@ -164,7 +164,8 @@ bool DynamicTexture::RecreateTexture(
     }
     if ( ! ( m_views_to_create.srv_cumulative
              || m_views_to_create.srv_main
-             || m_views_to_create.srv_per_mip ) )
+             || m_views_to_create.srv_per_mip )
+        && (flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) )
     {
         flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
     }

@@ -70,7 +70,7 @@ void Renderer::InitFramegraph()
 
     m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->GetFormat(), *m_device );
     m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
-    m_framegraph.ConstructAndEnableNode<ToneMapNode>( m_back_buffer_format, *m_device );
+    m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device );
     m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device );
     m_framegraph.ConstructAndEnableNode<HDRDownscaleNode>( m_hdr_format, *m_device );
 
@@ -129,6 +129,7 @@ void Renderer::CreateTransientResources()
     create_tex( L"blurred ssao", m_ssao_blurred, m_ssao_format, false, true, false, true, false, false );
     create_tex( L"transposed ssao", m_ssao_blurred_transposed, m_ssao_format, false, true, false, true, false, false );
     create_tex( L"depth stencil buffer", m_depth_stencil_buffer, m_depth_stencil_format_resource, false, true, false, false, false, true );
+    create_tex( L"sdr buffer", m_sdr_buffer, m_sdr_format, false, false, false, true, false, false );
 
     ResizeTransientResources();
 }
@@ -148,6 +149,7 @@ void Renderer::ResizeTransientResources()
     resize_tex( *m_ssao_blurred, m_resolution_width, m_resolution_height );
     resize_tex( *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width );
     resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height );
+    resize_tex( *m_sdr_buffer, m_resolution_width, m_resolution_height );
     
 }
 
@@ -227,7 +229,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     ID3D12GraphicsCommandList* list_iface = cmd_list.GetInterface();
 
-    constexpr uint32_t nbarriers = 9;
+    constexpr uint32_t nbarriers = 11;
     CD3DX12_RESOURCE_BARRIER rtv_barriers[nbarriers];
     rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_backbuffer->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
     rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_ambient->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -246,9 +248,28 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
             throw SnowEngineException( "missing resource" );
         rtv_barriers[7] = CD3DX12_RESOURCE_BARRIER::Transition( pssm_storage->res, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE );
     }
-    rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->GetResource(), D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+    rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->GetResource(),  D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
+    rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( m_sdr_buffer->GetResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
 
-    list_iface->ResourceBarrier( nbarriers, rtv_barriers );
+    
+    const bool copy_sdr_to_target = !frame_ctx.render_target.uav.valid();
+    const D3D12_RESOURCE_STATES target_state_src = frame_ctx.render_target.current_state;
+    D3D12_RESOURCE_STATES target_state_dst = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    if (copy_sdr_to_target)
+    {
+        target_state_dst = D3D12_RESOURCE_STATE_COPY_DEST;
+    }
+
+    if ( target_state_src != target_state_dst )
+    {
+        rtv_barriers[10] = CD3DX12_RESOURCE_BARRIER::Transition( frame_ctx.render_target.resource, target_state_src, target_state_dst );
+        list_iface->ResourceBarrier( nbarriers, rtv_barriers );
+    }
+    else
+    {
+        list_iface->ResourceBarrier( nbarriers - 1, rtv_barriers );
+    }
+
     ID3D12DescriptorHeap* heaps[] = { m_descriptor_tables->CurrentGPUHeap().Get() };
     list_iface->SetDescriptorHeaps( 1, heaps );
 
@@ -320,13 +341,6 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         ssao_blurred_texture_horizontal.srv = GetGPUHandle( *m_ssao_blurred_transposed->GetSrvMain(), 0 );
         m_framegraph.SetRes( ssao_blurred_texture_horizontal );
 
-
-        TonemapNodeSettings tm_settings;
-        tm_settings.data.blend_luminance = false;
-        tm_settings.data.lower_luminance_bound = m_tonemap_settings.min_luminance;
-        tm_settings.data.upper_luminance_bound = m_tonemap_settings.max_luminance;
-        m_framegraph.SetRes( tm_settings );
-
         ::HBAOSettings hbao_settings;
         hbao_settings.data.render_target_size = DirectX::XMFLOAT2( screen.viewport.Width, screen.viewport.Height );
         hbao_settings.data.angle_bias = m_hbao_settings.angle_bias;
@@ -335,17 +349,38 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         m_framegraph.SetRes( hbao_settings );
 
         SDRBuffer backbuffer;
+        if (!copy_sdr_to_target)
         {
             const auto& target = frame_ctx.render_target;
             backbuffer.res = target.resource;
-            backbuffer.rtv = target.rtv;
+            backbuffer.uav = GetGPUHandle( target.uav );
             backbuffer.viewport = target.viewport;
             backbuffer.scissor_rect = target.scissor_rect;
+        }
+        else
+        {
+            backbuffer.res = m_sdr_buffer->GetResource();
+            backbuffer.uav = GetGPUHandle( *m_sdr_buffer->GetUavPerMip(), 0 );
+            backbuffer.viewport = CD3DX12_VIEWPORT( m_sdr_buffer->GetResource() );
+            backbuffer.scissor_rect = CD3DX12_RECT( 0, 0, backbuffer.viewport.Width, backbuffer.viewport.Height );
         }
         m_framegraph.SetRes( backbuffer );
     }
 
     m_framegraph.Run( *list_iface );
+
+    if ( copy_sdr_to_target )
+    {
+        rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_sdr_buffer->GetResource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE );
+        list_iface->ResourceBarrier( 1, rtv_barriers );
+        list_iface->CopyResource( frame_ctx.render_target.resource, m_sdr_buffer->GetResource() );
+    }
+
+    if ( target_state_src != target_state_dst )
+    {
+        rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( frame_ctx.render_target.resource, target_state_dst, target_state_src );
+        list_iface->ResourceBarrier( 1, rtv_barriers );
+    }
 
     ThrowIfFailedH( list_iface->Close() );
 
@@ -387,8 +422,6 @@ void Renderer::SetTargetFormat( RenderMode mode, DXGI_FORMAT format )
 
     if ( m_back_buffer_format != DefaultBackbufferFormat )
         throw SnowEngineException( "unsupported rtv format" );
-
-    m_framegraph.ConstructNode<ToneMapNode>( m_back_buffer_format, *m_device );
 }
 
 

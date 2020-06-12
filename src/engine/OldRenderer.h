@@ -93,6 +93,7 @@ private:
     int m_curr_back_buff = 0;
     ComPtr<ID3D12Resource> m_swap_chain_buffer[SwapChainBufferCount] = { nullptr };
     std::optional<Descriptor> m_back_buffer_rtv[SwapChainBufferCount] = { std::nullopt };
+
     
     DXGI_FORMAT m_back_buffer_format = DXGI_FORMAT_R8G8B8A8_UNORM;
     D3D12_VIEWPORT m_screen_viewport;

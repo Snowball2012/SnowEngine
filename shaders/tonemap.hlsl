@@ -1,28 +1,29 @@
 #include "lib/colorspaces.hlsli"
 #include "lib/math_utils.hlsli"
 
-cbuffer TonemapSettigns : register(b0)
+cbuffer TonemapSettigns : register( b0 )
 {
-    float max_luminance;
-    float min_luminance;
-    bool blend_luminance;
+    float2 inv_frame_size; // 1 / texture size in pixels
+    float frame_mip_levels;
 }
 
-SamplerState linear_clamp_sampler : register(s0);
-SamplerState point_clamp_sampler : register(s1);
+SamplerState linear_clamp_sampler : register( s0 );
 
-Texture2D frame : register(t0);
+Texture2D frame : register( t0 );
 
-float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
+RWTexture2D<float4> output : register( u0 );
+
+static const int GROUP_SIZE_X = 8;
+static const int GROUP_SIZE_Y = 8;
+
+[numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
+void main( uint3 thread : SV_DispatchThreadID )
 {
-    float2 uv = ((ndc.xy + (float2) 1) / 2);
-    uv.y = 1 - uv.y;
-    int2 coord2d = int2(coord.x, coord.y);
-    float4 cur_radiance = frame.Load(int3(coord2d, 0));
-    uint MipLevel; float Width; float Height; float NumberOfLevels;
-    frame.GetDimensions( 0, Width, Height, NumberOfLevels );
+    float4 cur_radiance = frame.Load(int3(thread.xy, 0));
+    
+    float2 uv = ( float2( thread.xy ) + float2( 0.5f, 0.5f ) ) * inv_frame_size; // for bilinear filtering
 
-    float avg_mip = NumberOfLevels - 3;
+    float avg_mip = frame_mip_levels - 3;
     float4 avg_radiance[9];
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,0) );
     avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,0) );
@@ -33,6 +34,7 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
     avg_radiance[6] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,-1) );
     avg_radiance[7] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,1) );
     avg_radiance[8] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,-1) );
+    
     [unroll]
     float4 avg_radiance_gauss = 0;
     for ( int i = 0; i < 9; ++i )
@@ -40,17 +42,9 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
         avg_radiance_gauss += log( avg_radiance[i] + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[i];
     }
     avg_radiance_gauss = exp( avg_radiance_gauss );
-
-
-    //float4 avg_radiance = frame.SampleLevel( linear_clamp_sampler, uv.xy, NumberOfLevels - 3 );
     
     float cur_luminance = photopic_luminance( cur_radiance.rgb );
     float avg_luminance = photopic_luminance( avg_radiance_gauss.rgb );
-
-    //const float max_average_luminance = 2.0e+2;
-    //const float min_average_luminance = 1.0e-1;
-    //
-    //avg_luminance = clamp(avg_luminance, min_average_luminance, max_average_luminance);
 
     const float display_max_luminance = 350.0f; // nits
 
@@ -58,5 +52,5 @@ float4 main(float4 coord : SV_POSITION, float4 ndc : NDCCOORD) : SV_TARGET
     float min_local_luminance = avg_luminance / 31.6f; // -15 dB
     float linear_brightness = saturate( (cur_luminance - min_local_luminance) / (max_local_luminance - min_local_luminance) );
 
-    return float4( radiance2gamma_rgb( cur_radiance.rgb, linear_brightness ), cur_radiance.a );
+    output[thread.xy] = float4( radiance2gamma_rgb( cur_radiance.rgb, linear_brightness ), cur_radiance.a );
 }

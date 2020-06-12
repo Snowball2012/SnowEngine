@@ -60,7 +60,9 @@ public:
     struct Target
     {
         ID3D12Resource* resource;
+        D3D12_RESOURCE_STATES current_state;
         D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+        DescriptorTableID uav;
         D3D12_VIEWPORT viewport;
         D3D12_RECT scissor_rect;
     };
@@ -162,6 +164,7 @@ private:
     DXGI_FORMAT m_hdr_format = DXGI_FORMAT_R16G16B16A16_FLOAT;
     DXGI_FORMAT m_normals_format = DXGI_FORMAT_R16G16_FLOAT;
     DXGI_FORMAT m_ssao_format = DXGI_FORMAT_R16_FLOAT;
+    DXGI_FORMAT m_sdr_format = DXGI_FORMAT_R8G8B8A8_UNORM;
     int32_t m_shadow_bias = 5000;
 
     std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
@@ -171,6 +174,7 @@ private:
     std::unique_ptr<DynamicTexture> m_ssao = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao_blurred = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed = nullptr;
+    std::unique_ptr<DynamicTexture> m_sdr_buffer = nullptr;
 
     StagingDescriptorHeap m_dsv_heap;
     StagingDescriptorHeap m_rtv_heap;

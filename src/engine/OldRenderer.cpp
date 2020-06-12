@@ -31,12 +31,14 @@ using namespace DirectX;
 
 OldRenderer::OldRenderer( HWND main_hwnd, uint32_t screen_width, uint32_t screen_height )
     : m_main_hwnd( main_hwnd ), m_client_width( screen_width ), m_client_height( screen_height )
-{}
+{
+}
 
 OldRenderer::~OldRenderer()
 {
     for ( auto& desc : m_back_buffer_rtv )
         desc.reset();
+
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
@@ -183,6 +185,8 @@ void OldRenderer::Draw()
     frame_ctx.cmd_list_pool = m_cmd_lists.get();
     frame_ctx.render_target.resource = CurrentBackBuffer();
     frame_ctx.render_target.rtv = CurrentBackBufferView();
+    frame_ctx.render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    frame_ctx.render_target.uav = DescriptorTableID::nullid;
     frame_ctx.render_target.viewport = m_screen_viewport;
     frame_ctx.render_target.scissor_rect = m_scissor_rect;
     frame_ctx.resources = &m_cur_frame_resource->second;
