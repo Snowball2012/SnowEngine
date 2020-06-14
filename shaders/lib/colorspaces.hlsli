@@ -41,7 +41,7 @@ float3 linear2gamma_std( float3 val, float gamma )
 float photopic_luminance(float3 radiance)
 {
     // rgb radiance in watt/(sr*m^2)
-    return 683.0f * (0.2973f * radiance.r + 1.0f * radiance.g + 0.1010f * radiance.b);
+    return dot( 683.0f * float3( 0.2973f, 1.0f, 0.1010f ), radiance.rgb );
 }
 
 

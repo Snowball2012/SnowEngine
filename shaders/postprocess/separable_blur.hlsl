@@ -24,8 +24,8 @@ float linear_depth( float hyperbolic_z )
 static const int BLUR_RADIUS = 10;
 static const float SIGMA = BLUR_RADIUS;
 
-static const int GROUP_SIZE_X = 64;
-static const int GROUP_SIZE_Y = 4;
+static const int GROUP_SIZE_X = 256; // optimal for 4k blur on NVidia GeForce GTX 1080ti
+static const int GROUP_SIZE_Y = 1;
 static const int GROUP_DATA_ELEM_NUM_X = BLUR_RADIUS * 2 + GROUP_SIZE_X;
 
 groupshared float shared_depth_data[GROUP_DATA_ELEM_NUM_X * GROUP_SIZE_Y];

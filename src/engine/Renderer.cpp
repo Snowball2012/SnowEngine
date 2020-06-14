@@ -348,6 +348,11 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         hbao_settings.data.nsamples_per_direction = m_hbao_settings.nsamples_per_direction;
         m_framegraph.SetRes( hbao_settings );
 
+        TonemapNodeSettings tonemap_settings;
+        tonemap_settings.bloom_mip = m_tonemap_settings.bloom_mip;
+        tonemap_settings.bloom_strength = m_tonemap_settings.bloom_strength;
+        m_framegraph.SetRes( tonemap_settings );
+
         SDRBuffer backbuffer;
         if (!copy_sdr_to_target)
         {

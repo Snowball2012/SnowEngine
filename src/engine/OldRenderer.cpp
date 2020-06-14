@@ -197,7 +197,7 @@ void OldRenderer::Draw()
 		frame_ctx.resources->AddResources( make_single_elem_span( shadow_list.per_obj_cb ) );
 
     m_renderer->SetHBAOSettings( Renderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
-    m_renderer->SetTonemapSettings( Renderer::TonemapSettings{ m_tonemap_settings.max_luminance, m_tonemap_settings.min_luminance } );
+    m_renderer->SetTonemapSettings( m_tonemap_settings );
 
     m_renderer->Draw( task, scene_ctx, frame_ctx, lists_to_execute );
 

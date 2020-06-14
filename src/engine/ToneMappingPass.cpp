@@ -33,7 +33,7 @@ void ToneMappingPass::Draw( const Context& context )
 {
     assert( m_cmd_list );
 
-    m_cmd_list->SetComputeRoot32BitConstants( 0, 3, &context.gpu_data, 0 );
+    m_cmd_list->SetComputeRoot32BitConstants( 0, 5, &context.gpu_data, 0 );
     m_cmd_list->SetComputeRootDescriptorTable( 1, context.hdr_srv );
     m_cmd_list->SetComputeRootDescriptorTable( 2, context.sdr_uav );
 
@@ -64,7 +64,7 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
 
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-    slot_root_parameter[0].InitAsConstants( 3, 0 );
+    slot_root_parameter[0].InitAsConstants( 5, 0 );
     CD3DX12_DESCRIPTOR_RANGE desc_table[2];
     desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );

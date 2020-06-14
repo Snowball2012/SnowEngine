@@ -12,6 +12,8 @@
 
 #include "SceneManager.h"
 
+#include "Renderer.h"
+
 class Renderer;
 
 // throws SnowEngineExceptions and DxExceptions for non-recoverable faults
@@ -39,12 +41,7 @@ public:
     D3D12_RECT& ScissorRect() { return m_scissor_rect; }
     const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
 
-    struct TonemapSettings
-    {
-        float max_luminance = 9000; // nits
-        float min_luminance = 1.e-2f;
-        bool blend_luminance = false;
-    } m_tonemap_settings;
+    Renderer::TonemapSettings m_tonemap_settings;
 
     HBAOPass::Settings m_hbao_settings;
     ParallelSplitShadowMapping& PSSM() noexcept;

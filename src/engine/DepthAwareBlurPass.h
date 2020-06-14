@@ -28,8 +28,8 @@ public:
     void Draw( const Context& context );
 
 private:
-    static constexpr uint32_t GroupSizeX = 64;
-    static constexpr uint32_t GroupSizeY = 4;
+    static constexpr uint32_t GroupSizeX = 256;
+    static constexpr uint32_t GroupSizeY = 1;
 
     virtual void BeginDerived( RenderStateID state ) noexcept override;
 

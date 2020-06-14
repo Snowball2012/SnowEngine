@@ -164,7 +164,8 @@ void RenderApp::UpdateGUI()
             ImGui::PushItemWidth( 150 );
             ImGui::SliderFloat( "Max luminance", &m_renderer->m_tonemap_settings.max_luminance, 0.f, 20000.0f, "%.2f" ); //-V807
             ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 20000.0f, "%.2f" );
-            ImGui::Checkbox( "Blur ref luminance 3x3", &m_renderer->m_tonemap_settings.blend_luminance );
+            ImGui::SliderFloat( "Bloom strength", &m_renderer->m_tonemap_settings.bloom_strength, 0.f, 10.0f, "%.2f" );
+            ImGui::SliderFloat( "Bloom mip", &m_renderer->m_tonemap_settings.bloom_mip, 0.f, 10.0f, "%.2f" );
             ImGui::EndChild();
         }
 
