@@ -254,6 +254,9 @@
     <ClCompile Include="..\src\utils\OrbitCameraController.cpp">
       <Filter>utils</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\engine\SingleDownsamplerPass.cpp">
+      <Filter>core\RenderPasses</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\RenderApp.h">
@@ -507,6 +510,9 @@
     </ClInclude>
     <ClInclude Include="..\src\utils\OrbitCameraController.h">
       <Filter>utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\engine\SingleDownsamplerPass.h">
+      <Filter>core\RenderPasses</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
