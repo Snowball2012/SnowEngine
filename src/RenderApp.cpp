@@ -312,7 +312,7 @@ void RenderApp::UpdateHighlightedObject()
 			throw SnowEngineException( "no drawable on highlight cube" );
 
 		cube_tf = m_renderer->GetScene().GetWorld().GetComponent<Transform>( m_highlight_cube );
-		if ( ! SE_ENSURE( cube_mesh ) )
+		if ( ! SE_ENSURE( cube_tf ) )
 			throw SnowEngineException( "no transform on highlight cube" );
 	}
 
@@ -550,11 +550,12 @@ void RenderApp::InitScene( ImportedScene imported_scene )
     BuildRenderItems( imported_scene );
 
     auto& scene = m_renderer->GetScene();
+    auto& world = scene.GetWorld();
 
     Camera::Data camera_data;
     camera_data.type = Camera::Type::Perspective;
-    m_camera = scene.GetWorld().CreateEntity();
-	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( m_camera );
+    m_camera = world.CreateEntity();
+	Camera& cam_component = world.AddComponent<Camera>( m_camera );
 	cam_component.ModifyData() = camera_data;
     cam_component.SetSkybox() = m_ph_skybox;
 
@@ -563,8 +564,8 @@ void RenderApp::InitScene( ImportedScene imported_scene )
     sun_data.type = Light::LightType::Parallel;
     m_sun = scene.AddLight( sun_data );
 
-	m_dbg_frustum_camera = scene.GetWorld().CreateEntity();
-	Camera& dbg_cam_component = scene.GetWorld().AddComponent<Camera>( m_dbg_frustum_camera );
+	m_dbg_frustum_camera = world.CreateEntity();
+	Camera& dbg_cam_component = world.AddComponent<Camera>( m_dbg_frustum_camera );
 }
 
 

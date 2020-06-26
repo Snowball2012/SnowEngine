@@ -558,6 +558,9 @@
     <FxCompile Include="..\shaders\postprocess\downscale.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
+    <FxCompile Include="..\shaders\downsample_singlepass.hlsl">
+      <Filter>shaders</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shaders\lib\lighting.hlsli">

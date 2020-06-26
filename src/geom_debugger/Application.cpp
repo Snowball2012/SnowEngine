@@ -1,3 +1,6 @@
+// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
+
 #include "stdafx.h"
 
 #include "Application.h"
@@ -47,6 +50,7 @@ namespace
 
 Application::Application( HINSTANCE instance, LPSTR cmd_line )
 	: m_app_instance( instance ), m_cmd_line( cmd_line )
+    , m_camera_controller()
 {
 }
 

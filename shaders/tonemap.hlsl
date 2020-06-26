@@ -19,8 +19,24 @@ static const int GROUP_SIZE_X = 8;
 static const int GROUP_SIZE_Y = 8;
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
-void main( uint3 thread : SV_DispatchThreadID )
+void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupThreadID )
 {
+    uint2 group_offset_in_threads = _thread.xy - thread_in_group.xy;
+    uint index = GROUP_SIZE_X * thread_in_group.y + thread_in_group.x;
+    uint2 thread;
+    
+    // demortonize
+    {
+        uint x = ( ( index & 0xaa ) << 7 ) | ( index & 0x55 );
+        x = ( x | ( x >> 1 ) ) & 0x3333;
+        x = ( x | ( x >> 2 ) ) & 0x0f0f;
+        x = ( x | ( x >> 4 ) ) & 0x00ff;
+        thread.x = x & 0xf;
+        thread.y = ( x & 0xf0 ) >> 4;
+    }
+    
+    thread.xy += group_offset_in_threads;
+    
     float4 cur_radiance = frame.Load(int3(thread.xy, 0));
     
     float2 uv = ( float2( thread.xy ) + float2( 0.5f, 0.5f ) ) * inv_frame_size; // for bilinear filtering
@@ -30,11 +46,13 @@ void main( uint3 thread : SV_DispatchThreadID )
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,-1) );
     avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,-1) );
     
+    float log_bias = 1;
+    
     float avg_radiance_gauss = 0;
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[i];
+        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[i];
     }
     
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,-1) );
@@ -42,7 +60,7 @@ void main( uint3 thread : SV_DispatchThreadID )
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[2 + i];
+        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[2 + i];
     }
     
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,0) );
@@ -50,7 +68,7 @@ void main( uint3 thread : SV_DispatchThreadID )
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[4 + i];
+        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[4 + i];
     }
     
     
@@ -59,7 +77,7 @@ void main( uint3 thread : SV_DispatchThreadID )
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[6 + i];
+        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[6 + i];
     }
     
     
@@ -67,10 +85,10 @@ void main( uint3 thread : SV_DispatchThreadID )
     [unroll]
     for ( int i = 0; i < 1; ++i )
     {
-        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + 1.0e-7f ) * GAUSS_KERNEL_3X3_SIGMA1[8 + i];
+        avg_radiance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[8 + i];
     }
     
-    avg_radiance_gauss = exp( avg_radiance_gauss );
+    avg_radiance_gauss = exp( avg_radiance_gauss ) - log_bias;
     
     float avg_luminance = avg_radiance_gauss; //photopic_luminance( avg_radiance_gauss.rgb );
 

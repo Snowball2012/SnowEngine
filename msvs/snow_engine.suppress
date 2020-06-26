@@ -887,4 +887,12 @@
     <CodeCurrent>1793121223</CodeCurrent>
     <CodeNext>3928021958</CodeNext>
   </snow_engine>
+  <snow_engine>
+    <FileName>Components.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: m_data.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>72777</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </snow_engine>
 </NewDataSet>

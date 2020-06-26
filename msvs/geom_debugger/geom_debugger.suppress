@@ -143,4 +143,20 @@
     <CodeCurrent>6258301</CodeCurrent>
     <CodeNext>123</CodeNext>
   </geom_debugger>
+  <geom_debugger>
+    <FileName>Components.h</FileName>
+    <ErrorCode>V730</ErrorCode>
+    <Message>Not all members of a class are initialized inside the compiler generated constructor. Consider inspecting: m_data.</Message>
+    <CodePrev>0</CodePrev>
+    <CodeCurrent>72777</CodeCurrent>
+    <CodeNext>123</CodeNext>
+  </geom_debugger>
+  <geom_debugger>
+    <FileName>Application.cpp</FileName>
+    <ErrorCode>V807</ErrorCode>
+    <Message>Decreased performance. Consider creating a reference to avoid using the 'cam_ptr-&gt;GetData()' expression repeatedly.</Message>
+    <CodePrev>3008310562</CodePrev>
+    <CodeCurrent>1814501741</CodeCurrent>
+    <CodeNext>967386680</CodeNext>
+  </geom_debugger>
 </NewDataSet>
