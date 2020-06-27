@@ -17,8 +17,8 @@ public:
 
     struct Context
     {
-        D3D12_GPU_DESCRIPTOR_HANDLE mip_uav_table;
         bc::static_vector<DirectX::XMUINT2, MaxMips> mip_size;
+        D3D12_GPU_DESCRIPTOR_HANDLE mip_uav_table;
         D3D12_GPU_DESCRIPTOR_HANDLE global_atomic_counter_uav; // must already be zero-initialized
         D3D12_GPU_VIRTUAL_ADDRESS shader_cb_gpu;
         span<uint8_t> shader_cb_mapped;

@@ -291,6 +291,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\engine\HBAONode.h" />
     <ClInclude Include="..\src\engine\HBAOPass.h" />
     <ClInclude Include="..\src\engine\HDRDownscaleNode.h" />
+    <ClInclude Include="..\src\engine\HDRSinglePassDownsampleNode.h" />
     <ClInclude Include="..\src\engine\LightComposeNode.h" />
     <ClInclude Include="..\src\engine\LightComposePass.h" />
     <ClInclude Include="..\src\engine\MaterialTableBaker.h" />

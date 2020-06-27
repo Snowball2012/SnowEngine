@@ -45,8 +45,9 @@ struct HDRBuffer : TrackedResource
     DirectX::XMUINT2 size;
     uint32_t nmips;
     D3D12_GPU_DESCRIPTOR_HANDLE srv_all_mips;
-    bc::small_vector<D3D12_GPU_DESCRIPTOR_HANDLE, 12> srv; // per mip level, non cumulative
-    bc::small_vector<D3D12_CPU_DESCRIPTOR_HANDLE, 12> rtv;
+    bc::small_vector<D3D12_GPU_DESCRIPTOR_HANDLE, 13> srv; // per mip level, non cumulative
+    bc::small_vector<D3D12_CPU_DESCRIPTOR_HANDLE, 13> rtv;
+    D3D12_GPU_DESCRIPTOR_HANDLE uav_per_mip_table; // contigious table of mip uavs, starting with mip 0
 };
 
 struct AmbientBuffer : TrackedResource
@@ -128,6 +129,17 @@ struct SkyboxData
     float radiance_factor = 0;
     D3D12_GPU_DESCRIPTOR_HANDLE cubemap_srv = {};
     DirectX::XMFLOAT4X4 obj2world_mat = {};
+};
+
+struct GlobalAtomicBuffer : TrackedResource
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE uav;
+};
+
+struct SinglePassDownsamplerShaderCB
+{
+    D3D12_GPU_VIRTUAL_ADDRESS gpu_ptr;
+    span<uint8_t> mapped_region;
 };
 
 struct HDRLightingMain {};

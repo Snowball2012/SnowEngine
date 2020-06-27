@@ -514,6 +514,9 @@
     <ClInclude Include="..\src\engine\SingleDownsamplerPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\engine\HDRSinglePassDownsampleNode.h">
+      <Filter>core\FramegraphInstance\Nodes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\shaders\temporal_blend_ps.hlsl">
