@@ -15,7 +15,7 @@
 #include "ToneMapNode.h"
 #include "HBAONode.h"
 #include "LightComposeNode.h"
-#include "HDRDownscaleNode.h"
+#include "HDRSinglePassDownsampleNode.h"
 
 #include "Scene.h"
 
@@ -154,7 +154,7 @@ private:
             BlurSSAONode,
             LightComposeNode,
             ToneMapNode,
-            HDRDownscaleNode
+            HDRSinglePassDownsampleNode
         >;
     FramegraphInstance m_framegraph;
     ShadowProvider m_shadow_provider;
@@ -177,6 +177,8 @@ private:
     std::unique_ptr<DynamicTexture> m_ssao_blurred = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed = nullptr;
     std::unique_ptr<DynamicTexture> m_sdr_buffer = nullptr;
+    ComPtr<ID3D12Resource> m_atomic_buffer = nullptr;
+    DescriptorTableID m_atimic_buffer_descriptor = DescriptorTableID::nullid;
 
     StagingDescriptorHeap m_dsv_heap;
     StagingDescriptorHeap m_rtv_heap;
@@ -197,11 +199,11 @@ private:
     void ResizeTransientResources();
 
     D3D12_HEAP_DESC GetUploadHeapDescription() const;
-
     
     std::pair<Skybox, ComPtr<ID3D12Resource>> CreateSkybox( const SkyboxData& skybox, DescriptorTableID ibl_table, GPULinearAllocator& upload_cb_allocator ) const;
 
     ComPtr<ID3D12Resource> CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2world, GPULinearAllocator& upload_cb_allocator ) const;
+    std::pair<ComPtr<ID3D12Resource>, SinglePassDownsamplerShaderCB> CreateDownscaleCB( GPULinearAllocator& upload_cb_allocator) const;
 
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( DescriptorTableID id ) const { return m_descriptor_tables->GetTable( id )->gpu_handle; }
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle( const DynamicTexture::TextureView& view, int mip ) const;

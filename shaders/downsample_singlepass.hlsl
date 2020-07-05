@@ -23,11 +23,11 @@ groupshared uint groups_finished;
 float4 SampleSourceTex( uint2 pos, uint mip )
 {
     float4 res = (float4)0;
-    if ( pos.x < mip_size[mip].x && pos.y < mip_size[mip].y )
+    if ( pos.x < (mip_size[mip].x * 2) && pos.y < (mip_size[mip].y * 2) )
     {
         res = (float4) 1.0f;
         res.rgb += mip_dst[mip].Load( pos ).rgb;
-        res.rgb = log2(res.rgb);        
+        res.rgb = log2(res.rgb);
     }
     return res;
 }
@@ -72,7 +72,7 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += SampleSourceTex( src_idx + uint2( 3, 2 ), src_mip ) * 0.25f;
     log_sum += SampleSourceTex( src_idx + uint2( 2, 3 ), src_mip ) * 0.25f;
     log_sum += SampleSourceTex( src_idx + uint2( 3, 3 ), src_mip ) * 0.25f;
-    StoreLogSum( log_sum, src_idx / 2 + uint2( 0, 1 ), src_mip );
+    StoreLogSum( log_sum, src_idx / 2 + uint2( 1, 1 ), src_mip );
     temps[3] = log_sum;
     
     src_mip++;

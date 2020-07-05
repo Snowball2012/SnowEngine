@@ -24,6 +24,13 @@ public:
         span<uint8_t> shader_cb_mapped;
     };
 
+    struct alignas(16) ShaderCB
+    {
+        uint32_t nmips;
+        uint32_t ngroups;
+        uint32_t mip_size[SingleDownsamplerPass::MaxMips * 2];
+    };
+
     void Draw( const Context& context );
 
 private:

@@ -4,7 +4,6 @@
 
 #include "Renderer.h"
 
-
 Renderer Renderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
 {
     assert( ctx.device );
@@ -72,7 +71,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
     m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device );
     m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device );
-    m_framegraph.ConstructAndEnableNode<HDRDownscaleNode>( m_hdr_format, *m_device );
+    m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device );
 
 
     if ( m_framegraph.IsRebuildNeeded() )
@@ -122,7 +121,7 @@ void Renderer::CreateTransientResources()
     };
 
 
-    create_tex( L"hdr buffer", m_hdr_backbuffer, m_hdr_format, true, true, true, false, true, false );
+    create_tex( L"hdr buffer", m_hdr_backbuffer, m_hdr_format, true, true, true, true, true, false );
     create_tex( L"hdr ambient", m_hdr_ambient, m_hdr_format, false, true, false, false, true, false );
     create_tex( L"normal buffer", m_normals, m_normals_format, false, true, false, false, true, false );
     create_tex( L"ssao", m_ssao, m_ssao_format, false, true, false, false, true, false );
@@ -132,6 +131,30 @@ void Renderer::CreateTransientResources()
     create_tex( L"sdr buffer", m_sdr_buffer, m_sdr_format, false, false, false, true, false, false );
 
     ResizeTransientResources();
+
+
+    // Atomic
+    m_device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
+        D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS,
+        &CD3DX12_RESOURCE_DESC::Buffer( 4, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        nullptr, IID_PPV_ARGS( m_atomic_buffer.GetAddressOf() ) );
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC uav_desc;
+    uav_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+    uav_desc.Format = DXGI_FORMAT_UNKNOWN;
+    uav_desc.Buffer.NumElements = 1;
+    uav_desc.Buffer.StructureByteStride = 4;
+    uav_desc.Buffer.FirstElement = 0;
+    uav_desc.Buffer.CounterOffsetInBytes = 0;
+    uav_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+    m_atimic_buffer_descriptor = m_descriptor_tables->AllocateTable( 1 );
+
+    m_device->CreateUnorderedAccessView(
+        m_atomic_buffer.Get(), nullptr, &uav_desc,
+        m_descriptor_tables->ModifyTable( m_atimic_buffer_descriptor ).value() );
 }
 
 
@@ -295,6 +318,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
                 hdr_buffer.rtv[i] = m_hdr_backbuffer->GetRtvPerMip()[i].HandleCPU();
                 hdr_buffer.srv[i] = GetGPUHandle( *srv_per_mip, i );
             }
+            hdr_buffer.uav_per_mip_table = GetGPUHandle( *m_hdr_backbuffer->GetUavPerMip(), 0 );
             hdr_buffer.size = DirectX::XMUINT2( hdr_buffer.res->GetDesc().Width, hdr_buffer.res->GetDesc().Height );
         }
         m_framegraph.SetRes( hdr_buffer );
@@ -352,6 +376,16 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         tonemap_settings.bloom_mip = m_tonemap_settings.bloom_mip;
         tonemap_settings.bloom_strength = m_tonemap_settings.bloom_strength;
         m_framegraph.SetRes( tonemap_settings );
+
+        auto downsampler_cb = CreateDownscaleCB( upload_allocator );
+        m_framegraph.SetRes( downsampler_cb.second );
+        frame_ctx.resources->AddResources( make_single_elem_span( downsampler_cb.first ) );
+        
+        GlobalAtomicBuffer global_atomic;
+        global_atomic.res = m_atomic_buffer.Get();
+        global_atomic.uav = GetGPUHandle( m_atimic_buffer_descriptor );
+        global_atomic.uav_cpu_handle = *m_descriptor_tables->ModifyTable( m_atimic_buffer_descriptor );
+        m_framegraph.SetRes( global_atomic );
 
         SDRBuffer backbuffer;
         if (!copy_sdr_to_target)
@@ -528,6 +562,28 @@ ComPtr<ID3D12Resource> Renderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2
 
     return std::move( res );
 }
+
+
+std::pair<ComPtr<ID3D12Resource>, SinglePassDownsamplerShaderCB> Renderer::CreateDownscaleCB(GPULinearAllocator& upload_cb_allocator) const
+{
+    std::pair<ComPtr<ID3D12Resource>, SinglePassDownsamplerShaderCB> res;
+
+    constexpr uint64_t cb_size = sizeof( SingleDownsamplerPass::ShaderCB );
+
+    auto allocation = upload_cb_allocator.Alloc( cb_size );
+    ThrowIfFailedH( m_device->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
+        &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+        IID_PPV_ARGS( res.first.GetAddressOf() ) ) );
+
+    uint8_t* mapped_cb = nullptr;
+    ThrowIfFailedH( res.first->Map( 0, nullptr, (void**)&mapped_cb ) );
+
+    res.second.gpu_ptr = res.first->GetGPUVirtualAddress();
+    res.second.mapped_region = span<uint8_t>( mapped_cb, mapped_cb + cb_size );
+
+    return std::move( res );
+}
+
 
 D3D12_GPU_DESCRIPTOR_HANDLE Renderer::GetGPUHandle( const DynamicTexture::TextureView& view, int mip ) const
 {

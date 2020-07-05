@@ -134,6 +134,7 @@ struct SkyboxData
 struct GlobalAtomicBuffer : TrackedResource
 {
     D3D12_GPU_DESCRIPTOR_HANDLE uav;
+    D3D12_CPU_DESCRIPTOR_HANDLE uav_cpu_handle; // must be in a non-shader visible heap!
 };
 
 struct SinglePassDownsamplerShaderCB

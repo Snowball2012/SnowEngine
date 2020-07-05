@@ -41,13 +41,6 @@ namespace
         AtomicCounter,
         Count
     };
-
-    struct alignas(16) ShaderCB
-    {
-        uint32_t nmips;
-        uint32_t ngroups;
-        uint32_t mip_size[SingleDownsamplerPass::MaxMips * 2];
-    };
 }
 
 
@@ -89,12 +82,12 @@ ComPtr<ID3D12RootSignature> SingleDownsamplerPass::BuildRootSignature( ID3D12Dev
     
     slot_root_parameter[int( RootSigSlot::ShaderCB )].InitAsConstantBufferView( 0 );
 
-    CD3DX12_DESCRIPTOR_RANGE desc_table[1];
+    CD3DX12_DESCRIPTOR_RANGE desc_table[2];
     desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, MaxMips, 0 );
     slot_root_parameter[int( RootSigSlot::MipsUAVs )].InitAsDescriptorTable( 1, desc_table );
     
-    desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, MaxMips );
-    slot_root_parameter[int( RootSigSlot::AtomicCounter )].InitAsDescriptorTable( 1, desc_table );
+    desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, MaxMips );
+    slot_root_parameter[int( RootSigSlot::AtomicCounter )].InitAsDescriptorTable( 1, desc_table + 1 );
 
     CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter );
 
