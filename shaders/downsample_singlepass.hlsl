@@ -50,7 +50,7 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += SampleSourceTex( src_idx + uint2( 1, 1 ), src_mip ) * 0.25f;
     StoreLogSum( log_sum, src_idx / 2, src_mip );
     temps[0] = log_sum;
-    
+
     log_sum = 0;
     log_sum += SampleSourceTex( src_idx + uint2( 2, 0 ), src_mip ) * 0.25f;
     log_sum += SampleSourceTex( src_idx + uint2( 3, 0 ), src_mip ) * 0.25f;
@@ -58,7 +58,7 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += SampleSourceTex( src_idx + uint2( 3, 1 ), src_mip ) * 0.25f;
     StoreLogSum( log_sum, src_idx / 2 + uint2( 1, 0 ), src_mip );
     temps[1] = log_sum;
-    
+
     log_sum = 0;
     log_sum += SampleSourceTex( src_idx + uint2( 0, 2 ), src_mip ) * 0.25f;
     log_sum += SampleSourceTex( src_idx + uint2( 1, 2 ), src_mip ) * 0.25f;
@@ -66,7 +66,7 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += SampleSourceTex( src_idx + uint2( 1, 3 ), src_mip ) * 0.25f;
     StoreLogSum( log_sum, src_idx / 2 + uint2( 0, 1 ), src_mip );
     temps[2] = log_sum;
-    
+
     log_sum = 0;
     log_sum += SampleSourceTex( src_idx + uint2( 2, 2 ), src_mip ) * 0.25f;
     log_sum += SampleSourceTex( src_idx + uint2( 3, 2 ), src_mip ) * 0.25f;
@@ -74,14 +74,14 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += SampleSourceTex( src_idx + uint2( 3, 3 ), src_mip ) * 0.25f;
     StoreLogSum( log_sum, src_idx / 2 + uint2( 1, 1 ), src_mip );
     temps[3] = log_sum;
-    
+
     src_mip++;
-    
+
     if ( src_mip >= nmips )
         return;
-    
+
     src_idx /= 4;
-    
+
     // 1 -> 2 mip, reduce 4 temps
     log_sum = 0;
     log_sum += temps[0] * 0.25f;
@@ -89,11 +89,11 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
     log_sum += temps[2] * 0.25f;
     log_sum += temps[3] * 0.25f;
     StoreLogSum( log_sum, src_idx, src_mip );
-    
+
     src_mip++;
     if ( src_mip >= nmips )
         return;
-    
+
     // 2 -> 3, use wave intrisics to reduce
     src_idx /= 2;
     log_sum *= 0.25f;
@@ -105,17 +105,20 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
         StoreLogSum( log_sum, src_idx, src_mip );
         intermediate_data[idx_in_group.x / 2][idx_in_group.y / 2] = log_sum;
     }
-    
+
     src_mip++;
     if ( src_mip >= nmips )
         return;
-    
+
     // 3 -> 4
     if ( morton_idx >= 64 )
         return;
-    
-    GroupMemoryBarrierWithGroupSync();
+
+    uint2 block_offset = src_idx % 8;
+    src_idx -= block_offset;
     src_idx /= 2;
+
+    GroupMemoryBarrierWithGroupSync();
     log_sum = intermediate_data[idx_in_group.x][idx_in_group.y];
     log_sum *= 0.25f;
     if ( morton_idx % 4 == 0 )
@@ -123,20 +126,20 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
         log_sum += QuadReadLaneAt( log_sum, 1 );
         log_sum += QuadReadLaneAt( log_sum, 2 );
         log_sum += QuadReadLaneAt( log_sum, 3 );
-        StoreLogSum( log_sum, src_idx, src_mip );
+        StoreLogSum( log_sum, src_idx + block_offset, src_mip );
         intermediate_data[idx_in_group.x / 2][idx_in_group.y / 2] = log_sum;        
     }
-    
+
     src_mip++;
     if ( src_mip >= nmips )
         return;
-    
+
     // 4 -> 5
     if ( morton_idx >= 16 )
         return;
-    
-    GroupMemoryBarrierWithGroupSync();
     src_idx /= 2;
+
+    GroupMemoryBarrierWithGroupSync();
     log_sum = intermediate_data[idx_in_group.x][idx_in_group.y];
     log_sum *= 0.25f;
     if ( morton_idx % 4 == 0 )
@@ -144,20 +147,20 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
         log_sum += QuadReadLaneAt( log_sum, 1 );
         log_sum += QuadReadLaneAt( log_sum, 2 );
         log_sum += QuadReadLaneAt( log_sum, 3 );
-        StoreLogSum( log_sum, src_idx, src_mip );
+        StoreLogSum( log_sum, src_idx + block_offset, src_mip );
         intermediate_data[idx_in_group.x / 2][idx_in_group.y / 2] = log_sum;        
     }
-    
+
     src_mip++;
     if ( src_mip >= nmips )
         return;
-    
+
     // 5 -> 6
     if ( morton_idx >= 4 )
         return;
-    
-    GroupMemoryBarrierWithGroupSync();
     src_idx /= 2;
+
+    GroupMemoryBarrierWithGroupSync();
     log_sum = intermediate_data[idx_in_group.x][idx_in_group.y];
     log_sum *= 0.25f;
     if ( morton_idx == 0 )
@@ -165,8 +168,8 @@ void DownsampleMipChain( uint morton_idx, uint2 src_idx, uint2 idx_in_group, uin
         log_sum += QuadReadLaneAt( log_sum, 1 );
         log_sum += QuadReadLaneAt( log_sum, 2 );
         log_sum += QuadReadLaneAt( log_sum, 3 );
-        StoreLogSum( log_sum, src_idx, src_mip );  
-    }   
+        StoreLogSum( log_sum, src_idx + block_offset, src_mip );  
+    }
 }
 
 
@@ -196,5 +199,5 @@ void main( uint morton_idx : SV_GroupIndex, uint3 group_idx : SV_GroupID )
     if ( groups_finished != ngroups - 1 )
         return;
     
-    DownsampleMipChain( morton_idx, src_idx, src_idx, 6 );
+    DownsampleMipChain( morton_idx, src_idx * 4, src_idx, 6 );
 }
