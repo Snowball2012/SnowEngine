@@ -49,12 +49,6 @@ public:
 
         DirectX::XMUINT2 size = hdr_buffer->size;
 
-        UINT clear_values[4] = {0, 0, 0, 0};
-        cmd_list.ClearUnorderedAccessViewUint(
-            global_counter->uav,
-            global_counter->uav_cpu_handle,
-            global_counter->res, clear_values, 0, nullptr );
-
         SingleDownsamplerPass::Context ctx;
         ctx.mip_uav_table = hdr_buffer->uav_per_mip_table;
         ctx.global_atomic_counter_uav = global_counter->uav;

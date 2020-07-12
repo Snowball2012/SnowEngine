@@ -6,7 +6,8 @@ cbuffer DownsampleSettings : register( b0 )
 {
     uint nmips;
     uint ngroups;
-    uint2 mip_size[MaxMips];
+    uint2 _pad;
+    uint4 mip_size[MaxMips];
 };
 
 globallycoherent RWTexture2D<float4> mip_dst[MaxMips] : register( u0 );
@@ -23,7 +24,7 @@ groupshared uint groups_finished;
 float4 SampleSourceTex( uint2 pos, uint mip )
 {
     float4 res = (float4)0;
-    if ( pos.x < (mip_size[mip].x * 2) && pos.y < (mip_size[mip].y * 2) )
+    if ( pos.x < mip_size[mip].x && pos.y < mip_size[mip].y )
     {
         res = (float4) 1.0f;
         res.rgb += mip_dst[mip].Load( pos ).rgb;
@@ -200,4 +201,7 @@ void main( uint morton_idx : SV_GroupIndex, uint3 group_idx : SV_GroupID )
         return;
     
     DownsampleMipChain( morton_idx, src_idx * 4, src_idx, 6 );
+
+    if ( morton_idx == 0 )
+        groups_finished_buf[0].counter = 0;
 }

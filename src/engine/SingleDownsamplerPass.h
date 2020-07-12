@@ -28,7 +28,8 @@ public:
     {
         uint32_t nmips;
         uint32_t ngroups;
-        uint32_t mip_size[SingleDownsamplerPass::MaxMips * 2];
+        uint32_t _pad[2];
+        uint32_t mip_size[SingleDownsamplerPass::MaxMips * 4]; // last 2 uints are empty in each entry
     };
 
     void Draw( const Context& context );

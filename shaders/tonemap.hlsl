@@ -41,7 +41,7 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     
     float2 uv = ( float2( thread.xy ) + float2( 0.5f, 0.5f ) ) * inv_frame_size; // for bilinear filtering
 
-    float avg_mip = frame_mip_levels - 3;
+    float avg_mip = frame_mip_levels - 4;
     float4 avg_radiance[2];
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,-1) );
     avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,-1) );

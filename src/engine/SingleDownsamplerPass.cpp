@@ -60,8 +60,8 @@ void SingleDownsamplerPass::Draw( const Context& context )
         cb.ngroups = ngroups_x * ngroups_y;
         for ( uint32_t i = 0; i < cb.nmips; ++i )
         {
-            cb.mip_size[i * 2] = context.mip_size[i].x;
-            cb.mip_size[i * 2 + 1] = context.mip_size[i].y;
+            cb.mip_size[i * 4] = context.mip_size[i].x;
+            cb.mip_size[i * 4 + 1] = context.mip_size[i].y;
         }
     }
     memcpy( context.shader_cb_mapped.begin(), &cb, sizeof( cb ) );
