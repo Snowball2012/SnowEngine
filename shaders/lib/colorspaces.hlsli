@@ -37,25 +37,32 @@ float3 linear2gamma_std( float3 val, float gamma )
     return linear2gamma( val, STANDART_GAMMA );
 }
 
-
-float photopic_luminance(float3 radiance)
+float photopic_luminance( float3 radiance )
 {
     // rgb radiance in watt/(sr*m^2)
     return dot( 683.0f * float3( 0.2973f, 1.0f, 0.1010f ), radiance.rgb );
 }
 
+float3 calc_white_point( float luminance )
+{
+    return float3(1,1,1) * luminance / 955.0389f;
+}
 
-float percieved_brightness(float3 color)
+float percieved_brightness( float3 color )
 {
     return (0.2126f * color.r + 0.7152f * color.g + 0.0722f * color.b);
 }
 
-
-float3 radiance2gamma_rgb(float3 radiance, float brightness)
+float3 gamma_2_2_OETF( float3 color )
 {
-    float3 normalized_color = radiance / percieved_brightness(radiance);
-    float3 linear_color = normalized_color * brightness;
-    return pow(linear_color, 1.0f / STANDART_GAMMA );
+    return pow( color, 1.0f/2.2f );
+}
+
+float3 srgb_OETF( float3 color )
+{
+    float3 linear_part = 12.92f * color;
+    float3 gamma_part = 1.055f * pow( color, 1.0f/2.4f ) - 0.055f;
+    return lerp( linear_part, gamma_part, color > ((float3)0.0031308f) );
 }
 
 #endif
