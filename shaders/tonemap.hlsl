@@ -49,10 +49,13 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     float log_bias = 1;
     
     float avg_luminance_gauss = 0;
+    float avg_luminance_gauss_a = 0;
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[i];
+        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
+        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[i] * w;
+        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[i] * w;
     }
     
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,-1) );
@@ -60,7 +63,9 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[2 + i];
+        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
+        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[2 + i] * w;
+        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[2 + i] * w;
     }
     
     avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,0) );
@@ -68,7 +73,9 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[4 + i];
+        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
+        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[4 + i] * w;
+        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[4 + i] * w;
     }
     
     
@@ -77,7 +84,9 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     [unroll]
     for ( int i = 0; i < 2; ++i )
     {
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[6 + i];
+        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
+        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[6 + i] * w;
+        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[6 + i] * w;
     }
     
     
@@ -85,9 +94,11 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     [unroll]
     for ( int i = 0; i < 1; ++i )
     {
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[8 + i];
+        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
+        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[8 + i] * w;
+        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[8] * w;
     }
-    
+    avg_luminance_gauss /= avg_luminance_gauss_a;
     avg_luminance_gauss = exp( avg_luminance_gauss ) - log_bias;
     
     float avg_luminance = avg_luminance_gauss;

@@ -56,8 +56,8 @@ private:
     using ChunkID = GPUPagedAllocator::ChunkID;
     struct SubresourceTiling
     {
-        D3D12_SUBRESOURCE_TILING data;
         ChunkID mip_pages = ChunkID::nullid;
+        D3D12_SUBRESOURCE_TILING data;
         uint8_t nframes_in_use = 0;
     };
     struct Tiling

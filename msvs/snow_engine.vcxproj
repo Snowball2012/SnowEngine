@@ -532,7 +532,9 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <None Include="..\shaders\bindings\pass_cb.hlsli" />
-    <None Include="..\shaders\lib\colorspaces.hlsli" />
+    <None Include="..\shaders\lib\colorspaces.hlsli">
+      <FileType>Document</FileType>
+    </None>
     <None Include="..\shaders\lib\lighting.hlsli" />
     <None Include="..\shaders\lib\math_utils.hlsli" />
     <None Include="..\shaders\lib\shadows.hlsli" />

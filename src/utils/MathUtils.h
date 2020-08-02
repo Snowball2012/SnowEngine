@@ -66,7 +66,7 @@ DirectX::XMMATRIX InverseTranspose( DirectX::CXMMATRIX m );
 // returns 0 if a point is inside a box
 float DistanceToBoxSqr( const DirectX::XMVECTOR& point, const DirectX::BoundingOrientedBox& box );
 
-constexpr DirectX::XMFLOAT4X4 Identity4x4 =
+static constexpr DirectX::XMFLOAT4X4 Identity4x4 =
 {
         1.0f, 0.0f, 0.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
@@ -74,7 +74,7 @@ constexpr DirectX::XMFLOAT4X4 Identity4x4 =
         0.0f, 0.0f, 0.0f, 1.0f
 };
 
-constexpr float HaltonSequence23[8][2] =
+static constexpr float HaltonSequence23[8][2] =
 {
     { 1.f / 2.f, 1.f / 3.f },
     { 1.f / 4.f, 2.f / 3.f },
