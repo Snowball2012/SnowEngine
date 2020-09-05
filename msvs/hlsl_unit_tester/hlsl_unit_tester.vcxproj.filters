@@ -21,9 +21,18 @@
     <ClCompile Include="..\..\src\hlsl_unit_tester\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\hlsl_unit_tester\PSOCache.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\hlsl_unit_tester\stdafx.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\hlsl_unit_tester\PSOCache.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\hlsl_unit_tester\CommonTypedefs.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

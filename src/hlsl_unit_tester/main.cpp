@@ -3,14 +3,109 @@
 
 #include "stdafx.h"
 
-#include <atlbase.h>
-#include <dxc/dxcapi.h>
-#include <dxc/d3d12shader.h>
+#include "PSOCache.h"
 
-#include <utils/Assertions.h>
+/*
+class HLSLFile
+{
+public:
+	
+	static std::optional<HLSLFile> Create( std::wstring_view path );
 
-#include <iostream>
+private:
+	HLSLFile( std::wstring_view path );
+};
 
+
+class HLSLFunc
+{
+public:
+	static std::optional<HLSLFunc> Create( std::string_view name, const HLSLFile& file );
+
+private:
+	HLSLFunc( std::string_view name, const HLSLFile& file );
+};
+
+
+class HLSLInput
+{
+public:
+	template<typename T>
+	bool Set( std::string param_name, const T& val );
+};
+
+
+class HLSLOutput
+{
+public:
+	template<typename T>
+	bool GetRetval( T& v ) const;
+};
+
+
+class IHLSLTest
+{
+public:
+	virtual ~IHLSLTest() {}
+
+	// Each instance of HLSLInput means one fuction invocation.
+	// The number of HLSLInputs will match the number of HLSLOutputs in IHLSLTest::Assert, one for each invocation
+	// returning false on Arrange or Assert means the test has failed
+	virtual bool Arrange( std::vector<HLSLInput>& inputs ) = 0;
+	virtual bool Assert( const std::vector<HLSLOutput>& output ) = 0;
+};
+
+
+class ExampleTest : public IHLSLTest
+{
+public:
+	virtual bool Arrange( std::vector<HLSLInput>& inputs ) override
+	{
+		auto& input = inputs.emplace_back();
+
+		if ( !input.Set( "color", DirectX::XMFLOAT3( 0, 0, 0 ) ) )
+			return false; // can't set the color for some reason
+
+		return true;
+	}
+
+	virtual bool Assert( const std::vector<HLSLOutput>& output ) override
+	{
+		if ( !SE_ENSURE( output.size() == 1 ) )
+			return false;
+
+		float res;
+		if ( !output[0].GetRetval( res ) )
+			return false;
+
+		return SE_ENSURE( res == 0 ); // returning "true" at this point will mean the test has passed
+	}
+};
+
+
+void test()
+{
+	// setup
+
+	constexpr std::wstring_view path = L"../../shaders/lib/colorspaces.hlsli";
+	auto file = HLSLFile::Create( path );
+	if ( ! SE_ENSURE( file.has_value() ) )
+	{
+		std::wcerr << L"Could not load HLSL file at " << path << std::endl;
+		return;
+	}
+
+	constexpr std::string_view func_name = "percieved_brightness";
+	auto foo = HLSLFunc::Create( func_name, *file );
+	if (!SE_ENSURE(foo.has_value()))
+	{
+		std::wcerr << L"Could not load HLSL function \"" << std::wstring( func_name.cbegin(), func_name.cend() ) << L"\" from file " << path << std::endl;
+		return;
+	}
+
+
+}
+*/
 
 int main()
 {
@@ -31,6 +126,9 @@ int main()
 	src_buffer.Ptr = src_blob->GetBufferPointer();
 	src_buffer.Size = src_blob->GetBufferSize();
 	src_buffer.Encoding = DXC_CP_ACP; // Assume BOM says UTF8 or UTF16 or this is ANSI text.
+
+
+	std::cout << (const char*)src_buffer.Ptr << std::endl;
 
 	LPCWSTR args[] =
 	{
@@ -91,5 +189,9 @@ int main()
 	}
 
 	std::cout << "everything is ok!" << std::endl;
+
+	PSOCache cache;
+
 	return 0;
 }
+
