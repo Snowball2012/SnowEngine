@@ -265,3 +265,4 @@ nsight/
 VTune Amplifier Results/
 snow_engine.vcxproj.snowball.nvuser
 snow_engine.sln.startup.json
+*.suppress

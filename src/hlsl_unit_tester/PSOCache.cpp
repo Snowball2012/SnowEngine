@@ -26,9 +26,7 @@ PSOCache::CompilationResult PSOCache::CompilePSO( CompilationRequest request )
 	if ( auto it = m_pso_lut.find( hash ); it != m_pso_lut.end() )
 		return it->second;
 
-	
-
-	auto async_res = std::async([&, request]()
+	auto async_res = std::async([&, request]() -> ComPtr<ID3D12PipelineState>
 	{
 		ComPtr<ID3D12PipelineState> pso;
 
@@ -44,17 +42,57 @@ PSOCache::CompilationResult PSOCache::CompilePSO( CompilationRequest request )
 
 		LPCWSTR args[] =
 		{
+			L"/E",
+			L"main",
 			L"/T",
 			L"cs_6_1",
-			L"/Vd",
-			L"/default-linkage",
-			L"external",
+			L"/Wx",
+			L"/O3"
 		};
 
-		m_compiler->Compile( &src_buffer, )
+		CComPtr<IDxcResult> compilation_result;
+		HRESULT hr;
+		if ( !SE_ENSURE_HRES( hr = m_compiler->Compile( &src_buffer, args, UINT32( std::size( args ) ), m_include_handler, IID_PPV_ARGS( &compilation_result ) ) ) )
+		{
+			std::cerr << "IDxcCompiler3::Compile error #" << hr << std::endl;
+			return nullptr;
+		}
 
-		if ( FAILED( m_device->CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) ) )
-			pso = nullptr;
+
+		ComPtr<IDxcBlobUtf8> error_buffer;
+		if ( !SE_ENSURE_HRES( hr = compilation_result->GetOutput( DXC_OUT_ERRORS, IID_PPV_ARGS( error_buffer.GetAddressOf() ), nullptr ) ) )
+		{
+			std::cerr << "IDxcResult::GetOutput error #" << hr << std::endl;
+			return nullptr;
+		}
+
+		if ( error_buffer && error_buffer->GetStringLength() > 0 )
+		{
+			std::cerr << "Shader compilation error : " << error_buffer->GetStringPointer() << std::endl;
+			return nullptr;
+		}
+
+		ComPtr<ID3DBlob> shader_binary;
+		if ( !SE_ENSURE_HRES( hr = compilation_result->GetOutput( DXC_OUT_OBJECT, IID_PPV_ARGS( shader_binary.GetAddressOf() ), nullptr ) ) )
+		{
+			std::cerr << "IDxcResult::GetOutput error #" << hr << std::endl;
+			return nullptr;
+		}
+
+		if ( shader_binary )
+		{
+			pso_desc.CS =
+			{
+				reinterpret_cast<BYTE*>( shader_binary->GetBufferPointer() ),
+				shader_binary->GetBufferSize()
+			};
+		}
+
+		if ( FAILED( hr = m_device->CreateComputePipelineState( &pso_desc, IID_PPV_ARGS( &pso ) ) ) )
+		{
+			std::cerr << "PSO creation error #" << hr << std::endl;
+			return nullptr;
+		}
 
 		return pso;
 	});	
