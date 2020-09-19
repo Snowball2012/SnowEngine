@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\hlsl_unit_tester\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\hlsl_unit_tester\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

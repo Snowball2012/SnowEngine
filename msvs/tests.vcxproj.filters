@@ -16,6 +16,9 @@
     <Filter Include="Source Files\ecs">
       <UniqueIdentifier>{c3ad1898-261a-42a2-af94-65e121a28430}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\hlsl_tester">
+      <UniqueIdentifier>{50185b1a-0108-493a-93ad-ea5f5371e5a8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\tests\btree.cpp">
@@ -44,6 +47,9 @@
     </ClCompile>
     <ClCompile Include="..\src\tests\intersections.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\tests\hlsl_tester\pso_cache.cpp">
+      <Filter>Source Files\hlsl_tester</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

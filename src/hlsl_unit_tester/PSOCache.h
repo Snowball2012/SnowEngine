@@ -5,11 +5,12 @@
 
 #include "CommonTypedefs.h"
 
-#include <d3d12.h>
+#include <atlbase.h>
+#include <wrl.h>
+#include <WindowsX.h>
 
 #include <future>
-#include <string_view>
-
+#include <string>
 
 // Uses shader text hashes. Beware of collisions
 class PSOCache

@@ -61,8 +61,6 @@ namespace
         }
     };
 
-    // very simple inefficient solution. Duplicate vertex attributes for each triangle
-    // complete garbage, please refactor
     class FbxMeshLoader
     {
     public:

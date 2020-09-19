@@ -83,13 +83,13 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\src;..\3rdparty\directxtk12_include;..\3rdparty\d3dx12;..\3rdparty\optick\include;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\3rdparty\directxtk12_include;..\3rdparty\d3dx12;..\3rdparty\optick\include;..\3rdparty;..\3rdparty\dxc\inc;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>NOMINMAX;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;snow_engine.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration);..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
+      <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;dxcompiler.lib;hlsl_unit_tester.lib;snow_engine.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\dxc\lib\x64;$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration);..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -122,21 +122,22 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>false</ConformanceMode>
-      <AdditionalIncludeDirectories>..\src;..\3rdparty\directxtk12_include;..\3rdparty\d3dx12;..\3rdparty\optick\include;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\src;..\3rdparty\directxtk12_include;..\3rdparty\d3dx12;..\3rdparty\optick\include;..\3rdparty;..\3rdparty\dxc\inc;..\3rdparty\boost_1_67_0</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <PreprocessorDefinitions>NOMINMAX;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;snow_engine.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration);..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
+      <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;dxcompiler.lib;hlsl_unit_tester.lib;snow_engine.lib;boost_unit_test_framework-vc141-mt-gd-x64-1_67.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)\3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration);$(SolutionDir)\3rdparty\cetonia\bin\x64\$(Configuration);$(SolutionDir)\3rdparty\directxtk12\Bin\Desktop_2017_Win10\x64\$(Configuration);$(SolutionDir)\3rdparty\dxc\lib\x64;$(SolutionDir)\3rdparty\optick\lib\x64\$(Configuration);..\bin\$(Configuration);..\3rdparty\boost_1_67_0\lib64-msvc-14.1</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\tests\btree.cpp" />
     <ClCompile Include="..\src\tests\compile_time_tests.cpp" />
     <ClCompile Include="..\src\tests\entity_container.cpp" />
+    <ClCompile Include="..\src\tests\hlsl_tester\pso_cache.cpp" />
     <ClCompile Include="..\src\tests\intersections.cpp" />
     <ClCompile Include="..\src\tests\main.cpp" />
     <ClCompile Include="..\src\tests\packed_freelist.cpp" />
