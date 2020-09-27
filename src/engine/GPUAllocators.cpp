@@ -4,6 +4,10 @@
 #include "stdafx.h"
 #include "GPUAllocators.h"
 
+
+// Linear allocator
+
+
 GPULinearAllocator::GPULinearAllocator( ID3D12Device* device, const D3D12_HEAP_DESC& desc )
     : m_device( device )
     , m_cur_heap_offset( 0 )
@@ -102,3 +106,114 @@ uint64_t GPULinearAllocator::CalcAllocationSize( uint64_t size ) const
 }
 
 
+GPUCircularAllocator::GPUCircularAllocator(
+    ID3D12Device* device, uint64_t size,
+    const D3D12_HEAP_DESC& desc)
+    : m_device( device )
+    , m_initial_desc( desc )
+{
+    OPTICK_EVENT( );
+
+    assert( m_device );
+
+    ThrowIfFailedH( m_device->CreateHeap( &desc, IID_PPV_ARGS( m_heap.GetAddressOf() ) ) );
+
+    if ( m_heap )
+        m_total_size = m_heap->GetDesc().SizeInBytes;
+}
+
+
+// Circular allocator
+
+
+std::pair<ID3D12Heap*, uint64_t> GPUCircularAllocator::Alloc( uint64_t size )
+{
+    const std::pair<ID3D12Heap*, uint64_t> null_alloc { nullptr, 0 };
+
+    size = CalcAllocationSize( size );
+    uint64_t alloc_start = std::numeric_limits<uint64_t>::max();
+
+    if ( m_tail > m_head )
+    {
+        const uint64_t available_space = m_tail - m_head;
+        if ( available_space < size )
+            return null_alloc;
+
+        alloc_start = m_head;
+    }
+    else
+    {
+        // 2 potentially available regions, after the head and before the tail
+
+        // check free space in front of the head first
+        const uint64_t front_available_space = GetTotalMem() - m_head;
+        if ( front_available_space >= size )
+            alloc_start = m_head;
+        else if ( m_tail >= size )
+            alloc_start = 0;
+        else
+            return null_alloc;
+    }
+
+    return AllocAt( alloc_start, size );
+}
+
+
+void GPUCircularAllocator::Free()
+{
+    if ( !SE_ENSURE( m_tail != m_head && !m_previous_heads.empty() ) ) // nothing left to free, most certainly an error in the calling code
+        return;
+
+    m_tail = m_previous_heads.front();
+    m_previous_heads.pop();
+    if ( m_previous_heads.empty() )
+    {
+        // this was the last allocation, reset the queue to avoid unnecessary fragmentation
+        m_head = 0;
+        m_tail = 0;
+    }
+}
+
+
+uint64_t GPUCircularAllocator::GetMaxAllocSize() const
+{
+    if ( m_tail > m_head )
+        return m_tail - m_head;
+
+    return std::max<uint64_t>( m_tail, uint64_t( GetTotalMem() - m_head ) );
+}
+
+
+uint64_t GPUCircularAllocator::GetFreeMem() const
+{
+    if ( m_tail > m_head )
+        return m_tail - m_head;
+
+    return m_tail + uint64_t( GetTotalMem() - m_head );
+}
+
+
+uint64_t GPUCircularAllocator::GetTotalMem() const
+{
+    return m_total_size;
+}
+
+
+uint64_t GPUCircularAllocator::CalcAllocationSize( uint64_t size ) const
+{
+    const UINT64 alignment = std::max<UINT64>( 1 << 16, m_initial_desc.Alignment ); // min 64k alignment
+    return ceil_integer_div( size, alignment ) * alignment;
+}
+
+
+std::pair<ID3D12Heap*, uint64_t> GPUCircularAllocator::AllocAt( uint64_t alloc_start, uint64_t size )
+{
+    std::pair<ID3D12Heap*, uint64_t> retval { nullptr, 0 };
+
+    retval.first = m_heap.Get();
+    retval.second = alloc_start;
+    m_previous_heads.push( m_head );
+    m_head = alloc_start + size;
+
+    return retval;
+}
