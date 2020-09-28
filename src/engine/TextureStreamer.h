@@ -3,7 +3,7 @@
 #include "SceneSystemData.h"
 #include "StagingDescriptorHeap.h"
 #include "GPUPagedAllocator.h"
-#include "CircularUploadBuffer.h"
+#include "GPUCircularBuffers.h"
 #include "Ptr.h"
 
 #include "utils/MemoryMappedFile.h"
@@ -128,7 +128,7 @@ private:
 
     std::unique_ptr<GPUPagedAllocator> m_gpu_mem_basic_mips;
     std::unique_ptr<GPUPagedAllocator> m_gpu_mem_detailed_mips;
-    std::unique_ptr<CircularUploadBuffer> m_upload_buffer;
+    std::unique_ptr<GPUMappedCircularUploadBuffer> m_upload_buffer;
 
     const size_t m_n_bufferized_frames;
 

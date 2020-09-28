@@ -177,7 +177,6 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\src\engine\CircularUploadBuffer.cpp" />
     <ClCompile Include="..\src\engine\CommandListPool.cpp" />
     <ClCompile Include="..\src\engine\CubemapConverter.cpp" />
     <ClCompile Include="..\src\engine\CubemapManager.cpp" />
@@ -192,6 +191,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClCompile Include="..\src\engine\ForwardLightingPass.cpp" />
     <ClCompile Include="..\src\engine\GeomGeneration.cpp" />
     <ClCompile Include="..\src\engine\GPUAllocators.cpp" />
+    <ClCompile Include="..\src\engine\GPUCircularBuffers.cpp" />
     <ClCompile Include="..\src\engine\GPUPagedAllocator.cpp" />
     <ClCompile Include="..\src\engine\GPUResourceHolder.cpp" />
     <ClCompile Include="..\src\engine\GPUTaskQueue.cpp" />
@@ -265,7 +265,6 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\ecs\EntityContainer.h" />
     <ClInclude Include="..\src\ecs\EntityContainer.hpp" />
     <ClInclude Include="..\src\engine\BlurSSAONode.h" />
-    <ClInclude Include="..\src\engine\CircularUploadBuffer.h" />
     <ClInclude Include="..\src\engine\CommandListPool.h" />
     <ClInclude Include="..\src\engine\Components.h" />
     <ClInclude Include="..\src\engine\CubemapConverter.h" />
@@ -285,6 +284,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\engine\GeomGeneration.h" />
     <ClInclude Include="..\src\engine\GeomGeneration.hpp" />
     <ClInclude Include="..\src\engine\GPUAllocators.h" />
+    <ClInclude Include="..\src\engine\GPUCircularBuffers.h" />
     <ClInclude Include="..\src\engine\GPUPagedAllocator.h" />
     <ClInclude Include="..\src\engine\GPUResourceHolder.h" />
     <ClInclude Include="..\src\engine\GPUTaskQueue.h" />

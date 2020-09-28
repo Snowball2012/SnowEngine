@@ -52,7 +52,7 @@ private:
 class GPUCircularAllocator
 {
 public:
-    GPUCircularAllocator( ID3D12Device* device, uint64_t size, const D3D12_HEAP_DESC& desc );
+    GPUCircularAllocator( ID3D12Device* device, const D3D12_HEAP_DESC& desc );
 
     GPUCircularAllocator( const GPUCircularAllocator& ) = delete;
     GPUCircularAllocator( GPUCircularAllocator&& ) = default;
@@ -71,6 +71,8 @@ public:
     uint64_t GetFreeMem() const;
 
     uint64_t GetTotalMem() const;
+
+    ID3D12Heap* GetHeap() const { return m_heap.Get(); }
 
 private:
     ComPtr<ID3D12Heap> m_heap;

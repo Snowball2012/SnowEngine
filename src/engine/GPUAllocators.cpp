@@ -107,7 +107,7 @@ uint64_t GPULinearAllocator::CalcAllocationSize( uint64_t size ) const
 
 
 GPUCircularAllocator::GPUCircularAllocator(
-    ID3D12Device* device, uint64_t size,
+    ID3D12Device* device,
     const D3D12_HEAP_DESC& desc)
     : m_device( device )
     , m_initial_desc( desc )
@@ -161,7 +161,7 @@ std::pair<ID3D12Heap*, uint64_t> GPUCircularAllocator::Alloc( uint64_t size )
 
 void GPUCircularAllocator::Free()
 {
-    if ( !SE_ENSURE( m_tail != m_head && !m_previous_heads.empty() ) ) // nothing left to free, most certainly an error in the calling code
+    if ( !SE_ENSURE( !m_previous_heads.empty() ) ) // nothing left to free, most certainly an error in the calling code
         return;
 
     m_tail = m_previous_heads.front();
@@ -201,7 +201,7 @@ uint64_t GPUCircularAllocator::GetTotalMem() const
 
 uint64_t GPUCircularAllocator::CalcAllocationSize( uint64_t size ) const
 {
-    const UINT64 alignment = std::max<UINT64>( 1 << 16, m_initial_desc.Alignment ); // min 64k alignment
+    const UINT64 alignment = std::max<UINT64>( D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT, m_initial_desc.Alignment ); // min 64k alignment
     return ceil_integer_div( size, alignment ) * alignment;
 }
 

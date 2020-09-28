@@ -31,7 +31,8 @@ TextureStreamer::TextureStreamer( ComPtr<ID3D12Device> device, uint64_t gpu_mem_
     m_gpu_mem_detailed_mips = std::make_unique<GPUPagedAllocator>( std::move( heap ) );
 
     // 64k alignment
-    m_upload_buffer = std::make_unique<CircularUploadBuffer>( m_device, cpu_mem_budget, alignment );
+    m_upload_buffer = std::make_unique<GPUMappedCircularUploadBuffer>(
+        m_device, cpu_mem_budget, alignment );
 }
 
 

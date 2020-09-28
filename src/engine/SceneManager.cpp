@@ -25,7 +25,7 @@ StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vert
 TextureID SceneClientView::LoadStreamedTexture( std::string path )
 {
     TextureID tex_id = m_scene->AddTexture();
-    m_static_texture_manager->LoadTexture( tex_id, std::move( path ) );
+    m_tex_streamer->LoadStreamedTexture( tex_id, std::move( path ) );
     return tex_id;
 }
 
