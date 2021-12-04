@@ -373,8 +373,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         m_framegraph.SetRes( hbao_settings );
 
         TonemapNodeSettings tonemap_settings;
-        tonemap_settings.bloom_mip = m_tonemap_settings.bloom_mip;
-        tonemap_settings.bloom_strength = m_tonemap_settings.bloom_strength;
+        tonemap_settings.whitepoint_luminance = m_tonemap_settings.max_luminance;
         m_framegraph.SetRes( tonemap_settings );
 
         auto downsampler_cb = CreateDownscaleCB( upload_allocator );

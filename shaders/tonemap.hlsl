@@ -3,10 +3,7 @@
 
 cbuffer TonemapSettigns : register( b0 )
 {
-    float2 inv_frame_size; // 1 / texture size in pixels
-    float frame_mip_levels;
-    float bloom_strength;
-    float bloom_mip;
+    float whitepoint_luminance;
 }
 
 SamplerState linear_clamp_sampler : register( s0 );
@@ -37,82 +34,9 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     
     thread.xy += group_offset_in_threads;
     
-    float4 cur_radiance = frame.Load(int3(thread.xy, 0));
+    float4 cur_radiance = frame.Load( int3( thread.xy, 0 ) );
     
-    float2 uv = ( float2( thread.xy ) + float2( 0.5f, 0.5f ) ) * inv_frame_size; // for bilinear filtering
-
-    float avg_mip = frame_mip_levels - 4;
-    float4 avg_radiance[2];
-    avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,-1) );
-    avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,-1) );
-    
-    float log_bias = 1;
-    
-    float avg_luminance_gauss = 0;
-    float avg_luminance_gauss_a = 0;
-    [unroll]
-    for ( int i = 0; i < 2; ++i )
-    {
-        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[i] * w;
-        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[i] * w;
-    }
-    
-    avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,-1) );
-    avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,0) );
-    [unroll]
-    for ( int i = 0; i < 2; ++i )
-    {
-        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[2 + i] * w;
-        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[2 + i] * w;
-    }
-    
-    avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,0) );
-    avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,0) );
-    [unroll]
-    for ( int i = 0; i < 2; ++i )
-    {
-        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[4 + i] * w;
-        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[4 + i] * w;
-    }
-    
-    
-    avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(-1,1) );
-    avg_radiance[1] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(0,1) );
-    [unroll]
-    for ( int i = 0; i < 2; ++i )
-    {
-        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[6 + i] * w;
-        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[6 + i] * w;
-    }
-    
-    
-    avg_radiance[0] = frame.SampleLevel( linear_clamp_sampler, uv.xy, avg_mip, int2(1,1) );
-    [unroll]
-    for ( int i = 0; i < 1; ++i )
-    {
-        float w = exp(-abs(percieved_brightness(avg_radiance[i].rgb) - percieved_brightness(cur_radiance.rgb)));
-        avg_luminance_gauss += log( photopic_luminance(avg_radiance[i].rgb) + log_bias ) * GAUSS_KERNEL_3X3_SIGMA1[8 + i] * w;
-        avg_luminance_gauss_a += GAUSS_KERNEL_3X3_SIGMA1[8] * w;
-    }
-    avg_luminance_gauss /= avg_luminance_gauss_a;
-    avg_luminance_gauss = exp( avg_luminance_gauss ) - log_bias;
-    
-    float avg_luminance = avg_luminance_gauss;
-
-    const float display_max_luminance = 300.0f; // nits
-
-    float max_local_luminance = max( avg_luminance * 8.3f, display_max_luminance ); // +9.2 dB todo: function of absolute luminance ? (at least clamp max_luminance at a monitor level)
-    
-    float3 white_point = calc_white_point( max_local_luminance );
-    
-    float3 bloom_radiance = frame.SampleLevel( linear_clamp_sampler, uv.xy, bloom_mip ).rgb;
-    float apply_bloom = 0;//(max(( photopic_luminance( bloom_radiance ) - max_local_luminance / 2 ), 0) / max_local_luminance) * bloom_strength;
-    
-    cur_radiance.rgb = cur_radiance.rgb + apply_bloom * bloom_radiance;
+    float3 white_point = calc_white_point( whitepoint_luminance );
 
     // simple linear tonemapping, no curves
     float3 normalized_color = cur_radiance.rgb / white_point;

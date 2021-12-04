@@ -47,14 +47,8 @@ public:
         ctx.frame_size[0] = uint32_t( sdr_buffer->viewport.Width );
         ctx.frame_size[1] = uint32_t( sdr_buffer->viewport.Height );
 
-        ctx.gpu_data.inv_hdr_size[0] = 1.0f / sdr_buffer->viewport.Width;
-        ctx.gpu_data.inv_hdr_size[1] = 1.0f / sdr_buffer->viewport.Height;
-        ctx.gpu_data.hdr_mip_levels = float( hdr_buffer->nmips );
-        ctx.gpu_data.bloom_strength = settings->bloom_strength;
-        ctx.gpu_data.bloom_mip = settings->bloom_mip;
-
-
-
+        ctx.gpu_data.whitepoint_luminance = settings->whitepoint_luminance;
+        
         ctx.sdr_uav = sdr_buffer->uav;
         ctx.hdr_srv = hdr_buffer->srv_all_mips;
 

@@ -330,7 +330,6 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\framegraph\FramegraphImpl.h" />
     <ClInclude Include="..\src\framegraph\utils\OptionalTuple.h" />
     <ClInclude Include="..\src\framegraph\utils\UniqueTuple.h" />
-    <ClInclude Include="..\src\FrameResource.h" />
     <ClInclude Include="..\src\GameTimer.h" />
     <ClInclude Include="..\src\imgui_impl\imgui_impl_dx12.h" />
     <ClInclude Include="..\src\imgui_impl\imgui_impl_win32.h" />

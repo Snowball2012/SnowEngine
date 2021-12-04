@@ -14,10 +14,7 @@ public:
 
     struct ShaderData
     {
-        float inv_hdr_size[2]; // 1 / texture size in pixels
-        float hdr_mip_levels;
-        float bloom_strength;
-        float bloom_mip;
+        float whitepoint_luminance;
     };
 
     struct Context

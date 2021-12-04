@@ -91,8 +91,7 @@ struct SSAOTexture_Transposed : TrackedResource
 
 struct TonemapNodeSettings
 {
-    float bloom_strength;
-    float bloom_mip;
+    float whitepoint_luminance;
 };
 
 struct HBAOSettings
