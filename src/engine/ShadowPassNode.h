@@ -30,7 +30,7 @@ public:
         m_state = m_pass.BuildRenderState( dsv_format, bias, false, true, device );
     }
 
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override
     {
         OPTICK_EVENT();
         auto& lights_with_shadow = framegraph.GetRes<ShadowProducers>();

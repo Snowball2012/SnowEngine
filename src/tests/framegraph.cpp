@@ -71,7 +71,7 @@ public:
 
 	ZPrepass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Z prepass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "Z prepass"; }
 };
 
 template<class Framegraph>
@@ -97,7 +97,7 @@ public:
 
 	ShadowPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "shadow pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "shadow pass"; }
 };
 
 template<class Framegraph>
@@ -123,7 +123,7 @@ public:
 
 	PSSMPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "PSSM pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "PSSM pass"; }
 };
 
 
@@ -156,7 +156,7 @@ public:
 
 	ForwardPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "Forward Pass"; }
 };
 
 template<class Framegraph>
@@ -184,7 +184,7 @@ public:
 
 	SkyboxPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "Skybox Pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "Skybox Pass"; }
 };
 
 template<class Framegraph>
@@ -212,7 +212,7 @@ public:
 
 	HBAOPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "HBAO Pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "HBAO Pass"; }
 };
 
 template<class Framegraph>
@@ -240,7 +240,7 @@ public:
 
 	SSAOBlurPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "SSAO blur pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "SSAO blur pass"; }
 };
 
 template<class Framegraph>
@@ -270,7 +270,7 @@ public:
 
 	TonemapPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "tonemap pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "tonemap pass"; }
 };
 
 template<class Framegraph>

@@ -95,6 +95,9 @@ inline std::ostream& operator<< ( std::ostream& stream, const SnowEngineExceptio
     return stream;
 }
 
+struct ID3D12GraphicsCommandList6;
+using IGraphicsCommandList = ID3D12GraphicsCommandList6;
+
 #ifndef NOTIMPL
 #define NOTIMPL throw SnowEngineException( "not implemented yet" );
 #endif

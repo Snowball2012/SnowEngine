@@ -30,7 +30,7 @@ public:
         m_state = m_pass.BuildRenderState( rtv_format, device );
     }
 
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override
     {
         OPTICK_EVENT();
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();

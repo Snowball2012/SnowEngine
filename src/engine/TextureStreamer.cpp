@@ -115,7 +115,7 @@ void TextureStreamer::LoadStreamedTexture( TextureID id, std::string path )
 }
 
 
-void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, ID3D12GraphicsCommandList& cmd_list )
+void TextureStreamer::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, IGraphicsCommandList& cmd_list )
 {
     OPTICK_EVENT();
     FinalizeCompletedGPUUploads( current_timestamp );
@@ -428,7 +428,7 @@ void TextureStreamer::FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp curre
 }
 
 
-void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsCommandList& cmd_list )
+void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, IGraphicsCommandList& cmd_list )
 {
     size_t first_still_active_disk_op = 0;
     for ( ; first_still_active_disk_op < m_uploaders_to_fill.size(); ++first_still_active_disk_op )
@@ -482,7 +482,7 @@ void TextureStreamer::CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsComman
 
 
 void TextureStreamer::CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip,
-                                                  ID3D12GraphicsCommandList& cmd_list )
+                                                  IGraphicsCommandList& cmd_list )
 {
     CD3DX12_TEXTURE_COPY_LOCATION dst( texture.gpu_res.Get(), mip_idx );
     CD3DX12_TEXTURE_COPY_LOCATION src( uploader, texture.virtual_layout.footprints[mip_idx] );

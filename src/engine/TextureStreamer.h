@@ -27,7 +27,7 @@ public:
 
     void LoadStreamedTexture( TextureID id, std::string path );
 
-    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, ID3D12GraphicsCommandList& cmd_list );
+    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, GPUTaskQueue& copy_queue, IGraphicsCommandList& cmd_list );
 
     // post a timestamp for given operation. May throw SnowEngineException if there already is a timestamp for this operation
     void PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp );
@@ -140,8 +140,8 @@ private:
     Scene* m_scene = nullptr;
 
     void FinalizeCompletedGPUUploads( GPUTaskQueue::Timestamp current_timestamp );
-    void CheckFilledUploaders( SceneCopyOp op, ID3D12GraphicsCommandList& cmd_list );
-    void CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip, ID3D12GraphicsCommandList& cmd_list );
+    void CheckFilledUploaders( SceneCopyOp op, IGraphicsCommandList& cmd_list );
+    void CopyUploaderToMainResource( const TextureData& texture, ID3D12Resource* uploader, uint32_t mip_idx, uint32_t base_mip, IGraphicsCommandList& cmd_list );
     void CalcDesiredMipLevels();
 
     void FreeUnusedMips( TextureData& texture );

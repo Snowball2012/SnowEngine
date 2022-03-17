@@ -5,13 +5,14 @@
 
 #include <d3d12.h>
 
-struct ID3D12GraphicsCommandList;
+struct ID3D12GraphicsCommandList6;
+using IGraphicsCommandList = ID3D12GraphicsCommandList6;
 
 template<typename Framegraph>
 class BaseRenderNode
 {
 public:
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) = 0;
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) = 0;
 };
 
 // any resource with automatically tracked state must be derived from TrackedResource
@@ -69,7 +70,7 @@ public:
 
     void Rebuild() { m_impl.Rebuild(); }
     void ClearResources() { m_impl.ClearResources(); }
-    void Run( ID3D12GraphicsCommandList& cmd_list ) { m_impl.Run( cmd_list ); }
+    void Run( IGraphicsCommandList& cmd_list ) { m_impl.Run( cmd_list ); }
 
     bool IsRebuildNeeded() const { return m_impl.IsRebuildNeeded(); }
 

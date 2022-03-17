@@ -22,12 +22,12 @@ public:
 
     void LoadCubemap( CubemapID cubemap_id, const std::string& path );
 
-    void Update( GPUTaskQueue::Timestamp current_timestamp, SceneCopyOp copy_op, ID3D12GraphicsCommandList& cmd_list );
+    void Update( GPUTaskQueue::Timestamp current_timestamp, SceneCopyOp copy_op, IGraphicsCommandList& cmd_list );
 
     // post a timestamp for given operation. May throw SnowEngineException if there already is a timestamp for this operation
     void PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp );
 
-    void OnBakeDescriptors( ID3D12GraphicsCommandList& cmd_list_graphics_queue );
+    void OnBakeDescriptors( IGraphicsCommandList& cmd_list_graphics_queue );
 
 private:
     struct CubemapData

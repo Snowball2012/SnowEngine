@@ -221,7 +221,7 @@ namespace details
             void Rebuild();
             void ClearResources();
 
-            void Run( ID3D12GraphicsCommandList& cmd_list );
+            void Run( IGraphicsCommandList& cmd_list );
 
             bool IsRebuildNeeded() const
             {
@@ -381,7 +381,7 @@ namespace details
         }
 
         template<template <typename> class ...Nodes>
-        void FramegraphImpl<Nodes...>::Run( ID3D12GraphicsCommandList& cmd_list )
+        void FramegraphImpl<Nodes...>::Run( IGraphicsCommandList& cmd_list )
         {
             if ( m_need_to_rebuild_framegraph )
                 throw SnowEngineException( "framegraph rebuild is needed" );

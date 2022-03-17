@@ -225,7 +225,7 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
 
     GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
-    m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
+    m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get(), *m_graphics_cmd_list.Get() );
     ProcessSubmeshes();
     m_uv_density_calculator.Update( *camera_component, main_viewport );
     m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );

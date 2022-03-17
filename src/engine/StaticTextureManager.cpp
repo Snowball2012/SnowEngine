@@ -49,7 +49,7 @@ void StaticTextureManager::LoadTexture( TextureID id, std::string path )
 }
 
 
-void StaticTextureManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list )
+void StaticTextureManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, IGraphicsCommandList& cmd_list )
 {
     OPTICK_EVENT();
     FinalizeCompletedTransactions( current_timestamp );
@@ -163,7 +163,7 @@ void StaticTextureManager::EnqueueRemovedTexturesForDestruction()
 }
 
 
-void StaticTextureManager::UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, ID3D12GraphicsCommandList& cmd_list )
+void StaticTextureManager::UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, IGraphicsCommandList& cmd_list )
 {
     for ( size_t subres_idx = 0; subres_idx < uploader.footprints.size(); ++subres_idx )
     {

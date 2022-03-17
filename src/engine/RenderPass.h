@@ -29,7 +29,7 @@ protected:
 public:
     using RenderStateID = typename RenderStates::id;
 
-    void Begin( RenderStateID state, ID3D12GraphicsCommandList& command_list ) noexcept;
+    void Begin( RenderStateID state, IGraphicsCommandList& command_list ) noexcept;
     void End() noexcept;
 
     void DeleteState( RenderStateID state ) noexcept;
@@ -38,7 +38,7 @@ protected:
 
     virtual void BeginDerived( RenderStateID state ) noexcept = 0;
 
-    ID3D12GraphicsCommandList* m_cmd_list = nullptr;
+    IGraphicsCommandList* m_cmd_list = nullptr;
 
     RenderStates m_pso_cache;
 };

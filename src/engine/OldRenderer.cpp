@@ -125,7 +125,7 @@ void OldRenderer::Draw()
     lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
     lists_to_execute.back().Reset();
 
-    ID3D12GraphicsCommandList* cmd_list = lists_to_execute.back().GetInterface();
+    IGraphicsCommandList* cmd_list = lists_to_execute.back().GetInterface();
 
     CD3DX12_RESOURCE_BARRIER barriers[1];
     barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET );

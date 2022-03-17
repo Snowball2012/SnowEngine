@@ -11,7 +11,8 @@
 
 enum DXGI_FORMAT;
 struct ID3D12Device;
-struct ID3D12GraphicsCommandList;
+struct ID3D12GraphicsCommandList6;
+using IGraphicsCommandList = ID3D12GraphicsCommandList6;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
 
@@ -22,7 +23,7 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 IMGUI_API bool  ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format,
                                     D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle);
 IMGUI_API void  ImGui_ImplDX12_Shutdown();
-IMGUI_API void  ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* cmd_list);
+IMGUI_API void  ImGui_ImplDX12_NewFrame(IGraphicsCommandList* cmd_list);
 IMGUI_API void  ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data);
 
 // Use if you want to reset your rendering device without losing ImGui state.

@@ -120,8 +120,8 @@ private:
 
     // command objects
     std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, GPUTaskQueue::Timestamp>> m_copy_cmd_allocators;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_copy_cmd_list;
+    Microsoft::WRL::ComPtr<IGraphicsCommandList> m_copy_cmd_list;
 
     std::vector<std::pair<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>, GPUTaskQueue::Timestamp>> m_graphics_cmd_allocators;
-    Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> m_graphics_cmd_list;
+    Microsoft::WRL::ComPtr<IGraphicsCommandList> m_graphics_cmd_list;
 };

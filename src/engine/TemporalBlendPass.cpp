@@ -9,7 +9,7 @@ TemporalBlendPass::TemporalBlendPass( ID3D12PipelineState* pso, ID3D12RootSignat
 {
 }
 
-void TemporalBlendPass::Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list )
+void TemporalBlendPass::Draw( const Context& context, IGraphicsCommandList& cmd_list )
 {
     cmd_list.SetPipelineState( m_pso );
     cmd_list.OMSetRenderTargets( 1, &context.cur_frame_rtv, false, nullptr );

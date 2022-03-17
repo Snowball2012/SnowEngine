@@ -28,7 +28,7 @@
 
 // DirectX data
 static ID3D12Device*                g_pd3dDevice = NULL;
-static ID3D12GraphicsCommandList*   g_pd3dCommandList = NULL;
+static IGraphicsCommandList*   g_pd3dCommandList = NULL;
 static ID3D10Blob*                  g_pVertexShaderBlob = NULL;
 static ID3D10Blob*                  g_pPixelShaderBlob = NULL;
 static ID3D12RootSignature*         g_pRootSignature = NULL;
@@ -66,7 +66,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     ID3D12Resource* g_pIB = frameResources->IB;
     int g_VertexBufferSize = frameResources->VertexBufferSize;
     int g_IndexBufferSize = frameResources->IndexBufferSize;
-    ID3D12GraphicsCommandList* ctx = g_pd3dCommandList;
+    IGraphicsCommandList* ctx = g_pd3dCommandList;
 
     // Create and grow vertex/index buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
@@ -621,7 +621,7 @@ void ImGui_ImplDX12_Shutdown()
     g_frameIndex = UINT_MAX;
 }
 
-void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
+void ImGui_ImplDX12_NewFrame(IGraphicsCommandList* command_list)
 {
     if (!g_pFramegraphState)
         ImGui_ImplDX12_CreateDeviceObjects();

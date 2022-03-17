@@ -25,7 +25,7 @@ struct IRenderMaterial
     virtual std::pair<uint64_t, uint64_t> GetPipelineStateID( FramegraphTechnique technique ) const = 0;
 
     // todo: replace command list with something less spaghetti(some parameter class)
-    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const = 0;
+    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, IGraphicsCommandList& cmd_list ) const = 0;
 };
 
 struct RenderBatch

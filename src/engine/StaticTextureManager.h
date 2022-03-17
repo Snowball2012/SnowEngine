@@ -18,7 +18,7 @@ public:
 
     void LoadTexture( TextureID id, std::string path );
 
-    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list );
+    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, IGraphicsCommandList& cmd_list );
 
     // post a timestamp for given operation. May throw SnowEngineException if there already is a timestamp for this operation
     void PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp );
@@ -62,7 +62,7 @@ private:
     void LoadTexturesFromTransaction( UploadTransaction& transaction );
     void FinalizeCompletedTransactions( GPUTaskQueue::Timestamp current_timestamp );
     void EnqueueRemovedTexturesForDestruction();
-    void UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, ID3D12GraphicsCommandList& cmd_list );
+    void UploadTexture( const UploadData& uploader, ID3D12Resource* tex_gpu, IGraphicsCommandList& cmd_list );
 
     UploadData CreateAndFillUploader( const Microsoft::WRL::ComPtr<ID3D12Resource>& gpu_res, const span<D3D12_SUBRESOURCE_DATA>& subresources );
 

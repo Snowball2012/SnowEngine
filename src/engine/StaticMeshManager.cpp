@@ -68,7 +68,7 @@ void StaticMeshManager::LoadStaticMesh( StaticMeshID id, std::string name, const
 }
 
 
-void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list )
+void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, IGraphicsCommandList& cmd_list_copy, IGraphicsCommandList& cmd_list_graphics )
 {
     OPTICK_EVENT();
     // Finalize existing transactions
@@ -79,7 +79,7 @@ void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timesta
         if ( active_transaction.end_timestamp.has_value()
              && active_transaction.end_timestamp.value() <= current_timestamp )
         {
-            LoadMeshesFromTransaction( active_transaction.transaction );
+            LoadMeshesFromTransaction( active_transaction.transaction, cmd_list_graphics );
             if ( i != m_active_transactions.size() - 1 )
                 active_transaction = std::move( m_active_transactions.back() );
 
@@ -119,8 +119,8 @@ void StaticMeshManager::Update( SceneCopyOp operation_tag, GPUTaskQueue::Timesta
 
     for ( size_t i = 0; i < m_pending_transaction.meshes_to_upload.size(); i++ )
     {
-        cmd_list.CopyResource( m_pending_transaction.meshes_to_upload[i].gpu_vb.Get(), m_pending_transaction.uploaders[i].first.Get() );
-        cmd_list.CopyResource( m_pending_transaction.meshes_to_upload[i].gpu_ib.Get(), m_pending_transaction.uploaders[i].second.Get() );
+        cmd_list_copy.CopyResource( m_pending_transaction.meshes_to_upload[i].gpu_vb.Get(), m_pending_transaction.uploaders[i].first.Get() );
+        cmd_list_copy.CopyResource( m_pending_transaction.meshes_to_upload[i].gpu_ib.Get(), m_pending_transaction.uploaders[i].second.Get() );
     }
 
     m_active_transactions.push_back( ActiveTransaction{ std::move( m_pending_transaction ), operation_tag, std::nullopt } );
@@ -143,18 +143,7 @@ void StaticMeshManager::PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::
         }
 }
 
-
-void StaticMeshManager::LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp )
-{
-    for ( auto& active_transaction : m_active_transactions )
-    {
-        if ( active_transaction.end_timestamp.has_value() && active_transaction.end_timestamp.value() <= timestamp )
-            LoadMeshesFromTransaction( active_transaction.transaction );
-    }
-}
-
-
-void StaticMeshManager::LoadMeshesFromTransaction( UploadTransaction& transaction )
+void StaticMeshManager::LoadMeshesFromTransaction( UploadTransaction& transaction, IGraphicsCommandList& cmd_list_graphics )
 {
     m_loaded_meshes.reserve( m_loaded_meshes.size() + transaction.meshes_to_upload.size() );
 
@@ -163,6 +152,23 @@ void StaticMeshManager::LoadMeshesFromTransaction( UploadTransaction& transactio
         StaticMesh* mesh = m_scene->TryModifyStaticMesh( mesh_data.id );
         if ( mesh ) // mesh could have already been deleted
         {
+            // Prepare acceleration structures for RT
+            D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC blas_desc;
+            blas_desc.Inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+            blas_desc.Inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+            D3D12_RAYTRACING_GEOMETRY_DESC rt_geom_desc;
+            rt_geom_desc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+            rt_geom_desc.Triangles.IndexBuffer = mesh_data.ibv.BufferLocation;
+            rt_geom_desc.Triangles.IndexCount = mesh->Indices().size();
+            rt_geom_desc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+            rt_geom_desc.Triangles.IndexFormat = mesh_data.ibv.Format;
+            rt_geom_desc.Triangles.VertexBuffer.StartAddress = mesh_data.vbv.BufferLocation;
+            rt_geom_desc.Triangles.VertexBuffer.StrideInBytes = mesh_data.vbv.StrideInBytes;
+            rt_geom_desc.Triangles.VertexCount = mesh->Vertices().size();
+            //rt_geom_desc.Triangles.VertexFormat = mesh->Vertices()
+            //std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
+            //blas_desc.Inputs.
+            //cmd_list_graphics.BuildRaytracingAccelerationStructure()
             mesh->Load( mesh_data.vbv, mesh_data.ibv );
             m_loaded_meshes.push_back( std::move( mesh_data ) );
         }

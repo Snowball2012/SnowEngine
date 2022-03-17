@@ -13,13 +13,13 @@ CommandList::CommandList( ID3D12Device& device, D3D12_COMMAND_LIST_TYPE type )
 }
 
 
-ID3D12GraphicsCommandList* CommandList::GetInterface() noexcept
+IGraphicsCommandList* CommandList::GetInterface() noexcept
 {
     return m_list.Get();
 }
 
 
-const ID3D12GraphicsCommandList* CommandList::GetInterface() const noexcept
+const IGraphicsCommandList* CommandList::GetInterface() const noexcept
 {
     return m_list.Get();
 }

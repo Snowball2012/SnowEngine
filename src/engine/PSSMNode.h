@@ -31,7 +31,7 @@ public:
         m_state = m_pass.BuildRenderState( dsv_format, bias, true, device );
     }
 
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override
     {
         OPTICK_EVENT();
         auto& lights_with_pssm = framegraph.GetRes<ShadowCascadeProducers>();

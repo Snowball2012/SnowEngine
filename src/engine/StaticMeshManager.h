@@ -14,15 +14,10 @@ public:
 
     void LoadStaticMesh( StaticMeshID id, std::string name, const span<const Vertex>& vertices, const span<const uint32_t>& indices );
 
-    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, ID3D12GraphicsCommandList& cmd_list );
+    void Update( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp current_timestamp, IGraphicsCommandList& cmd_list_copy, IGraphicsCommandList& cmd_list_graphics );
 
     // post a timestamp for given operation. May throw SnowEngineException if there already is a timestamp for this operation
     void PostTimestamp( SceneCopyOp operation_tag, GPUTaskQueue::Timestamp end_timestamp );
-
-    // Mark as loaded every transaction before timestamp.
-    // However, this does not mean the transaction is really completed, so uploaders will still remain intact until Update.
-    // Use this method if you are sure this timestamp will be reached before any subsequent operations on any mesh in transaction
-    void LoadEverythingBeforeTimestamp( GPUTaskQueue::Timestamp timestamp );
 
 private:
     struct StaticMeshData
@@ -54,7 +49,7 @@ private:
         std::optional<GPUTaskQueue::Timestamp> end_timestamp;
     };
 
-    void LoadMeshesFromTransaction( UploadTransaction& transaction );
+    void LoadMeshesFromTransaction( UploadTransaction& transaction, IGraphicsCommandList& cmd_list_graphics );
 
     std::vector<StaticMeshData> m_loaded_meshes;
 

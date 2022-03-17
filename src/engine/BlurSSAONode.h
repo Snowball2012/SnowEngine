@@ -33,7 +33,7 @@ public:
         m_state = m_pass.BuildRenderState( device );
     }
 
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override;
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override;
 
 private:
     DepthAwareBlurPass m_pass;
@@ -42,7 +42,7 @@ private:
 
 
 template<class Framegraph>
-inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
+inline void BlurSSAONode<Framegraph>::Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list )
 {
     OPTICK_EVENT();
     auto& blurred_ssao = framegraph.GetRes<SSAOTexture_Blurred>();

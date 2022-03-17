@@ -25,6 +25,9 @@ Renderer::~Renderer()
     m_hdr_ambient.reset();
     m_normals.reset();
     m_ssao.reset();
+    m_ssao_blurred.reset();
+    m_ssao_blurred_transposed.reset();
+    m_sdr_buffer.reset();
 }
 
 
@@ -250,7 +253,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
     CommandList cmd_list = frame_ctx.cmd_list_pool->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT );
     cmd_list.Reset();
 
-    ID3D12GraphicsCommandList* list_iface = cmd_list.GetInterface();
+    IGraphicsCommandList* list_iface = cmd_list.GetInterface();
 
     constexpr uint32_t nbarriers = 11;
     CD3DX12_RESOURCE_BARRIER rtv_barriers[nbarriers];

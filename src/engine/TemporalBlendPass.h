@@ -26,7 +26,7 @@ public:
         ShaderData gpu_data;
     };
 
-    void Draw( const Context& context, ID3D12GraphicsCommandList& cmd_list );
+    void Draw( const Context& context, IGraphicsCommandList& cmd_list );
 
     static ComPtr<ID3D12RootSignature> BuildRootSignature( ID3D12Device& device );
 

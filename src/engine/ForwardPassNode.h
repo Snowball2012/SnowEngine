@@ -45,7 +45,7 @@ public:
         m_renderstates = m_pass.CompileStates( direct_format, ambient_rtv_format, normal_format, depth_stencil_format, device );
     }
 
-    virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override;
+    virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override;
 
 private:
     ForwardLightingPass m_pass;
@@ -55,7 +55,7 @@ private:
 
 
 template<class Framegraph>
-inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list )
+inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list )
 {
     OPTICK_EVENT();
     auto& shadow_maps = framegraph.GetRes<ShadowMaps>();

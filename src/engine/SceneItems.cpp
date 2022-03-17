@@ -3,13 +3,34 @@
 #include "stdafx.h"
 #include "SceneItems.h"
 
+void StaticMesh::SubscribeToLoad( const std::function<void()>& callback )
+{
+    if ( m_is_loaded )
+    {
+        callback();
+        return;
+    }
+    m_loaded_callbacks.emplace_back( callback );
+}
+
+void StaticMesh::OnLoaded()
+{
+    if ( !SE_ENSURE( m_is_loaded ) )
+        return;
+
+    for ( const auto& callback : m_loaded_callbacks )
+        callback();
+
+    m_loaded_callbacks.clear();
+}
+
 std::pair<uint64_t, uint64_t> MaterialPBR::GetPipelineStateID( FramegraphTechnique technique ) const
 {
     NOTIMPL;
     return std::pair<uint64_t, uint64_t>();
 }
 
-bool MaterialPBR::BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const
+bool MaterialPBR::BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, IGraphicsCommandList& cmd_list ) const
 {
     switch ( technique )
     {

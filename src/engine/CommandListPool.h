@@ -15,14 +15,14 @@ public:
     CommandList( CommandList&& ) = default;
     CommandList& operator=( CommandList&& ) = default;
 
-    ID3D12GraphicsCommandList* GetInterface() noexcept;
-    const ID3D12GraphicsCommandList* GetInterface() const noexcept;
+    IGraphicsCommandList* GetInterface() noexcept;
+    const IGraphicsCommandList* GetInterface() const noexcept;
     void Reset( ID3D12PipelineState* initial_pso = nullptr, bool reset_allocator = true );
     D3D12_COMMAND_LIST_TYPE GetType() const noexcept;
 
 private:
     ComPtr<ID3D12CommandAllocator> m_allocator;
-    ComPtr<ID3D12GraphicsCommandList> m_list;
+    ComPtr<IGraphicsCommandList> m_list;
     D3D12_COMMAND_LIST_TYPE m_type;
 };
 

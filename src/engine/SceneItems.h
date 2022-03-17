@@ -81,6 +81,10 @@ public:
     bool IsLoaded() const noexcept { return m_is_loaded; }
     void Load( const D3D12_VERTEX_BUFFER_VIEW& vbv, const D3D12_INDEX_BUFFER_VIEW& ibvy ) noexcept;
 
+    void SubscribeToLoad(const std::function<void(void)>& callback);
+
+    void OnLoaded();
+
 private:
     friend class Scene;
     StaticMesh( ) {}
@@ -92,6 +96,8 @@ private:
     D3D12_INDEX_BUFFER_VIEW m_ibv;
     D3D_PRIMITIVE_TOPOLOGY m_topology;
     bool m_is_loaded = false;
+
+    std::vector<std::function<void(void)>> m_loaded_callbacks;
 };
 using StaticMeshID = typename packed_freelist<StaticMesh>::id;
 
@@ -129,6 +135,8 @@ private:
 
     Data m_data;
     StaticMeshID m_mesh_id;
+
+    ComPtr<ID3D12Resource> m_rt_blas;
 
     DirectX::BoundingBox m_box;
     DirectX::XMFLOAT2 m_max_inv_uv_density; // for mip streaming
@@ -242,7 +250,7 @@ private:
 
     // Inherited via IRenderMaterial
     virtual std::pair<uint64_t, uint64_t> GetPipelineStateID( FramegraphTechnique technique ) const override;
-    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, ID3D12GraphicsCommandList& cmd_list ) const override;
+    virtual bool BindDataToPipeline( FramegraphTechnique technique, uint64_t item_id, IGraphicsCommandList& cmd_list ) const override;
 };
 using MaterialID = typename packed_freelist<MaterialPBR>::id;
 

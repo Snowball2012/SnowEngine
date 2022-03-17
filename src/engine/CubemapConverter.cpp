@@ -18,7 +18,7 @@ CubemapConverter::CubemapConverter( ComPtr<ID3D12Device> device )
 
 
 ComPtr<ID3D12Resource> CubemapConverter::MakeCubemapFromCylindrical( uint32_t resolution, D3D12_GPU_DESCRIPTOR_HANDLE texture_srv,
-                                                                     DXGI_FORMAT cubemap_format, ID3D12GraphicsCommandList& cmd_list )
+                                                                     DXGI_FORMAT cubemap_format, IGraphicsCommandList& cmd_list )
 {
     assert( resolution > 0 && texture_srv.ptr != 0 );
 

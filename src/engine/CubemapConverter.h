@@ -10,7 +10,7 @@ public:
     CubemapConverter( ComPtr<ID3D12Device> device );
 
     ComPtr<ID3D12Resource> MakeCubemapFromCylindrical( uint32_t resolution, D3D12_GPU_DESCRIPTOR_HANDLE texture_srv,
-                                                       DXGI_FORMAT cubemap_format, ID3D12GraphicsCommandList& cmd_list );
+                                                       DXGI_FORMAT cubemap_format, IGraphicsCommandList& cmd_list );
 
 private:
     struct Shaders

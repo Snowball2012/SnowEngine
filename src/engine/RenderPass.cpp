@@ -5,7 +5,7 @@
 #include "RenderPass.h"
 
 
-void RenderPass::Begin( RenderStateID state, ID3D12GraphicsCommandList& command_list ) noexcept
+void RenderPass::Begin( RenderStateID state, IGraphicsCommandList& command_list ) noexcept
 {
     assert( m_pso_cache.has( state ) );
     command_list.SetPipelineState( m_pso_cache[state].Get() );
