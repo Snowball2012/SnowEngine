@@ -2,6 +2,8 @@
 
 Small DX12 render framework for educational purposes
 
+!(/screenshots/Demo1.png)
+
 Right now supports:
 1) PBR direct lighting (Disney diffuse + GGX specular)
 2) Normal mapping
