@@ -46,7 +46,7 @@ void UVScreenDensityCalculator::Update( const Camera& camera, const D3D12_VIEWPO
         if ( has_unloaded_texture )
             continue;
 
-        const StaticSubmesh& submesh = m_scene->AllStaticSubmeshes()[drawable.mesh];
+        const StaticSubmesh_Deprecated& submesh = m_scene->AllStaticSubmeshes()[drawable.mesh];
 
         BoundingOrientedBox bob;
         BoundingOrientedBox::CreateFromBoundingBox( bob, submesh.Box() );
@@ -70,7 +70,7 @@ void UVScreenDensityCalculator::Update( const Camera& camera, const D3D12_VIEWPO
     }
 }
 
-void UVScreenDensityCalculator::CalcUVDensityInObjectSpace( StaticSubmesh& submesh )
+void UVScreenDensityCalculator::CalcUVDensityInObjectSpace( StaticSubmesh_Deprecated& submesh )
 {
     StaticMeshID mesh_id = submesh.GetMesh();
 

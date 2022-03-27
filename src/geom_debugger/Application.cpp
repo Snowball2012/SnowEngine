@@ -362,7 +362,7 @@ void Application::Update( const GameTimer& timer )
 			DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( camera_ray_pos_ws, world2local );
 			DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( camera_ray_dir_ws, world2local );
 
-			const StaticSubmesh* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
+			const StaticSubmesh_Deprecated* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
 			if ( ! submesh )
 				continue;
 
@@ -536,7 +536,7 @@ bool Application::InitSceneAssets( SceneClientView& scene, SceneAssets& assets )
         cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
     }
 	assets.cube = scene.LoadStaticMesh( "cube", cube_vertices, cube_indices );
-	StaticSubmesh::Data submesh_data;
+	StaticSubmesh_Deprecated::Data submesh_data;
 	{
 		submesh_data.base_vertex_loc = 0;
 		submesh_data.idx_cnt = uint32_t( cube_indices.size() );

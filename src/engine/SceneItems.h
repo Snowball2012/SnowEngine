@@ -7,17 +7,11 @@
 
 #include "RenderData.h"
 
+#include "resources/Mesh.h"
+
 #include "utils/packed_freelist.h"
 
 class Scene;
-
-struct Vertex
-{
-    DirectX::XMFLOAT3 pos;
-    DirectX::XMFLOAT3 normal;
-    DirectX::XMFLOAT3 tangent;
-    DirectX::XMFLOAT2 uv;
-};
 
 class RefCounter
 {
@@ -102,7 +96,7 @@ private:
 using StaticMeshID = typename packed_freelist<StaticMesh>::id;
 
 
-class StaticSubmesh : public RefCounter
+class StaticSubmesh_Deprecated : public RefCounter
 {
 public:
     struct Data
@@ -130,7 +124,7 @@ public:
 
 private:
     friend class Scene;
-    StaticSubmesh( StaticMeshID mesh_id ) : m_mesh_id( mesh_id ), m_data{ 0, 0, 0 } {}
+    StaticSubmesh_Deprecated( StaticMeshID mesh_id ) : m_mesh_id( mesh_id ), m_data{ 0, 0, 0 } {}
     StaticMeshID& Mesh() noexcept { return m_mesh_id; }
 
     Data m_data;
@@ -142,7 +136,7 @@ private:
     DirectX::XMFLOAT2 m_max_inv_uv_density; // for mip streaming
     bool m_is_dirty = false;
 };
-using StaticSubmeshID = typename packed_freelist<StaticSubmesh>::id;
+using StaticSubmeshID = typename packed_freelist<StaticSubmesh_Deprecated>::id;
 
 
 class Texture : public RefCounter

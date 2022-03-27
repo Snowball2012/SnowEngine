@@ -28,7 +28,7 @@ template<> struct Scene::ID2Obj<StaticMeshID>
 
 template<> struct Scene::ID2Obj<StaticSubmeshID>
 {
-    using type = StaticSubmesh;
+    using type = StaticSubmesh_Deprecated;
 };
 
 template<> struct Scene::ID2Obj<TextureID>
@@ -148,13 +148,13 @@ StaticSubmeshID Scene::AddStaticSubmesh( StaticMeshID mesh_id )
         throw SnowEngineException( "referenced mesh does not exist" );
     mesh->AddRef();
 
-    StaticSubmesh submesh( mesh_id );
+    StaticSubmesh_Deprecated submesh( mesh_id );
     return m_static_submeshes.insert( std::move( submesh ) );
 }
 
 bool Scene::RemoveStaticSubmesh( StaticSubmeshID id ) noexcept
 {
-    StaticSubmesh* submesh = m_static_submeshes.try_get( id );
+    StaticSubmesh_Deprecated* submesh = m_static_submeshes.try_get( id );
     if ( ! submesh )
         return true;
 
@@ -167,7 +167,7 @@ bool Scene::RemoveStaticSubmesh( StaticSubmeshID id ) noexcept
     return Remove( id );
 }
 
-StaticSubmesh* Scene::TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept
+StaticSubmesh_Deprecated* Scene::TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept
 {
     return m_static_submeshes.try_get( id );
 }

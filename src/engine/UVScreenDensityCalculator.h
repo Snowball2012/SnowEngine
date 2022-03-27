@@ -9,7 +9,7 @@ public:
 
     void Update( const Camera& camera, const D3D12_VIEWPORT& viewport );
 
-    void CalcUVDensityInObjectSpace( StaticSubmesh& submesh );
+    void CalcUVDensityInObjectSpace( StaticSubmesh_Deprecated& submesh );
 
 private:
     Scene* m_scene;

@@ -510,7 +510,7 @@ OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask&
         if ( ! drawable.show )
             continue;
 
-        const StaticSubmesh& submesh = scene.AllStaticSubmeshes()[drawable.mesh];
+        const StaticSubmesh_Deprecated& submesh = scene.AllStaticSubmeshes()[drawable.mesh];
         const StaticMesh& geom = scene.AllStaticMeshes()[submesh.GetMesh()];
         if ( ! geom.IsLoaded() )
             continue;

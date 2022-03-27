@@ -44,7 +44,7 @@ public:
     auto StaticSubmeshSpan() const noexcept { return m_static_submeshes.get_elems(); }
     // for element modification
     auto StaticSubmeshSpan() noexcept { return m_static_submeshes.get_elems(); }
-    StaticSubmesh* TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept; // returns nullptr if object no longer exists
+    StaticSubmesh_Deprecated* TryModifyStaticSubmesh( StaticSubmeshID id ) noexcept; // returns nullptr if object no longer exists
 
 
     // Textures
@@ -118,7 +118,7 @@ private:
 
     packed_freelist<ObjectTransform> m_obj_tfs;
     packed_freelist<StaticMesh> m_static_meshes;
-    packed_freelist<StaticSubmesh> m_static_submeshes;
+    packed_freelist<StaticSubmesh_Deprecated> m_static_submeshes;
     packed_freelist<Texture> m_textures;
     packed_freelist<Cubemap> m_cubemaps;
     packed_freelist<MaterialPBR> m_materials;

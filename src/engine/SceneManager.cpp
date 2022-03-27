@@ -80,7 +80,7 @@ MaterialPBR* SceneClientView::ModifyMaterial( MaterialID mat ) noexcept
     return m_scene->TryModifyMaterial( mat );
 }
 
-StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh::Data& data )
+StaticSubmeshID SceneClientView::AddSubmesh( StaticMeshID mesh_id, const StaticSubmesh_Deprecated::Data& data )
 {
     StaticSubmeshID id = m_scene->AddStaticSubmesh( mesh_id );
     m_scene->TryModifyStaticSubmesh( id )->Modify() = data;
@@ -298,7 +298,7 @@ void SceneManager::ProcessSubmeshes()
     }
 }
 
-void SceneManager::CalcSubmeshBoundingBox( StaticSubmesh& submesh )
+void SceneManager::CalcSubmeshBoundingBox( StaticSubmesh_Deprecated& submesh )
 {
     assert( m_scene.AllStaticMeshes().has( submesh.GetMesh() ) );
 

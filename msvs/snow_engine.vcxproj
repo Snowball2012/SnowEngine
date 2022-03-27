@@ -206,6 +206,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClCompile Include="..\src\engine\RenderTask.cpp" />
     <ClCompile Include="..\src\engine\RenderUtils.cpp" />
     <ClCompile Include="..\src\engine\ResizableTexture.cpp" />
+    <ClCompile Include="..\src\engine\resources\GPUDevice.cpp" />
     <ClCompile Include="..\src\engine\Scene.cpp" />
     <ClCompile Include="..\src\engine\SceneItems.cpp" />
     <ClCompile Include="..\src\engine\SceneManager.cpp" />
@@ -306,6 +307,8 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\engine\RenderTask.h" />
     <ClInclude Include="..\src\engine\RenderUtils.h" />
     <ClInclude Include="..\src\engine\ResizableTexture.h" />
+    <ClInclude Include="..\src\engine\resources\GPUDevice.h" />
+    <ClInclude Include="..\src\engine\resources\Mesh.h" />
     <ClInclude Include="..\src\engine\Scene.h" />
     <ClInclude Include="..\src\engine\SceneItems.h" />
     <ClInclude Include="..\src\engine\SceneManager.h" />

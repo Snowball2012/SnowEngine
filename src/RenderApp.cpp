@@ -355,7 +355,7 @@ void RenderApp::UpdateHighlightedObject()
 			DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( camera_pos_ws, world2local );
 			DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( camera_dir_ws, world2local );
 
-			const StaticSubmesh* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
+			const StaticSubmesh_Deprecated* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
 			if ( ! submesh )
 				continue;
 
@@ -591,7 +591,7 @@ bool RenderApp::InitHighlightCube()
         cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
     }
     StaticMeshID mesh_id = scene.LoadStaticMesh( "highlight_cube", std::move( cube_vertices ), std::move( cube_indices ) );
-    StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
+    StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh_Deprecated::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
 
     m_highlight_cube = world.CreateEntity();
     world.AddComponent<Transform>( m_highlight_cube, Transform{ DirectX::XMMatrixIdentity() } );
@@ -639,7 +639,7 @@ void RenderApp::BuildGeometry( ImportedScene& ext_scene )
         for ( auto& submesh : mesh.submeshes )
         {
             submesh.submesh_id = scene.AddSubmesh( mesh.mesh_id,
-                                                   StaticSubmesh::Data{ uint32_t( submesh.nindices ),
+                                                   StaticSubmesh_Deprecated::Data{ uint32_t( submesh.nindices ),
                                                                         uint32_t( submesh.index_offset ),
                                                                         0 } );
         }
@@ -798,7 +798,7 @@ void RenderApp::LoadingScreen::LoadCube( SceneClientView& scene, TextureID norma
         cube_indices.assign( GeomGeneration::CubeIndices.cbegin(), GeomGeneration::CubeIndices.cend() );
     }
     StaticMeshID mesh_id = scene.LoadStaticMesh( "loading cube", std::move( cube_vertices ), std::move( cube_indices ) );
-    StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
+    StaticSubmeshID submesh_id = scene.AddSubmesh( mesh_id, StaticSubmesh_Deprecated::Data{ uint32_t( GeomGeneration::CubeIndices.size() ), 0, 0 } );
 
     auto& world = scene.GetWorld();
     m_cube = world.CreateEntity();
