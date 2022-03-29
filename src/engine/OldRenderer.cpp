@@ -52,29 +52,27 @@ void OldRenderer::Init()
 {
     CreateDevice();
 
-    m_cmd_lists = std::make_shared<CommandListPool>( m_d3d_device.Get() );
+    auto* d3d_device = m_gpu_device->GetNativeDevice();
 
-    m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
-    m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
-    m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
+    m_cmd_lists = std::make_shared<CommandListPool>( d3d_device );
 
-    m_rtv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
-    m_dsv_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
-    m_cbv_srv_uav_size = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    m_graphics_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
+    m_copy_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
+    m_compute_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
 
     CreateSwapChain();
 
     InitImgui();
     BuildRtvDescriptorHeaps();
 
-    m_scene_manager = std::make_unique<SceneManager>( m_d3d_device, FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
+    m_scene_manager = std::make_unique<SceneManager>( d3d_device, FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
 
     RecreateSwapChain( m_client_width, m_client_height );
 
     BuildFrameResources();
 
     Renderer::DeviceContext device_ctx;
-    device_ctx.device = m_d3d_device.Get();
+    device_ctx.device = d3d_device;
     device_ctx.srv_cbv_uav_tables = &DescriptorTables();
     m_renderer = std::make_unique<Renderer>( Renderer::Create( device_ctx, m_client_width, m_client_height ) );
 
@@ -94,11 +92,12 @@ void OldRenderer::Draw()
 
     {
         D3D12_CPU_DESCRIPTOR_HANDLE desc_table = *DescriptorTables().ModifyTable( m_ibl_table );
+        const size_t descriptor_size = m_gpu_device->GetDescriptorSizes().cbv_srv_uav;
         if ( auto* tex = scene.AllCubemaps().try_get( m_irradiance_map ) )
         {
             if ( tex->IsLoaded() )
             {
-                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 0, UINT( m_cbv_srv_uav_size ) ),
+                m_gpu_device->GetNativeDevice()->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 0, UINT( descriptor_size ) ),
                                                      tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
             }
         }
@@ -106,7 +105,7 @@ void OldRenderer::Draw()
         {
             if ( tex->IsLoaded() )
             {
-                m_d3d_device->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, UINT( m_cbv_srv_uav_size ) ),
+                m_gpu_device->GetNativeDevice()->CopyDescriptorsSimple( 1, CD3DX12_CPU_DESCRIPTOR_HANDLE( desc_table, 1, UINT( descriptor_size ) ),
                                                      tex->StagingSRV(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
             }
         }
@@ -138,7 +137,7 @@ void OldRenderer::Draw()
     
     constexpr UINT64 heap_block_size = 1024 * 1024;
     
-    GPULinearAllocator allocator( m_d3d_device.Get(), CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS ) );
+    GPULinearAllocator allocator( m_gpu_device->GetNativeDevice(), CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS ) );
 
     RenderTask task = m_renderer->CreateTask( main_camera->GetData(), GetScene().GetAllLights(),
                                               RenderMode::FullTonemapped, allocator );
@@ -303,11 +302,12 @@ void OldRenderer::CreateDevice()
     ThrowIfFailedH( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
 
     // Try to create hardware device.
+    ComPtr<ID3D12Device> d3d_device;
     HRESULT hardware_result;
     hardware_result = D3D12CreateDevice(
         nullptr,             // default adapter
         D3D_FEATURE_LEVEL_11_0,
-        IID_PPV_ARGS( &m_d3d_device ) );
+        IID_PPV_ARGS( &d3d_device ) );
 
 
     // Fallback to WARP device.
@@ -319,8 +319,10 @@ void OldRenderer::CreateDevice()
         ThrowIfFailedH( D3D12CreateDevice(
             pWarpAdapter.Get(),
             D3D_FEATURE_LEVEL_11_0,
-            IID_PPV_ARGS( &m_d3d_device ) ) );
+            IID_PPV_ARGS( &d3d_device ) ) );
     }
+
+    m_gpu_device = std::make_unique<GPUDevice>(std::move(d3d_device));
 }
 
 
@@ -383,7 +385,7 @@ void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
 
         m_back_buffer_rtv[i] = std::nullopt;
         m_back_buffer_rtv[i].emplace( std::move( m_rtv_heap->AllocateDescriptor() ) );
-        m_d3d_device->CreateRenderTargetView( m_swap_chain_buffer[i].Get(), nullptr, m_back_buffer_rtv[i]->HandleCPU() );
+        m_gpu_device->GetNativeDevice()->CreateRenderTargetView( m_swap_chain_buffer[i].Get(), nullptr, m_back_buffer_rtv[i]->HandleCPU() );
     }
 
     // Update the viewport transform to cover the client area.
@@ -401,7 +403,7 @@ void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
 
 void OldRenderer::BuildRtvDescriptorHeaps()
 {
-    m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_d3d_device.Get() );
+    m_rtv_heap = std::make_unique<StagingDescriptorHeap>( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, m_gpu_device->GetNativeDevice() );
 }
 
 void OldRenderer::BuildUIDescriptorHeap( )
@@ -414,8 +416,8 @@ void OldRenderer::BuildUIDescriptorHeap( )
         srv_heap_desc.NumDescriptors = 1 /*imgui font*/;
 
         ComPtr<ID3D12DescriptorHeap> srv_heap;
-        ThrowIfFailedH( m_d3d_device->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
-        m_srv_ui_heap = std::make_unique<DescriptorHeap>( std::move( srv_heap ), m_cbv_srv_uav_size );
+        ThrowIfFailedH( m_gpu_device->GetNativeDevice()->CreateDescriptorHeap( &srv_heap_desc, IID_PPV_ARGS( &srv_heap ) ) );
+        m_srv_ui_heap = std::make_unique<DescriptorHeap>( std::move( srv_heap ), m_gpu_device->GetDescriptorSizes().cbv_srv_uav );
     }
 }
 
@@ -428,7 +430,7 @@ void OldRenderer::InitImgui()
     ImGui_ImplWin32_Init( m_main_hwnd );
     BuildUIDescriptorHeap();
     m_ui_font_desc = std::make_unique<Descriptor>( std::move( m_srv_ui_heap->AllocateDescriptor() ) );
-    ImGui_ImplDX12_Init( m_d3d_device.Get(), FrameResourceCount, m_back_buffer_format, m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
+    ImGui_ImplDX12_Init( m_gpu_device->GetNativeDevice(), FrameResourceCount, m_back_buffer_format, m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
     ImGui::StyleColorsDark();
 }
 

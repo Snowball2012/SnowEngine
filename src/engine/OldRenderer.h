@@ -13,6 +13,7 @@
 #include "SceneManager.h"
 
 #include "Renderer.h"
+#include "resources/GPUDevice.h"
 
 class Renderer;
 
@@ -74,7 +75,7 @@ private:
 
     // d3d stuff
     ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
-    ComPtr<ID3D12Device> m_d3d_device = nullptr;
+    std::unique_ptr<GPUDevice> m_gpu_device = nullptr;
 
     std::shared_ptr<CommandListPool> m_cmd_lists = nullptr;
 
@@ -111,10 +112,6 @@ private:
     // descriptor heaps
     std::unique_ptr<DescriptorHeap> m_srv_ui_heap = nullptr;
     std::unique_ptr<StagingDescriptorHeap> m_rtv_heap = nullptr;
-
-    size_t m_cbv_srv_uav_size = 0;
-    size_t m_dsv_size = 0;
-    size_t m_rtv_size = 0;
 
     // ui font descriptor
     std::unique_ptr<Descriptor> m_ui_font_desc = nullptr;

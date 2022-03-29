@@ -55,6 +55,15 @@ GPUResource::~GPUResource()
         m_deleter->RegisterResource(*this);
 }
 
+GPUDevice::GPUDevice(ComPtr<ID3D12Device> native_device)
+    : m_d3d_device(std::move(native_device))
+{
+    SE_ENSURE(m_d3d_device.Get());
+    m_descriptor_size.rtv = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
+    m_descriptor_size.dsv = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
+    m_descriptor_size.cbv_srv_uav = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+}
+
 GPUResource GPUDevice::CreateResource(IGPUResourceDeleter* deleter)
 {
     NOTIMPL;

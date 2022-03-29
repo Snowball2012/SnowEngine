@@ -53,14 +53,29 @@ public:
 
 class GPUDevice : private IGPUResourceDeleter
 {
+public:
+    struct GPUDescriptorSizes
+    {
+        size_t rtv = 0;
+        size_t dsv = 0;
+        size_t cbv_srv_uav = 0;
+    };
+    
 private:
-    ComPtr<ID3D12Device> m_d3d_device;
+    ComPtr<ID3D12Device> m_d3d_device = nullptr;
+
+    GPUDescriptorSizes m_descriptor_size;
     
 public:
+    GPUDevice(ComPtr<ID3D12Device> native_device);
+    
     ID3D12Device* GetNativeDevice() const { return m_d3d_device.Get(); }
 
     GPUResource CreateResource(IGPUResourceDeleter* deleter = nullptr);
 
+    const GPUDescriptorSizes& GetDescriptorSizes() const { return m_descriptor_size; }
+
 private:
     virtual void RegisterResource(GPUResource& resource) override;
+    virtual RegisterTime GetRegisterTime() const override { return RegisterTime::OnRelease; };
 };
