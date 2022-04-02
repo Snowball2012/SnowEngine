@@ -236,7 +236,7 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
 
     ThrowIfFailedH( m_copy_cmd_list->Close() );
     ID3D12CommandList* lists_to_exec[]{ m_copy_cmd_list.Get() };
-    m_copy_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
+    m_copy_queue->GetNativeQueue()->ExecuteCommandLists( 1, lists_to_exec );
     
     m_last_copy_timestamp = m_copy_queue->CreateTimestamp();
     m_copy_cmd_allocators[cur_op % m_nframes_to_buffer].second = m_last_copy_timestamp;
@@ -257,7 +257,7 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
 
     ThrowIfFailedH( m_graphics_cmd_list->Close() );
     lists_to_exec[0] = m_graphics_cmd_list.Get();
-    m_graphics_queue->GetCmdQueue()->ExecuteCommandLists( 1, lists_to_exec );
+    m_graphics_queue->GetNativeQueue()->ExecuteCommandLists( 1, lists_to_exec );
 
     CleanModifiedItemsStatus();
 }

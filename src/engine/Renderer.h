@@ -27,6 +27,7 @@
 #include "RenderTask.h"
 
 
+class GPUDevice;
 // Main renderer class.
 // Basic pipeline:
 // 1. Enable/disable features
@@ -55,7 +56,7 @@ public:
 
     struct DeviceContext
     {
-        ID3D12Device* device = nullptr;
+        GPUDevice* device = nullptr;
         DescriptorTableBakery* srv_cbv_uav_tables = nullptr;
     };
 
@@ -72,7 +73,6 @@ public:
     struct FrameContext
     {
         Target render_target;
-        CommandListPool* cmd_list_pool;
         GPUResourceHolder* resources;
     };
 
@@ -184,7 +184,7 @@ private:
     StagingDescriptorHeap m_rtv_heap;
 
     // permanent context
-    ID3D12Device* m_device = nullptr;
+    GPUDevice* m_device = nullptr;
     DescriptorTableBakery* m_descriptor_tables = nullptr;
 
     Renderer( const DeviceContext& ctx,

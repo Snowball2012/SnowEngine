@@ -17,13 +17,14 @@ public:
     ~GPUTaskQueue();
 
     D3D12_COMMAND_LIST_TYPE GetType() const noexcept { return m_type; }
-    ID3D12CommandQueue* GetCmdQueue() noexcept;
+    ID3D12CommandQueue* GetNativeQueue() noexcept;
     Timestamp CreateTimestamp();
     Timestamp GetLastPlacedTimestamp() const;
 
     void SubmitLists( const span<CommandList>& lists ) noexcept; // lists will be executed in the order of submission,
                                                                  // passed CommandLists will be invalided
                                                                  // lists must be closed
+                                                                 // lists must be previously created with this queue
     Timestamp ExecuteSubmitted(); // calls ExecuteCommandLists
 
     // not const since 2 consequential calls may return different values
@@ -33,6 +34,8 @@ public:
 
     // convinient equivalent of WaitForTimestamp( CreateTimestamp() )
     void Flush();
+
+    CommandList CreateCommandList();
 
 private:
 

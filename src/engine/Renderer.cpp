@@ -4,13 +4,15 @@
 
 #include "Renderer.h"
 
+#include "resources/GPUDevice.h"
+
 Renderer Renderer::Create( const DeviceContext& ctx, uint32_t width, uint32_t height )
 {
     assert( ctx.device );
 
-    StagingDescriptorHeap dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, ctx.device );
-    StagingDescriptorHeap rtv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, ctx.device );
-    ShadowProvider shadow_provider( ctx.device, ctx.srv_cbv_uav_tables );
+    StagingDescriptorHeap dsv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_DSV, ctx.device->GetNativeDevice() );
+    StagingDescriptorHeap rtv_heap( D3D12_DESCRIPTOR_HEAP_TYPE_RTV, ctx.device->GetNativeDevice() );
+    ShadowProvider shadow_provider( ctx.device->GetNativeDevice(), ctx.srv_cbv_uav_tables );
 
     return Renderer( ctx, width, height,
                           std::move( dsv_heap ), std::move( rtv_heap ),
@@ -58,23 +60,23 @@ Renderer::Renderer( const DeviceContext& ctx,
 
 void Renderer::InitFramegraph()
 {
-    m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format_dsv, *m_device );
+    m_framegraph.ConstructAndEnableNode<DepthPrepassNode>( m_depth_stencil_format_dsv, *m_device->GetNativeDevice() );
 
-    m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device );
-    m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device );
+    m_framegraph.ConstructAndEnableNode<ShadowPassNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<PSSMNode>( m_depth_stencil_format_dsv, m_shadow_bias, *m_device->GetNativeDevice() );
 
     m_framegraph.ConstructAndEnableNode<ForwardPassNode>( m_hdr_format, // rendertarget
                                                           m_hdr_format, // ambient lighting
                                                           m_normals_format, // normals
-                                                          m_depth_stencil_format_dsv, *m_device );
+                                                          m_depth_stencil_format_dsv, *m_device->GetNativeDevice() );
 
-    m_framegraph.ConstructAndEnableNode<SkyboxNode>( m_hdr_format, m_depth_stencil_format_dsv, *m_device );
+    m_framegraph.ConstructAndEnableNode<SkyboxNode>( m_hdr_format, m_depth_stencil_format_dsv, *m_device->GetNativeDevice() );
 
-    m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->GetFormat(), *m_device );
-    m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device );
-    m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device );
-    m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device );
-    m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device );
+    m_framegraph.ConstructAndEnableNode<HBAONode>( m_ssao->GetFormat(), *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<BlurSSAONode>( *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device->GetNativeDevice() );
 
 
     if ( m_framegraph.IsRebuildNeeded() )
@@ -120,7 +122,7 @@ void Renderer::CreateTransientResources()
 
         tex = std::make_unique<DynamicTexture>(
             name, 1, 1, texture_format, has_mips, initial_state, views_to_create,
-            *m_device, m_descriptor_tables, &m_rtv_heap, &m_dsv_heap, opt_clear_ptr );
+            *m_device->GetNativeDevice(), m_descriptor_tables, &m_rtv_heap, &m_dsv_heap, opt_clear_ptr );
     };
 
 
@@ -137,7 +139,7 @@ void Renderer::CreateTransientResources()
 
 
     // Atomic
-    m_device->CreateCommittedResource(
+    m_device->GetNativeDevice()->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES( D3D12_HEAP_TYPE_DEFAULT ),
         D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS,
         &CD3DX12_RESOURCE_DESC::Buffer( 4, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS ),
@@ -155,7 +157,7 @@ void Renderer::CreateTransientResources()
 
     m_atimic_buffer_descriptor = m_descriptor_tables->AllocateTable( 1 );
 
-    m_device->CreateUnorderedAccessView(
+    m_device->GetNativeDevice()->CreateUnorderedAccessView(
         m_atomic_buffer.Get(), nullptr, &uav_desc,
         m_descriptor_tables->ModifyTable( m_atimic_buffer_descriptor ).value() );
 }
@@ -165,7 +167,7 @@ void Renderer::ResizeTransientResources()
 {
     auto resize_tex = [&]( auto& tex, uint32_t width, uint32_t height )
     {
-        tex.Resize( width, height, *m_device, m_descriptor_tables, &m_rtv_heap, &m_dsv_heap );
+        tex.Resize( width, height, *m_device->GetNativeDevice(), m_descriptor_tables, &m_rtv_heap, &m_dsv_heap );
     };
 
     resize_tex( *m_hdr_backbuffer, m_resolution_width, m_resolution_height );
@@ -192,7 +194,7 @@ RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Lig
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
 
-    ForwardCBProvider forward_cb = ForwardCBProvider::Create( main_camera, m_pssm, light_list, *m_device, cb_allocator );
+    ForwardCBProvider forward_cb = ForwardCBProvider::Create( main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
 
     RenderTask new_task( std::move( forward_cb ) );
     new_task.m_mode = mode;
@@ -216,7 +218,6 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
                      std::vector<CommandList>& graphics_cmd_lists )
 {
     OPTICK_EVENT();
-    assert( frame_ctx.cmd_list_pool != nullptr );
     assert( frame_ctx.resources != nullptr );
 
     m_framegraph.ClearResources();
@@ -225,7 +226,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         m_framegraph.Rebuild();
 
     
-    GPULinearAllocator upload_allocator( m_device, GetUploadHeapDescription() );
+    GPULinearAllocator upload_allocator( m_device->GetNativeDevice(), GetUploadHeapDescription() );
 
     frame_ctx.resources->AddResources( make_single_elem_span( task.m_forward_cb_provider.GetResource() ) );
 
@@ -250,7 +251,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     // Reuse memory associated with command recording
     // We can only reset when the associated command lists have finished execution on GPU
-    CommandList cmd_list = frame_ctx.cmd_list_pool->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT );
+    CommandList cmd_list = m_device->GetGraphicsQueue()->CreateCommandList();
     cmd_list.Reset();
 
     IGraphicsCommandList* list_iface = cmd_list.GetInterface();
@@ -488,7 +489,7 @@ Renderer::RenderBatchList Renderer::CreateRenderitems( const span<const RenderIt
 
     auto gpu_allocation = frame_allocator.Alloc( buffer_size );
 
-    ThrowIfFailedH( m_device->CreatePlacedResource( gpu_allocation.first, gpu_allocation.second, 
+    ThrowIfFailedH( m_device->GetNativeDevice()->CreatePlacedResource( gpu_allocation.first, gpu_allocation.second, 
             &CD3DX12_RESOURCE_DESC::Buffer( buffer_size ),
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
@@ -551,7 +552,7 @@ ComPtr<ID3D12Resource> Renderer::CreateSkyboxCB( const DirectX::XMFLOAT4X4& obj2
 
     constexpr uint64_t cb_size = sizeof( obj2world );
     auto allocation = upload_cb_allocator.Alloc( cb_size );
-    ThrowIfFailedH( m_device->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
+    ThrowIfFailedH( m_device->GetNativeDevice()->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
                                                     &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
                                                     IID_PPV_ARGS( res.GetAddressOf() ) ) );
 
@@ -573,7 +574,7 @@ std::pair<ComPtr<ID3D12Resource>, SinglePassDownsamplerShaderCB> Renderer::Creat
     constexpr uint64_t cb_size = sizeof( SingleDownsamplerPass::ShaderCB );
 
     auto allocation = upload_cb_allocator.Alloc( cb_size );
-    ThrowIfFailedH( m_device->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
+    ThrowIfFailedH( m_device->GetNativeDevice()->CreatePlacedResource( allocation.first, UINT64( allocation.second ),
         &CD3DX12_RESOURCE_DESC::Buffer( cb_size ), D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
         IID_PPV_ARGS( res.first.GetAddressOf() ) ) );
 

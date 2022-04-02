@@ -2,6 +2,8 @@
 
 #include "GPUDevice.h"
 
+#include "engine/GPUTaskQueue.h"
+
 GPUResource::GPUResource(ComPtr<ID3D12Resource> native_resource, IGPUResourceDeleter* deleter)
     : m_native_resource(native_resource.Get())
 {
@@ -62,6 +64,34 @@ GPUDevice::GPUDevice(ComPtr<ID3D12Device> native_device)
     m_descriptor_size.rtv = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_RTV );
     m_descriptor_size.dsv = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_DSV );
     m_descriptor_size.cbv_srv_uav = m_d3d_device->GetDescriptorHandleIncrementSize( D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
+    
+    m_cmd_lists = std::make_shared<CommandListPool>( m_d3d_device.Get() );
+    
+    m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
+    m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
+    m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
+}
+
+GPUTaskQueue* GPUDevice::GetGraphicsQueue()
+{
+    return m_graphics_queue.get();
+}
+
+GPUTaskQueue* GPUDevice::GetComputeQueue()
+{
+    return m_compute_queue.get();
+}
+
+GPUTaskQueue* GPUDevice::GetCopyQueue()
+{
+    return m_copy_queue.get();
+}
+
+void GPUDevice::Flush()
+{
+    m_copy_queue->Flush();
+    m_compute_queue->Flush();
+    m_graphics_queue->Flush();
 }
 
 GPUResource GPUDevice::CreateResource(IGPUResourceDeleter* deleter)

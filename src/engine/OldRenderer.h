@@ -77,12 +77,6 @@ private:
     ComPtr<IDXGIFactory4> m_dxgi_factory = nullptr;
     std::unique_ptr<GPUDevice> m_gpu_device = nullptr;
 
-    std::shared_ptr<CommandListPool> m_cmd_lists = nullptr;
-
-    std::unique_ptr<GPUTaskQueue> m_graphics_queue = nullptr;
-    std::unique_ptr<GPUTaskQueue> m_copy_queue = nullptr;
-    std::unique_ptr<GPUTaskQueue> m_compute_queue = nullptr;
-
     uint32_t m_client_width;
     uint32_t m_client_height;
 

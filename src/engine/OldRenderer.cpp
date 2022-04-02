@@ -1,4 +1,4 @@
-// This is an independent project of an individual developer. Dear PVS-Studio, please check it.
+/ This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
 #include "stdafx.h"
 
@@ -54,25 +54,19 @@ void OldRenderer::Init()
 
     auto* d3d_device = m_gpu_device->GetNativeDevice();
 
-    m_cmd_lists = std::make_shared<CommandListPool>( d3d_device );
-
-    m_graphics_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
-    m_copy_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
-    m_compute_queue = std::make_unique<GPUTaskQueue>( *d3d_device, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
-
     CreateSwapChain();
 
     InitImgui();
     BuildRtvDescriptorHeaps();
 
-    m_scene_manager = std::make_unique<SceneManager>( d3d_device, FrameResourceCount, m_copy_queue.get(), m_graphics_queue.get() );
+    m_scene_manager = std::make_unique<SceneManager>( d3d_device, FrameResourceCount, m_gpu_device->GetCopyQueue(), m_gpu_device->GetGraphicsQueue() );
 
     RecreateSwapChain( m_client_width, m_client_height );
 
     BuildFrameResources();
 
     Renderer::DeviceContext device_ctx;
-    device_ctx.device = d3d_device;
+    device_ctx.device = m_gpu_device.get();
     device_ctx.srv_cbv_uav_tables = &DescriptorTables();
     m_renderer = std::make_unique<Renderer>( Renderer::Create( device_ctx, m_client_width, m_client_height ) );
 
@@ -121,7 +115,7 @@ void OldRenderer::Draw()
 
     std::vector<CommandList> lists_to_execute;
 
-    lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
+    lists_to_execute.emplace_back( m_gpu_device->GetGraphicsQueue()->CreateCommandList() );
     lists_to_execute.back().Reset();
 
     IGraphicsCommandList* cmd_list = lists_to_execute.back().GetInterface();
@@ -181,7 +175,6 @@ void OldRenderer::Draw()
 	}
 
     Renderer::FrameContext frame_ctx;
-    frame_ctx.cmd_list_pool = m_cmd_lists.get();
     frame_ctx.render_target.resource = CurrentBackBuffer();
     frame_ctx.render_target.rtv = CurrentBackBufferView();
     frame_ctx.render_target.current_state = D3D12_RESOURCE_STATE_RENDER_TARGET;
@@ -201,7 +194,7 @@ void OldRenderer::Draw()
     m_renderer->Draw( task, scene_ctx, frame_ctx, lists_to_execute );
 
     // Draw UI
-    lists_to_execute.emplace_back( m_cmd_lists->GetList( D3D12_COMMAND_LIST_TYPE_DIRECT ) );
+    lists_to_execute.emplace_back( m_gpu_device->GetGraphicsQueue()->CreateCommandList() );
     lists_to_execute.back().Reset();
     cmd_list = lists_to_execute.back().GetInterface();
     ImGui_ImplDX12_NewFrame( cmd_list );
@@ -216,7 +209,7 @@ void OldRenderer::Draw()
 
     ThrowIfFailedH( cmd_list->Close() );
 
-    m_graphics_queue->SubmitLists( make_span( lists_to_execute ) );
+     m_gpu_device->GetGraphicsQueue()->SubmitLists( make_span( lists_to_execute ) );
 
     EndFrame( );	
 }
@@ -228,7 +221,7 @@ void OldRenderer::NewGUIFrame()
 
 void OldRenderer::Resize( uint32_t new_width, uint32_t new_height )
 {
-    m_graphics_queue->Flush();
+    m_gpu_device->Flush();
     RecreateSwapChain( new_width, new_height );
     m_renderer->SetInternalResolution( new_width, new_height );
 }
@@ -349,7 +342,7 @@ void OldRenderer::CreateSwapChain()
 
     // Note: Swap chain uses queue to perform flush.
     ThrowIfFailedH( m_dxgi_factory->CreateSwapChain(
-        m_graphics_queue->GetCmdQueue(),
+        m_gpu_device->GetGraphicsQueue()->GetNativeQueue(),
         &sd,
         m_swap_chain.GetAddressOf() ) );
 }
@@ -359,7 +352,7 @@ void OldRenderer::RecreateSwapChain( uint32_t new_width, uint32_t new_height )
     assert( m_swap_chain );
 
     // Flush before changing any resources.
-    m_graphics_queue->Flush();
+    m_gpu_device->Flush();
 
     ImGui_ImplDX12_InvalidateDeviceObjects();
 
@@ -445,7 +438,7 @@ void OldRenderer::EndFrame( )
 {
     // GPU timeline
 
-    m_cur_frame_resource->first = m_graphics_queue->ExecuteSubmitted();
+    m_cur_frame_resource->first = m_gpu_device->GetGraphicsQueue()->ExecuteSubmitted();
     // swap buffers
     OPTICK_GPU_FLIP(m_swap_chain.Get());
 	OPTICK_CATEGORY("Present", Optick::Category::Wait);
@@ -458,7 +451,7 @@ void OldRenderer::EndFrame( )
 
     // wait for gpu to complete (i - 2)th frame;
     if ( m_cur_frame_resource->first != 0 )
-        m_graphics_queue->WaitForTimestamp( m_cur_frame_resource->first );
+        m_gpu_device->GetGraphicsQueue()->WaitForTimestamp( m_cur_frame_resource->first );
 
     m_cur_frame_resource->second.Clear();
 }

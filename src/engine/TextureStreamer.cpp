@@ -252,7 +252,7 @@ std::optional<
         range_start_offsets.push_back( page );
     std::vector<UINT> range_tile_counts;
     range_tile_counts.resize( required_tiles_num, 1 ); // this is ridiculous. Maybe use static array of ones?
-    copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
+    copy_queue.GetNativeQueue()->UpdateTileMappings( texture.gpu_res.Get(),
                                                   UINT( resource_region_coords.size() ),
                                                   resource_region_coords.data(),
                                                   &resource_region_size,
@@ -342,7 +342,7 @@ std::optional<
         range_start_offsets.push_back( page );
     std::vector<UINT> range_tile_counts;
     range_tile_counts.resize( required_tiles_num, 1 );
-    copy_queue.GetCmdQueue()->UpdateTileMappings( texture.gpu_res.Get(),
+    copy_queue.GetNativeQueue()->UpdateTileMappings( texture.gpu_res.Get(),
                                                   UINT( resource_region_coords.size() ),
                                                   resource_region_coords.data(),
                                                   resource_region_sizes.data(),

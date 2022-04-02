@@ -30,7 +30,7 @@ GPUTaskQueue::~GPUTaskQueue()
 }
 
 
-ID3D12CommandQueue* GPUTaskQueue::GetCmdQueue() noexcept
+ID3D12CommandQueue* GPUTaskQueue::GetNativeQueue() noexcept
 {
     return m_cmd_queue.Get();
 }
@@ -103,6 +103,11 @@ void GPUTaskQueue::WaitForTimestamp( Timestamp ts )
 void GPUTaskQueue::Flush()
 {
     WaitForTimestamp( CreateTimestamp() );
+}
+
+CommandList GPUTaskQueue::CreateCommandList()
+{
+    return m_pool->GetList(GetType());
 }
 
 

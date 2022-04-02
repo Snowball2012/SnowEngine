@@ -4,6 +4,8 @@
 
 #include <d3d12.h>
 
+class GPUTaskQueue;
+class CommandListPool;
 class GPUDevice;
 
 class IGPUResourceDeleter;
@@ -18,8 +20,7 @@ private:
     friend class GPUDevice;
     
     GPUResource(ComPtr<ID3D12Resource> native_resource, IGPUResourceDeleter* deleter);
-    
-    
+
 public:
     ~GPUResource();
     
@@ -65,11 +66,25 @@ private:
     ComPtr<ID3D12Device> m_d3d_device = nullptr;
 
     GPUDescriptorSizes m_descriptor_size;
+
+    std::shared_ptr<CommandListPool> m_cmd_lists = nullptr;
+
+    std::unique_ptr<GPUTaskQueue> m_graphics_queue = nullptr;
+    std::unique_ptr<GPUTaskQueue> m_copy_queue = nullptr;
+    std::unique_ptr<GPUTaskQueue> m_compute_queue = nullptr;
     
 public:
     GPUDevice(ComPtr<ID3D12Device> native_device);
     
-    ID3D12Device* GetNativeDevice() const { return m_d3d_device.Get(); }
+    ID3D12Device* GetNativeDevice() { return m_d3d_device.Get(); }
+    const ID3D12Device* GetNativeDevice() const  { return m_d3d_device.Get(); }
+    
+    GPUTaskQueue* GetGraphicsQueue();
+    GPUTaskQueue* GetComputeQueue();
+    GPUTaskQueue* GetCopyQueue();
+
+    // Flush all queues
+    void Flush();
 
     GPUResource CreateResource(IGPUResourceDeleter* deleter = nullptr);
 
