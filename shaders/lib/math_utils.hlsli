@@ -4,6 +4,8 @@
 
 static const float PI = 3.14159265f;
 
+static const float FLT_MAX = 3.402823466e+38f;
+
 static const float GAUSS_KERNEL_3X3_SIGMA1[9] =
 {
     0.077847f,	0.123317f,	0.077847f,
@@ -50,6 +52,12 @@ void renormalize_tbn( inout float3 n, inout float3 t, out float3 b )
     n = normalize( n );
     t = normalize( t - dot( t, n ) * n );
     b = cross( n, t );    
+}
+
+float linear_depth( float hyperbolic_z, float near_z, float far_z )
+{
+    float remapped_z = 2.0 * hyperbolic_z - 1.0;
+    return 2.0 * near_z * far_z / (far_z + near_z - remapped_z * (far_z - near_z));
 }
 
 #endif
