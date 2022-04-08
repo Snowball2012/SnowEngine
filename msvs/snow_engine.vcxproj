@@ -204,6 +204,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClCompile Include="..\src\engine\OldRenderer.cpp" />
     <ClCompile Include="..\src\engine\ParallelSplitShadowMapping.cpp" />
     <ClCompile Include="..\src\engine\PSSMGenPass.cpp" />
+    <ClCompile Include="..\src\engine\raytracing\RayTracedDirectShadows.cpp" />
     <ClCompile Include="..\src\engine\Renderer.cpp" />
     <ClCompile Include="..\src\engine\RenderPass.cpp" />
     <ClCompile Include="..\src\engine\RenderTask.cpp" />
@@ -304,6 +305,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\engine\PSSMGenPass.h" />
     <ClInclude Include="..\src\engine\PSSMNode.h" />
     <ClInclude Include="..\src\engine\Ptr.h" />
+    <ClInclude Include="..\src\engine\raytracing\RayTracedDirectShadows.h" />
     <ClInclude Include="..\src\engine\RenderData.h" />
     <ClInclude Include="..\src\engine\Renderer.h" />
     <ClInclude Include="..\src\engine\RenderPass.h" />
@@ -543,9 +545,6 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <None Include="..\shaders\lib\lighting.hlsli" />
     <None Include="..\shaders\lib\math_utils.hlsli" />
     <None Include="..\shaders\lib\shadows.hlsli" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="..\src\engine\raytracing" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
