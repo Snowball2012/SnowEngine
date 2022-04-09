@@ -5,13 +5,16 @@
 #include "bindings/pass_cb.hlsli"
 
 
-RaytracingAccelerationStructure scene_tlas;
+Texture2D<float> depth_buffer : register(t0);
 
-RWTexture2D<float4> output;
+RaytracingAccelerationStructure scene_tlas : register(t1);
 
-float3 light_dir;
+RWTexture2D<float4> output : register(u0);
 
-Texture2D<float> depth_buffer;
+cbuffer cbSettings : register(b1);
+{
+    float3 light_dir;
+}
 
 
 struct ShadowPayload
