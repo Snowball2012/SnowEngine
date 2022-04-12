@@ -111,6 +111,13 @@ struct RayTriangleIntersection
 		float tolerance ) const; // for convinient testing
 };
 
+inline uint64_t CalcAlignedSize( uint64_t size, uint64_t alignment )
+{
+	if ( alignment > 1 )
+		return ( size + ( alignment - 1 ) ) & ~( alignment - 1 );
+	return size;
+}
+
 RayTriangleIntersection IntersectRayTriangle(
 	const float v1[3], const float v2[3], const float v3[3],
 	const float ray_origin[3], const float ray_direction[3]);

@@ -75,10 +75,26 @@ inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraph
     
     auto empty_arg = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{{}, {}, {}};
     dispatch_rays_desc.CallableShaderTable = empty_arg;
-    dispatch_rays_desc.HitGroupTable = empty_arg;
-    dispatch_rays_desc.MissShaderTable = empty_arg;
-    dispatch_rays_desc.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE{{},{}};
+    dispatch_rays_desc.HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{m_anyhit_shader_record, m_shader_record_size, m_shader_record_size};
+    dispatch_rays_desc.MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{m_miss_shader_record, m_shader_record_size, m_shader_record_size};
+    dispatch_rays_desc.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE{m_raygen_shader_record, m_shader_record_size};
     
     cmd_list.DispatchRays(&dispatch_rays_desc);
+}
+
+void GenerateRaytracedShadowmaskPass::GenerateShaderTable(ID3D12Device& device)
+{
+    const auto properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    const auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(CalcAlignedSize(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+    ThrowIfFailedH(device.CreateCommittedResource(
+        &properties, D3D12_HEAP_FLAG_NONE, &buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
+        nullptr, IID_PPV_ARGS(&m_shader_table)));
+    m_shader_table->SetName(L"DirectRaytracedShadowsShadertable");
+
+    uint8_t* mapped_data;
+    CD3DX12_RANGE read_range(0, 0);
+    ThrowIfFailedH(m_shader_table->Map(0, &read_range, (void**)&mapped_data));
+
+    // fill table with shader records
     NOTIMPL;
 }

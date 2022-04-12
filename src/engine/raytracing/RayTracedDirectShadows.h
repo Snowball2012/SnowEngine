@@ -23,6 +23,11 @@ public:
 
 private:
     ComPtr<ID3D12RootSignature> m_global_root_signature = nullptr;
+    ComPtr<ID3D12Resource> m_shader_table = nullptr;
+    D3D12_GPU_VIRTUAL_ADDRESS m_raygen_shader_record = -1;
+    D3D12_GPU_VIRTUAL_ADDRESS m_miss_shader_record = -1;
+    D3D12_GPU_VIRTUAL_ADDRESS m_anyhit_shader_record = -1;
+    size_t m_shader_record_size = 0;
     
 public:
 
@@ -31,6 +36,8 @@ public:
     void Draw(const Context& context, IGraphicsCommandList& cmd_list);
 
 private:
+
+    void GenerateShaderTable(ID3D12Device& device);
     
     static ComPtr<ID3D12RootSignature> BuildRootSignature(ID3D12Device& device);
 };
