@@ -214,6 +214,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClCompile Include="..\src\engine\Scene.cpp" />
     <ClCompile Include="..\src\engine\SceneItems.cpp" />
     <ClCompile Include="..\src\engine\SceneManager.cpp" />
+    <ClCompile Include="..\src\engine\Shader.cpp" />
     <ClCompile Include="..\src\engine\ShadowProvider.cpp" />
     <ClCompile Include="..\src\engine\SingleDownsamplerPass.cpp" />
     <ClCompile Include="..\src\engine\SkyboxPass.cpp" />
@@ -318,6 +319,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\engine\SceneItems.h" />
     <ClInclude Include="..\src\engine\SceneManager.h" />
     <ClInclude Include="..\src\engine\SceneSystemData.h" />
+    <ClInclude Include="..\src\engine\Shader.h" />
     <ClInclude Include="..\src\engine\ShadowPassNode.h" />
     <ClInclude Include="..\src\engine\ShadowProvider.h" />
     <ClInclude Include="..\src\engine\SingleDownsamplerPass.h" />
