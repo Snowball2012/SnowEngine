@@ -2,27 +2,59 @@
 
 #include "Shader.h"
 
-#include <dxc/inc/dxc/dxcapi.h>
-
 Shader::Shader(std::wstring filename, std::wstring entry_point, ComPtr<IDxcBlob> bytecode)
     : m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
     , m_bytecode_blob(std::move(bytecode))
 {
     if (!bytecode)
     {
-        Compile();
+        Compile(nullptr);
     }
+}
+
+Shader::Shader(const ShaderSourceFile& source, std::wstring entry_point)
+    : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point))
+{
+    Compile(&source);
 }
 
 std::unique_ptr<ShaderCompiler> ShaderCompiler::m_shared_instance(nullptr);
 
-void Shader::Compile()
+ShaderLibrarySubobjectInfo Shader::CreateSubobjectInfo() const
+{
+    ShaderLibrarySubobjectInfo res = {};
+    
+    auto& export_desc = res.export_desc;
+    export_desc.Name = GetEntryPoint();
+    export_desc.ExportToRename = GetEntryPoint();
+    export_desc.Flags = D3D12_EXPORT_FLAG_NONE;
+
+    auto& lib_desc = res.lib_desc;
+    lib_desc.NumExports = 1;
+    lib_desc.pExports = &export_desc;
+    lib_desc.DXILLibrary.BytecodeLength = m_bytecode_blob->GetBufferSize();
+    lib_desc.DXILLibrary.pShaderBytecode = m_bytecode_blob->GetBufferPointer();
+
+    auto& suboobj = res.subobject;
+    suboobj.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
+    suboobj.pDesc = &lib_desc;
+
+    return res;
+}
+
+void Shader::Compile(const ShaderSourceFile* source)
 {
     auto* compiler = ShaderCompiler::Get();
     if (!SE_ENSURE(compiler))
         return;
 
-    auto source = compiler->LoadSourceFile(m_filename);
+    std::unique_ptr<ShaderSourceFile> source_holder = nullptr;
+    if (!source)
+    {
+        source_holder = compiler->LoadSourceFile(m_filename);
+        source = source_holder.get();
+    }
+    
     if (SE_ENSURE(source))
         m_bytecode_blob = compiler->CompileFromSource(*source, m_entrypoint);
 }

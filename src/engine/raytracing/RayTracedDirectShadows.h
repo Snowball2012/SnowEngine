@@ -40,6 +40,8 @@ private:
     void GenerateShaderTable(ID3D12Device& device);
     
     static ComPtr<ID3D12RootSignature> BuildRootSignature(ID3D12Device& device);
+
+    void BuildRaytracingPSO(ID3D12Device5& device);
 };
 
 template<class Framegraph>

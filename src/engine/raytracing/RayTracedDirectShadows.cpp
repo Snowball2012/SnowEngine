@@ -2,6 +2,8 @@
 
 #include "RayTracedDirectShadows.h"
 
+#include "engine/Shader.h"
+
 GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(ID3D12Device& device)
 {
     m_global_root_signature = BuildRootSignature(device);
@@ -56,6 +58,60 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
     rootsig->SetName( L"RaytracedDirectShadowsPass Rootsig" );
 
     return rootsig;    
+}
+
+void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
+{
+    ComPtr<ID3D12StateObject> rtpso;
+
+    ComPtr<ID3D12StateObjectProperties> rtpso_info;
+
+    std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+
+    ShaderCompiler* compiler = ShaderCompiler::Get();
+    if (!SE_ENSURE(compiler))
+        return;
+    
+    std::unique_ptr<ShaderSourceFile> raytracing_source = compiler->LoadSourceFile(L"shaders/raytracing.hlsl");
+    if (!SE_ENSURE(raytracing_source))
+        return;
+
+    Shader raygen_shader(*raytracing_source, L"DirectShadowmaskRGS");
+    Shader anyhit_shader(*raytracing_source, L"DirectShadowmaskAHS");
+    Shader miss_shader(*raytracing_source, L"DirectShadowmaskMS");
+
+    ShaderLibrarySubobjectInfo subobject_infos[3]
+    {
+        raygen_shader.CreateSubobjectInfo(),
+        miss_shader.CreateSubobjectInfo(),
+        anyhit_shader.CreateSubobjectInfo()
+    };
+
+    for (auto& it : subobject_infos)
+    {
+        subobjects.emplace_back(it.subobject);
+    }
+
+    D3D12_HIT_GROUP_DESC hit_group_desc = {};
+    hit_group_desc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+    hit_group_desc.AnyHitShaderImport = anyhit_shader.GetEntryPoint();
+    hit_group_desc.HitGroupExport = L"HitGroup";
+
+    {
+        auto& hit_group_subobj = subobjects.emplace_back();
+        hit_group_subobj.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+        hit_group_subobj.pDesc = &hit_group_desc;
+    }
+    
+    D3D12_STATE_OBJECT_DESC rtpso_desc = {};
+    rtpso_desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+    rtpso_desc.NumSubobjects = UINT(subobjects.size());
+    rtpso_desc.pSubobjects = subobjects.data();
+
+    SE_ENSURE_HRES(device.CreateStateObject(&rtpso_desc, IID_PPV_ARGS(rtpso.GetAddressOf())));
+
+    SE_ENSURE_HRES(rtpso->QueryInterface(IID_PPV_ARGS(rtpso_info.GetAddressOf())));
+    
 }
 
 inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraphicsCommandList& cmd_list)

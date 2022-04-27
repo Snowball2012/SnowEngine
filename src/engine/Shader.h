@@ -1,22 +1,35 @@
 ﻿#pragma once
 
+#include <dxc/inc/dxc/dxcapi.h>
+
+struct ShaderLibrarySubobjectInfo
+{
+    D3D12_EXPORT_DESC export_desc;
+    D3D12_DXIL_LIBRARY_DESC lib_desc;
+    D3D12_STATE_SUBOBJECT subobject;
+};
+
 class Shader
 {
 private:
-    ComPtr<struct IDxcBlob> m_bytecode_blob = nullptr;
+    ComPtr<IDxcBlob> m_bytecode_blob = nullptr;
 
     std::wstring m_filename;
     std::wstring m_entrypoint;
     
 public:
     Shader(std::wstring filename, std::wstring entry_point, ComPtr<IDxcBlob> bytecode);
+    Shader(const class ShaderSourceFile& source, std::wstring entry_point);
+    
     IDxcBlob* GetNativeBytecode() const { return m_bytecode_blob.Get(); }
 
     const wchar_t* GetFileName() const { return m_filename.c_str(); }
     const wchar_t* GetEntryPoint() const { return m_entrypoint.c_str(); }
 
+    ShaderLibrarySubobjectInfo CreateSubobjectInfo() const;
+
 private:
-    void Compile();
+    void Compile(const ShaderSourceFile* source);
 };
 
 class ShaderSourceFile
