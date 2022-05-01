@@ -64,6 +64,7 @@ public:
     
 private:
     ComPtr<ID3D12Device> m_d3d_device = nullptr;
+    ComPtr<ID3D12Device5> m_rt_device = nullptr;
 
     GPUDescriptorSizes m_descriptor_size;
 
@@ -74,14 +75,19 @@ private:
     std::unique_ptr<GPUTaskQueue> m_compute_queue = nullptr;
     
 public:
-    GPUDevice(ComPtr<ID3D12Device> native_device);
+    GPUDevice(ComPtr<ID3D12Device> native_device, bool enable_raytracing);
     
     ID3D12Device* GetNativeDevice() { return m_d3d_device.Get(); }
     const ID3D12Device* GetNativeDevice() const  { return m_d3d_device.Get(); }
     
+    ID3D12Device5* GetNativeRTDevice() { return m_rt_device.Get(); }
+    const ID3D12Device5* GetNativeRTDevice() const  { return m_rt_device.Get(); }
+    
     GPUTaskQueue* GetGraphicsQueue();
     GPUTaskQueue* GetComputeQueue();
     GPUTaskQueue* GetCopyQueue();
+
+    bool IsRaytracingEnabled() const { return m_rt_device; }
 
     // Flush all queues
     void Flush();

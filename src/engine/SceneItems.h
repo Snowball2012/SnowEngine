@@ -112,6 +112,9 @@ public:
 
     StaticMeshID GetMesh() const noexcept { return m_mesh_id; }
 
+    ID3D12Resource* GetBLAS() const noexcept { return m_rt_blas.Get(); }
+    void SetBLAS(ComPtr<ID3D12Resource> blas) { m_rt_blas = std::move(blas); }
+
     // properties
     DirectX::BoundingBox& Box() noexcept { return m_box; }
     const DirectX::BoundingBox& Box() const noexcept { return m_box; }

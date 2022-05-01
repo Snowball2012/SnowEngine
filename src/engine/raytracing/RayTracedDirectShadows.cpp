@@ -121,7 +121,7 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
     
 }
 
-inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraphicsCommandList& cmd_list)
+void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraphicsCommandList& cmd_list)
 {
     cmd_list.SetComputeRootSignature(m_global_root_signature.Get());
     

@@ -62,10 +62,16 @@ public:
     >;
     using CloseRes = std::tuple<>;
     
-private:
+private:    
+    GenerateRaytracedShadowmaskPass m_pass;
     
 public:
 
+    GenerateRaytracedShadowmaskNode(ID3D12Device& device)
+        : m_pass(device)
+    {
+    }
+    
     virtual void Run(Framegraph& framegraph, IGraphicsCommandList& cmd_list) override;
 };
 
@@ -94,10 +100,8 @@ void GenerateRaytracedShadowmaskNode<Framegraph>::Run(Framegraph& framegraph, IG
     ctx.uav_width = shadowmask_desc.Width;
     ctx.uav_height = shadowmask_desc.Height;
     ctx.pass_cb = pass_cb->pass_cb;
-    
-    GenerateRaytracedShadowmaskPass pass;
 
-    pass.Draw(ctx, cmd_list);
+    m_pass.Draw(ctx, cmd_list);
     
     PIXEndEvent(&cmd_list);
 }

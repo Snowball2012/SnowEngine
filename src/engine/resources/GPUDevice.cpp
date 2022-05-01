@@ -57,7 +57,7 @@ GPUResource::~GPUResource()
         m_deleter->RegisterResource(*this);
 }
 
-GPUDevice::GPUDevice(ComPtr<ID3D12Device> native_device)
+GPUDevice::GPUDevice(ComPtr<ID3D12Device> native_device, bool enable_raytracing)
     : m_d3d_device(std::move(native_device))
 {
     SE_ENSURE(m_d3d_device.Get());
@@ -70,6 +70,9 @@ GPUDevice::GPUDevice(ComPtr<ID3D12Device> native_device)
     m_graphics_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_DIRECT, m_cmd_lists );
     m_copy_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COPY, m_cmd_lists );
     m_compute_queue = std::make_unique<GPUTaskQueue>( *m_d3d_device.Get(), D3D12_COMMAND_LIST_TYPE_COMPUTE, m_cmd_lists );
+
+    if (enable_raytracing)
+        ThrowIfFailedH(m_d3d_device->QueryInterface(m_rt_device.GetAddressOf()));
 }
 
 GPUTaskQueue* GPUDevice::GetGraphicsQueue()

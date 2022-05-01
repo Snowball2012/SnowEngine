@@ -8,6 +8,8 @@
 
 #include <DirectXMath.h>
 
+#include "resources/GPUDevice.h"
+
 StaticMeshID SceneClientView::LoadStaticMesh( std::string name, std::vector<Vertex> vertices, std::vector<uint32_t> indices )
 {
     StaticMeshID mesh_id = m_scene->AddStaticMesh();
@@ -133,48 +135,47 @@ ObjectTransform* SceneClientView::ModifyTransform( TransformID id ) noexcept
     return m_scene->TryModifyTransform( id );
 }
 
-
-
-SceneManager::SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device,
+SceneManager::SceneManager( GPUDevice* device,
                             size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue )
-    : m_static_mesh_mgr( device, &m_scene )
-    , m_tex_streamer( device, 700*1024*1024ul, 32*1024*1024ul, nframes_to_buffer, &m_scene )
-    , m_static_texture_mgr( device, &m_scene )
-    , m_dynamic_buffers( device, &m_scene, nframes_to_buffer )
+    : m_static_mesh_mgr( device->GetNativeDevice(), &m_scene )
+    , m_tex_streamer( device->GetNativeDevice(), 700*1024*1024ul, 32*1024*1024ul, nframes_to_buffer, &m_scene )
+    , m_static_texture_mgr( device->GetNativeDevice(), &m_scene )
+    , m_dynamic_buffers( device->GetNativeDevice(), &m_scene, nframes_to_buffer )
     , m_scene_view( &m_scene, &m_static_mesh_mgr, &m_static_texture_mgr, &m_tex_streamer, &m_cubemap_mgr, &m_dynamic_buffers, &m_material_table_baker )
     , m_copy_queue( copy_queue )
     , m_nframes_to_buffer( nframes_to_buffer )
-    , m_gpu_descriptor_tables( device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
-    , m_cubemap_mgr( device, &m_gpu_descriptor_tables, &m_scene )
-    , m_material_table_baker( device, &m_scene, &m_gpu_descriptor_tables )
+    , m_gpu_descriptor_tables( device->GetNativeDevice(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, nframes_to_buffer )
+    , m_cubemap_mgr( device->GetNativeDevice(), &m_gpu_descriptor_tables, &m_scene )
+    , m_material_table_baker( device->GetNativeDevice(), &m_scene, &m_gpu_descriptor_tables )
     , m_uv_density_calculator( &m_scene )
     , m_graphics_queue( graphics_queue )
-{
+    , m_device( device )
+{    
     for ( size_t i = 0; i < size_t( m_nframes_to_buffer ); ++i )
     {
         m_copy_cmd_allocators.emplace_back();
         auto& allocator = m_copy_cmd_allocators.back();
-        ThrowIfFailedH( device->CreateCommandAllocator(
+        ThrowIfFailedH( device->GetNativeDevice()->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_COPY,
             IID_PPV_ARGS( allocator.first.GetAddressOf() ) ) );
         allocator.second = 0;
 
         m_graphics_cmd_allocators.emplace_back();
         auto& graphics_allocator = m_graphics_cmd_allocators.back();
-        ThrowIfFailedH( device->CreateCommandAllocator(
+        ThrowIfFailedH( device->GetNativeDevice()->CreateCommandAllocator(
             D3D12_COMMAND_LIST_TYPE_DIRECT,
             IID_PPV_ARGS( graphics_allocator.first.GetAddressOf() ) ) );
         graphics_allocator.second = 0;
     }
 
-    ThrowIfFailedH( device->CreateCommandList(
+    ThrowIfFailedH( device->GetNativeDevice()->CreateCommandList(
         0,
         D3D12_COMMAND_LIST_TYPE_COPY,
         m_copy_cmd_allocators[0].first.Get(), // Associated command allocator
         nullptr,                 
         IID_PPV_ARGS( m_copy_cmd_list.GetAddressOf() ) ) );
 
-    ThrowIfFailedH( device->CreateCommandList(
+    ThrowIfFailedH( device->GetNativeDevice()->CreateCommandList(
         0,
         D3D12_COMMAND_LIST_TYPE_DIRECT,
         m_graphics_cmd_allocators[0].first.Get(), // Associated command allocator
@@ -226,7 +227,7 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
     GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
     m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get(), *m_graphics_cmd_list.Get() );
-    ProcessSubmeshes();
+    ProcessSubmeshes(*m_graphics_cmd_list.Get());
     m_uv_density_calculator.Update( *camera_component, main_viewport );
     m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );
     m_static_texture_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
@@ -285,9 +286,10 @@ void SceneManager::CleanModifiedItemsStatus()
 }
 
 
-void SceneManager::ProcessSubmeshes()
+void SceneManager::ProcessSubmeshes(IGraphicsCommandList& cmd_list)
 {
     OPTICK_EVENT();
+    
     for ( auto& submesh : m_scene.StaticSubmeshSpan() )
     {
         if ( submesh.IsDirty() )
@@ -295,7 +297,69 @@ void SceneManager::ProcessSubmeshes()
             CalcSubmeshBoundingBox( submesh );
             m_uv_density_calculator.CalcUVDensityInObjectSpace( submesh );
         }
+        if ( m_device->GetNativeRTDevice() && !submesh.GetBLAS() && submesh.GetMesh() != StaticMeshID::nullid )
+        {
+            const auto& source_mesh = m_scene.AllStaticMeshes()[submesh.GetMesh()];
+            if (source_mesh.IsLoaded())
+            {
+                CreateBLAS(cmd_list, submesh, source_mesh);
+            }
+        }
     }
+}
+
+void SceneManager::CreateBLAS(IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh)
+{
+    D3D12_RAYTRACING_GEOMETRY_DESC geometry = {};
+    geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+    geometry.Triangles.VertexBuffer.StartAddress = source_mesh.VertexBufferView().BufferLocation + submesh.DrawArgs().base_vertex_loc * source_mesh.VertexBufferView().StrideInBytes;
+    geometry.Triangles.VertexBuffer.StrideInBytes = source_mesh.VertexBufferView().StrideInBytes;
+    geometry.Triangles.VertexCount = UINT(source_mesh.Vertices().size());
+    geometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+    geometry.Triangles.IndexBuffer = source_mesh.IndexBufferView().BufferLocation + submesh.DrawArgs().start_index_loc * sizeof(uint32_t);
+    geometry.Triangles.IndexCount = submesh.DrawArgs().idx_cnt;
+    geometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+    geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS as_inputs = {};
+    as_inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+    as_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    as_inputs.pGeometryDescs = &geometry;
+    as_inputs.NumDescs = 1;
+    as_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO as_build_info = {};
+    auto* rt_device = m_device->GetNativeRTDevice();
+    rt_device->GetRaytracingAccelerationStructurePrebuildInfo(&as_inputs, &as_build_info);
+
+    ComPtr<ID3D12Resource> scratch_buffer;
+    ThrowIfFailedH(rt_device->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(
+            as_build_info.ScratchDataSizeInBytes,
+            D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+        IID_PPV_ARGS(scratch_buffer.GetAddressOf())));
+    
+    ComPtr<ID3D12Resource> blas_res;
+    ThrowIfFailedH(rt_device->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(
+                as_build_info.ResultDataMaxSizeInBytes,
+                D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+            D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+            IID_PPV_ARGS(blas_res.GetAddressOf())));
+    
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC blas_desc = {};
+    blas_desc.Inputs = as_inputs;
+    blas_desc.DestAccelerationStructureData = blas_res->GetGPUVirtualAddress();
+    blas_desc.ScratchAccelerationStructureData = scratch_buffer->GetGPUVirtualAddress();
+    
+    cmd_list.BuildRaytracingAccelerationStructure(&blas_desc, 0, nullptr);
+    
+    submesh.SetBLAS(std::move(blas_res));
 }
 
 void SceneManager::CalcSubmeshBoundingBox( StaticSubmesh_Deprecated& submesh )

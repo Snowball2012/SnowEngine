@@ -77,7 +77,7 @@ private:
 class SceneManager
 {
 public:
-    SceneManager( Microsoft::WRL::ComPtr<ID3D12Device> device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue );
+    SceneManager( class GPUDevice* device, size_t nframes_to_buffer, GPUTaskQueue* copy_queue, GPUTaskQueue* graphics_queue );
 
     const SceneClientView& GetScene() const noexcept;
     SceneClientView& GetScene() noexcept;
@@ -97,8 +97,10 @@ private:
 
     void CleanModifiedItemsStatus();
 
-    void ProcessSubmeshes();
+    void ProcessSubmeshes( IGraphicsCommandList& cmd_list );
     void CalcSubmeshBoundingBox( StaticSubmesh_Deprecated& submesh );
+
+    void CreateBLAS( IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh );
 
     Scene m_scene;
     DescriptorTableBakery m_gpu_descriptor_tables;
@@ -112,6 +114,7 @@ private:
     UVScreenDensityCalculator m_uv_density_calculator;
     GPUTaskQueue* m_copy_queue;
     GPUTaskQueue* m_graphics_queue;
+    GPUDevice* m_device;
 
     SceneCopyOp m_operation_counter = 0;
     GPUTaskQueue::Timestamp m_last_copy_timestamp = 0;

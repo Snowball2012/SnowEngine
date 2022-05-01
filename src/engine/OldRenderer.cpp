@@ -51,15 +51,12 @@ OldRenderer::~OldRenderer()
 void OldRenderer::Init()
 {
     CreateDevice();
-
-    auto* d3d_device = m_gpu_device->GetNativeDevice();
-
     CreateSwapChain();
 
     InitImgui();
     BuildRtvDescriptorHeaps();
 
-    m_scene_manager = std::make_unique<SceneManager>( d3d_device, FrameResourceCount, m_gpu_device->GetCopyQueue(), m_gpu_device->GetGraphicsQueue() );
+    m_scene_manager = std::make_unique<SceneManager>( m_gpu_device.get(), FrameResourceCount, m_gpu_device->GetCopyQueue(), m_gpu_device->GetGraphicsQueue() );
 
     RecreateSwapChain( m_client_width, m_client_height );
 
@@ -315,7 +312,7 @@ void OldRenderer::CreateDevice()
             IID_PPV_ARGS( &d3d_device ) ) );
     }
 
-    m_gpu_device = std::make_unique<GPUDevice>(std::move(d3d_device));
+    m_gpu_device = std::make_unique<GPUDevice>(std::move(d3d_device), false);
 }
 
 
