@@ -22,11 +22,14 @@ public:
     };
 
 private:
+    ComPtr<ID3D12Device5> m_rt_device = nullptr;
     ComPtr<ID3D12RootSignature> m_global_root_signature = nullptr;
     ComPtr<ID3D12Resource> m_shader_table = nullptr;
+    ComPtr<ID3D12StateObject> m_rtpso = nullptr;
+    ComPtr<ID3D12StateObjectProperties> m_rtpso_info = nullptr;
     D3D12_GPU_VIRTUAL_ADDRESS m_raygen_shader_record = -1;
     D3D12_GPU_VIRTUAL_ADDRESS m_miss_shader_record = -1;
-    D3D12_GPU_VIRTUAL_ADDRESS m_anyhit_shader_record = -1;
+    D3D12_GPU_VIRTUAL_ADDRESS m_hitgroup_shader_record = -1;
     size_t m_shader_record_size = 0;
     
 public:

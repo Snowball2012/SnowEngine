@@ -7,6 +7,9 @@
 GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(ID3D12Device& device)
 {
     m_global_root_signature = BuildRootSignature(device);
+    ThrowIfFailedH(device.QueryInterface(IID_PPV_ARGS(m_rt_device.GetAddressOf())));
+    BuildRaytracingPSO(*m_rt_device.Get());
+    GenerateShaderTable(device);    
 }
 
 ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(ID3D12Device& device)
@@ -20,7 +23,7 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
      * 4 - constants (light dir)
      **/
 
-    constexpr int nparams = 5;
+    constexpr int nparams = 4;
     
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
@@ -32,7 +35,6 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
     slot_root_parameter[1].InitAsShaderResourceView(1);
     slot_root_parameter[2].InitAsDescriptorTable(1, &desc_table[1]);
     slot_root_parameter[3].InitAsConstantBufferView(0);
-    slot_root_parameter[4].InitAsConstants(3,1);
 
     CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc(nparams, slot_root_parameter);
 
@@ -62,10 +64,6 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
 
 void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
 {
-    ComPtr<ID3D12StateObject> rtpso;
-
-    ComPtr<ID3D12StateObjectProperties> rtpso_info;
-
     std::vector<D3D12_STATE_SUBOBJECT> subobjects;
 
     ShaderCompiler* compiler = ShaderCompiler::Get();
@@ -102,15 +100,24 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
         hit_group_subobj.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
         hit_group_subobj.pDesc = &hit_group_desc;
     }
+
+    D3D12_RAYTRACING_PIPELINE_CONFIG conf = {};
+    conf.MaxTraceRecursionDepth = 1;
+    {
+        auto& pipeline_config_subobj = subobjects.emplace_back();
+        pipeline_config_subobj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
+        pipeline_config_subobj.pDesc = &conf;
+    }
     
     D3D12_STATE_OBJECT_DESC rtpso_desc = {};
     rtpso_desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
     rtpso_desc.NumSubobjects = UINT(subobjects.size());
     rtpso_desc.pSubobjects = subobjects.data();
 
-    SE_ENSURE_HRES(device.CreateStateObject(&rtpso_desc, IID_PPV_ARGS(rtpso.GetAddressOf())));
 
-    SE_ENSURE_HRES(rtpso->QueryInterface(IID_PPV_ARGS(rtpso_info.GetAddressOf())));
+    SE_ENSURE_HRES(device.CreateStateObject(&rtpso_desc, IID_PPV_ARGS(m_rtpso.GetAddressOf())));
+
+    SE_ENSURE_HRES(m_rtpso->QueryInterface(IID_PPV_ARGS(m_rtpso_info.GetAddressOf())));
     
 }
 
@@ -122,7 +129,6 @@ inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraph
     cmd_list.SetComputeRootShaderResourceView(1, context.tlas);
     cmd_list.SetComputeRootDescriptorTable(2, context.shadowmask_uav);
     cmd_list.SetComputeRootConstantBufferView(3, context.pass_cb);
-    cmd_list.SetComputeRoot32BitConstants(4, 3, &context.light_dir, 0);
     
     D3D12_DISPATCH_RAYS_DESC dispatch_rays_desc;
     dispatch_rays_desc.Depth = 1;
@@ -131,7 +137,7 @@ inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraph
     
     auto empty_arg = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{{}, {}, {}};
     dispatch_rays_desc.CallableShaderTable = empty_arg;
-    dispatch_rays_desc.HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{m_anyhit_shader_record, m_shader_record_size, m_shader_record_size};
+    dispatch_rays_desc.HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{m_hitgroup_shader_record, m_shader_record_size, m_shader_record_size};
     dispatch_rays_desc.MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE{m_miss_shader_record, m_shader_record_size, m_shader_record_size};
     dispatch_rays_desc.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE{m_raygen_shader_record, m_shader_record_size};
     
@@ -141,7 +147,7 @@ inline void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraph
 void GenerateRaytracedShadowmaskPass::GenerateShaderTable(ID3D12Device& device)
 {
     const auto properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    const auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(CalcAlignedSize(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+    const auto buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(CalcAlignedSize(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES * 3, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
     ThrowIfFailedH(device.CreateCommittedResource(
         &properties, D3D12_HEAP_FLAG_NONE, &buffer_desc, D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr, IID_PPV_ARGS(&m_shader_table)));
@@ -150,7 +156,17 @@ void GenerateRaytracedShadowmaskPass::GenerateShaderTable(ID3D12Device& device)
     uint8_t* mapped_data;
     CD3DX12_RANGE read_range(0, 0);
     ThrowIfFailedH(m_shader_table->Map(0, &read_range, (void**)&mapped_data));
-
-    // fill table with shader records
-    NOTIMPL;
+    
+    memcpy(mapped_data, m_rtpso_info->GetShaderIdentifier(L"DirectShadowmaskRGS"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    m_raygen_shader_record = m_shader_table->GetGPUVirtualAddress();
+    mapped_data += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    
+    memcpy(mapped_data, m_rtpso_info->GetShaderIdentifier(L"DirectShadowmaskMS"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    m_miss_shader_record = m_raygen_shader_record + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    mapped_data += D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    
+    memcpy(mapped_data, m_rtpso_info->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+    m_hitgroup_shader_record = m_miss_shader_record + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    
+    m_shader_table->Unmap(0, nullptr);    
 }

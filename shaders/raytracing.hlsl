@@ -11,12 +11,6 @@ RaytracingAccelerationStructure scene_tlas : register(t1);
 
 RWTexture2D<float4> output : register(u0);
 
-cbuffer cbSettings : register(b1);
-{
-    float3 light_dir;
-}
-
-
 struct ShadowPayload
 {
     float is_visible;
