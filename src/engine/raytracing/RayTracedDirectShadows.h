@@ -56,7 +56,7 @@ public:
         ResourceInState<DirectShadowsMask, D3D12_RESOURCE_STATE_UNORDERED_ACCESS>
     >;
     using ReadRes = std::tuple<
-        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_READ>,
         ResourceInState<SceneRaytracingTLAS, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE>,
         ForwardPassCB
     >;

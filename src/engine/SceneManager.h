@@ -87,20 +87,21 @@ public:
     const DescriptorTableBakery& GetDescriptorTables() const noexcept;
     DescriptorTableBakery& GetDescriptorTables() noexcept;
 
-    void UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport );
+    void UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport, bool& rt_as_updated );
 
     void FlushAllOperations();
 
     const TextureStreamer& GetTexStreamer() const noexcept { return m_tex_streamer; }
+    
 
 private:
 
     void CleanModifiedItemsStatus();
 
-    void ProcessSubmeshes( IGraphicsCommandList& cmd_list );
+    void ProcessSubmeshes( IGraphicsCommandList& cmd_list, std::vector<ComPtr<ID3D12Resource>>& scratch_buffers );
     void CalcSubmeshBoundingBox( StaticSubmesh_Deprecated& submesh );
 
-    void CreateBLAS( IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh );
+    void CreateBLAS( IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh, std::vector<ComPtr<ID3D12Resource>>& scratch_buffers );
 
     Scene m_scene;
     DescriptorTableBakery m_gpu_descriptor_tables;

@@ -102,7 +102,12 @@ void OldRenderer::Draw()
         }
     }
 
-    m_scene_manager->UpdateFramegraphBindings( scene_camera, m_renderer->GetPSSM(), m_screen_viewport );
+    bool blas_updated = false;
+    m_scene_manager->UpdateFramegraphBindings( scene_camera, m_renderer->GetPSSM(), m_screen_viewport, blas_updated );
+    if (blas_updated)
+    {
+        RebuildTLAS();
+    }
 
     // Draw scene
     const Camera* main_camera = GetScene().GetWorld().GetComponent<Camera>( scene_camera );
@@ -277,10 +282,11 @@ OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
     };
 }
 
+#define ENABLE_D3D12_VALIDATION 0
+
 void OldRenderer::CreateDevice()
 {
-
-#if defined(DEBUG) || defined(_DEBUG) 
+#if ENABLE_D3D12_VALIDATION
     ComPtr<ID3D12Debug> spDebugController0;
     ComPtr<ID3D12Debug1> spDebugController1;
     ThrowIfFailedH( D3D12GetDebugInterface( IID_PPV_ARGS( &spDebugController0 ) ) );
@@ -292,13 +298,12 @@ void OldRenderer::CreateDevice()
     ThrowIfFailedH( CreateDXGIFactory1( IID_PPV_ARGS( &m_dxgi_factory ) ) );
 
     // Try to create hardware device.
-    ComPtr<ID3D12Device> d3d_device;
+    ComPtr<ID3D12Device5> d3d_device;
     HRESULT hardware_result;
     hardware_result = D3D12CreateDevice(
         nullptr,             // default adapter
-        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_12_1,
         IID_PPV_ARGS( &d3d_device ) );
-
 
     // Fallback to WARP device.
     if ( FAILED( hardware_result ) )
@@ -308,11 +313,17 @@ void OldRenderer::CreateDevice()
 
         ThrowIfFailedH( D3D12CreateDevice(
             pWarpAdapter.Get(),
-            D3D_FEATURE_LEVEL_11_0,
+            D3D_FEATURE_LEVEL_12_1,
             IID_PPV_ARGS( &d3d_device ) ) );
     }
 
-    m_gpu_device = std::make_unique<GPUDevice>(std::move(d3d_device), false);
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 features;
+    ThrowIfFailedH(hardware_result = d3d_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
+        &features, sizeof(features)));
+
+    bool has_raytracing = features.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0;    
+
+    m_gpu_device = std::make_unique<GPUDevice>(std::move(d3d_device), has_raytracing);
 }
 
 
@@ -583,6 +594,98 @@ OldRenderer::RenderItemStorage OldRenderer::CreateRenderItems( const RenderTask&
     m_num_renderitems_to_draw = lists[0].size();
 
     return std::move( lists );
+}
+
+void OldRenderer::RebuildTLAS()
+{
+    if (!SE_ENSURE(m_gpu_device) || !m_gpu_device->IsRaytracingEnabled())
+        return;
+    
+    auto& world = m_scene_manager->GetScene().GetWorld();
+    const auto& scene_view = m_scene_manager->GetScene().GetROScene();
+
+    std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
+    int inst_idx = 0;
+    for (const auto& [entity_id, transform, drawable] : world.CreateView<Transform, DrawableMesh>())
+    {
+        // todo: ignore drawable.show for now, we can't catch the changes in the flag yet
+        const auto& submesh = scene_view.AllStaticSubmeshes()[drawable.mesh];
+        if (submesh.GetBLAS())
+        {
+            auto& inst = instances.emplace_back();
+            memcpy(inst.Transform, transform.local2world.r, sizeof(inst.Transform));
+            inst.AccelerationStructure = submesh.GetBLAS()->GetGPUVirtualAddress();
+            inst.InstanceContributionToHitGroupIndex = 0;
+            inst.InstanceID = inst_idx++;
+            inst.InstanceMask = ~0;
+            inst.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+        }
+    }
+
+    size_t instances_gpu_size = instances.size() * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
+    ComPtr<ID3D12Resource> inst_gpu_buffer;
+    ThrowIfFailedH(m_gpu_device->GetNativeRTDevice()->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD), D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(instances_gpu_size),
+        D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(inst_gpu_buffer.GetAddressOf())));
+
+    if (!SE_ENSURE(inst_gpu_buffer))
+        return;
+
+    CD3DX12_RANGE read_range(0, 0);
+    uint8_t* mapped_data = nullptr;
+    ThrowIfFailedH(inst_gpu_buffer->Map(0, &read_range, (void**)&mapped_data));
+    inst_gpu_buffer->SetName(L"Upload TLAS data");
+
+    if (!SE_ENSURE(mapped_data))
+        return;
+
+    memcpy(mapped_data, instances.data(), instances_gpu_size);
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS as_inputs = {};
+    as_inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+    as_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    as_inputs.NumDescs = UINT(instances.size());
+    as_inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+    as_inputs.InstanceDescs = inst_gpu_buffer->GetGPUVirtualAddress();
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO as_build_info = {};
+    auto* rt_device = m_gpu_device->GetNativeRTDevice();
+    rt_device->GetRaytracingAccelerationStructurePrebuildInfo(&as_inputs, &as_build_info);
+    
+    ComPtr<ID3D12Resource> scratch_buffer = nullptr;
+    ThrowIfFailedH(m_gpu_device->GetNativeDevice()->CreateCommittedResource(
+        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        D3D12_HEAP_FLAG_NONE,
+        &CD3DX12_RESOURCE_DESC::Buffer(
+            as_build_info.ScratchDataSizeInBytes,
+            D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
+        IID_PPV_ARGS(scratch_buffer.GetAddressOf())));
+    scratch_buffer->SetName(L"tlas scratch");
+    
+    ThrowIfFailedH(m_gpu_device->GetNativeDevice()->CreateCommittedResource(
+            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+            D3D12_HEAP_FLAG_NONE,
+            &CD3DX12_RESOURCE_DESC::Buffer(
+                as_build_info.ResultDataMaxSizeInBytes,
+                D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
+            D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+            IID_PPV_ARGS(m_tlas.GetAddressOf())));
+    m_tlas->SetName(L"tlas");
+    
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC tlas_desc = {};
+    tlas_desc.Inputs = as_inputs;
+    tlas_desc.DestAccelerationStructureData = m_tlas->GetGPUVirtualAddress();
+    tlas_desc.ScratchAccelerationStructureData = scratch_buffer->GetGPUVirtualAddress();
+
+    auto cmd_list = m_gpu_device->GetGraphicsQueue()->CreateCommandList();
+    cmd_list.Reset();
+    cmd_list.GetInterface()->BuildRaytracingAccelerationStructure(&tlas_desc, 0, nullptr);
+    ThrowIfFailedH(cmd_list.GetInterface()->Close());
+    m_gpu_device->GetGraphicsQueue()->SubmitLists(make_single_elem_span(cmd_list));
+    m_gpu_device->GetGraphicsQueue()->ExecuteSubmitted();
+    m_gpu_device->GetGraphicsQueue()->Flush();
 }
 
 ID3D12Resource* OldRenderer::CurrentBackBuffer()

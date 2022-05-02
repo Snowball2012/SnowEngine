@@ -19,7 +19,7 @@ public:
     using ReadRes = std::tuple
         <
         ResourceInState<NormalBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_READ>,
         ScreenConstants,
         ForwardPassCB,
         HBAOSettings

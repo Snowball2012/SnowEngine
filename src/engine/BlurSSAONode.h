@@ -20,7 +20,7 @@ public:
     using ReadRes = std::tuple
         <
         ResourceInState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
-        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_READ>,
         ForwardPassCB
         >;
     using CloseRes = std::tuple

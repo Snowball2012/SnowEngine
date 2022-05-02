@@ -207,7 +207,7 @@ DescriptorTableBakery& SceneManager::GetDescriptorTables() noexcept
     return m_gpu_descriptor_tables;
 }
 
-void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport )
+void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const ParallelSplitShadowMapping& pssm, const D3D12_VIEWPORT& main_viewport, bool& rt_as_updated )
 {
     OPTICK_EVENT();
     SceneCopyOp cur_op = m_operation_counter++;
@@ -226,8 +226,10 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
 
     GPUTaskQueue::Timestamp current_copy_time = m_copy_queue->GetCurrentTimestamp();		
 
+    std::vector<ComPtr<ID3D12Resource>> scratch_buffers;
     m_static_mesh_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get(), *m_graphics_cmd_list.Get() );
-    ProcessSubmeshes(*m_graphics_cmd_list.Get());
+    ProcessSubmeshes(*m_graphics_cmd_list.Get(), scratch_buffers );
+    
     m_uv_density_calculator.Update( *camera_component, main_viewport );
     m_tex_streamer.Update( cur_op, current_copy_time, *m_copy_queue, *m_copy_cmd_list.Get() );
     m_static_texture_mgr.Update( cur_op, current_copy_time, *m_copy_cmd_list.Get() );
@@ -260,6 +262,10 @@ void SceneManager::UpdateFramegraphBindings( World::Entity main_camera, const Pa
     lists_to_exec[0] = m_graphics_cmd_list.Get();
     m_graphics_queue->GetNativeQueue()->ExecuteCommandLists( 1, lists_to_exec );
 
+    rt_as_updated = !scratch_buffers.empty();
+    if (rt_as_updated) // we don't want to keep old scratch buffers around. They are updated only at load time right now so it should be okay
+        m_graphics_queue->Flush();
+
     CleanModifiedItemsStatus();
 }
 
@@ -286,7 +292,7 @@ void SceneManager::CleanModifiedItemsStatus()
 }
 
 
-void SceneManager::ProcessSubmeshes(IGraphicsCommandList& cmd_list)
+void SceneManager::ProcessSubmeshes(IGraphicsCommandList& cmd_list, std::vector<ComPtr<ID3D12Resource>>& scratch_buffers)
 {
     OPTICK_EVENT();
     
@@ -302,13 +308,13 @@ void SceneManager::ProcessSubmeshes(IGraphicsCommandList& cmd_list)
             const auto& source_mesh = m_scene.AllStaticMeshes()[submesh.GetMesh()];
             if (source_mesh.IsLoaded())
             {
-                CreateBLAS(cmd_list, submesh, source_mesh);
+                CreateBLAS(cmd_list, submesh, source_mesh, scratch_buffers);
             }
         }
     }
 }
 
-void SceneManager::CreateBLAS(IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh)
+void SceneManager::CreateBLAS(IGraphicsCommandList& cmd_list, StaticSubmesh_Deprecated& submesh, const StaticMesh& source_mesh, std::vector<ComPtr<ID3D12Resource>>& scratch_buffers)
 {
     D3D12_RAYTRACING_GEOMETRY_DESC geometry = {};
     geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -332,15 +338,16 @@ void SceneManager::CreateBLAS(IGraphicsCommandList& cmd_list, StaticSubmesh_Depr
     auto* rt_device = m_device->GetNativeRTDevice();
     rt_device->GetRaytracingAccelerationStructurePrebuildInfo(&as_inputs, &as_build_info);
 
-    ComPtr<ID3D12Resource> scratch_buffer;
+    ComPtr<ID3D12Resource>& scratch_buffer = scratch_buffers.emplace_back();
     ThrowIfFailedH(rt_device->CreateCommittedResource(
         &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
         D3D12_HEAP_FLAG_NONE,
         &CD3DX12_RESOURCE_DESC::Buffer(
             as_build_info.ScratchDataSizeInBytes,
             D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
-        D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr,
         IID_PPV_ARGS(scratch_buffer.GetAddressOf())));
+    scratch_buffer->SetName(L"blas scratch");
     
     ComPtr<ID3D12Resource> blas_res;
     ThrowIfFailedH(rt_device->CreateCommittedResource(
@@ -351,6 +358,7 @@ void SceneManager::CreateBLAS(IGraphicsCommandList& cmd_list, StaticSubmesh_Depr
                 D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS),
             D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, nullptr,
             IID_PPV_ARGS(blas_res.GetAddressOf())));
+    blas_res->SetName(L"blas");
     
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC blas_desc = {};
     blas_desc.Inputs = as_inputs;
