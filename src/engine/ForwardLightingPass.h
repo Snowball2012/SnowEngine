@@ -31,6 +31,7 @@ public:
         D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
         D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE shadow_cascade_srv;
+        D3D12_GPU_DESCRIPTOR_HANDLE shadowmask_srv;
         struct IBL
         {
             D3D12_GPU_DESCRIPTOR_HANDLE desc_table_srv;

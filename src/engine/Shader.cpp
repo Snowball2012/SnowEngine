@@ -95,7 +95,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
     if (!SE_ENSURE_HRES(m_dxc_compiler->Compile(
         source.GetNativeBlob(),
         source.GetFilename(), entry_point.c_str(),
-        L"lib6_3", nullptr, 0, nullptr, 0,
+        L"lib_6_3", nullptr, 0, nullptr, 0,
         m_dxc_include_header.Get(),
         result.GetAddressOf())))
             return nullptr;
@@ -104,13 +104,27 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
     if (!SE_ENSURE_HRES(result->GetResult(bytecode.GetAddressOf())))
         return nullptr;
 
+    if (!bytecode || bytecode->GetBufferSize() == 0)
+    {
+        ComPtr<IDxcBlobEncoding> error_buffer;
+        result->GetErrorBuffer(error_buffer.GetAddressOf());
+        if (error_buffer)
+        {
+
+                    char* Chars = new char[error_buffer->GetBufferSize() + 1];
+                    memcpy(Chars, error_buffer->GetBufferPointer(), error_buffer->GetBufferSize());
+                    Chars[error_buffer->GetBufferSize()] = 0;
+                    std::cout << Chars;
+                    delete[] Chars;
+        }
+    }
+
     return std::move(bytecode);    
 }
 
 ShaderCompiler::ShaderCompiler()
 {
-    ComPtr<IDxcUtils> dxc_utils;
-    SE_ENSURE_HRES(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&dxc_utils )));
-    SE_ENSURE_HRES(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&m_dxc_compiler)));
-    SE_ENSURE_HRES(dxc_utils->CreateDefaultIncludeHandler(&m_dxc_include_header) );
+    SE_ENSURE_HRES(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(m_dxc_utils.GetAddressOf())));
+    SE_ENSURE_HRES(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.GetAddressOf())));
+    SE_ENSURE_HRES(m_dxc_utils->CreateDefaultIncludeHandler(&m_dxc_include_header) );
 }

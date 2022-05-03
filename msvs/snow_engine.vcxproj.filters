@@ -260,6 +260,12 @@
     <ClCompile Include="..\src\engine\resources\GPUDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\engine\raytracing\RayTracedDirectShadows.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\engine\Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\RenderApp.h">
@@ -519,6 +525,8 @@
     </ClInclude>
     <ClInclude Include="..\src\engine\resources\GPUDevice.h" />
     <ClInclude Include="..\src\engine\resources\Mesh.h" />
+    <ClInclude Include="..\src\engine\raytracing\RayTracedDirectShadows.h" />
+    <ClInclude Include="..\src\engine\Shader.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\shaders\temporal_blend_ps.hlsl">
@@ -572,9 +580,6 @@
     <FxCompile Include="..\shaders\downsample_singlepass.hlsl">
       <Filter>shaders</Filter>
     </FxCompile>
-    <FxCompile Include="..\shaders\raytracing.hlsl">
-      <Filter>shaders</Filter>
-    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shaders\lib\lighting.hlsli">
@@ -601,5 +606,6 @@
     <None Include="..\shaders\bindings\light_cb.hlsli">
       <Filter>shaders\bindings</Filter>
     </None>
+    <None Include="..\shaders\raytracing.hlsl" />
   </ItemGroup>
 </Project>

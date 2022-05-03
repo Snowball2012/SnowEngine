@@ -16,6 +16,7 @@
 #include "HBAONode.h"
 #include "LightComposeNode.h"
 #include "HDRSinglePassDownsampleNode.h"
+#include "raytracing/RayTracedDirectShadows.h"
 
 #include "Scene.h"
 
@@ -81,6 +82,8 @@ public:
         SkyboxData skybox;
 
         DescriptorTableID ibl_table;
+
+        ComPtr<ID3D12Resource> scene_rt_tlas;
     };
 
     // factory
@@ -154,7 +157,8 @@ private:
             BlurSSAONode,
             LightComposeNode,
             ToneMapNode,
-            HDRSinglePassDownsampleNode
+            HDRSinglePassDownsampleNode,
+            GenerateRaytracedShadowmaskNode
         >;
     FramegraphInstance m_framegraph;
     ShadowProvider m_shadow_provider;
@@ -167,6 +171,7 @@ private:
     DXGI_FORMAT m_normals_format = DXGI_FORMAT_R16G16_FLOAT;
     DXGI_FORMAT m_ssao_format = DXGI_FORMAT_R16_FLOAT;
     DXGI_FORMAT m_sdr_format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    DXGI_FORMAT m_rt_shadowmask_format = DXGI_FORMAT_R8_UNORM;
     int32_t m_shadow_bias = 5000;
 
     std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
@@ -177,6 +182,7 @@ private:
     std::unique_ptr<DynamicTexture> m_ssao_blurred = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao_blurred_transposed = nullptr;
     std::unique_ptr<DynamicTexture> m_sdr_buffer = nullptr;
+    std::unique_ptr<DynamicTexture> m_rt_shadowmask = nullptr;
     ComPtr<ID3D12Resource> m_atomic_buffer = nullptr;
     DescriptorTableID m_atimic_buffer_descriptor = DescriptorTableID::nullid;
 

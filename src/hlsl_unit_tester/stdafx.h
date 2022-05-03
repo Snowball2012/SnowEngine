@@ -4,8 +4,8 @@
 
 #include <atlbase.h>
 #include <d3d12.h>
-#include <dxc/dxcapi.h>
-#include <dxc/d3d12shader.h>
+#include <dxcapi.h>
+#include <d3d12shader.h>
 
 #include <DirectXMath.h>
 

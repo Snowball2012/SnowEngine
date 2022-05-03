@@ -296,7 +296,7 @@ public:
 
 	UIPass( ) = default;
 
-	virtual void Run( Framegraph& framegraph, ID3D12GraphicsCommandList& cmd_list ) override { std::cout << "ui pass"; }
+	virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override { std::cout << "ui pass"; }
 };
 
 BOOST_AUTO_TEST_SUITE( framegraph )

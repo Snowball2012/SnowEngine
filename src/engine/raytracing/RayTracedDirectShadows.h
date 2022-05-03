@@ -24,6 +24,7 @@ public:
 private:
     ComPtr<ID3D12Device5> m_rt_device = nullptr;
     ComPtr<ID3D12RootSignature> m_global_root_signature = nullptr;
+    ComPtr<ID3DBlob> m_global_root_signature_serialized = nullptr;
     ComPtr<ID3D12Resource> m_shader_table = nullptr;
     ComPtr<ID3D12StateObject> m_rtpso = nullptr;
     ComPtr<ID3D12StateObjectProperties> m_rtpso_info = nullptr;
@@ -42,7 +43,7 @@ private:
 
     void GenerateShaderTable(ID3D12Device& device);
     
-    static ComPtr<ID3D12RootSignature> BuildRootSignature(ID3D12Device& device);
+    static ComPtr<ID3D12RootSignature> BuildRootSignature(ID3D12Device& device, ComPtr<ID3DBlob>& serialized_rs);
 
     void BuildRaytracingPSO(ID3D12Device5& device);
 };
@@ -87,8 +88,11 @@ void GenerateRaytracedShadowmaskNode<Framegraph>::Run(Framegraph& framegraph, IG
 
     const auto& shadowmask_desc = shadowmask->res->GetDesc();
 
-    if (!depth_buffer || !shadowmask)
+    if (!depth_buffer || !shadowmask || !scene_tlas)
         throw SnowEngineException("missing resource");
+
+    if (!scene_tlas->res)
+        return;
     
     PIXBeginEvent(&cmd_list, PIX_COLOR( 200, 210, 230 ), "Raytraced Direct Shadows");
 

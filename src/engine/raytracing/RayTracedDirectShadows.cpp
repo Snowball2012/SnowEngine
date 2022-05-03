@@ -6,13 +6,13 @@
 
 GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(ID3D12Device& device)
 {
-    m_global_root_signature = BuildRootSignature(device);
+    m_global_root_signature = BuildRootSignature(device, m_global_root_signature_serialized);
     ThrowIfFailedH(device.QueryInterface(IID_PPV_ARGS(m_rt_device.GetAddressOf())));
     BuildRaytracingPSO(*m_rt_device.Get());
     GenerateShaderTable(device);    
 }
 
-ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(ID3D12Device& device)
+ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(ID3D12Device& device, ComPtr<ID3DBlob>& serialized_rs)
 {
     /*
      * Global rootsig for direct shadows
@@ -38,10 +38,9 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
 
     CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc(nparams, slot_root_parameter);
 
-    ComPtr<ID3DBlob> serialized_root_sig = nullptr;
     ComPtr<ID3DBlob> error_blob = nullptr;
     HRESULT hr = D3D12SerializeRootSignature( &root_sig_desc, D3D_ROOT_SIGNATURE_VERSION_1,
-                                              serialized_root_sig.GetAddressOf(), error_blob.GetAddressOf() );
+                                              serialized_rs.GetAddressOf(), error_blob.GetAddressOf() );
 
     if ( error_blob )
     {
@@ -53,8 +52,8 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
 
     ThrowIfFailedH( device.CreateRootSignature(
         0,
-        serialized_root_sig->GetBufferPointer(),
-        serialized_root_sig->GetBufferSize(),
+        serialized_rs->GetBufferPointer(),
+        serialized_rs->GetBufferSize(),
         IID_PPV_ARGS( &rootsig ) ) );
 
     rootsig->SetName( L"RaytracedDirectShadowsPass Rootsig" );
@@ -65,6 +64,7 @@ ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(
 void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
 {
     std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+    subobjects.reserve(10);
 
     ShaderCompiler* compiler = ShaderCompiler::Get();
     if (!SE_ENSURE(compiler))
@@ -87,6 +87,8 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
 
     for (auto& it : subobject_infos)
     {
+        it.lib_desc.pExports = &it.export_desc;
+        it.subobject.pDesc = &it.lib_desc;
         subobjects.emplace_back(it.subobject);
     }
 
@@ -108,12 +110,45 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
         pipeline_config_subobj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
         pipeline_config_subobj.pDesc = &conf;
     }
+
+    D3D12_RAYTRACING_SHADER_CONFIG shader_conf = {};
+    shader_conf.MaxAttributeSizeInBytes = 8;
+    shader_conf.MaxPayloadSizeInBytes = 8;
+    {
+        auto& shader_conf_subobj = subobjects.emplace_back();
+        shader_conf_subobj.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
+        shader_conf_subobj.pDesc = &shader_conf;
+    }
+
+    const wchar_t* shader_payload_exports[] =
+    {
+        L"DirectShadowmaskRGS",
+        L"DirectShadowmaskMS",
+        L"HitGroup"
+    };
+    D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION association_desc = {};
+    association_desc.NumExports = _countof(shader_payload_exports);
+    association_desc.pExports = shader_payload_exports;
+    association_desc.pSubobjectToAssociate = &subobjects.back();
+    {
+        auto& assoc_so = subobjects.emplace_back();
+        assoc_so.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
+        assoc_so.pDesc = &association_desc;
+    }
+
+    D3D12_GLOBAL_ROOT_SIGNATURE global_rs_desc;
+    global_rs_desc.pGlobalRootSignature = m_global_root_signature.Get();
+    {
+        auto& global_rs = subobjects.emplace_back();
+        global_rs.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+        global_rs.pDesc = &global_rs_desc;
+    }
+    
     
     D3D12_STATE_OBJECT_DESC rtpso_desc = {};
     rtpso_desc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
     rtpso_desc.NumSubobjects = UINT(subobjects.size());
     rtpso_desc.pSubobjects = subobjects.data();
-
 
     SE_ENSURE_HRES(device.CreateStateObject(&rtpso_desc, IID_PPV_ARGS(m_rtpso.GetAddressOf())));
 
@@ -123,6 +158,7 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
 
 void GenerateRaytracedShadowmaskPass::Draw(const Context& context, IGraphicsCommandList& cmd_list)
 {
+    cmd_list.SetPipelineState1(m_rtpso.Get());
     cmd_list.SetComputeRootSignature(m_global_root_signature.Get());
     
     cmd_list.SetComputeRootDescriptorTable(0, context.depth_srv);
@@ -167,6 +203,7 @@ void GenerateRaytracedShadowmaskPass::GenerateShaderTable(ID3D12Device& device)
     
     memcpy(mapped_data, m_rtpso_info->GetShaderIdentifier(L"HitGroup"), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     m_hitgroup_shader_record = m_miss_shader_record + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    m_shader_record_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     
     m_shader_table->Unmap(0, nullptr);    
 }

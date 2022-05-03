@@ -77,6 +77,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<GenerateRaytracedShadowmaskNode>( *m_device->GetNativeDevice() );
 
 
     if ( m_framegraph.IsRebuildNeeded() )
@@ -134,9 +135,9 @@ void Renderer::CreateTransientResources()
     create_tex( L"transposed ssao", m_ssao_blurred_transposed, m_ssao_format, false, true, false, true, false, false );
     create_tex( L"depth stencil buffer", m_depth_stencil_buffer, m_depth_stencil_format_resource, false, true, false, false, false, true );
     create_tex( L"sdr buffer", m_sdr_buffer, m_sdr_format, false, false, false, true, false, false );
-
+    create_tex( L"rt_shadowmask", m_rt_shadowmask, m_rt_shadowmask_format, false, true, false, true, false, false );
+    
     ResizeTransientResources();
-
 
     // Atomic
     m_device->GetNativeDevice()->CreateCommittedResource(
@@ -178,7 +179,7 @@ void Renderer::ResizeTransientResources()
     resize_tex( *m_ssao_blurred_transposed, m_resolution_height, m_resolution_width );
     resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height );
     resize_tex( *m_sdr_buffer, m_resolution_width, m_resolution_height );
-    
+    resize_tex( *m_rt_shadowmask, m_resolution_width, m_resolution_height );
 }
 
 D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
@@ -221,6 +222,15 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
     assert( frame_ctx.resources != nullptr );
 
     m_framegraph.ClearResources();
+
+    if (scene_ctx.scene_rt_tlas)
+    {
+        m_framegraph.Enable<GenerateRaytracedShadowmaskNode>();
+    }
+    else
+    {
+        m_framegraph.Disable<GenerateRaytracedShadowmaskNode>();
+    }
 
     if ( m_framegraph.IsRebuildNeeded() )
         m_framegraph.Rebuild();
@@ -407,6 +417,16 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
             backbuffer.scissor_rect = CD3DX12_RECT( 0, 0, backbuffer.viewport.Width, backbuffer.viewport.Height );
         }
         m_framegraph.SetRes( backbuffer );
+
+        DirectShadowsMask direct_shadows_mask;
+        direct_shadows_mask.res = m_rt_shadowmask->GetResource();
+        direct_shadows_mask.uav = GetGPUHandle( *m_rt_shadowmask->GetUavPerMip(), 0 );
+        direct_shadows_mask.srv = GetGPUHandle( *m_rt_shadowmask->GetSrvMain(), 0 );
+        m_framegraph.SetRes( direct_shadows_mask );
+
+        SceneRaytracingTLAS tlas;
+        tlas.res = scene_ctx.scene_rt_tlas.Get();
+        m_framegraph.SetRes( tlas );
     }
 
     m_framegraph.Run( *list_iface );

@@ -153,6 +153,8 @@ void OldRenderer::Draw()
         m_renderer->SetSkybox( false );
     }
 
+    scene_ctx.scene_rt_tlas = m_tlas;
+
     RenderItemStorage render_lists = CreateRenderItems( task, DirectX::XMLoadFloat3( &main_camera->GetData().pos ) );
 
 	auto opaque_list = m_renderer->CreateRenderitems( make_span( render_lists[0] ), allocator );
@@ -613,7 +615,9 @@ void OldRenderer::RebuildTLAS()
         if (submesh.GetBLAS())
         {
             auto& inst = instances.emplace_back();
-            memcpy(inst.Transform, transform.local2world.r, sizeof(inst.Transform));
+            DirectX::XMMATRIX local2world = XMMatrixTranspose(transform.local2world);
+            //XMMatrixTranspose(local2world);
+            memcpy(inst.Transform, local2world.r, sizeof(inst.Transform));
             inst.AccelerationStructure = submesh.GetBLAS()->GetGPUVirtualAddress();
             inst.InstanceContributionToHitGroupIndex = 0;
             inst.InstanceID = inst_idx++;

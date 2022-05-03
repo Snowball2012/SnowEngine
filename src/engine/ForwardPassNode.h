@@ -26,6 +26,7 @@ public:
         ResourceInState<ShadowMaps, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
         ResourceInState<ShadowCascade, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
         ResourceInState<DepthStencilBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE>,
+        ResourceInState<DirectShadowsMask, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
         ScreenConstants,
         MainRenderitems,
         ForwardPassCB,
@@ -65,6 +66,10 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     if ( ! csm )
         NOTIMPL;
 
+    auto& rt_shadows = framegraph.GetRes<DirectShadowsMask>();
+    if ( !rt_shadows )
+        NOTIMPL;
+
     auto& renderitems = framegraph.GetRes<MainRenderitems>();
     if ( ! renderitems )
         NOTIMPL;
@@ -95,6 +100,7 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     ctx.ibl.desc_table_srv = skybox->srv_table;
     ctx.ibl.radiance_multiplier = skybox->radiance_factor;
     ctx.ibl.transform = skybox->tf_cbv;
+    ctx.shadowmask_srv = rt_shadows->srv;
 
     
     PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "ForwardLighting" );

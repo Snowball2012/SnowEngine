@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <dxc/inc/dxc/dxcapi.h>
+#include <dxcapi.h>
 
 struct ShaderLibrarySubobjectInfo
 {

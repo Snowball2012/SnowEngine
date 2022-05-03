@@ -22,7 +22,7 @@ float4 reconstruct_position_ws(uint2 pixel_id)
     float2 plane_ndc = float2(pixel_id) / (pass_params.render_target_size - 1.0f) * 2.0f - 1.0f;
     float4 ndc = float4( plane_ndc, depth_buffer.Load( uint3(pixel_id, 0) ).r, 1.0f );
     
-    float4 position_ws = ndc * pass_params.view_proj_inv_mat;
+    float4 position_ws = mul(ndc, pass_params.view_proj_inv_mat);
     position_ws /= position_ws.w;
     return position_ws;
 }

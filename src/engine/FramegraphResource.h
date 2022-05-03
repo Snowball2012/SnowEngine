@@ -115,6 +115,7 @@ struct DepthStencilBuffer : TrackedResource
 struct DirectShadowsMask : TrackedResource
 {
     D3D12_GPU_DESCRIPTOR_HANDLE uav;
+    D3D12_GPU_DESCRIPTOR_HANDLE srv;
 };
 
 struct SceneRaytracingTLAS : TrackedResource

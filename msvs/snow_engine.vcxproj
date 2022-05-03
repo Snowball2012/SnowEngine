@@ -106,7 +106,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -117,7 +117,8 @@
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+      <Command>copy $(SolutionDir)shaders\* $(TargetDir)shaders\
+copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
 </Command>
@@ -149,7 +150,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>false</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)src;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\directxtk12_include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\d3dx12;$(SolutionDir)3rdparty\cetonia\include;$(SolutionDir)3rdparty\tinyobjloader;$(SolutionDir)3rdparty\fbx_sdk\2019.0\include;$(SolutionDir)3rdparty\optick\include</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PreprocessorDefinitions>NOMINMAX;FBXSDK_SHARED;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -162,7 +163,8 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
+      <Command>copy $(SolutionDir)shaders\* $(TargetDir)shaders\
+copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
 </Command>

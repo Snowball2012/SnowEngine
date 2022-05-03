@@ -82,7 +82,7 @@ void ForwardLightingPass::Draw( const Context& context )
 
     m_cmd_list->OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
 
-    m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.shadow_map_srv );
+    m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.shadowmask_srv );
     m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
 
     m_cmd_list->SetGraphicsRootConstantBufferView( 5, context.pass_cb );
