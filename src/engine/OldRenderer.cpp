@@ -73,7 +73,7 @@ void OldRenderer::Init()
 }
 
 
-void OldRenderer::Draw()
+void OldRenderer::Draw(float time)
 {
     OPTICK_EVENT();
     // Update rendergraph
@@ -135,7 +135,7 @@ void OldRenderer::Draw()
     
     GPULinearAllocator allocator( m_gpu_device->GetNativeDevice(), CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS ) );
 
-    RenderTask task = m_renderer->CreateTask( main_camera->GetData(), GetScene().GetAllLights(),
+    RenderTask task = m_renderer->CreateTask( time, main_camera->GetData(), GetScene().GetAllLights(),
                                               RenderMode::FullTonemapped, allocator );
 
     Renderer::SceneContext scene_ctx;

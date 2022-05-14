@@ -128,7 +128,10 @@ void RenderApp::UpdateGUI()
         ImGui::NewLine();
 
         ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0 );
-        ImGui::NewLine();		
+        ImGui::NewLine();
+
+        ImGui::InputFloat( "Sun angle in degrees", &m_sun_angle, 0, 0 );
+        ImGui::NewLine();	
 
         ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );
         ImGui::End();
@@ -291,6 +294,7 @@ void RenderApp::UpdateLights()
     {
         sun_data.dir = SphericalToCartesian( -1, m_sun_phi, m_sun_theta );
         sun_data.strength = getLightIrradiance( m_sun_illuminance, m_sun_color_corrected, 2.2f );
+        sun_data.angle = m_sun_angle / 180.0f * XM_PI;
     }
     Light::Shadow sun_shadow;
     {
@@ -461,7 +465,7 @@ void RenderApp::ReadKeyboardState( const GameTimer& gt )
 
 void RenderApp::Draw( const GameTimer& gt )
 {
-    m_renderer->Draw( );
+    m_renderer->Draw( gt.TotalTime() );
 }
 
 void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
@@ -712,6 +716,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
     Light::Data light_data;
     light_data.type = Light::LightType::Parallel;
     light_data.dir = DirectX::XMFLOAT3( 1, 1, -1 );
+    light_data.angle = XM_PI / 6;
     XMFloat3Normalize( light_data.dir );
     light_data.strength = getLightIrradiance( 70.0e3f, DirectX::XMFLOAT3( 1, 1, 1 ), 2.2f );
     m_light = scene.AddLight( light_data );

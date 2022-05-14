@@ -299,6 +299,7 @@ public:
         float falloff_start; // point and spotlight, meters
         float falloff_end; // point and spotlight, meters
         float spot_power; // spotlight only
+        float angle; // directional
     };
 
     struct Shadow

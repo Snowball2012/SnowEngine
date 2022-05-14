@@ -11,7 +11,7 @@ ForwardCBProvider::ForwardCBProvider()
 {}
 
 
-ForwardCBProvider ForwardCBProvider::Create( const DirectX::XMFLOAT2& viewport_size, const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
+ForwardCBProvider ForwardCBProvider::Create( float time, const DirectX::XMFLOAT2& viewport_size, const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                                              const span<const Light>& scene_lights,
                                              ID3D12Device& device, GPULinearAllocator& upload_cb_allocator )
 {
@@ -34,6 +34,8 @@ ForwardCBProvider ForwardCBProvider::Create( const DirectX::XMFLOAT2& viewport_s
 
     gpu_data.render_target_size = viewport_size;
     gpu_data.render_target_size_inv = DirectX::XMFLOAT2(1.0f / viewport_size.x, 1.0f / viewport_size.y);
+
+    gpu_data.total_time = time;
     
     buffer.FillLightData( scene_lights,
                    DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
@@ -186,6 +188,8 @@ void ForwardCBProvider::FillLightData( const span<const Light>& lights,
             const Light::Data& src_data = light.GetData();
             DirectX::XMStoreFloat3( &data.dir, DirectX::XMVector3TransformNormal( DirectX::XMLoadFloat3( &src_data.dir ), view_matrix ) );
             data.strength = src_data.strength;
+            data.half_angle_sin_2 = sin(src_data.angle / 2);
+            data.half_angle_sin_2 *= data.half_angle_sin_2;
         }
         else
         {

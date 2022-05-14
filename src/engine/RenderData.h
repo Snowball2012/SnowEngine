@@ -115,7 +115,7 @@ struct ParallelLightConstants
     int32_t csm_num_split_positions;     // must be <= MaxCascadeSize
 
     DirectX::XMFLOAT3 dir;      // to the light source
-    float _padding;
+    float half_angle_sin_2;
 };
 
 constexpr uint32_t MAX_LIGHTS = 15;

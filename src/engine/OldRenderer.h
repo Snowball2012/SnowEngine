@@ -32,7 +32,7 @@ public:
         bool wireframe_mode;
         bool taa_enabled;
     };
-    void Draw();
+    void Draw(float time);
     void NewGUIFrame();
     void Resize( uint32_t new_width, uint32_t new_height );
 

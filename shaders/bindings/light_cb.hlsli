@@ -19,7 +19,7 @@ struct ParallelLight
     float3 strength;
     int csm_num_split_positions;
     float3 dir;
-    float _padding;
+    float half_angle_sin_2;
 };
 
 #endif

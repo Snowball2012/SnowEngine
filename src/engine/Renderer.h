@@ -96,7 +96,7 @@ public:
     Renderer( Renderer&& ) = default;
     Renderer& operator=( Renderer&& ) = default;
 
-    RenderTask CreateTask( const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const;
+    RenderTask CreateTask( float time, const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const;
     // Target must be in D3D12_RESOURCE_STATE_RENDER_TARGET on graphics queue
     // Returned lists must be submitted to graphics queue, returned allocators
     // can be freed after the rendering is over on device queues

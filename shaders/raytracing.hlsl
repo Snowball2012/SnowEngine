@@ -57,6 +57,12 @@ void DirectShadowmaskRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
 
+    float2 seed = frac(pixel_id.xy / pass_params.render_target_size + pass_params.total_time);
+    seed = frac(sin(dot(seed ,float2(12.9898,78.233)*2.0)) * 43758.5453); // random vector seed
+
+    float3 cone_sample = uniform_sample_cone(seed, pass_params.parallel_lights[0].half_angle_sin_2).xyz;
+    
+
     float3 ray_origin = reconstruct_position_ws(pixel_id);
 
     float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f) * float2(1, -1) + float2(0,1)) * 2.0f - 1.0f;
@@ -71,6 +77,8 @@ void DirectShadowmaskRGS()
     //return;
     float3 ray_dir = mul(pass_params.view_mat, pass_params.parallel_lights[0].dir);
     ray_dir = normalize(ray_dir);
+
+    ray_dir = apply_cone_sample_to_direction(cone_sample, ray_dir);
     
     float4 ray_dir_ws = mul(pass_params.view_mat, float4(ray_dir, 0));
     // abs(float4(ray_origin.z, ray_origin.z,ray_origin.z, ray_origin.z) / 5000.0f);//

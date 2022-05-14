@@ -111,6 +111,7 @@ private:
     float m_sun_theta = -1.852f;
     float m_sun_phi = 2.496f;
     float m_sun_illuminance = 90.0e3f; // lux
+    float m_sun_angle = 0.54f; // degrees
     float m_sky_phi = DirectX::XM_PI;
     float m_sky_radiance_factor = 18.0f;
     DirectX::XMFLOAT3 m_sun_color_corrected = DirectX::XMFLOAT3( 1.0f, 232.0f /255.0f, 213.0f /255.0f ); // gamma == 2.2

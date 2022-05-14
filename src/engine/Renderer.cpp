@@ -189,14 +189,14 @@ D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
 }
 
 
-RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const
+RenderTask Renderer::CreateTask( float time, const Camera::Data& main_camera, const span<Light>& light_list, RenderMode mode, GPULinearAllocator& cb_allocator ) const
 {
     OPTICK_EVENT();
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
 
     DirectX::XMFLOAT2 viewport_size(m_resolution_width, m_resolution_height);
-    ForwardCBProvider forward_cb = ForwardCBProvider::Create( viewport_size, main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
+    ForwardCBProvider forward_cb = ForwardCBProvider::Create( time, viewport_size, main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
 
     RenderTask new_task( std::move( forward_cb ) );
     new_task.m_mode = mode;
