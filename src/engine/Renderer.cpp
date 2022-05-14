@@ -195,7 +195,8 @@ RenderTask Renderer::CreateTask( const Camera::Data& main_camera, const span<Lig
     if ( mode != RenderMode::FullTonemapped )
         NOTIMPL;
 
-    ForwardCBProvider forward_cb = ForwardCBProvider::Create( main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
+    DirectX::XMFLOAT2 viewport_size(m_resolution_width, m_resolution_height);
+    ForwardCBProvider forward_cb = ForwardCBProvider::Create( viewport_size, main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
 
     RenderTask new_task( std::move( forward_cb ) );
     new_task.m_mode = mode;

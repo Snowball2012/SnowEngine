@@ -140,8 +140,8 @@ PixelOut main(PixelIn pin)
                                                                            light.dir, to_camera, normal, cos_nv,
                                                                            roughness );
 
-        float2 shadowmask_uv = pin.pos.xy * pass_params.render_target_size_inv * float2(1, -1) + float2(0,1);
-        res.direct_lighting.rgb += light_radiance * shadow_map.Sample( point_wrap_sampler, shadowmask_uv ).r;
+        float2 shadowmask_uv = pin.pos.xy * pass_params.render_target_size_inv;// * float2(1, -1) + float2(0,1);
+        res.direct_lighting.rgb += light_radiance * shadow_map.Load( uint3(pin.pos.xy, 0) ).r;// point_wrap_sampler, shadowmask_uv ).r;
         //res.direct_lighting.rgb +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade,
         //                                                                pass_params.csm_split_positions, shadow_map_sampler );
     }

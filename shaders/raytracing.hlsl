@@ -19,7 +19,7 @@ struct ShadowPayload
 
 float4 reconstruct_position_ws(uint2 pixel_id)
 {
-    float2 plane_ndc = float2(pixel_id) / (pass_params.render_target_size - 1.0f) * 2.0f - 1.0f;
+    float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f) * float2(1, -1) + float2(0,1)) * 2.0f - 1.0f;
     float4 ndc = float4( plane_ndc, depth_buffer.Load( uint3(pixel_id, 0) ).r, 1.0f );
     
     float4 position_ws = mul(ndc, pass_params.view_proj_inv_mat);
@@ -58,8 +58,25 @@ void DirectShadowmaskRGS()
     uint2 pixel_id = DispatchRaysIndex().xy;
 
     float3 ray_origin = reconstruct_position_ws(pixel_id);
-    float3 ray_dir = pass_params.lights[0].dir;
+
+    float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f) * float2(1, -1) + float2(0,1)) * 2.0f - 1.0f;
+
+    float closeness_to_edge = dot(plane_ndc, plane_ndc);
+    float ray_tolerance = lerp(1.e-2f, 3.e-2f, closeness_to_edge);
     
-    output[pixel_id] = ShadowRay(ray_origin, ray_dir, 1.e-4f);
+    float3 signal = frac(ray_origin.xyz);
+    
+    
+    //output[pixel_id] = dot(signal, signal);
+    //return;
+    float3 ray_dir = mul(pass_params.view_mat, pass_params.parallel_lights[0].dir);
+    ray_dir = normalize(ray_dir);
+    
+    float4 ray_dir_ws = mul(pass_params.view_mat, float4(ray_dir, 0));
+    // abs(float4(ray_origin.z, ray_origin.z,ray_origin.z, ray_origin.z) / 5000.0f);//
+
+    
+    
+    output[pixel_id] = ShadowRay(ray_origin, ray_dir.xyz, ray_tolerance);
     
 }

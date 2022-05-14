@@ -11,7 +11,7 @@ ForwardCBProvider::ForwardCBProvider()
 {}
 
 
-ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
+ForwardCBProvider ForwardCBProvider::Create( const DirectX::XMFLOAT2& viewport_size, const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                                              const span<const Light>& scene_lights,
                                              ID3D12Device& device, GPULinearAllocator& upload_cb_allocator )
 {
@@ -31,6 +31,10 @@ ForwardCBProvider ForwardCBProvider::Create( const Camera::Data& camera, const P
 
     GPUPassConstants gpu_data;
     FillCameraData( camera, buffer.m_viewproj, buffer.m_view, buffer.m_proj, gpu_data );
+
+    gpu_data.render_target_size = viewport_size;
+    gpu_data.render_target_size_inv = DirectX::XMFLOAT2(1.0f / viewport_size.x, 1.0f / viewport_size.y);
+    
     buffer.FillLightData( scene_lights,
                    DirectX::XMLoadFloat4x4( &gpu_data.view_inv_mat ),
                    DirectX::XMMatrixTranspose( DirectX::XMLoadFloat4x4( &gpu_data.view_mat ) ),
