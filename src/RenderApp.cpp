@@ -130,7 +130,7 @@ void RenderApp::UpdateGUI()
         ImGui::InputFloat( "Sun illuminance in lux", &m_sun_illuminance, 0, 0 );
         ImGui::NewLine();
 
-        ImGui::InputFloat( "Sun angle in degrees", &m_sun_angle, 0, 0 );
+        ImGui::SliderFloat( "Sun angle in degrees", &m_sun_angle, 0, 10 );
         ImGui::NewLine();	
 
         ImGui::ColorEdit3( "Sun color", (float*)&m_sun_color_corrected );

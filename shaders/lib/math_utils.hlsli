@@ -85,12 +85,17 @@ float3 apply_cone_sample_to_direction(float3 sample, float3 dir)
 {
     float3 cross_product = cross(float3(0,0,1), dir);
     float sin_a = length(cross_product);
-    float cos_a = sqrt(1 - sqr(sin_a));
+    float cos_a = sqrt(1 - sqr(sin_a)) * sign(dot(sample,dir));
     float3 axis = cross_product / sin_a;
 
     // Rodrigues' rotation formula
     float3 rotated = sample * cos_a + sin(cross(axis, sample)) + (1 - cos_a) * dot(axis, sample) * axis;
     return rotated;
+}
+
+float2 random_from_seed(float2 seed)
+{
+    return frac(sin(dot(seed, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
 }
 
 #endif

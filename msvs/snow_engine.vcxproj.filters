@@ -606,6 +606,8 @@
     <None Include="..\shaders\bindings\light_cb.hlsli">
       <Filter>shaders\bindings</Filter>
     </None>
-    <None Include="..\shaders\raytracing.hlsl" />
+    <None Include="..\shaders\raytracing.hlsl">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

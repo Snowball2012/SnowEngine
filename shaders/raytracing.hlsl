@@ -19,7 +19,8 @@ struct ShadowPayload
 
 float4 reconstruct_position_ws(uint2 pixel_id)
 {
-    float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f) * float2(1, -1) + float2(0,1)) * 2.0f - 1.0f;
+    float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f)) * 2.0f - 1.0f;
+    plane_ndc.y *= -1;
     float4 ndc = float4( plane_ndc, depth_buffer.Load( uint3(pixel_id, 0) ).r, 1.0f );
     
     float4 position_ws = mul(ndc, pass_params.view_proj_inv_mat);
@@ -56,35 +57,33 @@ void DirectShadowmaskAHS(inout ShadowPayload pay, BuiltInTriangleIntersectionAtt
 void DirectShadowmaskRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
-
-    float2 seed = frac(pixel_id.xy / pass_params.render_target_size + pass_params.total_time);
-    seed = frac(sin(dot(seed ,float2(12.9898,78.233)*2.0)) * 43758.5453); // random vector seed
-
-    float3 cone_sample = uniform_sample_cone(seed, pass_params.parallel_lights[0].half_angle_sin_2).xyz;
     
-
     float3 ray_origin = reconstruct_position_ws(pixel_id);
 
-    float2 plane_ndc = (float2(pixel_id) / (pass_params.render_target_size - 1.0f) * float2(1, -1) + float2(0,1)) * 2.0f - 1.0f;
+    float2 plane_ndc = float2(pixel_id) / (pass_params.render_target_size - 1.0f) * 2.0f - 1.0f;
 
     float closeness_to_edge = dot(plane_ndc, plane_ndc);
     float ray_tolerance = lerp(1.e-2f, 3.e-2f, closeness_to_edge);
     
-    float3 signal = frac(ray_origin.xyz);
-    
-    
-    //output[pixel_id] = dot(signal, signal);
-    //return;
-    float3 ray_dir = mul(pass_params.view_mat, pass_params.parallel_lights[0].dir);
-    ray_dir = normalize(ray_dir);
+    float3 base_dir = mul(pass_params.view_mat, pass_params.parallel_lights[0].dir);
+    //float4 base_dir_ws = mul(pass_params.view_mat, float4(base_dir, 0));
 
-    ray_dir = apply_cone_sample_to_direction(cone_sample, ray_dir);
-    
-    float4 ray_dir_ws = mul(pass_params.view_mat, float4(ray_dir, 0));
-    // abs(float4(ray_origin.z, ray_origin.z,ray_origin.z, ray_origin.z) / 5000.0f);//
+    float2 seed = frac(plane_ndc + pass_params.total_time);
 
-    
-    
-    output[pixel_id] = ShadowRay(ray_origin, ray_dir.xyz, ray_tolerance);
-    
+    int nsamples = 1;
+    float visibility_acc = 0;
+    float seed_step = 1.0f / float(nsamples);
+
+    for (int i = 0; i < nsamples; ++i)
+    {
+        float2 random_val = random_from_seed(seed);
+        seed = frac(seed + seed_step);
+
+        float3 cone_sample = uniform_sample_cone(random_val, pass_params.parallel_lights[0].half_angle_sin_2).xyz;
+        float3 ray_dir = apply_cone_sample_to_direction(cone_sample, base_dir);
+
+        visibility_acc += ShadowRay(ray_origin, ray_dir.xyz, ray_tolerance);
+    }
+
+    output[pixel_id] = visibility_acc / nsamples;
 }

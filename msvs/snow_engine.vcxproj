@@ -117,7 +117,7 @@
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(SolutionDir)shaders\* $(TargetDir)shaders\
+      <Command>xcopy /s /y $(SolutionDir)shaders\* $(TargetDir)shaders\
 copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
@@ -163,7 +163,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <AdditionalDependencies>optickcore.lib;d3dcompiler.lib;D3D12.lib;Dxgi.lib;DirectXTK12.lib;libfbxsdk.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>copy $(SolutionDir)shaders\* $(TargetDir)shaders\
+      <Command>xcopy /s /y $(SolutionDir)shaders\* $(TargetDir)shaders\
 copy $(SolutionDir)3rdparty\cetonia\bin\x64\$(Configuration)\cetonia.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\fbx_sdk\2019.0\lib\vs2015\x64\$(Configuration)\libfbxsdk.dll $(TargetDir)
 copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(TargetDir)
