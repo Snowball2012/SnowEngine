@@ -56,13 +56,13 @@ private:
     };
 
     Microsoft::WRL::ComPtr<ID3D12Device> m_device;
+    StagingDescriptorHeap m_srv_heap;
 
     std::vector<CubemapData> m_loaded_cubemaps;
 
     std::vector<ConvertationData> m_conversion_in_progress;
     std::vector<CopyData> m_copy_in_progress;
 
-    StagingDescriptorHeap m_srv_heap;
     DescriptorTableBakery* m_desc_tables;
 
     CubemapConverter m_converter;

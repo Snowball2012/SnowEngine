@@ -161,7 +161,6 @@ private:
             GenerateRaytracedShadowmaskNode
         >;
     FramegraphInstance m_framegraph;
-    ShadowProvider m_shadow_provider;
 
     // transient resources
     DXGI_FORMAT m_depth_stencil_format_resource = DXGI_FORMAT_R32_TYPELESS;
@@ -188,6 +187,7 @@ private:
 
     StagingDescriptorHeap m_dsv_heap;
     StagingDescriptorHeap m_rtv_heap;
+    ShadowProvider m_shadow_provider;
 
     // permanent context
     GPUDevice* m_device = nullptr;

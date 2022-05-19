@@ -88,6 +88,12 @@ ShadowProvider::ShadowProvider( ID3D12Device* device, DescriptorTableBakery* srv
     }
 }
 
+ShadowProvider::~ShadowProvider()
+{
+	m_dsv.reset();
+	m_pssm_dsvs.clear();
+}
+
 
 std::vector<RenderTask::ShadowFrustum> ShadowProvider::Update( span<Light> scene_lights, const ParallelSplitShadowMapping& pssm, const Camera::Data& main_camera_data )
 {
