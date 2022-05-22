@@ -194,6 +194,7 @@ void OldRenderer::Draw(float time)
 
     m_renderer->SetHBAOSettings( Renderer::HBAOSettings{ m_hbao_settings.max_r, m_hbao_settings.angle_bias, m_hbao_settings.nsamples_per_direction } );
     m_renderer->SetTonemapSettings( m_tonemap_settings );
+    m_renderer->SetRTSettings( m_rt_settings );
 
     m_renderer->Draw( task, scene_ctx, frame_ctx, lists_to_execute );
 

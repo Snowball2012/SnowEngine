@@ -2,9 +2,11 @@
 
 #include "Shader.h"
 
-Shader::Shader(std::wstring filename, std::wstring entry_point, ComPtr<IDxcBlob> bytecode)
+Shader::Shader(std::wstring filename, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
     , m_bytecode_blob(std::move(bytecode))
+    , m_frequency(frequency)
+    , m_defines(std::move(defines))
 {
     if (!bytecode)
     {
@@ -12,8 +14,8 @@ Shader::Shader(std::wstring filename, std::wstring entry_point, ComPtr<IDxcBlob>
     }
 }
 
-Shader::Shader(const ShaderSourceFile& source, std::wstring entry_point)
-    : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point))
+Shader::Shader(const ShaderSourceFile& source, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines)
+    : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point)), m_frequency(frequency), m_defines(std::move(defines))
 {
     Compile(&source);
 }
@@ -56,7 +58,7 @@ void Shader::Compile(const ShaderSourceFile* source)
     }
     
     if (SE_ENSURE(source))
-        m_bytecode_blob = compiler->CompileFromSource(*source, m_entrypoint);
+        m_bytecode_blob = compiler->CompileFromSource(*source, m_frequency, m_entrypoint, make_span(m_defines));
 }
 
 ShaderSourceFile::ShaderSourceFile(std::wstring filename, ComPtr<IDxcBlobEncoding> blob)
@@ -86,16 +88,33 @@ std::unique_ptr<ShaderSourceFile> ShaderCompiler::LoadSourceFile(std::wstring fi
 }
 
 ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& source,
-    std::wstring entry_point)
+    ShaderFrequency frequency, const std::wstring& entry_point, const span<const ShaderDefine>& defines)
 {
     if (!SE_ENSURE(m_dxc_compiler))
         return nullptr;
+
+    LPCWSTR profiles[ShaderFrequency::Count] =
+    {
+        L"vs_6_3",
+        L"ps_6_3",
+        L"cs_6_3",
+        L"lib_6_3"
+    };
+
+    std::vector<DxcDefine> dxc_defines;
+    dxc_defines.reserve(defines.size());
+    for (const auto& define : defines)
+    {
+        auto& dxc_define = dxc_defines.emplace_back();
+        dxc_define.Name = define.name.c_str();
+        dxc_define.Value = define.value.empty() ? nullptr : define.value.c_str();
+    }
 
     ComPtr<IDxcOperationResult> result = nullptr;
     if (!SE_ENSURE_HRES(m_dxc_compiler->Compile(
         source.GetNativeBlob(),
         source.GetFilename(), entry_point.c_str(),
-        L"lib_6_3", nullptr, 0, nullptr, 0,
+        profiles[uint8_t(frequency)], nullptr, 0, dxc_defines.data(), dxc_defines.size(),
         m_dxc_include_header.Get(),
         result.GetAddressOf())))
             return nullptr;

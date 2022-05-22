@@ -43,6 +43,7 @@ public:
     const D3D12_RECT& ScissorRect() const { return m_scissor_rect; }
 
     Renderer::TonemapSettings m_tonemap_settings;
+    Renderer::RTSettings m_rt_settings;
 
     HBAOPass::Settings m_hbao_settings;
     ParallelSplitShadowMapping& PSSM() noexcept;

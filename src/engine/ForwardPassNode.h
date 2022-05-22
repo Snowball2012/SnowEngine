@@ -66,9 +66,10 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     if ( ! csm )
         NOTIMPL;
 
+    bool use_rt_shadows = false;
     auto& rt_shadows = framegraph.GetRes<DirectShadowsMask>();
-    if ( !rt_shadows )
-        NOTIMPL;
+    if ( rt_shadows )
+        use_rt_shadows = true;;
 
     auto& renderitems = framegraph.GetRes<MainRenderitems>();
     if ( ! renderitems )
@@ -100,7 +101,11 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     ctx.ibl.desc_table_srv = skybox->srv_table;
     ctx.ibl.radiance_multiplier = skybox->radiance_factor;
     ctx.ibl.transform = skybox->tf_cbv;
-    ctx.shadowmask_srv = rt_shadows->srv;
+    ctx.use_rt_shadows = use_rt_shadows;
+    if (use_rt_shadows)
+        ctx.shadowmask_srv = rt_shadows->srv;
+    else
+        ctx.shadowmask_srv = {};
 
     
     PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "ForwardLighting" );
@@ -113,7 +118,8 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     cmd_list.RSSetViewports( 1, &view->viewport );
     cmd_list.RSSetScissorRects( 1, &view->scissor_rect );
 
-    m_pass.Begin( m_renderstates.triangle_fill, cmd_list );
+    m_pass.Begin( use_rt_shadows ? m_renderstates.triangle_fill_raytraced_shadows : m_renderstates.triangle_fill,
+        cmd_list );
 
     m_pass.Draw( ctx );
 

@@ -13,6 +13,7 @@ public:
     struct States
     {
         RenderStateID triangle_fill;
+        RenderStateID triangle_fill_raytraced_shadows;
         RenderStateID wireframe;
     };
 
@@ -39,6 +40,7 @@ public:
             D3D12_GPU_VIRTUAL_ADDRESS transform;
         } ibl;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
+        bool use_rt_shadows;
     };
 
     // all descriptor heaps must be set prematurely
@@ -53,6 +55,7 @@ private:
     {
         ComPtr<ID3DBlob> vs;
         ComPtr<ID3DBlob> ps;
+        ComPtr<ID3DBlob> ps_raytraced;
     };
     static Shaders LoadAndCompileShaders();
 

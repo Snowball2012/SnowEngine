@@ -182,6 +182,12 @@ void RenderApp::UpdateGUI()
             ImGui::End();
         }
 
+        {
+            ImGui::Begin( "RT settings" );
+            ImGui::Checkbox( "RT sun shadows", &m_renderer->m_rt_settings.sun_shadows );
+            ImGui::End();
+        }
+
         ImGui::End();
     }
 

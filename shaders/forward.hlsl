@@ -1,12 +1,44 @@
-#include "lib/lighting.hlsli"
-#include "lib/shadows.hlsli"
-#include "lib/colorspaces.hlsli"
+
+#define PER_OBJECT_CB_BINDING b0
+#include "bindings/object_cb.hlsli"
 
 #define PER_MATERIAL_CB_BINDING b1
 #include "bindings/material_cb.hlsli"
 
 #define PER_PASS_CB_BINDING b2
 #include "bindings/pass_cb.hlsli"
+
+#include "lib/lighting.hlsli"
+#include "lib/shadows.hlsli"
+#include "lib/colorspaces.hlsli"
+
+struct IBLTransform
+{
+    float4x4 world2env_mat;
+};
+
+cbuffer cbIBLTransform : register(b3)
+{
+    IBLTransform ibl;
+}
+
+struct VertexIn
+{
+    float3 pos : POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv : TEXCOORD;
+};
+
+struct VertexOut
+{
+    nointerpolation float4x4 view2env : VIEWTOENV;
+    float4 pos : SV_POSITION;
+    float3 pos_v : POSITION;
+    float3 normal : NORMAL;
+    float3 tangent : TANGENT;
+    float2 uv : TEXCOORD;
+};
 
 cbuffer cbIBLParams : register(b4)
 {
@@ -100,8 +132,22 @@ float4 dbg_get_lod_color( float4 base_color, float lod )
     return base_color;
 }
 
+VertexOut main_vs( VertexIn vin )
+{
+    float4 pos_ws = mul( float4( vin.pos, 1.0f ), renderitem.model_mat );
+    VertexOut vout;
+    float4 pos_v = mul( pos_ws, pass_params.view_mat );
+    vout.pos = mul( pos_ws, pass_params.view_proj_mat );
+    vout.pos_v = pos_v.xyz / pos_v.w;
 
-PixelOut main(PixelIn pin)
+    vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
+    vout.tangent = normalize( mul( mul( float4( vin.tangent, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
+    vout.uv = vin.uv;
+    vout.view2env = mul( pass_params.view_inv_mat, ibl.world2env_mat );
+    return vout;
+}
+
+PixelOut main_ps(PixelIn pin)
 {
     // unpack data
     float4 base_color = base_color_map.Sample( anisotropic_wrap_sampler, pin.uv );
@@ -140,10 +186,13 @@ PixelOut main(PixelIn pin)
                                                                            light.dir, to_camera, normal, cos_nv,
                                                                            roughness );
 
-        float2 shadowmask_uv = pin.pos.xy * pass_params.render_target_size_inv;// * float2(1, -1) + float2(0,1);
-        res.direct_lighting.rgb += light_radiance * shadow_map.Load( uint3(pin.pos.xy, 0) ).r;// point_wrap_sampler, shadowmask_uv ).r;
-        //res.direct_lighting.rgb +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade,
-        //                                                                pass_params.csm_split_positions, shadow_map_sampler );
+        #if RAYTRACED_SHADOWS
+            float2 shadowmask_uv = pin.pos.xy * pass_params.render_target_size_inv;
+            res.direct_lighting.rgb += light_radiance * shadow_map.Load( uint3(pin.pos.xy, 0) ).r;
+        #else
+            res.direct_lighting.rgb +=  light_radiance * csm_shadow_factor( pin.pos_v, light, shadow_cascade,
+                                                                            pass_params.csm_split_positions, shadow_map_sampler );
+        #endif
     }
 
     // calc ambient

@@ -74,9 +74,9 @@ void GenerateRaytracedShadowmaskPass::BuildRaytracingPSO(ID3D12Device5& device)
     if (!SE_ENSURE(raytracing_source))
         return;
 
-    Shader raygen_shader(*raytracing_source, L"DirectShadowmaskRGS");
-    Shader anyhit_shader(*raytracing_source, L"DirectShadowmaskAHS");
-    Shader miss_shader(*raytracing_source, L"DirectShadowmaskMS");
+    Shader raygen_shader(*raytracing_source, ShaderFrequency::Raytracing, L"DirectShadowmaskRGS");
+    Shader anyhit_shader(*raytracing_source, ShaderFrequency::Raytracing, L"DirectShadowmaskAHS");
+    Shader miss_shader(*raytracing_source, ShaderFrequency::Raytracing, L"DirectShadowmaskMS");
 
     ShaderLibrarySubobjectInfo subobject_infos[3]
     {

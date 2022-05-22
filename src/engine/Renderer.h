@@ -55,6 +55,11 @@ public:
         float bloom_strength = 0.1f;
     };
 
+    struct RTSettings
+    {
+        bool sun_shadows = false;
+    };
+
     struct DeviceContext
     {
         GPUDevice* device = nullptr;
@@ -109,6 +114,9 @@ public:
     void SetHBAOSettings( const HBAOSettings& settings ) noexcept { m_hbao_settings = settings; }
     HBAOSettings GetHBAOSettings() const noexcept { return m_hbao_settings; }
 
+    void SetRTSettings( const RTSettings& settings ) noexcept { m_rt_settings = settings; }
+    RTSettings GetRTSettings() const noexcept { return m_rt_settings; }
+
     void SetSkybox( bool enable );
 
     ParallelSplitShadowMapping& GetPSSM() noexcept { return m_pssm; }
@@ -142,6 +150,7 @@ private:
 
     HBAOSettings m_hbao_settings;
     TonemapSettings m_tonemap_settings;
+    RTSettings m_rt_settings;
     ParallelSplitShadowMapping m_pssm;
 
     // framegraph

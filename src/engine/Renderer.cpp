@@ -224,7 +224,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     m_framegraph.ClearResources();
 
-    if (scene_ctx.scene_rt_tlas)
+    if (scene_ctx.scene_rt_tlas && m_rt_settings.sun_shadows)
     {
         m_framegraph.Enable<GenerateRaytracedShadowmaskNode>();
     }
@@ -419,11 +419,14 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         }
         m_framegraph.SetRes( backbuffer );
 
-        DirectShadowsMask direct_shadows_mask;
-        direct_shadows_mask.res = m_rt_shadowmask->GetResource();
-        direct_shadows_mask.uav = GetGPUHandle( *m_rt_shadowmask->GetUavPerMip(), 0 );
-        direct_shadows_mask.srv = GetGPUHandle( *m_rt_shadowmask->GetSrvMain(), 0 );
-        m_framegraph.SetRes( direct_shadows_mask );
+        if (m_rt_settings.sun_shadows)
+        {
+            DirectShadowsMask direct_shadows_mask;
+            direct_shadows_mask.res = m_rt_shadowmask->GetResource();
+            direct_shadows_mask.uav = GetGPUHandle( *m_rt_shadowmask->GetUavPerMip(), 0 );
+            direct_shadows_mask.srv = GetGPUHandle( *m_rt_shadowmask->GetSrvMain(), 0 );
+            m_framegraph.SetRes( direct_shadows_mask );
+        }
 
         SceneRaytracingTLAS tlas;
         tlas.res = scene_ctx.scene_rt_tlas.Get();

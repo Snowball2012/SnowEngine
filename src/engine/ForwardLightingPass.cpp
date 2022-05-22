@@ -4,6 +4,7 @@
 #include "ForwardLightingPass.h"
 
 #include "RenderUtils.h"
+#include "Shader.h"
 
 ForwardLightingPass::ForwardLightingPass( ID3D12Device& device )
 {
@@ -56,16 +57,25 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
 
     pso_desc.DSVFormat = depth_stencil_format;
 
-    ComPtr<ID3D12PipelineState> main_pso, wireframe_pso;
+    ComPtr<ID3D12PipelineState> main_pso, wireframe_pso, rt_pso;
     ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &main_pso ) ) );
 
     pso_desc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
     pso_desc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
     ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &wireframe_pso ) ) );
 
+    pso_desc.RasterizerState = CD3DX12_RASTERIZER_DESC( D3D12_DEFAULT );
+    pso_desc.PS =
+    {
+        reinterpret_cast<BYTE*>( shaders.ps_raytraced->GetBufferPointer() ),
+        shaders.ps_raytraced->GetBufferSize()
+    };
+    ThrowIfFailedH( device.CreateGraphicsPipelineState( &pso_desc, IID_PPV_ARGS( &rt_pso ) ) );
+
     States retval;
     retval.triangle_fill = m_pso_cache.emplace( std::move( main_pso ) );
     retval.wireframe = m_pso_cache.emplace( std::move( wireframe_pso ) );
+    retval.triangle_fill_raytraced_shadows = m_pso_cache.emplace( std::move( rt_pso ) );
 
     return retval;
 }
@@ -82,7 +92,7 @@ void ForwardLightingPass::Draw( const Context& context )
 
     m_cmd_list->OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
 
-    m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.shadowmask_srv );
+    m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.use_rt_shadows ? context.shadowmask_srv : context.shadow_map_srv );
     m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
 
     m_cmd_list->SetGraphicsRootConstantBufferView( 5, context.pass_cb );
@@ -112,11 +122,34 @@ void ForwardLightingPass::Draw( const Context& context )
 
 ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
 {
-    return Shaders
-    {
-        Utils::LoadBinary( L"shaders/forward_vs.cso" ),
-        Utils::LoadBinary( L"shaders/forward_ps.cso" )
-    };
+    Shaders base_shaders = {};
+    
+    ShaderCompiler* compiler = ShaderCompiler::Get();
+    if (!SE_ENSURE(compiler))
+        return base_shaders;
+
+    std::unique_ptr<ShaderSourceFile> forward_source = compiler->LoadSourceFile(L"shaders/forward.hlsl");
+    if (!SE_ENSURE(forward_source))
+        return base_shaders;
+
+    Shader vs(*forward_source, ShaderFrequency::Vertex, L"main_vs");
+    Shader ps(*forward_source, ShaderFrequency::Pixel, L"main_ps");
+
+    
+    std::vector<ShaderDefine> defines;
+    auto& rt_define = defines.emplace_back();
+    rt_define.name = L"RAYTRACED_SHADOWS";
+    rt_define.value = L"1";
+
+    Shader raytraced_ps(*forward_source, ShaderFrequency::Pixel, L"main_ps", std::move(defines));
+    
+    ThrowIfFailedH(vs.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.vs.GetAddressOf())));
+    ThrowIfFailedH(ps.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.ps.GetAddressOf())));
+    ThrowIfFailedH(raytraced_ps.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.ps_raytraced.GetAddressOf())));
+
+
+    
+    return base_shaders;
 }
 
 
