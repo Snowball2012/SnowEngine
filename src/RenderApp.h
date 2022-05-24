@@ -119,6 +119,7 @@ private:
     bool m_is_console_opened = true;
     bool m_tilda_was_pressed_last_frame = false;
     ExampleAppConsole m_console;
+    ILog* m_saved_log = nullptr;
 
 	bool m_highlight_object = false;
 	MaterialID m_highlighted_material = MaterialID::nullid;

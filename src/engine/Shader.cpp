@@ -2,6 +2,8 @@
 
 #include "Shader.h"
 
+#include "utils/Log.h"
+
 Shader::Shader(std::wstring filename, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
     , m_bytecode_blob(std::move(bytecode))
@@ -129,12 +131,11 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
         result->GetErrorBuffer(error_buffer.GetAddressOf());
         if (error_buffer)
         {
-
-                    char* Chars = new char[error_buffer->GetBufferSize() + 1];
-                    memcpy(Chars, error_buffer->GetBufferPointer(), error_buffer->GetBufferSize());
-                    Chars[error_buffer->GetBufferSize()] = 0;
-                    std::cout << Chars;
-                    delete[] Chars;
+            char* Chars = new char[error_buffer->GetBufferSize() + 1];
+            memcpy(Chars, error_buffer->GetBufferPointer(), error_buffer->GetBufferSize());
+            Chars[error_buffer->GetBufferSize()] = 0;
+            SE_LOG("%s", Chars);
+            delete[] Chars;
         }
     }
 

@@ -27,9 +27,14 @@ RenderApp::RenderApp( HINSTANCE hinstance, LPSTR cmd_line )
     mMainWndCaption = L"Snow Engine";
     mClientWidth = 1920;
     mClientHeight = 1080;
+    m_saved_log = g_log;
+    g_log = &m_console;
 }
 
-RenderApp::~RenderApp() = default;
+RenderApp::~RenderApp()
+{
+    g_log = m_saved_log;
+}
 
 bool RenderApp::Initialize()
 {

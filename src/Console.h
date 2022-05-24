@@ -9,9 +9,12 @@
 #include <stdio.h>          // vsnprintf, sscanf, printf
 #include <ctype.h>          // toupper
 
+#include "utils/Log.h"
+
 // Demonstrate creating a simple console window, with scrolling, filtering, completion and history.
 // For the console example, here we are using a more C++ like approach of declaring a class to hold the data and the functions.
-struct ExampleAppConsole
+// Not thread-safe
+struct ExampleAppConsole : public ILog
 {
     char                  InputBuf[256];
     ImVector<char*>       Items;
@@ -59,7 +62,7 @@ struct ExampleAppConsole
         ScrollToBottom = true;
     }
 
-    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+    virtual void AddLog(const char* fmt, ...) override IM_FMTARGS(2)
     {
         // FIXME-OPT
         char buf[1024];

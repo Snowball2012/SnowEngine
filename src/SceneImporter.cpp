@@ -499,7 +499,7 @@ namespace
 }
 bool LoadFbxFromFile( const std::string& filename, ImportedScene& mesh )
 {
-    std::cout << "Loading " << filename << std::endl;
+    SE_LOG("Loading %s", filename.c_str());
 
     FbxManager* fbx_mgr = FbxManager::Create();
     FbxIOSettings* ios = FbxIOSettings::Create( fbx_mgr, IOSROOT );
@@ -509,7 +509,7 @@ bool LoadFbxFromFile( const std::string& filename, ImportedScene& mesh )
 
     if ( ! importer->Initialize( filename.c_str(), -1, fbx_mgr->GetIOSettings() ) )
     {
-        std::cerr << "FbxManager::Initialize failed\n" << '\t' << importer->GetStatus().GetErrorString();
+        SE_LOG("FbxManager::Initialize failed\n\t%s", importer->GetStatus().GetErrorString());
         return false;
     }
 

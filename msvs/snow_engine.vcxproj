@@ -257,6 +257,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\src\utils\CGUtils.cpp" />
+    <ClCompile Include="..\src\utils\Log.cpp" />
     <ClCompile Include="..\src\utils\MathUtils.cpp" />
     <ClCompile Include="..\src\utils\MemoryMappedFile.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../stdafx.h</PrecompiledHeaderFile>
@@ -351,6 +352,7 @@ copy $(SolutionDir)3rdparty\optick\lib\x64\$(Configuration)\optickcore.dll $(Tar
     <ClInclude Include="..\src\utils\btree.h" />
     <ClInclude Include="..\src\utils\btree.hpp" />
     <ClInclude Include="..\src\utils\CGUtils.h" />
+    <ClInclude Include="..\src\utils\Log.h" />
     <ClInclude Include="..\src\utils\MathUtils.h" />
     <ClInclude Include="..\src\utils\MemoryMappedFile.h" />
     <ClInclude Include="..\src\utils\OrbitCameraController.h" />
