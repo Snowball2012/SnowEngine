@@ -50,6 +50,17 @@ struct HDRBuffer : TrackedResource
     D3D12_GPU_DESCRIPTOR_HANDLE uav_per_mip_table; // contigious table of mip uavs, starting with mip 0
 };
 
+struct HDRBuffer_Final : TrackedResource
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE srv;
+    D3D12_GPU_DESCRIPTOR_HANDLE uav;
+};
+
+struct HDRBuffer_Prev : TrackedResource
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE srv;
+};
+
 struct AmbientBuffer : TrackedResource
 {
     D3D12_GPU_DESCRIPTOR_HANDLE srv;

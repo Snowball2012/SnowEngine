@@ -66,7 +66,6 @@ void DirectShadowmaskRGS()
     float ray_tolerance = lerp(1.e-2f, 3.e-2f, closeness_to_edge);
     
     float3 base_dir = mul(pass_params.view_mat, pass_params.parallel_lights[0].dir);
-    //float4 base_dir_ws = mul(pass_params.view_mat, float4(base_dir, 0));
 
     float2 seed = frac(plane_ndc + pass_params.total_time);
 

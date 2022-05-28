@@ -118,6 +118,7 @@ private:
     std::vector<std::pair<GPUTaskQueue::Timestamp, GPUResourceHolder>> m_frame_resources;
     std::pair<GPUTaskQueue::Timestamp, GPUResourceHolder>* m_cur_frame_resource = nullptr;
     int m_cur_fr_idx = 0;
+    uint64_t m_total_frames_rendered = 0;
 
     std::unique_ptr<Renderer> m_renderer = nullptr;
 

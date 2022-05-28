@@ -60,7 +60,7 @@ public:
     }
 
     template<template <typename> class N>
-    N<Framegraph>* GetNode() { return m_impl.GetNode<N>(); }
+    N<details::framegraph::FramegraphImpl<Nodes...>>* GetNode() { return m_impl.GetNode<N>(); }
 
     template<typename Res>
     std::optional<Res>& GetRes() { return m_impl.GetRes<Res>(); }

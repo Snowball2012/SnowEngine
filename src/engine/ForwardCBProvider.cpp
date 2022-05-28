@@ -5,6 +5,7 @@
 #include "ForwardCBProvider.h"
 
 #include "ParallelSplitShadowMapping.h"
+#include "TemporalAA.h"
 
 
 ForwardCBProvider::ForwardCBProvider()
@@ -13,6 +14,7 @@ ForwardCBProvider::ForwardCBProvider()
 
 ForwardCBProvider ForwardCBProvider::Create( float time, const DirectX::XMFLOAT2& viewport_size, const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                                              const span<const Light>& scene_lights,
+                                             const TemporalAA* taa,
                                              ID3D12Device& device, GPULinearAllocator& upload_cb_allocator )
 {
     ForwardCBProvider buffer;
@@ -30,7 +32,7 @@ ForwardCBProvider ForwardCBProvider::Create( float time, const DirectX::XMFLOAT2
     ThrowIfFailedH( buffer.m_gpu_res->Map( 0, nullptr, &mapped_data ) );
 
     GPUPassConstants gpu_data;
-    FillCameraData( camera, buffer.m_viewproj, buffer.m_view, buffer.m_proj, gpu_data );
+    FillCameraData( camera, buffer.m_viewproj, buffer.m_view, buffer.m_proj, viewport_size, taa, gpu_data );
 
     gpu_data.render_target_size = viewport_size;
     gpu_data.render_target_size_inv = DirectX::XMFLOAT2(1.0f / viewport_size.x, 1.0f / viewport_size.y);
@@ -68,6 +70,8 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera,
                                         DirectX::XMFLOAT4X4& viewproj,
                                         DirectX::XMMATRIX& view,
                                         DirectX::XMMATRIX& proj,
+                                        const DirectX::XMFLOAT2& viewport_size,
+                                        const TemporalAA* taa,
                                         GPUPassConstants& gpu_data ) noexcept
 {
     // reversed z
@@ -75,6 +79,11 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera,
                                               camera.aspect_ratio,
                                               camera.far_plane,
                                               camera.near_plane );
+
+    if (taa && taa->IsJitterEnabled())
+    {
+        proj = taa->JitterProjection(proj, viewport_size.x, viewport_size.y);
+    }
 
     view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
                                       DirectX::XMLoadFloat3( &camera.dir ),

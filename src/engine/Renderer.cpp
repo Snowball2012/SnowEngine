@@ -78,6 +78,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<GenerateRaytracedShadowmaskNode>( *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<TemporalAANode>(*m_device);
 
 
     if ( m_framegraph.IsRebuildNeeded() )
@@ -128,6 +129,8 @@ void Renderer::CreateTransientResources()
 
 
     create_tex( L"hdr buffer", m_hdr_backbuffer, m_hdr_format, true, true, true, true, true, false );
+    create_tex( L"hdr buffer #1", m_prev_frame_hdr_buffer[0], m_hdr_format, false, true, true, true, true, false );
+    create_tex( L"hdr buffer #2", m_prev_frame_hdr_buffer[1], m_hdr_format, false, true, true, true, true, false );
     create_tex( L"hdr ambient", m_hdr_ambient, m_hdr_format, false, true, false, false, true, false );
     create_tex( L"normal buffer", m_normals, m_normals_format, false, true, false, false, true, false );
     create_tex( L"ssao", m_ssao, m_ssao_format, false, true, false, false, true, false );
@@ -172,6 +175,8 @@ void Renderer::ResizeTransientResources()
     };
 
     resize_tex( *m_hdr_backbuffer, m_resolution_width, m_resolution_height );
+    resize_tex( *m_prev_frame_hdr_buffer[0], m_resolution_width, m_resolution_height );
+    resize_tex( *m_prev_frame_hdr_buffer[1], m_resolution_width, m_resolution_height );
     resize_tex( *m_hdr_ambient, m_resolution_width, m_resolution_height );
     resize_tex( *m_normals, m_resolution_width, m_resolution_height );
     resize_tex( *m_ssao, m_resolution_width / 2, m_resolution_height / 2 );
@@ -196,7 +201,7 @@ RenderTask Renderer::CreateTask( float time, const Camera::Data& main_camera, co
         NOTIMPL;
 
     DirectX::XMFLOAT2 viewport_size(m_resolution_width, m_resolution_height);
-    ForwardCBProvider forward_cb = ForwardCBProvider::Create( time, viewport_size, main_camera, m_pssm, light_list, *m_device->GetNativeDevice(), cb_allocator );
+    ForwardCBProvider forward_cb = ForwardCBProvider::Create( time, viewport_size, main_camera, m_pssm, light_list, &m_taa, *m_device->GetNativeDevice(), cb_allocator );
 
     RenderTask new_task( std::move( forward_cb ) );
     new_task.m_mode = mode;
@@ -235,6 +240,8 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     if ( m_framegraph.IsRebuildNeeded() )
         m_framegraph.Rebuild();
+
+    m_framegraph.GetNode<TemporalAANode>()->SetTAAState(&m_taa);
 
     
     GPULinearAllocator upload_allocator( m_device->GetNativeDevice(), GetUploadHeapDescription() );
@@ -337,6 +344,24 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
             hdr_buffer.size = DirectX::XMUINT2( hdr_buffer.res->GetDesc().Width, hdr_buffer.res->GetDesc().Height );
         }
         m_framegraph.SetRes( hdr_buffer );
+
+        
+        auto& prev_hdr_buffer = m_prev_frame_hdr_buffer[m_taa.GetFrame() % 2];
+        auto& cur_final_hdr_buffer = m_prev_frame_hdr_buffer[1 - (m_taa.GetFrame() % 2)];
+        HDRBuffer_Prev hdr_prev;
+        {
+            hdr_prev.res = prev_hdr_buffer->GetResource();
+            hdr_prev.srv = GetGPUHandle( *prev_hdr_buffer->GetSrvMain(), 0 );
+        }
+        m_framegraph.SetRes( hdr_prev );
+
+        HDRBuffer_Final hdr_final;
+        {
+            hdr_final.res = cur_final_hdr_buffer->GetResource();
+            hdr_final.srv = GetGPUHandle( *cur_final_hdr_buffer->GetSrvMain(), 0 );
+            hdr_final.uav = GetGPUHandle( *cur_final_hdr_buffer->GetUavPerMip(), 0 );
+        }
+        m_framegraph.SetRes( hdr_final );
 
         AmbientBuffer ambient_buffer;
         ambient_buffer.res = m_hdr_ambient->GetResource();

@@ -8,7 +8,6 @@
 
 #include <engine/ForwardLightingPass.h>
 #include <engine/DepthOnlyPass.h>
-#include <engine/TemporalBlendPass.h>
 
 #include <engine/SceneItems.h>
 

@@ -19,6 +19,7 @@ class ForwardCBProvider
 public:
     static ForwardCBProvider Create( float time, const DirectX::XMFLOAT2& viewport_size, const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,
                                      const span<const Light>& scene_lights,
+                                     const class TemporalAA* taa,
                                      ID3D12Device& device, GPULinearAllocator& upload_cb_allocator );
 
     ComPtr<ID3D12Resource> GetResource() const noexcept;
@@ -45,6 +46,8 @@ private:
                                 DirectX::XMFLOAT4X4& viewproj,
                                 DirectX::XMMATRIX& view,
                                 DirectX::XMMATRIX& proj,
+                                const DirectX::XMFLOAT2& viewport_size,
+                                const class TemporalAA* taa,
                                 GPUPassConstants& gpu_data ) noexcept;
 
     static void FillCSMData( const Camera::Data& camera, const ParallelSplitShadowMapping& pssm,

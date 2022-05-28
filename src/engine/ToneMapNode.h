@@ -17,7 +17,7 @@ public:
         >;
     using ReadRes = std::tuple
         <
-        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<HDRBuffer_Final, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
         TonemapNodeSettings
         >;
     using CloseRes = std::tuple
@@ -34,7 +34,7 @@ public:
     {
         OPTICK_EVENT();
         auto& sdr_buffer = framegraph.GetRes<SDRBuffer>();
-        auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
+        auto& hdr_buffer = framegraph.GetRes<HDRBuffer_Final>();
         auto& settings = framegraph.GetRes<TonemapNodeSettings>();
 
         if ( ! sdr_buffer || ! hdr_buffer || ! settings )
@@ -50,7 +50,7 @@ public:
         ctx.gpu_data.whitepoint_luminance = settings->whitepoint_luminance;
         
         ctx.sdr_uav = sdr_buffer->uav;
-        ctx.hdr_srv = hdr_buffer->srv_all_mips;
+        ctx.hdr_srv = hdr_buffer->srv;
 
         m_pass.Draw( ctx );
 

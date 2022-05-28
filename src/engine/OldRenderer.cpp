@@ -8,8 +8,6 @@
 
 #include "GeomGeneration.h"
 
-#include "TemporalBlendPass.h"
-
 #include "GPUResourceHolder.h"
 
 #include <utils/CGUtils.h>
@@ -135,6 +133,9 @@ void OldRenderer::Draw(float time)
     
     GPULinearAllocator allocator( m_gpu_device->GetNativeDevice(), CD3DX12_HEAP_DESC( heap_block_size, D3D12_HEAP_TYPE_UPLOAD, 0, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS ) );
 
+    {
+        m_renderer->TAA().SetFrame(m_total_frames_rendered);
+    }
     RenderTask task = m_renderer->CreateTask( time, main_camera->GetData(), GetScene().GetAllLights(),
                                               RenderMode::FullTonemapped, allocator );
 
@@ -285,7 +286,7 @@ OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
     };
 }
 
-#define ENABLE_D3D12_VALIDATION 0
+#define ENABLE_D3D12_VALIDATION 1
 
 void OldRenderer::CreateDevice()
 {
@@ -459,6 +460,7 @@ void OldRenderer::EndFrame( )
     // CPU timeline
     m_cur_fr_idx = ( m_cur_fr_idx + 1 ) % FrameResourceCount;
     m_cur_frame_resource = m_frame_resources.data() + m_cur_fr_idx;
+    m_total_frames_rendered++;
 
     // wait for gpu to complete (i - 2)th frame;
     if ( m_cur_frame_resource->first != 0 )

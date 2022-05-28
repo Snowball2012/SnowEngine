@@ -26,6 +26,7 @@
 #include "ParallelSplitShadowMapping.h"
 
 #include "RenderTask.h"
+#include "TemporalAA.h"
 
 
 class GPUDevice;
@@ -117,6 +118,8 @@ public:
     void SetRTSettings( const RTSettings& settings ) noexcept { m_rt_settings = settings; }
     RTSettings GetRTSettings() const noexcept { return m_rt_settings; }
 
+    TemporalAA& TAA() noexcept { return m_taa; }
+
     void SetSkybox( bool enable );
 
     ParallelSplitShadowMapping& GetPSSM() noexcept { return m_pssm; }
@@ -152,6 +155,7 @@ private:
     TonemapSettings m_tonemap_settings;
     RTSettings m_rt_settings;
     ParallelSplitShadowMapping m_pssm;
+    TemporalAA m_taa;
 
     // framegraph
     using FramegraphInstance =
@@ -167,7 +171,8 @@ private:
             LightComposeNode,
             ToneMapNode,
             HDRSinglePassDownsampleNode,
-            GenerateRaytracedShadowmaskNode
+            GenerateRaytracedShadowmaskNode,
+            TemporalAANode
         >;
     FramegraphInstance m_framegraph;
 
@@ -184,6 +189,7 @@ private:
 
     std::unique_ptr<DynamicTexture> m_depth_stencil_buffer = nullptr;
     std::unique_ptr<DynamicTexture> m_hdr_backbuffer = nullptr;
+    std::unique_ptr<DynamicTexture> m_prev_frame_hdr_buffer[2] = { nullptr, nullptr };
     std::unique_ptr<DynamicTexture> m_hdr_ambient = nullptr;
     std::unique_ptr<DynamicTexture> m_normals = nullptr;
     std::unique_ptr<DynamicTexture> m_ssao = nullptr;

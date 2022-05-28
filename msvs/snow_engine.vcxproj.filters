@@ -179,9 +179,6 @@
     <ClCompile Include="..\src\engine\DepthOnlyPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\engine\TemporalBlendPass.cpp">
-      <Filter>core\RenderPasses</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\engine\RenderPass.cpp">
       <Filter>core\RenderPasses</Filter>
     </ClCompile>
@@ -264,6 +261,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\engine\Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\Log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -433,9 +433,6 @@
     <ClInclude Include="..\src\engine\SkyboxPass.h">
       <Filter>core\RenderPasses</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\engine\TemporalBlendPass.h">
-      <Filter>core\RenderPasses</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\engine\DynamicSceneBuffers.h">
       <Filter>core\SceneSystems</Filter>
     </ClInclude>
@@ -527,11 +524,9 @@
     <ClInclude Include="..\src\engine\resources\Mesh.h" />
     <ClInclude Include="..\src\engine\raytracing\RayTracedDirectShadows.h" />
     <ClInclude Include="..\src\engine\Shader.h" />
+    <ClInclude Include="..\src\utils\Log.h" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\shaders\temporal_blend_ps.hlsl">
-      <Filter>shaders\postprocess</Filter>
-    </FxCompile>
     <FxCompile Include="..\shaders\fullscreen_quad_vs.hlsl">
       <Filter>shaders\postprocess</Filter>
     </FxCompile>
@@ -561,15 +556,6 @@
     </FxCompile>
     <FxCompile Include="..\shaders\cubemap_gen_ps.hlsl">
       <Filter>shaders\cubemap_gen</Filter>
-    </FxCompile>
-    <FxCompile Include="..\shaders\forward_vs.hlsl">
-      <Filter>shaders\forward_lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="..\shaders\forward_gs.hlsl">
-      <Filter>shaders\forward_lighting</Filter>
-    </FxCompile>
-    <FxCompile Include="..\shaders\forward_ps.hlsl">
-      <Filter>shaders\forward_lighting</Filter>
     </FxCompile>
     <FxCompile Include="..\shaders\postprocess\light_compose.hlsl">
       <Filter>shaders\postprocess</Filter>
@@ -607,6 +593,12 @@
       <Filter>shaders\bindings</Filter>
     </None>
     <None Include="..\shaders\raytracing.hlsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders\taa.hlsl">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders\forward.hlsl">
       <Filter>shaders</Filter>
     </None>
   </ItemGroup>

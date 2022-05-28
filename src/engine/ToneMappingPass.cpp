@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include "ToneMappingPass.h"
 
+#include "Shader.h"
+
 ToneMappingPass::ToneMappingPass( ID3D12Device& device )
 {
     m_root_signature = BuildRootSignature( device );
@@ -102,7 +104,11 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
 
 ComPtr<ID3DBlob> ToneMappingPass::LoadAndCompileShaders()
 {
-    return Utils::LoadBinary( L"shaders/tonemap.cso" );
+    ComPtr<ID3DBlob> bytecode;
+    Shader taa_shader(L"shaders/tonemap.hlsl", ShaderFrequency::Compute, L"main", {}, nullptr);
+    ThrowIfFailedH(taa_shader.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(bytecode.GetAddressOf())));
+    return bytecode;
+    //return Utils::LoadBinary( L"shaders/tonemap.cso" );
 }
 
 void ToneMappingPass::BeginDerived( RenderStateID state ) noexcept

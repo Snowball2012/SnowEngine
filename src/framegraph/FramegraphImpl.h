@@ -669,7 +669,7 @@ namespace details
         template<template <typename> class N>
         N<FramegraphImpl<Nodes...>>* FramegraphImpl<Nodes...>::GetNode()
         {
-            return std::get<OptionalFgNode<N<FramegraphImpl>>>( m_node_storage ).node.get_ptr();
+            return &(std::get<OptionalFgNode<N<FramegraphImpl>>>( m_node_storage ).node.value());
         }
 
     }
