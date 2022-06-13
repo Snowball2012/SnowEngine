@@ -87,6 +87,7 @@ void TemporalBlendPass::Draw( const Context& context )
     m_cmd_list->SetComputeRootDescriptorTable( 1, context.prev_frame_srv );
     m_cmd_list->SetComputeRootDescriptorTable( 2, context.jittered_frame_srv );
     m_cmd_list->SetComputeRootDescriptorTable( 3, context.cur_frame_uav );
+    m_cmd_list->SetComputeRootDescriptorTable( 4, context.motion_vectors_srv );
 
     constexpr uint32_t GroupSizeX = 8;
     constexpr uint32_t GroupSizeY = 8;
@@ -105,24 +106,27 @@ ComPtr<ID3D12RootSignature> TemporalBlendPass::BuildRootSignature( ID3D12Device&
     1 - previous frame texture
     2 - current jittered frame texture
     3 - anti-aliased output
+    4 - motion vectors
 
     Shader register bindings
     b0 - blend factor
     t0 - prev frame
     */
 
-    constexpr int nparams = 4;
+    constexpr int nparams = 5;
 
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
     slot_root_parameter[0].InitAsConstants( 4, 0 );
-    CD3DX12_DESCRIPTOR_RANGE desc_table[3];
+    CD3DX12_DESCRIPTOR_RANGE desc_table[4];
     desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
     desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );
     desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0 );
+    desc_table[3].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2 );
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
     slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 1 );
     slot_root_parameter[3].InitAsDescriptorTable( 1, desc_table + 2 );
+    slot_root_parameter[4].InitAsDescriptorTable( 1, desc_table + 3 );
 
     CD3DX12_STATIC_SAMPLER_DESC linear_wrap(
         0, // shaderRegister

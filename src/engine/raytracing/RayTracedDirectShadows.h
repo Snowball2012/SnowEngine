@@ -35,7 +35,7 @@ private:
     
 public:
 
-    GenerateRaytracedShadowmaskPass(ID3D12Device& device);
+    GenerateRaytracedShadowmaskPass(GPUDevice& device);
 
     void Draw(const Context& context, IGraphicsCommandList& cmd_list);
 
@@ -68,7 +68,7 @@ private:
     
 public:
 
-    GenerateRaytracedShadowmaskNode(ID3D12Device& device)
+    GenerateRaytracedShadowmaskNode(GPUDevice& device)
         : m_pass(device)
     {
     }

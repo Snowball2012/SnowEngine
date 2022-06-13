@@ -133,6 +133,12 @@ struct SceneRaytracingTLAS : TrackedResource
 {
 };
 
+struct MotionVectors : TrackedResource
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE srv;
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv;
+};
+
 struct ScreenConstants
 {
     D3D12_VIEWPORT viewport;

@@ -19,6 +19,7 @@ public:
         ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
         ResourceInState<AmbientBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
         ResourceInState<NormalBuffer, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+        ResourceInState<MotionVectors, D3D12_RESOURCE_STATE_RENDER_TARGET>,
         HDRLightingMain
         >;
     using ReadRes = std::tuple
@@ -40,10 +41,11 @@ public:
                      DXGI_FORMAT ambient_rtv_format,
                      DXGI_FORMAT normal_format,
                      DXGI_FORMAT depth_stencil_format,
+                     DXGI_FORMAT motionvectors_format,
                      ID3D12Device& device )
         : m_pass( device )
     {
-        m_renderstates = m_pass.CompileStates( direct_format, ambient_rtv_format, normal_format, depth_stencil_format, device );
+        m_renderstates = m_pass.CompileStates( direct_format, ambient_rtv_format, normal_format, motionvectors_format, depth_stencil_format, device );
     }
 
     virtual void Run( Framegraph& framegraph, IGraphicsCommandList& cmd_list ) override;
@@ -84,7 +86,8 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
     auto& ambient_buffer = framegraph.GetRes<AmbientBuffer>();
     auto& normal_buffer = framegraph.GetRes<NormalBuffer>();
-    if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer )
+    auto& motionvectors = framegraph.GetRes<MotionVectors>();
+    if ( ! depth_buffer || ! hdr_buffer || ! ambient_buffer || ! normal_buffer || ! motionvectors )
         throw SnowEngineException( "missing resource" );
 
     auto& skybox = framegraph.GetRes<Skybox>();
@@ -97,6 +100,7 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     ctx.pass_cb = pass_cb->pass_cb;
     ctx.ambient_rtv = ambient_buffer->rtv;
     ctx.normals_rtv = normal_buffer->rtv;
+    ctx.motionvectors_rtv = motionvectors->rtv;
     ctx.shadow_cascade_srv = csm->srv;
     ctx.ibl.desc_table_srv = skybox->srv_table;
     ctx.ibl.radiance_multiplier = skybox->radiance_factor;

@@ -75,22 +75,36 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera,
                                         GPUPassConstants& gpu_data ) noexcept
 {
     // reversed z
-    proj = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
+    DirectX::XMMATRIX proj_unjittered;
+    proj_unjittered = DirectX::XMMatrixPerspectiveFovLH( camera.fov_y,
                                               camera.aspect_ratio,
                                               camera.far_plane,
                                               camera.near_plane );
 
+
     if (taa && taa->IsJitterEnabled())
     {
-        proj = taa->JitterProjection(proj, viewport_size.x, viewport_size.y);
+        proj = taa->JitterProjection(proj_unjittered, viewport_size.x, viewport_size.y);
+    }
+    else
+    {
+        proj = proj_unjittered;
     }
 
     view = DirectX::XMMatrixLookToLH( DirectX::XMLoadFloat3( &camera.pos ),
                                       DirectX::XMLoadFloat3( &camera.dir ),
                                       DirectX::XMLoadFloat3( &camera.up ) );
 
-    DirectX::XMMATRIX view_proj = view * proj;
+    DirectX::XMMATRIX view_prev =
+        DirectX::XMMatrixLookToLH(
+            DirectX::XMLoadFloat3( &camera.pos_prev ),
+            DirectX::XMLoadFloat3( &camera.dir_prev ),
+            DirectX::XMLoadFloat3( &camera.up_prev ) );
 
+    DirectX::XMMATRIX view_proj = view * proj;
+    DirectX::XMMATRIX view_proj_unjittered = view * proj_unjittered;
+    DirectX::XMMATRIX view_proj_unjittered_prev = view_prev * proj_unjittered;
+    
     DirectX::XMStoreFloat4x4( &viewproj, view_proj );
 
     DirectX::XMVECTOR determinant;
@@ -102,6 +116,9 @@ void ForwardCBProvider::FillCameraData( const Camera::Data& camera,
     DirectX::XMStoreFloat4x4( &gpu_data.proj_mat, DirectX::XMMatrixTranspose( proj ) );
     DirectX::XMStoreFloat4x4( &gpu_data.view_mat, DirectX::XMMatrixTranspose( view ) );
     DirectX::XMStoreFloat4x4( &gpu_data.view_proj_mat, DirectX::XMMatrixTranspose( view_proj ) );
+
+    DirectX::XMStoreFloat4x4( &gpu_data.view_proj_mat_prev, DirectX::XMMatrixTranspose( view_proj_unjittered_prev ) );
+    DirectX::XMStoreFloat4x4( &gpu_data.view_proj_mat_unjittered, DirectX::XMMatrixTranspose( view_proj_unjittered ) );
 
     DirectX::XMStoreFloat4x4( &gpu_data.proj_inv_mat, DirectX::XMMatrixTranspose( inv_proj ) );
     DirectX::XMStoreFloat4x4( &gpu_data.view_inv_mat, DirectX::XMMatrixTranspose( inv_view ) );

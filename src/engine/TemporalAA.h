@@ -25,6 +25,7 @@ public:
         D3D12_GPU_DESCRIPTOR_HANDLE prev_frame_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE jittered_frame_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE cur_frame_uav;
+        D3D12_GPU_DESCRIPTOR_HANDLE motion_vectors_srv;
         uint32_t frame_size[2];
         ShaderData gpu_data;
     };
@@ -90,7 +91,8 @@ public:
     using ReadRes = std::tuple
         <
         ResourceInState<HDRBuffer_Prev, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
-        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>
+        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<MotionVectors, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>
         >;
     using CloseRes = std::tuple
         <
@@ -113,8 +115,9 @@ public:
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer>();
         auto& prev_hdr_buffer = framegraph.GetRes<HDRBuffer_Prev>();
         auto& new_hdr_buffer = framegraph.GetRes<HDRBuffer_Final>();
+        auto& motion_vectors = framegraph.GetRes<MotionVectors>();
 
-        if ( ! m_taa_state || ! hdr_buffer || ! prev_hdr_buffer )
+        if ( ! m_taa_state || ! hdr_buffer || ! prev_hdr_buffer || ! motion_vectors )
             throw SnowEngineException( "missing resource" );
         
         PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "TAA" );
@@ -124,6 +127,7 @@ public:
         ctx.prev_frame_srv = prev_hdr_buffer->srv;
         ctx.jittered_frame_srv = hdr_buffer->srv[0];
         ctx.cur_frame_uav = new_hdr_buffer->uav;
+        ctx.motion_vectors_srv = motion_vectors->srv;
         ctx.frame_size[0] = uint32_t( hdr_buffer->size.x );
         ctx.frame_size[1] = uint32_t( hdr_buffer->size.y );
         m_taa_state->FillShaderData(ctx.gpu_data);

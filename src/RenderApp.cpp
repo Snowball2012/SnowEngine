@@ -230,6 +230,7 @@ void RenderApp::UpdateCamera()
         if ( ! cam_ptr )
             throw SnowEngineException( "no main camera" );
 
+        cam_ptr->SavePrevFrameData();
         Camera::Data& cam_data = cam_ptr->ModifyData();
 
         cam_data.dir = SphericalToCartesian( -1.0f, m_phi, m_theta );
@@ -247,6 +248,7 @@ void RenderApp::UpdateCamera()
         if ( ! cam_ptr )
             throw SnowEngineException( "no debug camera" );
 
+        cam_ptr->SavePrevFrameData();
         Camera::Data& cam_data = cam_ptr->ModifyData();
 
         cam_data.pos = DirectX::XMFLOAT3( 30.f, 30.f, -30.f );
@@ -571,6 +573,7 @@ void RenderApp::InitScene( ImportedScene imported_scene )
     m_camera = world.CreateEntity();
 	Camera& cam_component = world.AddComponent<Camera>( m_camera );
 	cam_component.ModifyData() = camera_data;
+    cam_component.SavePrevFrameData();
     cam_component.SetSkybox() = m_ph_skybox;
 
     m_renderer->SetMainCamera( m_camera );
@@ -721,6 +724,7 @@ void RenderApp::LoadingScreen::Init( SceneClientView& scene, TextureID normal_te
 	m_camera = scene.GetWorld().CreateEntity();
 	Camera& cam_component = scene.GetWorld().AddComponent<Camera>( m_camera );
 	cam_component.ModifyData() = camera_data;
+    cam_component.SavePrevFrameData();
     cam_component.SetSkybox() = skybox_id;
 
     Light::Data light_data;

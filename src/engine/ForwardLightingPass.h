@@ -21,6 +21,7 @@ public:
                           DXGI_FORMAT ambient_format,
                           DXGI_FORMAT normal_format,
                           DXGI_FORMAT depth_stencil_format,
+                          DXGI_FORMAT motion_vectors_format,
                           ID3D12Device& device );
 
     struct Context
@@ -30,6 +31,7 @@ public:
         D3D12_CPU_DESCRIPTOR_HANDLE depth_stencil_view;
         D3D12_CPU_DESCRIPTOR_HANDLE ambient_rtv;
         D3D12_CPU_DESCRIPTOR_HANDLE normals_rtv;
+        D3D12_CPU_DESCRIPTOR_HANDLE motionvectors_rtv;
         D3D12_GPU_DESCRIPTOR_HANDLE shadow_map_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE shadow_cascade_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE shadowmask_srv;

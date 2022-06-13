@@ -11,6 +11,7 @@ SamplerState point_wrap_sampler : register( s0 );
 
 Texture2D prev_frame : register( t0 );
 Texture2D cur_frame : register( t1 );
+Texture2D motion_vectors : register( t2 );
 RWTexture2D<float4> output : register( u0 );
 
 static const int GROUP_SIZE_X = 8;
@@ -39,8 +40,9 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     prev_frame.GetDimensions( tex_size.x, tex_size.y );
     float2 texcoord = float2( float(thread.x) + 0.5f + jitter_x, float(thread.y) + 0.5f + jitter_y ) / tex_size;
 
+    float2 motionvec = motion_vectors.SampleLevel( point_wrap_sampler, texcoord, 0 ).xy;
     float4 cur_color = cur_frame.SampleLevel( point_wrap_sampler, texcoord, 0 );
-    float4 hist_color = prev_frame.Load( int3( thread.x, thread.y, 0 ) );
+    float4 hist_color = prev_frame.SampleLevel( point_wrap_sampler, texcoord + motionvec, 0 );
 
     // 3x3 neighbourhood clamping 
     const float2 offsets[8] =

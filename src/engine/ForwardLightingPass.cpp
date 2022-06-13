@@ -16,6 +16,7 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
                                                                 DXGI_FORMAT ambient_rtv_format,
                                                                 DXGI_FORMAT normal_format,
                                                                 DXGI_FORMAT depth_stencil_format,
+                                                                DXGI_FORMAT motion_vectors_format,
                                                                 ID3D12Device& device )
 {
     const ::InputLayout input_layout = InputLayout();
@@ -48,10 +49,12 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
     pso_desc.SampleMask = UINT_MAX;
     pso_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-    pso_desc.NumRenderTargets = 3;
+    pso_desc.NumRenderTargets = 4;
     pso_desc.RTVFormats[0] = rendertarget_format;
     pso_desc.RTVFormats[1] = ambient_rtv_format;
     pso_desc.RTVFormats[2] = normal_format;
+    pso_desc.RTVFormats[3] = motion_vectors_format;
+    
     pso_desc.SampleDesc.Count = 1;
     pso_desc.SampleDesc.Quality = 0;
 
@@ -83,14 +86,15 @@ ForwardLightingPass::States ForwardLightingPass::CompileStates( DXGI_FORMAT rend
 
 void ForwardLightingPass::Draw( const Context& context )
 {	
-    D3D12_CPU_DESCRIPTOR_HANDLE render_targets[3] =
+    D3D12_CPU_DESCRIPTOR_HANDLE render_targets[4] =
     {
         context.back_buffer_rtv,
         context.ambient_rtv,
-        context.normals_rtv
+        context.normals_rtv,
+        context.motionvectors_rtv
     };
 
-    m_cmd_list->OMSetRenderTargets( 3, render_targets, false, &context.depth_stencil_view );
+    m_cmd_list->OMSetRenderTargets( 4, render_targets, false, &context.depth_stencil_view );
 
     m_cmd_list->SetGraphicsRootDescriptorTable( 3, context.use_rt_shadows ? context.shadowmask_srv : context.shadow_map_srv );
     m_cmd_list->SetGraphicsRootDescriptorTable( 4, context.shadow_cascade_srv );
@@ -146,8 +150,6 @@ ForwardLightingPass::Shaders ForwardLightingPass::LoadAndCompileShaders()
     ThrowIfFailedH(vs.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.vs.GetAddressOf())));
     ThrowIfFailedH(ps.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.ps.GetAddressOf())));
     ThrowIfFailedH(raytraced_ps.GetNativeBytecode()->QueryInterface(IID_PPV_ARGS(base_shaders.ps_raytraced.GetAddressOf())));
-
-
     
     return base_shaders;
 }

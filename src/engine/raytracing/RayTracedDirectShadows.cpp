@@ -3,13 +3,17 @@
 #include "RayTracedDirectShadows.h"
 
 #include "engine/Shader.h"
+#include "engine/resources/GPUDevice.h"
 
-GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(ID3D12Device& device)
+GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(GPUDevice& device)
 {
-    m_global_root_signature = BuildRootSignature(device, m_global_root_signature_serialized);
-    ThrowIfFailedH(device.QueryInterface(IID_PPV_ARGS(m_rt_device.GetAddressOf())));
+    if (!device.IsRaytracingEnabled())
+        return;
+    
+    m_global_root_signature = BuildRootSignature(*device.GetNativeRTDevice(), m_global_root_signature_serialized);
+    ThrowIfFailedH(device.GetNativeRTDevice()->QueryInterface(IID_PPV_ARGS(m_rt_device.GetAddressOf())));
     BuildRaytracingPSO(*m_rt_device.Get());
-    GenerateShaderTable(device);    
+    GenerateShaderTable(*device.GetNativeRTDevice());    
 }
 
 ComPtr<ID3D12RootSignature> GenerateRaytracedShadowmaskPass::BuildRootSignature(ID3D12Device& device, ComPtr<ID3DBlob>& serialized_rs)

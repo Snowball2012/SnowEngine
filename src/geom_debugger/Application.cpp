@@ -417,6 +417,9 @@ void Application::Update( const GameTimer& timer )
 	m_pending_rotation[1] = 0;
 
     Camera::Data& cam_data = cam_ptr->ModifyData();
+	cam_data.pos_prev = cam_data.pos;
+	cam_data.dir_prev = cam_data.dir;
+	cam_data.up_prev = cam_data.up;
 	DirectX::XMStoreFloat3( &cam_data.pos, m_camera_controller.GetPosition() );
 	DirectX::XMStoreFloat3( &cam_data.dir, m_camera_controller.GetEyeDir() );
 	DirectX::XMStoreFloat3( &cam_data.up, m_camera_controller.GetUp() );
@@ -562,6 +565,9 @@ bool Application::InitSceneObjects( const SceneAssets& assets, SceneClientView& 
 	camera_data.fov_y = DirectX::XM_PIDIV4;
 	camera_data.pos = DirectX::XMFLOAT3( 0, 0, -5 );
 	camera_data.up = DirectX::XMFLOAT3( 0, 1, 0 );
+	camera_data.pos_prev = camera_data.pos;
+	camera_data.up_prev = camera_data.up;
+	camera_data.dir_prev = camera_data.dir;
 
 	camera_controller.SetAngleSpeed( 1.e-2f );
 	camera_controller.SetZoomSpeed( 1.2f );

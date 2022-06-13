@@ -34,6 +34,8 @@ struct VertexOut
 {
     nointerpolation float4x4 view2env : VIEWTOENV;
     float4 pos : SV_POSITION;
+    float4 pos_unjittered : CUR_SVPOSITION;
+    float4 pos_prev : PREV_SVPOSITION;
     float3 pos_v : POSITION;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
@@ -68,6 +70,8 @@ struct PixelIn
 {
     float4x4 view2env : VIEWTOENV;
     float4 pos : SV_POSITION;
+    float4 pos_unjittered : CUR_SVPOSITION;
+    float4 pos_prev : PREV_SVPOSITION;
     float3 pos_v : POSITION;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
@@ -79,6 +83,7 @@ struct PixelOut
     float4 direct_lighting : SV_TARGET0;
     float4 ambient_lighting : SV_TARGET1;
     float2 screen_space_normal : SV_TARGET2;
+    float2 motion_vector : SV_TARGET3;
 };
 
 
@@ -139,6 +144,8 @@ VertexOut main_vs( VertexIn vin )
     float4 pos_v = mul( pos_ws, pass_params.view_mat );
     vout.pos = mul( pos_ws, pass_params.view_proj_mat );
     vout.pos_v = pos_v.xyz / pos_v.w;
+    vout.pos_prev = mul( pos_ws, pass_params.view_proj_mat_prev_unjittered );
+    vout.pos_unjittered = mul( pos_ws, pass_params.view_proj_mat_unjittered );
 
     vout.normal = normalize( mul( mul( float4( vin.normal, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
     vout.tangent = normalize( mul( mul( float4( vin.tangent, 0.0f ), renderitem.model_inv_transpose_mat ), pass_params.view_mat ).xyz );
@@ -211,5 +218,6 @@ PixelOut main_ps(PixelIn pin)
     res.ambient_lighting.a = 1.0f;
     res.direct_lighting.a = 1.0f;
     res.screen_space_normal = normal.xy;
+    res.motion_vector = ((pin.pos_prev.xy / pin.pos_prev.w) - (pin.pos_unjittered.xy / pin.pos_unjittered.w)) * float2(0.5f, -0.5f);
     return res;
 }

@@ -286,7 +286,7 @@ OldRenderer::PerformanceStats OldRenderer::GetPerformanceStats() const noexcept
     };
 }
 
-#define ENABLE_D3D12_VALIDATION 1
+#define ENABLE_D3D12_VALIDATION 0
 
 void OldRenderer::CreateDevice()
 {

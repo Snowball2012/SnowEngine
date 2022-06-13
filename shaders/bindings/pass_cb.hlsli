@@ -13,6 +13,8 @@ struct PassConstants
     float4x4 proj_mat;
     float4x4 proj_inv_mat;
     float4x4 view_proj_mat;
+    float4x4 view_proj_mat_unjittered;
+    float4x4 view_proj_mat_prev_unjittered;
     float4x4 view_proj_inv_mat;
 
     float3 eye_pos_w;

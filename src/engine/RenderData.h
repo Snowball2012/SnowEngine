@@ -128,6 +128,9 @@ struct alignas( 16 ) GPUPassConstants
     DirectX::XMFLOAT4X4 proj_mat = Identity4x4;
     DirectX::XMFLOAT4X4 proj_inv_mat = Identity4x4;
     DirectX::XMFLOAT4X4 view_proj_mat = Identity4x4;
+    DirectX::XMFLOAT4X4 view_proj_mat_unjittered = Identity4x4;
+    DirectX::XMFLOAT4X4 view_proj_mat_prev = Identity4x4;
+    
     DirectX::XMFLOAT4X4 view_proj_inv_mat = Identity4x4;
 
     DirectX::XMFLOAT3 eye_pos_w = { 0.0f, 0.0f, 0.0f };

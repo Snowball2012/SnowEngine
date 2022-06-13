@@ -24,12 +24,15 @@ Renderer::~Renderer()
 {
     m_depth_stencil_buffer.reset();
     m_hdr_backbuffer.reset();
+    m_prev_frame_hdr_buffer[0].reset();
+    m_prev_frame_hdr_buffer[1].reset();
     m_hdr_ambient.reset();
     m_normals.reset();
     m_ssao.reset();
     m_ssao_blurred.reset();
     m_ssao_blurred_transposed.reset();
     m_sdr_buffer.reset();
+    m_motionvectors.reset();
 }
 
 
@@ -68,6 +71,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<ForwardPassNode>( m_hdr_format, // rendertarget
                                                           m_hdr_format, // ambient lighting
                                                           m_normals_format, // normals
+                                                          m_motionvectors_format,
                                                           m_depth_stencil_format_dsv, *m_device->GetNativeDevice() );
 
     m_framegraph.ConstructAndEnableNode<SkyboxNode>( m_hdr_format, m_depth_stencil_format_dsv, *m_device->GetNativeDevice() );
@@ -77,7 +81,7 @@ void Renderer::InitFramegraph()
     m_framegraph.ConstructAndEnableNode<ToneMapNode>( *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<LightComposeNode>( m_hdr_format, *m_device->GetNativeDevice() );
     m_framegraph.ConstructAndEnableNode<HDRSinglePassDownsampleNode>( *m_device->GetNativeDevice() );
-    m_framegraph.ConstructAndEnableNode<GenerateRaytracedShadowmaskNode>( *m_device->GetNativeDevice() );
+    m_framegraph.ConstructAndEnableNode<GenerateRaytracedShadowmaskNode>( *m_device );
     m_framegraph.ConstructAndEnableNode<TemporalAANode>(*m_device);
 
 
@@ -139,6 +143,7 @@ void Renderer::CreateTransientResources()
     create_tex( L"depth stencil buffer", m_depth_stencil_buffer, m_depth_stencil_format_resource, false, true, false, false, false, true );
     create_tex( L"sdr buffer", m_sdr_buffer, m_sdr_format, false, false, false, true, false, false );
     create_tex( L"rt_shadowmask", m_rt_shadowmask, m_rt_shadowmask_format, false, true, false, true, false, false );
+    create_tex( L"motion vectors", m_motionvectors, m_motionvectors_format, false, true, false, false, true, false );
     
     ResizeTransientResources();
 
@@ -185,6 +190,7 @@ void Renderer::ResizeTransientResources()
     resize_tex( *m_depth_stencil_buffer, m_resolution_width, m_resolution_height );
     resize_tex( *m_sdr_buffer, m_resolution_width, m_resolution_height );
     resize_tex( *m_rt_shadowmask, m_resolution_width, m_resolution_height );
+    resize_tex( *m_motionvectors, m_resolution_width, m_resolution_height );
 }
 
 D3D12_HEAP_DESC Renderer::GetUploadHeapDescription() const
@@ -274,7 +280,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     IGraphicsCommandList* list_iface = cmd_list.GetInterface();
 
-    constexpr uint32_t nbarriers = 11;
+    constexpr uint32_t nbarriers = 12;
     CD3DX12_RESOURCE_BARRIER rtv_barriers[nbarriers];
     rtv_barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_backbuffer->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
     rtv_barriers[1] = CD3DX12_RESOURCE_BARRIER::Transition( m_hdr_ambient->GetResource(), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
@@ -295,6 +301,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
     }
     rtv_barriers[8] = CD3DX12_RESOURCE_BARRIER::Transition( m_depth_stencil_buffer->GetResource(),  D3D12_RESOURCE_STATE_DEPTH_READ, D3D12_RESOURCE_STATE_DEPTH_WRITE );
     rtv_barriers[9] = CD3DX12_RESOURCE_BARRIER::Transition( m_sdr_buffer->GetResource(), D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS );
+    rtv_barriers[10] = CD3DX12_RESOURCE_BARRIER::Transition( m_motionvectors->GetResource(), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET );
 
     
     const bool copy_sdr_to_target = !frame_ctx.render_target.uav.valid();
@@ -307,7 +314,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
     if ( target_state_src != target_state_dst )
     {
-        rtv_barriers[10] = CD3DX12_RESOURCE_BARRIER::Transition( frame_ctx.render_target.resource, target_state_src, target_state_dst );
+        rtv_barriers[11] = CD3DX12_RESOURCE_BARRIER::Transition( frame_ctx.render_target.resource, target_state_src, target_state_dst );
         list_iface->ResourceBarrier( nbarriers, rtv_barriers );
     }
     else
@@ -425,6 +432,12 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
         global_atomic.uav = GetGPUHandle( m_atimic_buffer_descriptor );
         global_atomic.uav_cpu_handle = *m_descriptor_tables->ModifyTable( m_atimic_buffer_descriptor );
         m_framegraph.SetRes( global_atomic );
+
+        MotionVectors motion_vectors;
+        motion_vectors.res = m_motionvectors->GetResource();
+        motion_vectors.rtv = m_motionvectors->GetRtvPerMip()[0].HandleCPU();
+        motion_vectors.srv = GetGPUHandle( *m_motionvectors->GetSrvMain(), 0 );
+        m_framegraph.SetRes( motion_vectors );
 
         SDRBuffer backbuffer;
         if (!copy_sdr_to_target)
