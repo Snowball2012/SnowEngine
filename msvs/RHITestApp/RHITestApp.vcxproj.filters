@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\..\src\RHITestApp\Main.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\RHITestApp.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\StdAfx.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\Shader.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\stb_image.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\RHITestApp\RHITestApp.h" />
+    <ClInclude Include="..\..\src\RHITestApp\StdAfx.h" />
+    <ClInclude Include="..\..\src\RHITestApp\Shader.h" />
+    <ClInclude Include="..\..\src\RHITestApp\span.h" />
+    <ClInclude Include="..\..\src\RHITestApp\stb_image.h" />
+  </ItemGroup>
+</Project>
