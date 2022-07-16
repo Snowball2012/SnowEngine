@@ -88,11 +88,9 @@ void RHITestApp::InitVulkan()
     PickPhysicalDevice();
     CreateLogicalDevice();
     CreateDescriptorSetLayout();
-    CreateSwapChain();
-    CreateRenderPass();
-    CreatePipeline();
-    CreateFramebuffers();
     CreateCommandPool();
+    CreateSwapChain();
+    CreatePipeline();
     CreateCommandBuffer();
     CreateSyncObjects();
     CreateTextureImage();
@@ -179,11 +177,7 @@ void RHITestApp::Cleanup()
 
 void RHITestApp::CleanupSwapChain()
 {
-    for (auto& framebuffer : m_swapchain_framebuffers)
-        vkDestroyFramebuffer(m_vk_device, framebuffer, nullptr);
-
     vkDestroyPipeline(m_vk_device, m_graphics_pipeline, nullptr);
-    vkDestroyRenderPass(m_vk_device, m_render_pass, nullptr);
     vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
 
     for (auto& view : m_swapchain_image_views)
@@ -443,17 +437,15 @@ void RHITestApp::CreateTextureImage()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         m_texture_image, m_texture_memory);
 
-    TransitionImageLayout(
+    TransitionImageLayoutAndFlush(
         m_texture_image,
-        VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     CopyBufferToImage(staging_buffer, m_texture_image, uint32_t(width), uint32_t(height));
 
-    TransitionImageLayout(
+    TransitionImageLayoutAndFlush(
         m_texture_image,
-        VK_FORMAT_R8G8B8A8_SRGB,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -531,10 +523,17 @@ void RHITestApp::EndSingleTimeCommands(VkCommandBuffer buffer)
     vkFreeCommandBuffers(m_vk_device, m_cmd_pool, 1, &buffer);
 }
 
-void RHITestApp::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout old_layout, VkImageLayout new_layout)
+void RHITestApp::TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
 {
     VkCommandBuffer cmd_buf = BeginSingleTimeCommands();
 
+    TransitionImageLayout(cmd_buf, image, old_layout, new_layout);
+
+    EndSingleTimeCommands(cmd_buf);
+}
+
+void RHITestApp::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
+{
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = old_layout;
@@ -572,21 +571,44 @@ void RHITestApp::TransitionImageLayout(VkImage image, VkFormat format, VkImageLa
         src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     }
+    else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+
+        src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = 0;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
     else
     {
-        bool unsupported_layyout_transition = true;
-        VERIFY_EQUALS(unsupported_layyout_transition, false);
+        bool unsupported_layout_transition = true;
+        VERIFY_EQUALS(unsupported_layout_transition, false);
     }
 
     vkCmdPipelineBarrier(
-        cmd_buf,
+        buf,
         src_stage, dst_stage,
         0,
         0, nullptr,
         0, nullptr,
         1, &barrier);
-
-    EndSingleTimeCommands(cmd_buf);
 }
 
 void RHITestApp::CreateTextureImageView()
@@ -714,7 +736,7 @@ void RHITestApp::CreateVkInstance()
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "No Engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_0;
+    app_info.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -938,9 +960,14 @@ bool RHITestApp::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
 bool RHITestApp::IsDeviceSuitable(VkPhysicalDevice device) const
 {
     VkPhysicalDeviceProperties props;
-    VkPhysicalDeviceFeatures features;
+    VkPhysicalDeviceVulkan13Features vk13_features = {};
+    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = &vk13_features;
+    
     vkGetPhysicalDeviceProperties(device, &props);
-    vkGetPhysicalDeviceFeatures(device, &features);
+    vkGetPhysicalDeviceFeatures2(device, &features2);
 
     auto queue_families = FindQueueFamilies(device, m_surface);
 
@@ -955,7 +982,10 @@ bool RHITestApp::IsDeviceSuitable(VkPhysicalDevice device) const
     if (swap_chain_support.formats.empty() || swap_chain_support.present_modes.empty())
         return false;
 
-    if (!features.samplerAnisotropy)
+    if (!features2.features.samplerAnisotropy)
+        return false;
+
+    if (!vk13_features.dynamicRendering)
         return false;
 
     return true;
@@ -1082,6 +1112,7 @@ void RHITestApp::CreateSwapChain()
     for (uint32_t i = 0; i < image_count; ++i)
     {
         m_swapchain_image_views[i] = CreateImageView(m_swapchain_images[i], m_swapchain_format.format);
+        TransitionImageLayoutAndFlush(m_swapchain_images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 }
 
@@ -1133,16 +1164,22 @@ void RHITestApp::CreateLogicalDevice()
         queue_create_info.pQueuePriorities = &priority;
     }
 
-    VkPhysicalDeviceFeatures features{};
-    features.samplerAnisotropy = VK_TRUE;
+    VkPhysicalDeviceVulkan13Features vk13_features = {};
+    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+    vk13_features.dynamicRendering = VK_TRUE;
+    VkPhysicalDeviceFeatures2 features2{};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = &vk13_features;
+    features2.features.samplerAnisotropy = VK_TRUE;
 
     VkDeviceCreateInfo device_create_info = {};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pQueueCreateInfos = queue_create_infos.data();
     device_create_info.queueCreateInfoCount = uint32_t(queue_create_infos.size());
-    device_create_info.pEnabledFeatures = &features;
+    device_create_info.pEnabledFeatures = nullptr;
     device_create_info.enabledExtensionCount = uint32_t(m_required_device_extensions.size());
     device_create_info.ppEnabledExtensionNames = m_required_device_extensions.data();
+    device_create_info.pNext = &features2;
 
     VK_VERIFY(vkCreateDevice(m_vk_phys_device, &device_create_info, nullptr, &m_vk_device));
 
@@ -1333,78 +1370,24 @@ void RHITestApp::CreatePipeline()
     pipeline_info.pRasterizationState = &rasterizer;
     pipeline_info.pMultisampleState = &multisampling;
     pipeline_info.pDepthStencilState = nullptr;
+
+    VkPipelineRenderingCreateInfo pipeline_rendering_info = {};
+    pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    pipeline_rendering_info.colorAttachmentCount = 1;
+    pipeline_rendering_info.pColorAttachmentFormats = &m_swapchain_format.format;
+    
+    pipeline_info.pNext = &pipeline_rendering_info;
     pipeline_info.pColorBlendState = &color_blending;
     pipeline_info.pDynamicState = nullptr;
 
     pipeline_info.layout = m_pipeline_layout;
-    pipeline_info.renderPass = m_render_pass;
+    pipeline_info.renderPass = nullptr;
     pipeline_info.subpass = 0;
 
     pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
     pipeline_info.basePipelineIndex = -1;
 
     VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
-}
-
-void RHITestApp::CreateRenderPass()
-{
-    VkAttachmentDescription color_attachment = {};
-    color_attachment.format = m_swapchain_format.format;
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference color_attachment_ref = {};
-    color_attachment_ref.attachment = 0;
-    color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_ref;
-
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo render_pass_info = {};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_info.attachmentCount = 1;
-    render_pass_info.pAttachments = &color_attachment;
-    render_pass_info.subpassCount = 1;
-    render_pass_info.pSubpasses = &subpass;
-    render_pass_info.dependencyCount = 1;
-    render_pass_info.pDependencies = &dependency;
-
-    VK_VERIFY(vkCreateRenderPass(m_vk_device, &render_pass_info, nullptr, &m_render_pass));
-}
-
-void RHITestApp::CreateFramebuffers()
-{
-    m_swapchain_framebuffers.resize(m_swapchain_image_views.size());
-
-    for (size_t i = 0; i < m_swapchain_image_views.size(); ++i)
-    {
-        VkFramebufferCreateInfo framebuffer_info = {};
-        framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebuffer_info.renderPass = m_render_pass;
-        framebuffer_info.attachmentCount = 1;
-        framebuffer_info.pAttachments = &m_swapchain_image_views[i];
-        framebuffer_info.width = m_swapchain_size_pixels.width;
-        framebuffer_info.height = m_swapchain_size_pixels.height;
-        framebuffer_info.layers = 1;
-
-        VK_VERIFY(vkCreateFramebuffer(m_vk_device, &framebuffer_info, nullptr, &m_swapchain_framebuffers[i]));
-    }
 }
 
 void RHITestApp::CreateCommandPool()
@@ -1439,19 +1422,26 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
 
     VK_VERIFY(vkBeginCommandBuffer(buf, &begin_info));
 
-    VkRenderPassBeginInfo render_pass_info = {};
-    render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    render_pass_info.renderPass = m_render_pass;
-    render_pass_info.framebuffer = m_swapchain_framebuffers[image_index];
+    TransitionImageLayout(buf, m_swapchain_images[image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-    render_pass_info.renderArea.offset = { 0, 0 };
-    render_pass_info.renderArea.extent = m_swapchain_size_pixels;
+    VkRenderingInfo render_info = {};
+    render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    render_info.colorAttachmentCount = 1;
 
+    VkRenderingAttachmentInfo color_attachment = {};
+    color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
     VkClearValue clear_color = { {{0.0f,0.0f,0.0f,1.0f}} };
-    render_pass_info.clearValueCount = 1;
-    render_pass_info.pClearValues = &clear_color;
+    color_attachment.clearValue = clear_color;
+    color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    color_attachment.imageView = m_swapchain_image_views[image_index];
+    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
-    vkCmdBeginRenderPass(buf, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    render_info.pColorAttachments = &color_attachment;
+    render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = m_swapchain_size_pixels };
+    render_info.layerCount = 1;
+    vkCmdBeginRendering(buf, &render_info);
+
     vkCmdBindPipeline(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 
     vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
@@ -1462,7 +1452,9 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
 
     vkCmdDrawIndexed(buf, 6, 1, 0, 0, 0);
 
-    vkCmdEndRenderPass(buf);
+    vkCmdEndRendering(buf);
+
+    TransitionImageLayout(buf, m_swapchain_images[image_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_VERIFY(vkEndCommandBuffer(buf));
 }
@@ -1551,9 +1543,7 @@ void RHITestApp::RecreateSwapChain()
     CleanupSwapChain();
 
     CreateSwapChain();
-    CreateRenderPass();
     CreatePipeline();
-    CreateFramebuffers();
 }
 
 VkVertexInputBindingDescription Vertex::GetBindingDescription()
