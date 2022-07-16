@@ -1,7 +1,15 @@
 #pragma once
 
+#include <memory>
+
 class RHI
 {
 public:
-	virtual ~RHI() = 0;
+	virtual ~RHI() {};
 };
+
+
+template<typename T>
+using UniquePtrWithDeleter = std::unique_ptr<T, void(*)(T*)>;
+
+using RHIPtr = UniquePtrWithDeleter<RHI>;

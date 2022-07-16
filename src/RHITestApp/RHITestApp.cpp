@@ -4,7 +4,11 @@
 
 #include "Shader.h"
 
+#include <VulkanRHI/VulkanRHI.h>
+#include <D3D12RHI/D3D12RHI.h>
+
 RHITestApp::RHITestApp()
+    : m_rhi(nullptr, [](auto*) {})
 {
 #ifndef NDEBUG
     m_enable_validation_layer = true;
@@ -17,7 +21,7 @@ void RHITestApp::Run()
     const char* window_name = "hello vulkan";
     m_main_wnd = SDL_CreateWindow(window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_window_size.x, m_window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    InitVulkan();
+    InitRHI();
     MainLoop();
     Cleanup();
 
@@ -78,9 +82,14 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
     return VK_FALSE;
 }
 
-void RHITestApp::InitVulkan()
+void RHITestApp::InitRHI()
 {
-    std::cout << "Vulkan initialization started\n";
+    std::cout << "RHI initialization started\n";
+
+    if (true)
+        m_rhi = CreateVulkanRHI_RAII();
+    else
+        m_rhi = CreateD3D12RHI_RAII();
 
     CreateVkInstance();
     SetupDebugMessenger();
@@ -171,7 +180,9 @@ void RHITestApp::Cleanup()
     DestroyDebugMessenger();
     vkDestroyInstance(m_vk_instance, nullptr);
 
-    std::cout << "Vulkan shutdown complete\n";
+    m_rhi.reset();
+
+    std::cout << "RHI shutdown complete\n";
 }
 
 

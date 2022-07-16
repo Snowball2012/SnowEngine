@@ -2,6 +2,8 @@
 
 #include "StdAfx.h"
 
+#include <RHI/RHI.h>
+
 struct SwapChainSupportDetails
 {
 	VkSurfaceCapabilitiesKHR capabilities = {};
@@ -93,13 +95,15 @@ private:
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
+	RHIPtr m_rhi;
+
 public:
 	RHITestApp();
 
 	void Run();
 
 private:
-	void InitVulkan();
+	void InitRHI();
 	void MainLoop();
 	void Cleanup();
 
