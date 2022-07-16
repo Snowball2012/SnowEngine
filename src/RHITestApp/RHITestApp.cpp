@@ -86,10 +86,18 @@ void RHITestApp::InitRHI()
 {
     std::cout << "RHI initialization started\n";
 
+    auto external_extensions = GetSDLExtensions();
+
+    // RHI test
+    std::cout << "Start RHI test" << std::endl;
     if (true)
-        m_rhi = CreateVulkanRHI_RAII();
+        m_rhi = CreateVulkanRHI_RAII(external_extensions);
     else
         m_rhi = CreateD3D12RHI_RAII();
+
+    m_rhi.reset();
+    std::cout << "End RHI test" << std::endl;
+    // RHI test
 
     CreateVkInstance();
     SetupDebugMessenger();

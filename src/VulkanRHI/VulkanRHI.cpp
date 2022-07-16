@@ -1,17 +1,11 @@
 #include "VulkanRHI.h"
 
-#include <RHI/RHI.h>
+#include "VulkanRHIImpl.h"
 
-class VulkanRHI : public RHI
-{
-public:
-	VulkanRHI() {}
-	virtual ~VulkanRHI() override {}
-};
 
-VULKANRHI_API RHI* CreateVulkanRHI()
+VULKANRHI_API RHI* CreateVulkanRHI(std::span<const char*> external_extensions)
 {
-	return new VulkanRHI();
+	return new VulkanRHI(external_extensions);
 }
 
 VULKANRHI_API void DestroyVulkanRHI(RHI* vulkan_rhi)

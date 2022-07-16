@@ -2,8 +2,12 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHI.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\VulkanRHIImpl.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\StdAfx.cpp" />
   </ItemGroup>
 </Project>

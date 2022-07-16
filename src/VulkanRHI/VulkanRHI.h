@@ -8,11 +8,13 @@
 
 #include <RHI/RHI.h>
 
-VULKANRHI_API class RHI* CreateVulkanRHI();
+#include <span>
+
+VULKANRHI_API class RHI* CreateVulkanRHI(std::span<const char*> external_extensions);
 
 VULKANRHI_API void DestroyVulkanRHI(RHI* vulkan_rhi);
 
-inline RHIPtr CreateVulkanRHI_RAII()
+inline RHIPtr CreateVulkanRHI_RAII(std::span<const char*> external_extensions)
 {
-	return RHIPtr(CreateVulkanRHI(), DestroyVulkanRHI);
+	return RHIPtr(CreateVulkanRHI(external_extensions), DestroyVulkanRHI);
 }
