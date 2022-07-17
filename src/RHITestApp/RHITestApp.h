@@ -37,9 +37,6 @@ private:
 
 	struct SDL_Window* m_main_wnd = nullptr;
 
-	// instance (temp)
-	VkInstance m_vk_instance = VK_NULL_HANDLE;
-
 	// device
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 	VkDevice m_vk_device = VK_NULL_HANDLE;

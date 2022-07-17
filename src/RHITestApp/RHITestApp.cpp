@@ -68,7 +68,6 @@ void RHITestApp::InitRHI()
         m_rhi = CreateD3D12RHI_RAII();
 
     // temp
-    m_vk_instance = *static_cast<VkInstance*>(m_rhi->GetNativeInstance());
     m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
     m_surface = *static_cast<VkSurfaceKHR*>(m_rhi->GetNativeSurface());
 
