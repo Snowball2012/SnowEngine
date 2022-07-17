@@ -8,7 +8,6 @@ public:
 	virtual ~RHI() {};
 
 	// temp functions, to be removed
-	virtual void* GetNativeInstance() const { return nullptr; }
 	virtual void* GetNativePhysDevice() const { return nullptr; }
 	virtual void* GetNativeSurface() const { return nullptr; }
 };

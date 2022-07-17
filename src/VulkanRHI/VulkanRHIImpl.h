@@ -35,7 +35,6 @@ public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
 
-	virtual void* GetNativeInstance() const { return (void*)&m_vk_instance; }
 	virtual void* GetNativePhysDevice() const { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const { return (void*)&m_main_surface; }
 
