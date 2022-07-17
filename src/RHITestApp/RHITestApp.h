@@ -37,10 +37,8 @@ private:
 
 	struct SDL_Window* m_main_wnd = nullptr;
 
-	// instance
+	// instance (temp)
 	VkInstance m_vk_instance = VK_NULL_HANDLE;
-	VkDebugUtilsMessengerEXT m_vk_dbg_messenger = VK_NULL_HANDLE;
-	bool m_enable_validation_layer = false;
 
 	// device
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
@@ -107,15 +105,7 @@ private:
 	void MainLoop();
 	void Cleanup();
 
-	void CreateVkInstance();
-	void SetupDebugMessenger();
-	void DestroyDebugMessenger();
 	std::vector<const char*> GetSDLExtensions() const;
-	std::vector<const char*> GetRequiredExtensions(bool enable_validation_layers) const;
-
-	std::vector<const char*> GetSupportedLayers(const std::vector<const char*> wanted_layers) const;
-
-	void LogSupportedVkInstanceExtensions() const;
 
 	void PickPhysicalDevice();
 	bool IsDeviceSuitable(VkPhysicalDevice device) const;

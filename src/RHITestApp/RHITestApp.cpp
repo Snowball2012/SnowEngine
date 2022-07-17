@@ -10,9 +10,6 @@
 RHITestApp::RHITestApp()
     : m_rhi(nullptr, [](auto*) {})
 {
-#ifndef NDEBUG
-    m_enable_validation_layer = true;
-#endif
 }
 
 void RHITestApp::Run()
@@ -74,9 +71,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
             << ": "
             << callback_data->pMessage << std::endl;
 
-#ifndef NDEBUG
+    #ifndef NDEBUG
         DebugBreak();
-#endif
+    #endif
     }
 
     return VK_FALSE;
@@ -86,21 +83,25 @@ void RHITestApp::InitRHI()
 {
     std::cout << "RHI initialization started\n";
 
-    auto external_extensions = GetSDLExtensions();
-
-    // RHI test
-    std::cout << "Start RHI test" << std::endl;
     if (true)
-        m_rhi = CreateVulkanRHI_RAII(external_extensions);
+    {
+        auto external_extensions = GetSDLExtensions();
+        VulkanRHICreateInfo create_info;
+        create_info.required_external_extensions = external_extensions;
+
+    #ifdef NDEBUG
+        create_info.enable_validation = false;
+    #else
+        create_info.enable_validation = true;
+    #endif
+        m_rhi = CreateVulkanRHI_RAII(create_info);
+    }
     else
         m_rhi = CreateD3D12RHI_RAII();
 
-    m_rhi.reset();
-    std::cout << "End RHI test" << std::endl;
-    // RHI test
+    // temp
+    m_vk_instance = *static_cast<VkInstance*>(m_rhi->GetNativeInstance());
 
-    CreateVkInstance();
-    SetupDebugMessenger();
     CreateSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
@@ -119,7 +120,7 @@ void RHITestApp::InitRHI()
     CreateDescriptorPool();
     CreateDescriptorSets();
 
-    std::cout << "Vulkan initialization complete\n";
+    std::cout << "RHI initialization complete\n";
 }
 
 void RHITestApp::MainLoop()
@@ -185,8 +186,6 @@ void RHITestApp::Cleanup()
 
     vkDestroyDevice(m_vk_device, nullptr);
     vkDestroySurfaceKHR(m_vk_instance, m_surface, nullptr);
-    DestroyDebugMessenger();
-    vkDestroyInstance(m_vk_instance, nullptr);
 
     m_rhi.reset();
 
@@ -742,109 +741,6 @@ uint32_t RHITestApp::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags 
     return uint32_t(-1);
 }
 
-void RHITestApp::CreateVkInstance()
-{
-    std::cout << "vkInstance creation started\n";
-
-    LogSupportedVkInstanceExtensions();
-    std::cout << std::endl;
-
-    VkApplicationInfo app_info = {};
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pApplicationName = "hello vulkan";
-    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.pEngineName = "No Engine";
-    app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_3;
-
-    VkInstanceCreateInfo create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    create_info.pApplicationInfo = &app_info;
-
-    // extensions
-    auto extensions = GetRequiredExtensions(m_enable_validation_layer);
-
-    create_info.enabledExtensionCount = uint32_t(extensions.size());
-    create_info.ppEnabledExtensionNames = extensions.data();
-
-    // layers
-    std::vector<const char*> wanted_layers = {};
-    if (m_enable_validation_layer)
-        wanted_layers.push_back("VK_LAYER_KHRONOS_validation");
-
-    std::cout << "Wanted validation layers:\n";
-    for (const char* layer : wanted_layers)
-    {
-        std::cout << "\t" << layer << "\n";
-    }
-    std::cout << std::endl;
-
-    std::vector<const char*> filtered_layers = GetSupportedLayers(wanted_layers);
-
-    std::cout << std::endl;
-
-    if (filtered_layers.size() < wanted_layers.size())
-    {
-        std::cerr << "Error: Some wanted vk instance layers are not available\n";
-    }
-
-    create_info.enabledLayerCount = uint32_t(filtered_layers.size());
-    create_info.ppEnabledLayerNames = filtered_layers.data();
-
-    VK_VERIFY(vkCreateInstance(&create_info, nullptr, &m_vk_instance));
-
-    std::cout << "vkInstance creation complete\n";
-}
-
-void RHITestApp::SetupDebugMessenger()
-{
-    if (!m_enable_validation_layer)
-    {
-        std::cout << "Vulkan validation layer disabled\n";
-        return;
-    }
-
-    VkDebugUtilsMessengerCreateInfoEXT create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    create_info.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT
-        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT; // ignore INFO
-    create_info.messageType =
-        VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-        | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
-        | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-
-    create_info.pfnUserCallback = VkDebugCallback;
-    create_info.pUserData = nullptr;
-
-    auto vkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_vk_instance, "vkCreateDebugUtilsMessengerEXT"));
-    if (vkCreateDebugUtilsMessengerEXT != nullptr)
-    {
-        VK_VERIFY(vkCreateDebugUtilsMessengerEXT(m_vk_instance, &create_info, nullptr, &m_vk_dbg_messenger));
-    }
-    else
-    {
-        throw std::runtime_error("Error: failed to find vkCreateDebugUtilsMessengerEXT address");
-    }
-}
-
-void RHITestApp::DestroyDebugMessenger()
-{
-    if (!m_enable_validation_layer)
-        return;
-
-    auto vkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_vk_instance, "vkDestroyDebugUtilsMessengerEXT"));
-    if (vkDestroyDebugUtilsMessengerEXT != nullptr)
-    {
-        vkDestroyDebugUtilsMessengerEXT(m_vk_instance, m_vk_dbg_messenger, nullptr);
-    }
-    else
-    {
-        throw std::runtime_error("Error: failed to find vkDestroyDebugUtilsMessengerEXT address");
-    }
-}
-
 std::vector<const char*> RHITestApp::GetSDLExtensions() const
 {
     uint32_t sdl_extension_count = 0;
@@ -856,62 +752,8 @@ std::vector<const char*> RHITestApp::GetSDLExtensions() const
     return sdl_extensions;
 }
 
-std::vector<const char*> RHITestApp::GetRequiredExtensions(bool enable_validation_layers) const
-{
-    auto extensions = GetSDLExtensions();
-
-    if (enable_validation_layers)
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-    return extensions;
-}
-
-std::vector<const char*> RHITestApp::GetSupportedLayers(const std::vector<const char*> wanted_layers) const
-{
-    uint32_t layer_count = 0;
-    VK_VERIFY(vkEnumerateInstanceLayerProperties(&layer_count, nullptr));
-
-    std::vector<VkLayerProperties> available_layers(layer_count);
-    VK_VERIFY(vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()));
-
-    // log available layers
-    std::cout << "Available Vulkan Instance Layers:\n";
-    for (const auto& layer : available_layers)
-    {
-        std::cout << '\t' << layer.layerName << "\tspec version = " << layer.specVersion << "\timplementation version = " << layer.implementationVersion << '\n';
-    }
-
-    std::vector<const char*> wanted_available_layers;
-    for (const char* wanted_layer : wanted_layers)
-    {
-        if (available_layers.cend() !=
-            std::find_if(available_layers.cbegin(), available_layers.cend(),
-                [&](const auto& elem) { return !strcmp(wanted_layer, elem.layerName); }))
-            wanted_available_layers.push_back(wanted_layer);
-    }
-
-    return wanted_available_layers;
-}
-
-void RHITestApp::LogSupportedVkInstanceExtensions() const
-{
-    uint32_t extension_count = 0;
-    VK_VERIFY(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr));
-
-    std::vector<VkExtensionProperties> extensions(extension_count);
-    VK_VERIFY(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.data()));
-
-    std::cout << "Available instance extensions:\n";
-
-    for (const auto& extension : extensions)
-    {
-        std::cout << '\t' << extension.extensionName << "\tversion = " << extension.specVersion << '\n';
-    }
-}
-
 namespace
 {
-
     void LogDevice(VkPhysicalDevice device)
     {
         VkPhysicalDeviceProperties props;

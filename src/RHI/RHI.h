@@ -6,6 +6,9 @@ class RHI
 {
 public:
 	virtual ~RHI() {};
+
+	// temp functions, to be removed
+	virtual void* GetNativeInstance() const { return nullptr; }
 };
 
 

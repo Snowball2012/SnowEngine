@@ -4,10 +4,12 @@
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHI.h" />
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
     <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Validation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHIImpl.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\StdAfx.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Validation.cpp" />
   </ItemGroup>
 </Project>

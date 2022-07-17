@@ -3,9 +3,9 @@
 #include "VulkanRHIImpl.h"
 
 
-VULKANRHI_API RHI* CreateVulkanRHI(std::span<const char*> external_extensions)
+VULKANRHI_API RHI* CreateVulkanRHI(const VulkanRHICreateInfo& info)
 {
-	return new VulkanRHI(external_extensions);
+	return new VulkanRHI(info);
 }
 
 VULKANRHI_API void DestroyVulkanRHI(RHI* vulkan_rhi)

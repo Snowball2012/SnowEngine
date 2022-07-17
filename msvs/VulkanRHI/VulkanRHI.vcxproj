@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Validation.h" />
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHI.h" />
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
   </ItemGroup>
@@ -28,6 +29,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\src\VulkanRHI\Validation.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

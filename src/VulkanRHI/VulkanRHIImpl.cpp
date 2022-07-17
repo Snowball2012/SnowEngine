@@ -2,17 +2,23 @@
 
 #include "VulkanRHIImpl.h"
 
-VulkanRHI::VulkanRHI(std::span<const char*> required_external_extensions)
+#include "Validation.h"
+
+VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
-    CreateVkInstance(required_external_extensions);
+    CreateVkInstance(info);
+
+    if (info.enable_validation)
+        m_validation_callback.reset(new VulkanValidationCallback(m_vk_instance));
 }
 
 VulkanRHI::~VulkanRHI()
 {
+    m_validation_callback.reset(); // we need to do this explicitly because VulkanValidationCallback requires valid VkInstance to destroy itself
     vkDestroyInstance(m_vk_instance, nullptr);
 }
 
-void VulkanRHI::CreateVkInstance(std::span<const char*> required_external_extensions)
+void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
 {
     std::cout << "vkInstance creation started\n";
 
@@ -32,15 +38,15 @@ void VulkanRHI::CreateVkInstance(std::span<const char*> required_external_extens
     create_info.pApplicationInfo = &app_info;
 
     // extensions
-    auto extensions = GetRequiredExtensions(m_enable_validation_layer);
-    extensions.insert(extensions.end(), required_external_extensions.begin(), required_external_extensions.end());
+    auto extensions = GetRequiredExtensions(info.enable_validation);
+    extensions.insert(extensions.end(), info.required_external_extensions.begin(), info.required_external_extensions.end());
 
     create_info.enabledExtensionCount = uint32_t(extensions.size());
     create_info.ppEnabledExtensionNames = extensions.data();
 
     // layers
     std::vector<const char*> wanted_layers = {};
-    if (m_enable_validation_layer)
+    if (info.enable_validation)
         wanted_layers.push_back("VK_LAYER_KHRONOS_validation");
 
     std::cout << "Wanted validation layers:\n";

@@ -4,20 +4,24 @@
 
 #include <RHI/RHI.h>
 
+#include "VulkanRHI.h"
+
 class VulkanRHI : public RHI
 {
 private:
 
 	VkInstance m_vk_instance = VK_NULL_HANDLE;
-	VkDebugUtilsMessengerEXT m_vk_dbg_messenger = VK_NULL_HANDLE;
-	bool m_enable_validation_layer = false;
+
+	std::unique_ptr<class VulkanValidationCallback> m_validation_callback = nullptr;
 
 public:
-	VulkanRHI(std::span<const char*> required_external_extensions);
+	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
 
+	virtual void* GetNativeInstance() const { return (void*)&m_vk_instance; }
+
 private:
-	void CreateVkInstance(std::span<const char*> required_external_extensions);
+	void CreateVkInstance(const VulkanRHICreateInfo& info);
 
 	void LogSupportedVkInstanceExtensions() const;
 
