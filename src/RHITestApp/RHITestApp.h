@@ -107,9 +107,6 @@ private:
 
 	std::vector<const char*> GetSDLExtensions() const;
 
-	void PickPhysicalDevice();
-	bool IsDeviceSuitable(VkPhysicalDevice device) const;
-
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const;
@@ -121,8 +118,6 @@ private:
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
 
 	void CreateLogicalDevice();
-
-	void CreateSurface();
 
 	void CreatePipeline();
 

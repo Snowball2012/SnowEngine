@@ -10,9 +10,16 @@
 
 #include <span>
 
+struct IVulkanSurfaceFactory
+{
+	virtual struct VkSurfaceKHR_T* CreateSurface(struct VkInstance_T* instance) = 0; // use _T* to avoid including entire vulkan api here
+	virtual ~IVulkanSurfaceFactory() {};
+};
+
 struct VulkanRHICreateInfo
 {
 	std::span<const char*> required_external_extensions;
+	IVulkanSurfaceFactory* main_window;
 	bool enable_validation = false;
 };
 

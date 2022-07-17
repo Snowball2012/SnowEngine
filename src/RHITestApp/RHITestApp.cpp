@@ -28,56 +28,19 @@ void RHITestApp::Run()
     SDL_Quit();
 }
 
-uint32_t CalcHighestBit(uint32_t n)
+struct SDLVulkanWindowFactory : public IVulkanSurfaceFactory
 {
-    for (int i = 1; i < sizeof(n) * CHAR_BIT; i <<= 1)
-        n |= n >> i;
+    SDL_Window* window = nullptr;
 
-    n = ((n + 1) >> 1) | (n & (1 << ((sizeof(n) * CHAR_BIT) - 1)));
+    SDLVulkanWindowFactory(SDL_Window* in_window) : window(in_window) {}
 
-    return n;
-}
-
-static const char* VkSeverityToString(VkDebugUtilsMessageSeverityFlagBitsEXT severity)
-{
-    switch (CalcHighestBit(severity))
+    virtual VkSurfaceKHR CreateSurface(VkInstance instance) override
     {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        return "Verbose";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        return "Info";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        return "Warning";
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        return "Error";
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        SDL_VERIFY(SDL_Vulkan_CreateSurface(window, instance, &surface));
+        return surface;
     }
-    return "Invalid Severity";
-}
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-    VkDebugUtilsMessageTypeFlagsEXT type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data)
-{
-    if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-    {
-        std::cerr
-            << "[vkValidationLayer]"
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) ? "[General]" : "")
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) ? "[Validation]" : "")
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) ? "[Performance]" : "")
-            << "[" << VkSeverityToString(severity) << "]"
-            << ": "
-            << callback_data->pMessage << std::endl;
-
-    #ifndef NDEBUG
-        DebugBreak();
-    #endif
-    }
-
-    return VK_FALSE;
-}
+};
 
 void RHITestApp::InitRHI()
 {
@@ -94,6 +57,11 @@ void RHITestApp::InitRHI()
     #else
         create_info.enable_validation = true;
     #endif
+
+        SDLVulkanWindowFactory main_window(m_main_wnd);
+
+        create_info.main_window = &main_window;
+
         m_rhi = CreateVulkanRHI_RAII(create_info);
     }
     else
@@ -101,9 +69,9 @@ void RHITestApp::InitRHI()
 
     // temp
     m_vk_instance = *static_cast<VkInstance*>(m_rhi->GetNativeInstance());
+    m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
+    m_surface = *static_cast<VkSurfaceKHR*>(m_rhi->GetNativeSurface());
 
-    CreateSurface();
-    PickPhysicalDevice();
     CreateLogicalDevice();
     CreateDescriptorSetLayout();
     CreateCommandPool();
@@ -185,7 +153,6 @@ void RHITestApp::Cleanup()
     vkDestroyDescriptorSetLayout(m_vk_device, m_descriptor_layout, nullptr);
 
     vkDestroyDevice(m_vk_device, nullptr);
-    vkDestroySurfaceKHR(m_vk_instance, m_surface, nullptr);
 
     m_rhi.reset();
 
@@ -818,67 +785,6 @@ bool RHITestApp::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
     return extensions_to_check.empty();
 }
 
-bool RHITestApp::IsDeviceSuitable(VkPhysicalDevice device) const
-{
-    VkPhysicalDeviceProperties props;
-    VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    VkPhysicalDeviceFeatures2 features2 = {};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &vk13_features;
-    
-    vkGetPhysicalDeviceProperties(device, &props);
-    vkGetPhysicalDeviceFeatures2(device, &features2);
-
-    auto queue_families = FindQueueFamilies(device, m_surface);
-
-    if (!queue_families.IsComplete())
-        return false;
-
-    if (!CheckDeviceExtensionSupport(device))
-        return false;
-
-    auto swap_chain_support = QuerySwapChainSupport(device);
-
-    if (swap_chain_support.formats.empty() || swap_chain_support.present_modes.empty())
-        return false;
-
-    if (!features2.features.samplerAnisotropy)
-        return false;
-
-    if (!vk13_features.dynamicRendering)
-        return false;
-
-    return true;
-}
-
-SwapChainSupportDetails RHITestApp::QuerySwapChainSupport(VkPhysicalDevice device) const
-{
-    SwapChainSupportDetails details = {};
-
-    VK_VERIFY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities));
-
-    uint32_t format_count = 0;
-    VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, nullptr));
-
-    if (format_count > 0)
-    {
-        details.formats.resize(format_count);
-        VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, details.formats.data()));
-    }
-
-    uint32_t present_mode_count = 0;
-    VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, nullptr));
-
-    if (present_mode_count > 0)
-    {
-        details.present_modes.resize(present_mode_count);
-        VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, details.present_modes.data()));
-    }
-
-    return details;
-}
-
 VkSurfaceFormatKHR RHITestApp::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const
 {
     for (const auto& format : available_formats)
@@ -977,34 +883,31 @@ void RHITestApp::CreateSwapChain()
     }
 }
 
-void RHITestApp::PickPhysicalDevice()
+SwapChainSupportDetails RHITestApp::QuerySwapChainSupport(VkPhysicalDevice device) const
 {
-    uint32_t device_count = 0;
-    VK_VERIFY(vkEnumeratePhysicalDevices(m_vk_instance, &device_count, nullptr));
+    SwapChainSupportDetails details = {};
 
-    if (device_count == 0)
-        throw std::runtime_error("Error: failed to find GPUs with Vulkan support");
+    VK_VERIFY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities));
 
-    m_vk_phys_device = VK_NULL_HANDLE;
+    uint32_t format_count = 0;
+    VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, nullptr));
 
-    std::vector<VkPhysicalDevice> devices(device_count);
-    VK_VERIFY(vkEnumeratePhysicalDevices(m_vk_instance, &device_count, devices.data()));
-
-    for (const auto& device : devices)
+    if (format_count > 0)
     {
-        if (IsDeviceSuitable(device))
-        {
-            m_vk_phys_device = device;
-            break;
-        }
+        details.formats.resize(format_count);
+        VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, details.formats.data()));
     }
 
-    if (!m_vk_phys_device)
-        throw std::runtime_error("Error: failed to find a suitable GPU");
+    uint32_t present_mode_count = 0;
+    VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, nullptr));
 
-    std::cout << "Picked physical device:\n\t";
-    LogDevice(m_vk_phys_device);
-    std::cout << std::endl;
+    if (present_mode_count > 0)
+    {
+        details.present_modes.resize(present_mode_count);
+        VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, details.present_modes.data()));
+    }
+
+    return details;
 }
 
 void RHITestApp::CreateLogicalDevice()
@@ -1053,11 +956,6 @@ void RHITestApp::CreateLogicalDevice()
         throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
 
     std::cout << "Queues created successfully" << std::endl;
-}
-
-void RHITestApp::CreateSurface()
-{
-    SDL_VERIFY(SDL_Vulkan_CreateSurface(m_main_wnd, m_vk_instance, &m_surface));
 }
 
 namespace
