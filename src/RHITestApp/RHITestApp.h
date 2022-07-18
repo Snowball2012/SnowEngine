@@ -112,10 +112,6 @@ private:
 
 	void CreateSwapChain();
 
-	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
-
-	void CreateLogicalDevice();
-
 	void CreatePipeline();
 
 	void CreateCommandPool();

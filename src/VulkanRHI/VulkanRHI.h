@@ -19,7 +19,8 @@ struct IVulkanSurfaceFactory
 struct VulkanRHICreateInfo
 {
 	std::span<const char*> required_external_extensions;
-	IVulkanSurfaceFactory* main_window;
+	IVulkanSurfaceFactory* main_window = nullptr;
+	const char* app_name = nullptr;
 	bool enable_validation = false;
 };
 

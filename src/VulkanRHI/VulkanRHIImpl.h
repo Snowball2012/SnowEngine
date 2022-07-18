@@ -30,13 +30,20 @@ private:
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
+	VkDevice m_vk_device = VK_NULL_HANDLE;
+
+	VkQueue m_graphics_queue = VK_NULL_HANDLE;
+	VkQueue m_present_queue = VK_NULL_HANDLE;
 
 public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
 
-	virtual void* GetNativePhysDevice() const { return (void*)&m_vk_phys_device; }
-	virtual void* GetNativeSurface() const { return (void*)&m_main_surface; }
+	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
+	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
+	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
+	virtual void* GetNativeGraphicsQueue() const override { return (void*)&m_graphics_queue; }
+	virtual void* GetNativePresentQueue() const override { return (void*)&m_present_queue; }
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);
@@ -51,4 +58,6 @@ private:
 
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
 	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) const;
+
+	void CreateLogicalDevice();
 };

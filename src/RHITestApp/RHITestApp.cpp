@@ -62,6 +62,8 @@ void RHITestApp::InitRHI()
 
         create_info.main_window = &main_window;
 
+        create_info.app_name = "SnowEngineRHITest";
+
         m_rhi = CreateVulkanRHI_RAII(create_info);
     }
     else
@@ -71,7 +73,10 @@ void RHITestApp::InitRHI()
     m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
     m_surface = *static_cast<VkSurfaceKHR*>(m_rhi->GetNativeSurface());
 
-    CreateLogicalDevice();
+    m_vk_device = *static_cast<VkDevice*>(m_rhi->GetNativeDevice());
+    m_graphics_queue = *static_cast<VkQueue*>(m_rhi->GetNativeGraphicsQueue());
+    m_present_queue = *static_cast<VkQueue*>(m_rhi->GetNativePresentQueue());
+
     CreateDescriptorSetLayout();
     CreateCommandPool();
     CreateSwapChain();
@@ -150,8 +155,6 @@ void RHITestApp::Cleanup()
 
     CleanupSwapChain();
     vkDestroyDescriptorSetLayout(m_vk_device, m_descriptor_layout, nullptr);
-
-    vkDestroyDevice(m_vk_device, nullptr);
 
     m_rhi.reset();
 
@@ -766,24 +769,6 @@ namespace
     }
 }
 
-bool RHITestApp::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
-{
-    uint32_t extension_count = 0;
-    VK_VERIFY(vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr));
-
-    std::vector<VkExtensionProperties> available_extensions(extension_count);
-    VK_VERIFY(vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data()));
-
-    std::set<std::string> extensions_to_check(m_required_device_extensions.begin(), m_required_device_extensions.end());
-
-    for (const auto& extension : available_extensions)
-    {
-        extensions_to_check.erase(extension.extensionName);
-    }
-
-    return extensions_to_check.empty();
-}
-
 VkSurfaceFormatKHR RHITestApp::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const
 {
     for (const auto& format : available_formats)
@@ -907,54 +892,6 @@ SwapChainSupportDetails RHITestApp::QuerySwapChainSupport(VkPhysicalDevice devic
     }
 
     return details;
-}
-
-void RHITestApp::CreateLogicalDevice()
-{
-    auto queue_families = FindQueueFamilies(m_vk_phys_device, m_surface);
-
-    std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-    std::set<uint32_t> unique_queue_families = { queue_families.graphics.value(), queue_families.present.value() };
-
-
-    float priority = 1.0f;
-    for (uint32_t family : unique_queue_families)
-    {
-        auto& queue_create_info = queue_create_infos.emplace_back();
-        queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_info.queueFamilyIndex = family;
-        queue_create_info.queueCount = 1;
-        queue_create_info.pQueuePriorities = &priority;
-    }
-
-    VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    vk13_features.dynamicRendering = VK_TRUE;
-    VkPhysicalDeviceFeatures2 features2{};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &vk13_features;
-    features2.features.samplerAnisotropy = VK_TRUE;
-
-    VkDeviceCreateInfo device_create_info = {};
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.pQueueCreateInfos = queue_create_infos.data();
-    device_create_info.queueCreateInfoCount = uint32_t(queue_create_infos.size());
-    device_create_info.pEnabledFeatures = nullptr;
-    device_create_info.enabledExtensionCount = uint32_t(m_required_device_extensions.size());
-    device_create_info.ppEnabledExtensionNames = m_required_device_extensions.data();
-    device_create_info.pNext = &features2;
-
-    VK_VERIFY(vkCreateDevice(m_vk_phys_device, &device_create_info, nullptr, &m_vk_device));
-
-    std::cout << "vkDevice created successfully" << std::endl;
-
-    vkGetDeviceQueue(m_vk_device, queue_families.graphics.value(), 0, &m_graphics_queue);
-    vkGetDeviceQueue(m_vk_device, queue_families.present.value(), 0, &m_present_queue);
-
-    if (!m_graphics_queue || !m_present_queue)
-        throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
-
-    std::cout << "Queues created successfully" << std::endl;
 }
 
 namespace

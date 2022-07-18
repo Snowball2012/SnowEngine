@@ -10,6 +10,9 @@ public:
 	// temp functions, to be removed
 	virtual void* GetNativePhysDevice() const { return nullptr; }
 	virtual void* GetNativeSurface() const { return nullptr; }
+	virtual void* GetNativeDevice() const { return nullptr; }
+	virtual void* GetNativeGraphicsQueue() const { return nullptr; }
+	virtual void* GetNativePresentQueue() const { return nullptr; }
 };
 
 
