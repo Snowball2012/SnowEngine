@@ -11,21 +11,32 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
     if (info.enable_validation)
         m_validation_callback.reset(new VulkanValidationCallback(m_vk_instance));
 
-    VERIFY_NOT_EQUAL(info.main_window, nullptr);
+    VERIFY_NOT_EQUAL(info.main_window_handle, nullptr);
+    VERIFY_NOT_EQUAL(info.window_iface, nullptr);
 
-    m_main_surface = info.main_window->CreateSurface(m_vk_instance);
+    m_window_iface = info.window_iface;
+
+    m_main_surface = m_window_iface->CreateSurface(info.main_window_handle, m_vk_instance);
 
     PickPhysicalDevice(m_main_surface);
 
     CreateLogicalDevice();
+
+    CreateCommandPool();
 }
 
 VulkanRHI::~VulkanRHI()
 {
+    vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
     vkDestroyDevice(m_vk_device, nullptr);
     vkDestroySurfaceKHR(m_vk_instance, m_main_surface, nullptr);
     m_validation_callback.reset(); // we need to do this explicitly because VulkanValidationCallback requires valid VkInstance to destroy itself
     vkDestroyInstance(m_vk_instance, nullptr);
+}
+
+SwapChain* VulkanRHI::GetMainSwapChain()
+{
+    return nullptr;
 }
 
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
@@ -340,4 +351,291 @@ void VulkanRHI::CreateLogicalDevice()
         throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
 
     std::cout << "Queues created successfully" << std::endl;
+}
+
+
+VkSurfaceFormatKHR VulkanRHI::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const
+{
+    for (const auto& format : available_formats)
+    {
+        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            return format;
+    }
+
+    return available_formats[0];
+}
+
+VkPresentModeKHR VulkanRHI::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const
+{
+    for (const auto& present_mode : present_modes)
+        if (present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
+            return present_mode;
+
+    return VK_PRESENT_MODE_FIFO_KHR; // guaranteed to be available by specs
+}
+
+VkExtent2D VulkanRHI::ChooseSwapExtent(void* window_handle, const VkSurfaceCapabilitiesKHR& capabilities) const
+{
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        return capabilities.currentExtent;
+
+    VkExtent2D extent;
+    m_window_iface->GetDrawableSize(window_handle, extent);
+
+    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    return extent;
+}
+
+VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format)
+{
+    VkImageViewCreateInfo view_info = {};
+    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    view_info.image = image;
+    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    view_info.format = format;
+    view_info.subresourceRange.baseMipLevel = 0;
+    view_info.subresourceRange.levelCount = 1;
+    view_info.subresourceRange.baseArrayLayer = 0;
+    view_info.subresourceRange.layerCount = 1;
+    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    view_info.components =
+    {
+        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+    };
+
+    VkImageView view = VK_NULL_HANDLE;
+    VK_VERIFY(vkCreateImageView(m_vk_device, &view_info, nullptr, &view));
+
+    return view;
+}
+
+void VulkanRHI::CreateCommandPool()
+{
+    QueueFamilyIndices indices = FindQueueFamilies(m_vk_phys_device, m_main_surface);
+
+    VkCommandPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    pool_info.queueFamilyIndex = indices.graphics.value();
+
+    VK_VERIFY(vkCreateCommandPool(m_vk_device, &pool_info, nullptr, &m_cmd_pool));
+}
+
+
+VulkanSwapChain* VulkanRHI::CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info)
+{
+    auto swap_chain_support = QuerySwapChainSupport(m_vk_phys_device, create_info.surface);
+
+    VkSurfaceFormatKHR swapchain_format = ChooseSwapSurfaceFormat(swap_chain_support.formats);
+    VkPresentModeKHR present_mode = ChooseSwapPresentMode(swap_chain_support.present_modes);
+    VkExtent2D swapchain_size_pixels = ChooseSwapExtent(create_info.window_handle, swap_chain_support.capabilities);
+
+    uint32_t image_count = swap_chain_support.capabilities.minImageCount + create_info.surface_num;
+
+    if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount)
+        image_count = swap_chain_support.capabilities.maxImageCount;
+
+    std::cout << "Swap chain creation:\n";
+    std::cout << "\twidth = " << swapchain_size_pixels.width << "\theight = " << swapchain_size_pixels.height << '\n';
+    std::cout << "\tNum images = " << image_count << '\n';
+
+    VkSwapchainCreateInfoKHR create_info_khr = {};
+    create_info_khr.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    create_info_khr.surface = create_info.surface;
+    create_info_khr.minImageCount = image_count;
+    create_info_khr.imageFormat = swapchain_format.format;
+    create_info_khr.imageColorSpace = swapchain_format.colorSpace;
+    create_info_khr.imageExtent = swapchain_size_pixels;
+    create_info_khr.imageArrayLayers = 1;
+    create_info_khr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    QueueFamilyIndices indices = FindQueueFamilies(m_vk_phys_device, create_info.surface);
+    uint32_t queue_family_indices[] = { indices.graphics.value(), indices.present.value() };
+
+    if (queue_family_indices[0] != queue_family_indices[1])
+    {
+        create_info_khr.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        create_info_khr.queueFamilyIndexCount = 2;
+        create_info_khr.pQueueFamilyIndices = queue_family_indices;
+    }
+    else
+    {
+        create_info_khr.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        create_info_khr.queueFamilyIndexCount = 0;
+        create_info_khr.pQueueFamilyIndices = nullptr;
+    }
+
+    create_info_khr.preTransform = swap_chain_support.capabilities.currentTransform;
+    create_info_khr.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    create_info_khr.presentMode = present_mode;
+    create_info_khr.clipped = VK_TRUE;
+    create_info_khr.oldSwapchain = VK_NULL_HANDLE;
+
+    VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+    VK_VERIFY(vkCreateSwapchainKHR(m_vk_device, &create_info_khr, nullptr, &swapchain));
+
+    VK_VERIFY(vkGetSwapchainImagesKHR(m_vk_device, swapchain, &image_count, nullptr));
+
+    std::vector<VkImage> swapchain_images;
+    swapchain_images.resize(image_count);
+    VK_VERIFY(vkGetSwapchainImagesKHR(m_vk_device, swapchain, &image_count, swapchain_images.data()));
+
+    std::vector<VkImageView> swapchain_image_views;
+    swapchain_image_views.resize(image_count);
+    for (uint32_t i = 0; i < image_count; ++i)
+    {
+        swapchain_image_views[i] = CreateImageView(swapchain_images[i], swapchain_format.format);
+        TransitionImageLayoutAndFlush(swapchain_images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    }
+
+    VulkanSwapChain* retval = new VulkanSwapChain();
+    retval->m_rhi = this;
+    retval->m_surface = create_info.surface;
+    retval->m_swapchain = swapchain;
+    retval->m_swapchain_images = std::move(swapchain_images);
+    retval->m_swapchain_image_views = std::move(swapchain_image_views);
+    retval->m_swapchain_size_pixels = swapchain_size_pixels;
+    retval->m_swapchain_format = swapchain_format;
+
+    retval->AddRef();
+
+    return retval;
+}
+
+VkCommandBuffer VulkanRHI::BeginSingleTimeCommands()
+{
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandPool = m_cmd_pool;
+    alloc_info.commandBufferCount = 1;
+
+    VkCommandBuffer buf;
+    VK_VERIFY(vkAllocateCommandBuffers(m_vk_device, &alloc_info, &buf));
+
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    VK_VERIFY(vkBeginCommandBuffer(buf, &begin_info));
+
+    return buf;
+}
+
+void VulkanRHI::EndSingleTimeCommands(VkCommandBuffer buffer)
+{
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submit_info.commandBufferCount = 1;
+    submit_info.pCommandBuffers = &buffer;
+
+    VK_VERIFY(vkEndCommandBuffer(buffer));
+    VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_VERIFY(vkQueueWaitIdle(m_graphics_queue));
+
+    vkFreeCommandBuffers(m_vk_device, m_cmd_pool, 1, &buffer);
+}
+
+void VulkanRHI::TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
+{
+    VkCommandBuffer cmd_buf = BeginSingleTimeCommands();
+
+    TransitionImageLayout(cmd_buf, image, old_layout, new_layout);
+
+    EndSingleTimeCommands(cmd_buf);
+}
+
+void VulkanRHI::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
+{
+    VkImageMemoryBarrier barrier = {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = 0;
+
+    VkPipelineStageFlags src_stage = 0;
+    VkPipelineStageFlags dst_stage = 0;
+
+    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+
+        src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = 0;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else
+    {
+        bool unsupported_layout_transition = true;
+        VERIFY_EQUALS(unsupported_layout_transition, false);
+    }
+
+    vkCmdPipelineBarrier(
+        buf,
+        src_stage, dst_stage,
+        0,
+        0, nullptr,
+        0, nullptr,
+        1, &barrier);
+}
+
+
+VulkanSwapChain::~VulkanSwapChain()
+{
+}
+
+void VulkanSwapChain::AddRef()
+{
+}
+
+void VulkanSwapChain::Release()
+{
 }

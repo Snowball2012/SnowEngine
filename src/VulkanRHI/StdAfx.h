@@ -1,7 +1,10 @@
 #pragma once
 
+#define NOMINMAX
+
 #include <vulkan/vulkan.h>
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <optional>

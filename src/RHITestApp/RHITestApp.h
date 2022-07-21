@@ -37,6 +37,8 @@ private:
 
 	struct SDL_Window* m_main_wnd = nullptr;
 
+	std::unique_ptr<class SDLVulkanWindowInterface> m_window_iface = nullptr;
+
 	// device
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 	VkDevice m_vk_device = VK_NULL_HANDLE;

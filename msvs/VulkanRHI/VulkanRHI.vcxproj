@@ -103,14 +103,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetName>VulkanRHI</TargetName>
-    <IncludePath>$(SolutionDir)src\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)intermediate\$(Platform)\$(Configuration)\$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetName>VulkanRHI</TargetName>
-    <IncludePath>$(SolutionDir)src\;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)intermediate\$(Platform)\$(Configuration)\$(ProjectName)</IntDir>
   </PropertyGroup>

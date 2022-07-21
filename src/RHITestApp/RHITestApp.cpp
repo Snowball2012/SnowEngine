@@ -28,18 +28,24 @@ void RHITestApp::Run()
     SDL_Quit();
 }
 
-struct SDLVulkanWindowFactory : public IVulkanSurfaceFactory
+struct SDLVulkanWindowInterface : public IVulkanWindowInterface
 {
-    SDL_Window* window = nullptr;
-
-    SDLVulkanWindowFactory(SDL_Window* in_window) : window(in_window) {}
-
-    virtual VkSurfaceKHR CreateSurface(VkInstance instance) override
+    virtual VkSurfaceKHR CreateSurface(void* window_handle, VkInstance instance) override
     {
+        SDL_Window* sdl_handle = static_cast<SDL_Window*>(window_handle);
         VkSurfaceKHR surface = VK_NULL_HANDLE;
-        SDL_VERIFY(SDL_Vulkan_CreateSurface(window, instance, &surface));
+        SDL_VERIFY(SDL_Vulkan_CreateSurface(sdl_handle, instance, &surface));
         return surface;
     }
+
+    virtual void GetDrawableSize(void* window_handle, VkExtent2D& drawable_size)
+    {
+        SDL_Window* sdl_handle = static_cast<SDL_Window*>(window_handle);
+        int w, h;
+        SDL_Vulkan_GetDrawableSize(sdl_handle, &w, &h);
+        VkExtent2D extent = { uint32_t(w), uint32_t(h) };
+    }
+    
 };
 
 void RHITestApp::InitRHI()
@@ -57,10 +63,10 @@ void RHITestApp::InitRHI()
     #else
         create_info.enable_validation = true;
     #endif
+        m_window_iface = std::make_unique<SDLVulkanWindowInterface>();
 
-        SDLVulkanWindowFactory main_window(m_main_wnd);
-
-        create_info.main_window = &main_window;
+        create_info.window_iface = m_window_iface.get();
+        create_info.main_window_handle = m_main_wnd;
 
         create_info.app_name = "SnowEngineRHITest";
 
