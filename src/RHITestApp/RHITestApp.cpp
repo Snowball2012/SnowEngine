@@ -75,6 +75,7 @@ void RHITestApp::InitRHI()
     else
         m_rhi = CreateD3D12RHI_RAII();
 
+    m_swapchain = m_rhi->GetMainSwapChain();
     // temp
     m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
     m_surface = *static_cast<VkSurfaceKHR*>(m_rhi->GetNativeSurface());
@@ -85,7 +86,6 @@ void RHITestApp::InitRHI()
 
     CreateDescriptorSetLayout();
     CreateCommandPool();
-    CreateSwapChain();
     CreatePipeline();
     CreateCommandBuffer();
     CreateSyncObjects();
@@ -173,10 +173,7 @@ void RHITestApp::CleanupSwapChain()
     vkDestroyPipeline(m_vk_device, m_graphics_pipeline, nullptr);
     vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
 
-    for (auto& view : m_swapchain_image_views)
-        vkDestroyImageView(m_vk_device, view, nullptr);
-
-    vkDestroySwapchainKHR(m_vk_device, m_swapchain, nullptr);
+    m_swapchain = nullptr;
 }
 
 void RHITestApp::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& buffer_mem)
@@ -296,7 +293,8 @@ void RHITestApp::UpdateUniformBuffer(uint32_t current_image)
 
     matrices.view = glm::lookAt(glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
 
-    matrices.proj = glm::perspective(glm::radians(45.0f), float(m_swapchain_size_pixels.width) / float(m_swapchain_size_pixels.height), 0.1f, 10.0f);
+    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
+    matrices.proj = glm::perspective(glm::radians(45.0f), float(swapchain_extent.x) / float(swapchain_extent.y), 0.1f, 10.0f);
     matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
 
     void* data;
@@ -809,97 +807,6 @@ VkExtent2D RHITestApp::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
     return extent;
 }
 
-void RHITestApp::CreateSwapChain()
-{
-    auto swap_chain_support = QuerySwapChainSupport(m_vk_phys_device);
-
-    m_swapchain_format = ChooseSwapSurfaceFormat(swap_chain_support.formats);
-    VkPresentModeKHR present_mode = ChooseSwapPresentMode(swap_chain_support.present_modes);
-    m_swapchain_size_pixels = ChooseSwapExtent(swap_chain_support.capabilities);
-
-    uint32_t image_count = swap_chain_support.capabilities.minImageCount + m_max_frames_in_flight;
-
-    if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount)
-        image_count = swap_chain_support.capabilities.maxImageCount;
-
-    std::cout << "Swap chain creation:\n";
-    std::cout << "\twidth = " << m_swapchain_size_pixels.width << "\theight = " << m_swapchain_size_pixels.height << '\n';
-    std::cout << "\tNum images = " << image_count << '\n';
-
-    VkSwapchainCreateInfoKHR create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    create_info.surface = m_surface;
-    create_info.minImageCount = image_count;
-    create_info.imageFormat = m_swapchain_format.format;
-    create_info.imageColorSpace = m_swapchain_format.colorSpace;
-    create_info.imageExtent = m_swapchain_size_pixels;
-    create_info.imageArrayLayers = 1;
-    create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    QueueFamilyIndices indices = FindQueueFamilies(m_vk_phys_device, m_surface);
-    uint32_t queue_family_indices[] = { indices.graphics.value(), indices.present.value() };
-
-    if (queue_family_indices[0] != queue_family_indices[1])
-    {
-        create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        create_info.queueFamilyIndexCount = 2;
-        create_info.pQueueFamilyIndices = queue_family_indices;
-    }
-    else
-    {
-        create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        create_info.queueFamilyIndexCount = 0;
-        create_info.pQueueFamilyIndices = nullptr;
-    }
-
-    create_info.preTransform = swap_chain_support.capabilities.currentTransform;
-    create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    create_info.presentMode = present_mode;
-    create_info.clipped = VK_TRUE;
-    create_info.oldSwapchain = VK_NULL_HANDLE;
-
-    VK_VERIFY(vkCreateSwapchainKHR(m_vk_device, &create_info, nullptr, &m_swapchain));
-
-    VK_VERIFY(vkGetSwapchainImagesKHR(m_vk_device, m_swapchain, &image_count, nullptr));
-
-    m_swapchain_images.resize(image_count);
-    VK_VERIFY(vkGetSwapchainImagesKHR(m_vk_device, m_swapchain, &image_count, m_swapchain_images.data()));
-
-    m_swapchain_image_views.resize(image_count);
-    for (uint32_t i = 0; i < image_count; ++i)
-    {
-        m_swapchain_image_views[i] = CreateImageView(m_swapchain_images[i], m_swapchain_format.format);
-        TransitionImageLayoutAndFlush(m_swapchain_images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    }
-}
-
-SwapChainSupportDetails RHITestApp::QuerySwapChainSupport(VkPhysicalDevice device) const
-{
-    SwapChainSupportDetails details = {};
-
-    VK_VERIFY(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &details.capabilities));
-
-    uint32_t format_count = 0;
-    VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, nullptr));
-
-    if (format_count > 0)
-    {
-        details.formats.resize(format_count);
-        VK_VERIFY(vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, details.formats.data()));
-    }
-
-    uint32_t present_mode_count = 0;
-    VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, nullptr));
-
-    if (present_mode_count > 0)
-    {
-        details.present_modes.resize(present_mode_count);
-        VK_VERIFY(vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &present_mode_count, details.present_modes.data()));
-    }
-
-    return details;
-}
-
 namespace
 {
     struct VkShaderModuleRAII
@@ -998,14 +905,15 @@ void RHITestApp::CreatePipeline()
     VkViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    viewport.width = float(m_swapchain_size_pixels.width);
-    viewport.height = float(m_swapchain_size_pixels.height);
+    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
+    viewport.width = float(swapchain_extent.x);
+    viewport.height = float(swapchain_extent.y);
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor = {};
     scissor.offset = { 0, 0 };
-    scissor.extent = m_swapchain_size_pixels;
+    scissor.extent = VkExtent2D(swapchain_extent.x, swapchain_extent.y);
 
     VkPipelineViewportStateCreateInfo viewport_state = {};
     viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -1075,7 +983,7 @@ void RHITestApp::CreatePipeline()
     VkPipelineRenderingCreateInfo pipeline_rendering_info = {};
     pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
     pipeline_rendering_info.colorAttachmentCount = 1;
-    pipeline_rendering_info.pColorAttachmentFormats = &m_swapchain_format.format;
+    pipeline_rendering_info.pColorAttachmentFormats = (VkFormat*)m_swapchain->GetNativeFormat();
     
     pipeline_info.pNext = &pipeline_rendering_info;
     pipeline_info.pColorBlendState = &color_blending;
@@ -1139,7 +1047,7 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
     color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
     render_info.pColorAttachments = &color_attachment;
-    render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = m_swapchain_size_pixels };
+    render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = { m_swapchain->GetExtent().x, m_swapchain->GetExtent().y } };
     render_info.layerCount = 1;
     vkCmdBeginRendering(buf, &render_info);
 

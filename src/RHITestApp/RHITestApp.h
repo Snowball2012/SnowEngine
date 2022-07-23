@@ -46,12 +46,8 @@ private:
 	VkQueue m_present_queue = VK_NULL_HANDLE;
 
 	// surface
+	RHIObjectPtr<SwapChain> m_swapchain = nullptr;
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-	VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
-	std::vector<VkImage> m_swapchain_images;
-	std::vector<VkImageView> m_swapchain_image_views;
-	VkExtent2D m_swapchain_size_pixels = { 0, 0 };
-	VkSurfaceFormatKHR m_swapchain_format = {};
 
 	// pipeline
 	VkDescriptorSetLayout m_descriptor_layout = VK_NULL_HANDLE;

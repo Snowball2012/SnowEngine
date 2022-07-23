@@ -13,6 +13,11 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> present_modes;
 };
 
+struct VulkanSwapChainCreateInfo : SwapChainCreateInfo
+{
+	VkSurfaceKHR surface = VK_NULL_HANDLE;
+};
+
 class VulkanSwapChain : public SwapChain
 {
 private:
@@ -23,18 +28,65 @@ private:
 	VkExtent2D m_swapchain_size_pixels = { 0, 0 };
 	VkSurfaceFormatKHR m_swapchain_format = {};
 
-	friend class VulkanRHI;
 	VulkanRHI* m_rhi = nullptr;
 
-	VulkanSwapChain() = default;
 public:
+
+	VulkanSwapChain(class VulkanRHI* rhi, const VulkanSwapChainCreateInfo& create_info);
 
 	virtual ~VulkanSwapChain() override;
 
 	// Inherited via SwapChain
 	virtual void AddRef() override;
 	virtual void Release() override;
+	virtual glm::uvec2 GetExtent() const override;
+
+	virtual void* GetNativeFormat() const override { return (void*)&m_swapchain_format.format; }
+
+	static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+
+private:
+
+	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const;
+	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const;
+	VkExtent2D ChooseSwapExtent(void* window_handle, const VkSurfaceCapabilitiesKHR& capabilities) const;
 };
+
+
+struct QueueFamilyIndices
+{
+	std::optional<uint32_t> graphics;
+	std::optional<uint32_t> present;
+
+	bool IsComplete() const { return graphics.has_value() && present.has_value(); }
+};
+
+QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
+{
+	QueueFamilyIndices indices;
+
+	uint32_t queue_family_count = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+
+	std::vector<VkQueueFamilyProperties> families(queue_family_count);
+	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, families.data());
+
+	for (uint32_t i = 0; i < queue_family_count; ++i)
+	{
+		if (families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			indices.graphics = i;
+
+		VkBool32 present_support = false;
+		VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support));
+		if (present_support)
+			indices.present = i;
+
+		if (indices.IsComplete())
+			break;
+	}
+
+	return indices;
+}
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 
@@ -58,6 +110,8 @@ private:
 
 	VkDevice m_vk_device = VK_NULL_HANDLE;
 
+	QueueFamilyIndices m_queue_family_indices;
+
 	VkQueue m_graphics_queue = VK_NULL_HANDLE;
 	VkQueue m_present_queue = VK_NULL_HANDLE;
 
@@ -78,6 +132,14 @@ public:
 	virtual void* GetNativeGraphicsQueue() const override { return (void*)&m_graphics_queue; }
 	virtual void* GetNativePresentQueue() const override { return (void*)&m_present_queue; }
 
+	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
+	VkDevice GetDevice() const { return m_vk_device; }
+	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_queue_family_indices; }
+	IVulkanWindowInterface* GetWindowIface() const { return m_window_iface; }
+
+	VkImageView CreateImageView(VkImage image, VkFormat format);
+	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);
 
@@ -90,27 +152,16 @@ private:
 	bool IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const;
 
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
-	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) const;
 
 	void CreateLogicalDevice();
 
-	struct VulkanSwapChainCreateInfo : SwapChainCreateInfo
-	{
-		VkSurfaceKHR surface = VK_NULL_HANDLE;
-	};
 	VulkanSwapChain* CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info);
-	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const;
-	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const;
-	VkExtent2D ChooseSwapExtent(void* window_handle, const VkSurfaceCapabilitiesKHR& capabilities) const;
-
-	VkImageView CreateImageView(VkImage image, VkFormat format);
 
 	void CreateCommandPool();
 
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer buf);
 
-	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
 };

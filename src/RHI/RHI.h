@@ -3,6 +3,9 @@
 #include <memory>
 #include <boost/intrusive_ptr.hpp>
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+
 class RHI
 {
 public:
@@ -18,6 +21,13 @@ public:
 	// window_handle must outlive the swap chain
 	virtual class SwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
 	virtual SwapChain* GetMainSwapChain() { return nullptr; }
+
+	struct PresentInfo
+	{
+		class Semaphore* wait_semaphores = nullptr;
+		size_t semaphore_count = 0;
+	};
+	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) = 0;
 };
 
 class RHIObject
@@ -25,6 +35,7 @@ class RHIObject
 public:
 	virtual void AddRef() = 0;
 	virtual void Release() = 0;
+
 	virtual ~RHIObject() {}
 };
 
@@ -55,7 +66,20 @@ struct SwapChainCreateInfo
 class SwapChain : public RHIObject
 {
 public:
-	virtual ~SwapChain() {};
+	virtual ~SwapChain() {}
+
+	virtual glm::uvec2 GetExtent() const = 0;
+
+	// temp, for PSO
+	virtual void* GetNativeFormat() const = 0;
+};
+
+class Semaphore : public RHIObject
+{
+public:
+	virtual ~Semaphore() {}
+
+	virtual void* GetNativeSemaphore() const = 0;
 };
 
 template<typename T>
