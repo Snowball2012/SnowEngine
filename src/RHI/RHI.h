@@ -16,18 +16,22 @@ public:
 	virtual void* GetNativeSurface() const { return nullptr; }
 	virtual void* GetNativeDevice() const { return nullptr; }
 	virtual void* GetNativeGraphicsQueue() const { return nullptr; }
-	virtual void* GetNativePresentQueue() const { return nullptr; }
+	virtual void* GetNativeCommandPool() const { return nullptr; }
 
 	// window_handle must outlive the swap chain
 	virtual class SwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
 	virtual SwapChain* GetMainSwapChain() { return nullptr; }
 
+	virtual class Semaphore* CreateGPUSemaphore() { return nullptr; }
+
 	struct PresentInfo
 	{
-		class Semaphore* wait_semaphores = nullptr;
+		class Semaphore** wait_semaphores = nullptr;
 		size_t semaphore_count = 0;
 	};
 	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) = 0;
+
+	virtual void WaitIdle() = 0;
 };
 
 class RHIObject
@@ -43,8 +47,7 @@ public:
 template<typename T>
 using RHIObjectPtr = boost::intrusive_ptr<T>;
 
-namespace boost
-{
+
 	inline void intrusive_ptr_add_ref(RHIObject* p)
 	{
 		if (p)
@@ -55,7 +58,6 @@ namespace boost
 		if (p)
 			p->Release();
 	}
-}
 
 struct SwapChainCreateInfo
 {
@@ -70,8 +72,15 @@ public:
 
 	virtual glm::uvec2 GetExtent() const = 0;
 
+	virtual void AcquireNextImage(class Semaphore* semaphore_to_signal, bool& out_recreated) = 0;
+
+	virtual void Recreate() = 0;
+
 	// temp, for PSO
 	virtual void* GetNativeFormat() const = 0;
+
+	virtual void* GetNativeImage() const = 0;
+	virtual void* GetNativeImageView() const = 0;
 };
 
 class Semaphore : public RHIObject

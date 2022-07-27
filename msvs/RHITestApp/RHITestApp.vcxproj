@@ -121,7 +121,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0\boost;$(SolutionDir)src\;$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -147,7 +147,7 @@ xcopy /s /y $(ProjectDir)..\..\src\$(ProjectName)\textures\* $(TargetDir)texture
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0\boost;$(SolutionDir)src\;$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;$(SolutionDir)3rdparty\dxc\inc;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>

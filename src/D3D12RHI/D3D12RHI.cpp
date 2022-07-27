@@ -7,6 +7,14 @@ class D3D12RHI : public RHI
 public:
 	D3D12RHI() {}
 	virtual ~D3D12RHI() override {}
+
+	// Inherited via RHI
+	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) override
+	{
+	}
+	virtual void WaitIdle() override
+	{
+	}
 };
 
 D3D12RHI_API RHI* CreateD3D12RHI()

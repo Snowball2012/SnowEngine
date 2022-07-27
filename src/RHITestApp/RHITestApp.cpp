@@ -12,6 +12,8 @@ RHITestApp::RHITestApp()
 {
 }
 
+RHITestApp::~RHITestApp() = default;
+
 void RHITestApp::Run()
 {
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -45,7 +47,6 @@ struct SDLVulkanWindowInterface : public IVulkanWindowInterface
         SDL_Vulkan_GetDrawableSize(sdl_handle, &w, &h);
         VkExtent2D extent = { uint32_t(w), uint32_t(h) };
     }
-    
 };
 
 void RHITestApp::InitRHI()
@@ -78,14 +79,12 @@ void RHITestApp::InitRHI()
     m_swapchain = m_rhi->GetMainSwapChain();
     // temp
     m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
-    m_surface = *static_cast<VkSurfaceKHR*>(m_rhi->GetNativeSurface());
 
     m_vk_device = *static_cast<VkDevice*>(m_rhi->GetNativeDevice());
     m_graphics_queue = *static_cast<VkQueue*>(m_rhi->GetNativeGraphicsQueue());
-    m_present_queue = *static_cast<VkQueue*>(m_rhi->GetNativePresentQueue());
+    m_cmd_pool = *static_cast<VkCommandPool*>(m_rhi->GetNativeCommandPool());
 
     CreateDescriptorSetLayout();
-    CreateCommandPool();
     CreatePipeline();
     CreateCommandBuffer();
     CreateSyncObjects();
@@ -153,13 +152,10 @@ void RHITestApp::Cleanup()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         vkDestroyFence(m_vk_device, m_inflight_fences[i], nullptr);
-        vkDestroySemaphore(m_vk_device, m_render_finished_semaphores[i], nullptr);
-        vkDestroySemaphore(m_vk_device, m_image_available_semaphores[i], nullptr);
     }
 
-    vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
-
-    CleanupSwapChain();
+    m_swapchain = nullptr;
+    CleanupPipeline();
     vkDestroyDescriptorSetLayout(m_vk_device, m_descriptor_layout, nullptr);
 
     m_rhi.reset();
@@ -168,12 +164,11 @@ void RHITestApp::Cleanup()
 }
 
 
-void RHITestApp::CleanupSwapChain()
+void RHITestApp::CleanupPipeline()
 {
     vkDestroyPipeline(m_vk_device, m_graphics_pipeline, nullptr);
     vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
 
-    m_swapchain = nullptr;
 }
 
 void RHITestApp::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& buffer_mem)
@@ -727,88 +722,6 @@ std::vector<const char*> RHITestApp::GetSDLExtensions() const
 
 namespace
 {
-    void LogDevice(VkPhysicalDevice device)
-    {
-        VkPhysicalDeviceProperties props;
-        VkPhysicalDeviceFeatures features;
-        vkGetPhysicalDeviceProperties(device, &props);
-        vkGetPhysicalDeviceFeatures(device, &features);
-
-        std::cout << props.deviceName << "; Driver: " << props.driverVersion;
-    }
-
-    struct QueueFamilyIndices
-    {
-        std::optional<uint32_t> graphics;
-        std::optional<uint32_t> present;
-
-        bool IsComplete() const { return graphics.has_value() && present.has_value(); }
-    };
-
-    QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
-    {
-        QueueFamilyIndices indices;
-
-        uint32_t queue_family_count = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
-
-        std::vector<VkQueueFamilyProperties> families(queue_family_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, families.data());
-
-        for (uint32_t i = 0; i < queue_family_count; ++i)
-        {
-            if (families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-                indices.graphics = i;
-
-            VkBool32 present_support = false;
-            VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support));
-            if (present_support)
-                indices.present = i;
-
-            if (indices.IsComplete())
-                break;
-        }
-
-        return indices;
-    }
-}
-
-VkSurfaceFormatKHR RHITestApp::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const
-{
-    for (const auto& format : available_formats)
-    {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-            return format;
-    }
-
-    return available_formats[0];
-}
-
-VkPresentModeKHR RHITestApp::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const
-{
-    for (const auto& present_mode : present_modes)
-        if (present_mode == VK_PRESENT_MODE_MAILBOX_KHR)
-            return present_mode;
-
-    return VK_PRESENT_MODE_FIFO_KHR; // guaranteed to be available by specs
-}
-
-VkExtent2D RHITestApp::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const
-{
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
-        return capabilities.currentExtent;
-
-    int w, h;
-    SDL_Vulkan_GetDrawableSize(m_main_wnd, &w, &h);
-    VkExtent2D extent = { uint32_t(w), uint32_t(h) };
-
-    extent.width = std::clamp(extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    extent.height = std::clamp(extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-    return extent;
-}
-
-namespace
-{
     struct VkShaderModuleRAII
     {
         VkShaderModule sm = VK_NULL_HANDLE;
@@ -999,18 +912,6 @@ void RHITestApp::CreatePipeline()
     VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
 }
 
-void RHITestApp::CreateCommandPool()
-{
-    QueueFamilyIndices indices = FindQueueFamilies(m_vk_phys_device, m_surface);
-
-    VkCommandPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    pool_info.queueFamilyIndex = indices.graphics.value();
-
-    VK_VERIFY(vkCreateCommandPool(m_vk_device, &pool_info, nullptr, &m_cmd_pool));
-}
-
 void RHITestApp::CreateCommandBuffer()
 {
     m_cmd_buffers.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
@@ -1024,14 +925,14 @@ void RHITestApp::CreateCommandBuffer()
     VK_VERIFY(vkAllocateCommandBuffers(m_vk_device, &alloc_info, m_cmd_buffers.data()));
 }
 
-void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
+void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view)
 {
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
     VK_VERIFY(vkBeginCommandBuffer(buf, &begin_info));
 
-    TransitionImageLayout(buf, m_swapchain_images[image_index], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
     VkRenderingInfo render_info = {};
     render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -1042,7 +943,7 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
     VkClearValue clear_color = { {{0.0f,0.0f,0.0f,1.0f}} };
     color_attachment.clearValue = clear_color;
     color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    color_attachment.imageView = m_swapchain_image_views[image_index];
+    color_attachment.imageView = swapchain_image_view;
     color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 
@@ -1063,25 +964,35 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index)
 
     vkCmdEndRendering(buf);
 
-    TransitionImageLayout(buf, m_swapchain_images[image_index], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VK_VERIFY(vkEndCommandBuffer(buf));
+}
+
+namespace
+{
+    VkSemaphore GetVkSemaphore(const Semaphore* semaphore)
+    {
+        return *static_cast<VkSemaphore*>(semaphore->GetNativeSemaphore());
+    }
 }
 
 void RHITestApp::DrawFrame()
 {
     VK_VERIFY(vkWaitForFences(m_vk_device, 1, &m_inflight_fences[m_current_frame], VK_TRUE, std::numeric_limits<uint64_t>::max()));
 
-    uint32_t image_index = uint32_t(-1);
-    VkResult acquire_res = vkAcquireNextImageKHR(m_vk_device, m_swapchain, std::numeric_limits<uint64_t>::max(), m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &image_index);
-    if (acquire_res == VK_ERROR_OUT_OF_DATE_KHR || acquire_res == VK_SUBOPTIMAL_KHR || m_fb_resized)
+    if (m_fb_resized)
     {
-        m_fb_resized = false;
         RecreateSwapChain();
-        acquire_res = vkAcquireNextImageKHR(m_vk_device, m_swapchain, std::numeric_limits<uint64_t>::max(), m_image_available_semaphores[m_current_frame], VK_NULL_HANDLE, &image_index);
+        m_fb_resized = false;
     }
-
-    VK_VERIFY(acquire_res);
+    bool swapchain_recreated = false;
+    m_swapchain->AcquireNextImage(m_image_available_semaphores[m_current_frame].get(), swapchain_recreated);
+    if (swapchain_recreated)
+    {
+        CleanupPipeline();
+        CreatePipeline();
+    }
 
     VK_VERIFY(vkResetFences(m_vk_device, 1, &m_inflight_fences[m_current_frame]));
 
@@ -1089,11 +1000,14 @@ void RHITestApp::DrawFrame()
 
     UpdateUniformBuffer(m_current_frame);
 
-    RecordCommandBuffer(m_cmd_buffers[m_current_frame], image_index);
+    VkImage swapchain_image = *static_cast<VkImage*>(m_swapchain->GetNativeImage());
+    VkImageView swapchain_image_view = *static_cast<VkImageView*>(m_swapchain->GetNativeImageView());
+
+    RecordCommandBuffer(m_cmd_buffers[m_current_frame], swapchain_image, swapchain_image_view);
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    VkSemaphore wait_semaphores[] = { m_image_available_semaphores[m_current_frame] };
+    VkSemaphore wait_semaphores[] = { GetVkSemaphore(m_image_available_semaphores[m_current_frame].get()) };
     VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitSemaphores = wait_semaphores;
@@ -1102,25 +1016,18 @@ void RHITestApp::DrawFrame()
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &m_cmd_buffers[m_current_frame];
 
-    VkSemaphore signal_semaphores[] = { m_render_finished_semaphores[m_current_frame] };
+    VkSemaphore signal_semaphores[] = { GetVkSemaphore(m_render_finished_semaphores[m_current_frame].get()) };
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = signal_semaphores;
 
     VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_inflight_fences[m_current_frame]));
 
-    VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    RHI::PresentInfo present_info = {};
+    present_info.semaphore_count = 1;
+    Semaphore* wait_semaphore = m_render_finished_semaphores[m_current_frame].get();
+    present_info.wait_semaphores = &wait_semaphore;
 
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = signal_semaphores;
-
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &m_swapchain;
-    present_info.pImageIndices = &image_index;
-
-    present_info.pResults = nullptr;
-
-    VK_VERIFY(vkQueuePresentKHR(m_present_queue, &present_info));
+    m_rhi->Present(*m_swapchain, present_info);
 
     m_current_frame = (m_current_frame + 1) % m_max_frames_in_flight;
 }
@@ -1131,27 +1038,21 @@ void RHITestApp::CreateSyncObjects()
     m_render_finished_semaphores.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
     m_inflight_fences.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
 
-    VkSemaphoreCreateInfo sem_info = {};
-    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     VkFenceCreateInfo fence_info = {};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
-        VK_VERIFY(vkCreateSemaphore(m_vk_device, &sem_info, nullptr, &m_image_available_semaphores[i]));
-        VK_VERIFY(vkCreateSemaphore(m_vk_device, &sem_info, nullptr, &m_render_finished_semaphores[i]));
+        m_image_available_semaphores[i] = m_rhi->CreateGPUSemaphore();
+        m_render_finished_semaphores[i] = m_rhi->CreateGPUSemaphore();
         VK_VERIFY(vkCreateFence(m_vk_device, &fence_info, nullptr, &m_inflight_fences[i]));
     }
 }
 
 void RHITestApp::RecreateSwapChain()
 {
-    VK_VERIFY(vkDeviceWaitIdle(m_vk_device));
-
-    CleanupSwapChain();
-
-    CreateSwapChain();
+    m_swapchain->Recreate();
     CreatePipeline();
 }
 

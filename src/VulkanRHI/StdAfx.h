@@ -11,6 +11,8 @@
 #include <span>
 #include <set>
 
+#include <boost/container/small_vector.hpp>
+
 #include <windows.h>
 
 // double extension trick to stringify __LINE__ and other things

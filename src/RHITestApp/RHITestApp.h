@@ -37,17 +37,15 @@ private:
 
 	struct SDL_Window* m_main_wnd = nullptr;
 
-	std::unique_ptr<class SDLVulkanWindowInterface> m_window_iface = nullptr;
+	std::unique_ptr<struct SDLVulkanWindowInterface> m_window_iface = nullptr;
 
 	// device
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 	VkDevice m_vk_device = VK_NULL_HANDLE;
 	VkQueue m_graphics_queue = VK_NULL_HANDLE;
-	VkQueue m_present_queue = VK_NULL_HANDLE;
 
 	// surface
 	RHIObjectPtr<SwapChain> m_swapchain = nullptr;
-	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
 	// pipeline
 	VkDescriptorSetLayout m_descriptor_layout = VK_NULL_HANDLE;
@@ -59,8 +57,8 @@ private:
 	std::vector<VkCommandBuffer> m_cmd_buffers;
 
 	// synchronization
-	std::vector<VkSemaphore> m_image_available_semaphores;
-	std::vector<VkSemaphore> m_render_finished_semaphores;
+	std::vector<RHIObjectPtr<Semaphore>> m_image_available_semaphores;
+	std::vector<RHIObjectPtr<Semaphore>> m_render_finished_semaphores;
 	std::vector<VkFence> m_inflight_fences;
 	uint32_t m_current_frame = 0;
 
@@ -92,6 +90,7 @@ private:
 
 public:
 	RHITestApp();
+	~RHITestApp();
 
 	void Run();
 
@@ -108,15 +107,11 @@ private:
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const;
 	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
 
-	void CreateSwapChain();
-
 	void CreatePipeline();
-
-	void CreateCommandPool();
 
 	void CreateCommandBuffer();
 
-	void RecordCommandBuffer(VkCommandBuffer buf, uint32_t image_index);
+	void RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view);
 
 	void DrawFrame();
 
@@ -124,7 +119,7 @@ private:
 
 	void RecreateSwapChain();
 
-	void CleanupSwapChain();
+	void CleanupPipeline();
 
 	void CreateVertexBuffer();
 

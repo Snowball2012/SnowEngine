@@ -28,7 +28,11 @@ private:
 	VkExtent2D m_swapchain_size_pixels = { 0, 0 };
 	VkSurfaceFormatKHR m_swapchain_format = {};
 
-	VulkanRHI* m_rhi = nullptr;
+	const VulkanSwapChainCreateInfo m_create_info;
+
+	class VulkanRHI* m_rhi = nullptr;
+
+	uint32_t m_cur_image_index = -1;
 
 public:
 
@@ -40,8 +44,15 @@ public:
 	virtual void AddRef() override;
 	virtual void Release() override;
 	virtual glm::uvec2 GetExtent() const override;
+	virtual void AcquireNextImage(class Semaphore* semaphore_to_signal, bool& out_recreated) override;
+	virtual void Recreate() override;
 
 	virtual void* GetNativeFormat() const override { return (void*)&m_swapchain_format.format; }
+	virtual void* GetNativeImage() const override { return (void*)&m_swapchain_images[m_cur_image_index]; }
+	virtual void* GetNativeImageView() const override { return (void*)&m_swapchain_image_views[m_cur_image_index]; }
+
+	VkSwapchainKHR GetVkSwapchain() const { return m_swapchain; }
+	uint32_t GetCurrentImageIndex() const { return m_cur_image_index; }
 
 	static SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
@@ -50,8 +61,29 @@ private:
 	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const;
 	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const;
 	VkExtent2D ChooseSwapExtent(void* window_handle, const VkSurfaceCapabilitiesKHR& capabilities) const;
+
+	void Init();
+	void Cleanup();
 };
 
+class VulkanSemaphore : public Semaphore
+{
+private:
+	VulkanRHI* m_rhi = nullptr;
+	VkSemaphore m_vk_semaphore = VK_NULL_HANDLE;
+
+public:
+	VulkanSemaphore(class VulkanRHI* rhi);
+
+	virtual ~VulkanSemaphore() override;
+
+	virtual void* GetNativeSemaphore() const override { return (void*)&m_vk_semaphore; }
+
+	VkSemaphore GetVkSemaphore() const { return m_vk_semaphore; }
+
+	virtual void AddRef() override;
+	virtual void Release() override;
+};
 
 struct QueueFamilyIndices
 {
@@ -61,32 +93,7 @@ struct QueueFamilyIndices
 	bool IsComplete() const { return graphics.has_value() && present.has_value(); }
 };
 
-QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
-{
-	QueueFamilyIndices indices;
-
-	uint32_t queue_family_count = 0;
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
-
-	std::vector<VkQueueFamilyProperties> families(queue_family_count);
-	vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, families.data());
-
-	for (uint32_t i = 0; i < queue_family_count; ++i)
-	{
-		if (families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-			indices.graphics = i;
-
-		VkBool32 present_support = false;
-		VK_VERIFY(vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &present_support));
-		if (present_support)
-			indices.present = i;
-
-		if (indices.IsComplete())
-			break;
-	}
-
-	return indices;
-}
+QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 
@@ -125,12 +132,18 @@ public:
 
 	virtual SwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
 
+	virtual Semaphore* CreateGPUSemaphore() override;
+
+	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) override;
+
+	virtual void WaitIdle() override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
 	virtual void* GetNativeGraphicsQueue() const override { return (void*)&m_graphics_queue; }
-	virtual void* GetNativePresentQueue() const override { return (void*)&m_present_queue; }
+	virtual void* GetNativeCommandPool() const override { return (void*)&m_cmd_pool; }
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
