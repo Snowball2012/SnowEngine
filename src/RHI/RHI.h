@@ -19,17 +19,17 @@ public:
 	virtual void* GetNativeCommandPool() const { return nullptr; }
 
 	// window_handle must outlive the swap chain
-	virtual class SwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
-	virtual SwapChain* GetMainSwapChain() { return nullptr; }
+	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
+	virtual RHISwapChain* GetMainSwapChain() { return nullptr; }
 
-	virtual class Semaphore* CreateGPUSemaphore() { return nullptr; }
+	virtual class RHISemaphore* CreateGPUSemaphore() { return nullptr; }
 
 	struct PresentInfo
 	{
-		class Semaphore** wait_semaphores = nullptr;
+		class RHISemaphore** wait_semaphores = nullptr;
 		size_t semaphore_count = 0;
 	};
-	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) = 0;
+	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) = 0;
 
 	virtual void WaitIdle() = 0;
 };
@@ -65,14 +65,14 @@ struct SwapChainCreateInfo
 	uint32_t surface_num = 0;
 };
 
-class SwapChain : public RHIObject
+class RHISwapChain : public RHIObject
 {
 public:
-	virtual ~SwapChain() {}
+	virtual ~RHISwapChain() {}
 
 	virtual glm::uvec2 GetExtent() const = 0;
 
-	virtual void AcquireNextImage(class Semaphore* semaphore_to_signal, bool& out_recreated) = 0;
+	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) = 0;
 
 	virtual void Recreate() = 0;
 
@@ -83,10 +83,10 @@ public:
 	virtual void* GetNativeImageView() const = 0;
 };
 
-class Semaphore : public RHIObject
+class RHISemaphore : public RHIObject
 {
 public:
-	virtual ~Semaphore() {}
+	virtual ~RHISemaphore() {}
 
 	virtual void* GetNativeSemaphore() const = 0;
 };

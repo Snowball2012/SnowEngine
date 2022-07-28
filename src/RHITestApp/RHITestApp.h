@@ -45,7 +45,7 @@ private:
 	VkQueue m_graphics_queue = VK_NULL_HANDLE;
 
 	// surface
-	RHIObjectPtr<SwapChain> m_swapchain = nullptr;
+	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 
 	// pipeline
 	VkDescriptorSetLayout m_descriptor_layout = VK_NULL_HANDLE;
@@ -57,8 +57,8 @@ private:
 	std::vector<VkCommandBuffer> m_cmd_buffers;
 
 	// synchronization
-	std::vector<RHIObjectPtr<Semaphore>> m_image_available_semaphores;
-	std::vector<RHIObjectPtr<Semaphore>> m_render_finished_semaphores;
+	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;
+	std::vector<RHIObjectPtr<RHISemaphore>> m_render_finished_semaphores;
 	std::vector<VkFence> m_inflight_fences;
 	uint32_t m_current_frame = 0;
 

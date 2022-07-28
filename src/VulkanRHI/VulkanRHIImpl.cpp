@@ -48,14 +48,14 @@ void VulkanRHI::WaitIdle()
     VK_VERIFY(vkDeviceWaitIdle(m_vk_device));
 }
 
-Semaphore* VulkanRHI::CreateGPUSemaphore()
+RHISemaphore* VulkanRHI::CreateGPUSemaphore()
 {
-    Semaphore* new_semaphore = new VulkanSemaphore(this);
+    RHISemaphore* new_semaphore = new VulkanSemaphore(this);
     new_semaphore->AddRef();
     return new_semaphore;
 }
 
-void VulkanRHI::Present(SwapChain& swap_chain, const PresentInfo& info)
+void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
 {
     boost::container::small_vector<VkSemaphore, 4> semaphores;
     if (info.wait_semaphores)

@@ -971,7 +971,7 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_imag
 
 namespace
 {
-    VkSemaphore GetVkSemaphore(const Semaphore* semaphore)
+    VkSemaphore GetVkSemaphore(const RHISemaphore* semaphore)
     {
         return *static_cast<VkSemaphore*>(semaphore->GetNativeSemaphore());
     }
@@ -1024,7 +1024,7 @@ void RHITestApp::DrawFrame()
 
     RHI::PresentInfo present_info = {};
     present_info.semaphore_count = 1;
-    Semaphore* wait_semaphore = m_render_finished_semaphores[m_current_frame].get();
+    RHISemaphore* wait_semaphore = m_render_finished_semaphores[m_current_frame].get();
     present_info.wait_semaphores = &wait_semaphore;
 
     m_rhi->Present(*m_swapchain, present_info);

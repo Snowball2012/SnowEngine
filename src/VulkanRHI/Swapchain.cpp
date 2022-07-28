@@ -103,7 +103,7 @@ glm::uvec2 VulkanSwapChain::GetExtent() const
     return glm::uvec2(m_swapchain_size_pixels.width, m_swapchain_size_pixels.height);
 }
 
-void VulkanSwapChain::AcquireNextImage(Semaphore* semaphore_to_signal, bool& out_recreated)
+void VulkanSwapChain::AcquireNextImage(RHISemaphore* semaphore_to_signal, bool& out_recreated)
 {
     VkSemaphore vk_semaphore = VK_NULL_HANDLE;
     if (VulkanSemaphore* semaphore_impl = static_cast<VulkanSemaphore*>(semaphore_to_signal))

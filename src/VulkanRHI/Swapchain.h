@@ -16,7 +16,7 @@ struct VulkanSwapChainCreateInfo : SwapChainCreateInfo
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 };
 
-class VulkanSwapChain : public SwapChain
+class VulkanSwapChain : public RHISwapChain
 {
 private:
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
@@ -38,11 +38,11 @@ public:
 
 	virtual ~VulkanSwapChain() override;
 
-	// Inherited via SwapChain
+	// Inherited via RHISwapChain
 	virtual void AddRef() override;
 	virtual void Release() override;
 	virtual glm::uvec2 GetExtent() const override;
-	virtual void AcquireNextImage(class Semaphore* semaphore_to_signal, bool& out_recreated) override;
+	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) override;
 	virtual void Recreate() override;
 
 	virtual void* GetNativeFormat() const override { return (void*)&m_swapchain_format.format; }

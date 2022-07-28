@@ -9,7 +9,7 @@ public:
 	virtual ~D3D12RHI() override {}
 
 	// Inherited via RHI
-	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) override
+	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) override
 	{
 	}
 	virtual void WaitIdle() override

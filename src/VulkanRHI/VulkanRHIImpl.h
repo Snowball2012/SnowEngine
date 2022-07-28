@@ -8,7 +8,7 @@
 
 #include "Swapchain.h"
 
-class VulkanSemaphore : public Semaphore
+class VulkanSemaphore : public RHISemaphore
 {
 private:
 	VulkanRHI* m_rhi = nullptr;
@@ -72,11 +72,11 @@ public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
 
-	virtual SwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
+	virtual RHISwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
 
-	virtual Semaphore* CreateGPUSemaphore() override;
+	virtual RHISemaphore* CreateGPUSemaphore() override;
 
-	virtual void Present(SwapChain& swap_chain, const PresentInfo& info) override;
+	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) override;
 
 	virtual void WaitIdle() override;
 
