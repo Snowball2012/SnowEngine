@@ -39,6 +39,21 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 
+class VulkanCommandList : public RHICommandList
+{
+private:
+	VkCommandBuffer m_vk_cmd_buffer = VK_NULL_HANDLE;
+	VkCommandPool m_vk_cmd_pool = VK_NULL_HANDLE;
+	RHI::QueueType m_type = RHI::QueueType::Graphics;
+	VulkanRHI* m_rhi = nullptr;
+
+public:
+	VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type);
+	virtual ~VulkanCommandList();
+
+	virtual void* GetNativeCmdList() const { return (void*)&m_vk_cmd_buffer; }
+};
+
 class VulkanRHI : public RHI
 {
 private:
@@ -68,6 +83,7 @@ private:
 
 	VkCommandPool m_cmd_pool = VK_NULL_HANDLE;
 
+
 public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
@@ -79,6 +95,8 @@ public:
 	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) override;
 
 	virtual void WaitIdle() override;
+
+	virtual RHICommandList* GetCommandList(QueueType type) override;
 
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }

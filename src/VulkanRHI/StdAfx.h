@@ -40,3 +40,6 @@ if ((x) == (FailValue)) \
 }
 
 #define VK_VERIFY(x) VERIFY_EQUALS(x, VK_SUCCESS)
+
+#define NOTIMPL INSERT_DBGBREAK \
+	throw std::runtime_error(__FUNCTION__ " is not implemented!");

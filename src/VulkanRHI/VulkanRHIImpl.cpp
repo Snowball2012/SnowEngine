@@ -82,6 +82,11 @@ void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
     VK_VERIFY(vkQueuePresentKHR(m_present_queue, &present_info));
 }
 
+RHICommandList* VulkanRHI::GetCommandList(QueueType type)
+{
+    return nullptr;
+}
+
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
 {
     std::cout << "vkInstance creation started\n";
@@ -289,10 +294,8 @@ bool VulkanRHI::CheckDeviceExtensionSupport(VkPhysicalDevice device) const
 
 void VulkanRHI::CreateLogicalDevice()
 {
-    auto queue_families = FindQueueFamilies(m_vk_phys_device, m_main_surface);
-
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-    std::set<uint32_t> unique_queue_families = { queue_families.graphics.value(), queue_families.present.value() };
+    std::set<uint32_t> unique_queue_families = { m_queue_family_indices.graphics.value(), m_queue_family_indices.present.value() };
 
 
     float priority = 1.0f;
@@ -326,8 +329,8 @@ void VulkanRHI::CreateLogicalDevice()
 
     std::cout << "vkDevice created successfully" << std::endl;
 
-    vkGetDeviceQueue(m_vk_device, queue_families.graphics.value(), 0, &m_graphics_queue);
-    vkGetDeviceQueue(m_vk_device, queue_families.present.value(), 0, &m_present_queue);
+    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.graphics.value(), 0, &m_graphics_queue);
+    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.present.value(), 0, &m_present_queue);
 
     if (!m_graphics_queue || !m_present_queue)
         throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
@@ -362,12 +365,10 @@ VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format)
 
 void VulkanRHI::CreateCommandPool()
 {
-    QueueFamilyIndices indices = FindQueueFamilies(m_vk_phys_device, m_main_surface);
-
     VkCommandPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    pool_info.queueFamilyIndex = indices.graphics.value();
+    pool_info.queueFamilyIndex = m_queue_family_indices.graphics.value();
 
     VK_VERIFY(vkCreateCommandPool(m_vk_device, &pool_info, nullptr, &m_cmd_pool));
 }
@@ -549,4 +550,41 @@ void VulkanSemaphore::AddRef()
 
 void VulkanSemaphore::Release()
 {
+}
+
+VulkanCommandList::VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type)
+    : m_rhi(rhi), m_type(type)
+{
+
+    VkCommandPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    switch (type)
+    {
+    case RHI::QueueType::Graphics:
+        pool_info.queueFamilyIndex = m_rhi->GetQueueFamilyIndices().graphics.value();
+        break;
+    default:
+        NOTIMPL;
+        break;
+    }
+
+    VkDevice vk_device = m_rhi->GetDevice();
+    VK_VERIFY(vkCreateCommandPool(vk_device, &pool_info, nullptr, &m_vk_cmd_pool));
+
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = m_vk_cmd_pool;
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = 1;
+
+    VK_VERIFY(vkAllocateCommandBuffers(vk_device, &alloc_info, &m_vk_cmd_buffer));
+}
+
+VulkanCommandList::~VulkanCommandList()
+{
+    vkFreeCommandBuffers(m_rhi->GetDevice(), m_vk_cmd_pool, 1, &m_vk_cmd_buffer);
+
+    vkDestroyCommandPool(m_rhi->GetDevice(), m_vk_cmd_pool, nullptr);
 }

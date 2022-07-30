@@ -32,6 +32,23 @@ public:
 	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) = 0;
 
 	virtual void WaitIdle() = 0;
+
+	enum class QueueType : uint8_t
+	{
+		Graphics = 0,
+		Compute = 1
+	};
+
+	virtual class RHICommandList* GetCommandList(QueueType type) = 0;
+
+	// command lists here must belong to the same QueueType
+	struct SubmitInfo
+	{
+		size_t cmd_list_count = 0;
+		class RHICommandList** cmd_lists = nullptr;
+		class RHISemaphore* semaphore_to_signal = nullptr; // optional
+	};
+	virtual void SubmitCommandLists(const SubmitInfo& info) = 0;
 };
 
 class RHIObject
@@ -89,6 +106,14 @@ public:
 	virtual ~RHISemaphore() {}
 
 	virtual void* GetNativeSemaphore() const = 0;
+};
+
+class RHICommandList
+{
+public:
+	virtual ~RHICommandList() {}
+
+	virtual void* GetNativeCmdList() const = 0;
 };
 
 template<typename T>
