@@ -39,21 +39,6 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 
-class VulkanCommandList : public RHICommandList
-{
-private:
-	VkCommandBuffer m_vk_cmd_buffer = VK_NULL_HANDLE;
-	VkCommandPool m_vk_cmd_pool = VK_NULL_HANDLE;
-	RHI::QueueType m_type = RHI::QueueType::Graphics;
-	VulkanRHI* m_rhi = nullptr;
-
-public:
-	VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type);
-	virtual ~VulkanCommandList();
-
-	virtual void* GetNativeCmdList() const { return (void*)&m_vk_cmd_buffer; }
-};
-
 class VulkanRHI : public RHI
 {
 private:
@@ -83,6 +68,7 @@ private:
 
 	VkCommandPool m_cmd_pool = VK_NULL_HANDLE;
 
+	std::unique_ptr<class VulkanCommandListManager> m_cmd_list_mgr;
 
 public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
@@ -98,6 +84,8 @@ public:
 
 	virtual RHICommandList* GetCommandList(QueueType type) override;
 
+	virtual void SubmitCommandLists(const SubmitInfo& info) override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
@@ -112,6 +100,8 @@ public:
 
 	VkImageView CreateImageView(VkImage image, VkFormat format);
 	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+
+	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);

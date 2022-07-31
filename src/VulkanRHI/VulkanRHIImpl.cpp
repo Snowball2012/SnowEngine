@@ -4,6 +4,8 @@
 
 #include "Validation.h"
 
+#include "CommandLists.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -84,7 +86,29 @@ void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
 
 RHICommandList* VulkanRHI::GetCommandList(QueueType type)
 {
-    return nullptr;
+    VERIFY_NOT_EQUAL(m_cmd_list_mgr, nullptr);
+
+    return m_cmd_list_mgr->GetCommandList(type);
+}
+
+VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)
+{
+    uint64_t res_raw = 0;
+    uint64_t checked_flags = 0;
+
+    auto add_flag = [&res_raw, &checked_flags, rhi_flags](PipelineStageFlags rhi_flag, VkPipelineStageFlagBits vk_flag)
+    {
+        res_raw |= (uint64_t(rhi_flags) & uint64_t(rhi_flag)) ? vk_flag : 0;
+        checked_flags |= uint64_t(rhi_flag);
+    };
+
+    add_flag(PipelineStageFlags::ColorAttachmentOutput, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+#ifndef NDEBUG
+    VERIFY_EQUALS(checked_flags & uint64_t(rhi_flags), uint64_t(PipelineStageFlags::AllBits) & uint64_t(rhi_flags)); // some flags were not handled if this fires
+#endif
+
+    return VkPipelineStageFlagBits(res_raw);
 }
 
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
@@ -550,41 +574,4 @@ void VulkanSemaphore::AddRef()
 
 void VulkanSemaphore::Release()
 {
-}
-
-VulkanCommandList::VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type)
-    : m_rhi(rhi), m_type(type)
-{
-
-    VkCommandPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-    switch (type)
-    {
-    case RHI::QueueType::Graphics:
-        pool_info.queueFamilyIndex = m_rhi->GetQueueFamilyIndices().graphics.value();
-        break;
-    default:
-        NOTIMPL;
-        break;
-    }
-
-    VkDevice vk_device = m_rhi->GetDevice();
-    VK_VERIFY(vkCreateCommandPool(vk_device, &pool_info, nullptr, &m_vk_cmd_pool));
-
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = m_vk_cmd_pool;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = 1;
-
-    VK_VERIFY(vkAllocateCommandBuffers(vk_device, &alloc_info, &m_vk_cmd_buffer));
-}
-
-VulkanCommandList::~VulkanCommandList()
-{
-    vkFreeCommandBuffers(m_rhi->GetDevice(), m_vk_cmd_pool, 1, &m_vk_cmd_buffer);
-
-    vkDestroyCommandPool(m_rhi->GetDevice(), m_vk_cmd_pool, nullptr);
 }

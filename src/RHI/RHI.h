@@ -36,7 +36,14 @@ public:
 	enum class QueueType : uint8_t
 	{
 		Graphics = 0,
-		Compute = 1
+		Compute = 1,
+		Count
+	};
+
+	enum class PipelineStageFlags : uint32_t
+	{
+		ColorAttachmentOutput = 0x00000001,
+		AllBits = 0x1,
 	};
 
 	virtual class RHICommandList* GetCommandList(QueueType type) = 0;
@@ -45,7 +52,10 @@ public:
 	struct SubmitInfo
 	{
 		size_t cmd_list_count = 0;
-		class RHICommandList** cmd_lists = nullptr;
+		class RHICommandList* const* cmd_lists = nullptr;
+		size_t wait_semaphore_count = 0;
+		class RHISemaphore* const* semaphores_to_wait = nullptr;
+		const RHI::PipelineStageFlags* stages_to_wait = nullptr;
 		class RHISemaphore* semaphore_to_signal = nullptr; // optional
 	};
 	virtual void SubmitCommandLists(const SubmitInfo& info) = 0;

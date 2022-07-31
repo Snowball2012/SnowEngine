@@ -4,16 +4,20 @@
 
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <algorithm>
 #include <iostream>
 #include <vector>
 #include <optional>
 #include <span>
 #include <set>
+#include <queue>
 
 #include <boost/container/small_vector.hpp>
 
 #include <windows.h>
+
+#include <utils/packed_freelist.h>
 
 // double extension trick to stringify __LINE__ and other things
 #define S(x) #x
