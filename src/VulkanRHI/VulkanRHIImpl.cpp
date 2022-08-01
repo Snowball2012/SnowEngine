@@ -111,6 +111,19 @@ VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)
     return VkPipelineStageFlagBits(res_raw);
 }
 
+VkQueue VulkanRHI::GetQueue(QueueType type) const
+{
+    switch (type)
+    {
+    case QueueType::Graphics:
+        return m_graphics_queue;
+    default:
+        NOTIMPL;
+    }
+
+    return VK_NULL_HANDLE;
+}
+
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
 {
     std::cout << "vkInstance creation started\n";

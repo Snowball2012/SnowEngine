@@ -101,6 +101,8 @@ public:
 	VkImageView CreateImageView(VkImage image, VkFormat format);
 	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
+	VkQueue GetQueue(QueueType type) const;
+
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 
 private:

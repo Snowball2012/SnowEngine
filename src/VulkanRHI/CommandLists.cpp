@@ -41,6 +41,11 @@ VulkanCommandList::~VulkanCommandList()
     vkDestroyCommandPool(m_rhi->GetDevice(), m_vk_cmd_pool, nullptr);
 }
 
+RHI::QueueType VulkanCommandList::GetType() const
+{
+    return m_type;
+}
+
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)
     : m_rhi(rhi)
 {
@@ -73,6 +78,12 @@ VulkanCommandList* VulkanCommandListManager::GetCommandList(RHI::QueueType type)
 
 void VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info)
 {
+    if (info.cmd_list_count == 0)
+        return;
+
+    // Not necessary, but we have to do this somewhere at regular intervals. Why not here?
+    ProcessCompleted();
+
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -107,7 +118,23 @@ void VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info)
     submit_info.signalSemaphoreCount = info.semaphore_to_signal ? 1 : 0;
     submit_info.pSignalSemaphores = (semaphore_to_signal != VK_NULL_HANDLE) ? &semaphore_to_signal : nullptr;
 
+    auto& submitted_lists = m_submitted_lists[size_t(info.cmd_lists[0]->GetType())].emplace();
+    submitted_lists.completion_fence = VK_NULL_HANDLE;
+    
+    if (!m_free_fences.empty())
+    {
+        submitted_lists.completion_fence = m_free_fences.back();
+        m_free_fences.pop_back();
+    }
+    else
+    {
+        VkFenceCreateInfo fence_create_info = {};
+        VK_VERIFY(vkCreateFence(m_rhi->GetDevice(), &fence_create_info, nullptr, &submitted_lists.completion_fence));
+    }
+    submitted_lists.lists.reserve(info.cmd_list_count);
+    submitted_lists.lists.insert(submitted_lists.lists.end(), info.cmd_lists, info.cmd_lists + info.cmd_list_count);
 
+    VkQueue vk_queue = m_rhi->GetQueue(info.cmd_lists[0]->GetType());
 
-    VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_inflight_fences[m_current_frame]));
+    VK_VERIFY(vkQueueSubmit(vk_queue, 1, &submit_info, submitted_lists.completion_fence));
 }

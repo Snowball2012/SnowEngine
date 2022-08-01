@@ -123,6 +123,8 @@ class RHICommandList
 public:
 	virtual ~RHICommandList() {}
 
+	virtual RHI::QueueType GetType() const = 0;
+
 	virtual void* GetNativeCmdList() const = 0;
 };
 
