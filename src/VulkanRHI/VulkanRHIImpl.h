@@ -35,6 +35,13 @@ struct QueueFamilyIndices
 	bool IsComplete() const { return graphics.has_value() && present.has_value(); }
 };
 
+struct VulkanQueue
+{
+	VkQueue vk_handle = VK_NULL_HANDLE;
+	uint64_t submitted_counter = 0;
+	uint64_t completed_counter = 0;
+};
+
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
@@ -61,8 +68,8 @@ private:
 
 	QueueFamilyIndices m_queue_family_indices;
 
-	VkQueue m_graphics_queue = VK_NULL_HANDLE;
-	VkQueue m_present_queue = VK_NULL_HANDLE;
+	VulkanQueue m_graphics_queue;
+	VulkanQueue m_present_queue;
 
 	VulkanSwapChainPtr m_main_swap_chain = nullptr;
 
@@ -84,7 +91,9 @@ public:
 
 	virtual RHICommandList* GetCommandList(QueueType type) override;
 
-	virtual void SubmitCommandLists(const SubmitInfo& info) override;
+	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) override;
+
+	virtual void WaitForFenceCompletion(const RHIFence& fence) override;
 
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
@@ -101,7 +110,7 @@ public:
 	VkImageView CreateImageView(VkImage image, VkFormat format);
 	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
-	VkQueue GetQueue(QueueType type) const;
+	VulkanQueue* GetQueue(QueueType type);
 
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 

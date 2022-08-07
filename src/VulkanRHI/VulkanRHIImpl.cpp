@@ -32,10 +32,14 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
     swapchain_create_info.window_handle = info.main_window_handle;
 
     m_main_swap_chain = CreateSwapChainInternal(swapchain_create_info);
+
+    m_cmd_list_mgr = std::make_unique<VulkanCommandListManager>(this);
 }
 
 VulkanRHI::~VulkanRHI()
 {
+    m_cmd_list_mgr = nullptr;
+
     m_main_swap_chain = nullptr;
 
     vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
@@ -81,7 +85,7 @@ void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
 
     present_info.pResults = nullptr;
 
-    VK_VERIFY(vkQueuePresentKHR(m_present_queue, &present_info));
+    VK_VERIFY(vkQueuePresentKHR(m_present_queue.vk_handle, &present_info));
 }
 
 RHICommandList* VulkanRHI::GetCommandList(QueueType type)
@@ -111,17 +115,17 @@ VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)
     return VkPipelineStageFlagBits(res_raw);
 }
 
-VkQueue VulkanRHI::GetQueue(QueueType type) const
+VulkanQueue* VulkanRHI::GetQueue(QueueType type)
 {
     switch (type)
     {
     case QueueType::Graphics:
-        return m_graphics_queue;
+        return &m_graphics_queue;
     default:
         NOTIMPL;
     }
 
-    return VK_NULL_HANDLE;
+    return nullptr;
 }
 
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
@@ -366,10 +370,10 @@ void VulkanRHI::CreateLogicalDevice()
 
     std::cout << "vkDevice created successfully" << std::endl;
 
-    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.graphics.value(), 0, &m_graphics_queue);
-    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.present.value(), 0, &m_present_queue);
+    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.graphics.value(), 0, &m_graphics_queue.vk_handle);
+    vkGetDeviceQueue(m_vk_device, m_queue_family_indices.present.value(), 0, &m_present_queue.vk_handle);
 
-    if (!m_graphics_queue || !m_present_queue)
+    if (!m_graphics_queue.vk_handle || !m_present_queue.vk_handle)
         throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
 
     std::cout << "Queues created successfully" << std::endl;
@@ -445,8 +449,8 @@ void VulkanRHI::EndSingleTimeCommands(VkCommandBuffer buffer)
     submit_info.pCommandBuffers = &buffer;
 
     VK_VERIFY(vkEndCommandBuffer(buffer));
-    VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_VERIFY(vkQueueWaitIdle(m_graphics_queue));
+    VK_VERIFY(vkQueueSubmit(m_graphics_queue.vk_handle, 1, &submit_info, VK_NULL_HANDLE));
+    VK_VERIFY(vkQueueWaitIdle(m_graphics_queue.vk_handle));
 
     vkFreeCommandBuffers(m_vk_device, m_cmd_pool, 1, &buffer);
 }
@@ -537,6 +541,29 @@ void VulkanRHI::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImag
         0, nullptr,
         0, nullptr,
         1, &barrier);
+}
+
+RHIFence VulkanRHI::SubmitCommandLists(const SubmitInfo& info)
+{
+    VERIFY_NOT_EQUAL(m_cmd_list_mgr, nullptr);
+
+    return m_cmd_list_mgr->SubmitCommandLists(info);
+}
+
+void VulkanRHI::WaitForFenceCompletion(const RHIFence& fence)
+{
+    QueueType queue_type = static_cast<QueueType>(fence._3);
+    VkFence vk_fence = reinterpret_cast<VkFence>(fence._1);
+    uint64_t submitted_counter = fence._2;
+
+    VulkanQueue* queue = GetQueue(queue_type);
+
+    VERIFY_NOT_EQUAL(queue, nullptr);
+
+    if (queue->completed_counter >= submitted_counter)
+        return;
+
+    VK_VERIFY(vkWaitForFences(m_vk_device, 1, &vk_fence, VK_TRUE, std::numeric_limits<uint64_t>::max()));
 }
 
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)

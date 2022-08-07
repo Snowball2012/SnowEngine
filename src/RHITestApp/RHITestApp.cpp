@@ -86,7 +86,6 @@ void RHITestApp::InitRHI()
 
     CreateDescriptorSetLayout();
     CreatePipeline();
-    CreateCommandBuffer();
     CreateSyncObjects();
     CreateTextureImage();
     CreateTextureImageView();
@@ -148,11 +147,6 @@ void RHITestApp::Cleanup()
     vkDestroyImageView(m_vk_device, m_texture_view, nullptr);
     vkDestroyImage(m_vk_device, m_texture_image, nullptr);
     vkFreeMemory(m_vk_device, m_texture_memory, nullptr);
-
-    for (size_t i = 0; i < m_max_frames_in_flight; ++i)
-    {
-        vkDestroyFence(m_vk_device, m_inflight_fences[i], nullptr);
-    }
 
     m_swapchain = nullptr;
     CleanupPipeline();
@@ -912,19 +906,6 @@ void RHITestApp::CreatePipeline()
     VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
 }
 
-void RHITestApp::CreateCommandBuffer()
-{
-    m_cmd_buffers.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
-
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = m_cmd_pool;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = m_max_frames_in_flight;
-
-    VK_VERIFY(vkAllocateCommandBuffers(m_vk_device, &alloc_info, m_cmd_buffers.data()));
-}
-
 void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view)
 {
     VkCommandBufferBeginInfo begin_info = {};
@@ -979,8 +960,8 @@ namespace
 
 void RHITestApp::DrawFrame()
 {
-    VK_VERIFY(vkWaitForFences(m_vk_device, 1, &m_inflight_fences[m_current_frame], VK_TRUE, std::numeric_limits<uint64_t>::max()));
-
+    m_rhi->WaitForFenceCompletion(m_inflight_fences[m_current_frame]);
+    
     if (m_fb_resized)
     {
         RecreateSwapChain();
@@ -994,33 +975,30 @@ void RHITestApp::DrawFrame()
         CreatePipeline();
     }
 
-    VK_VERIFY(vkResetFences(m_vk_device, 1, &m_inflight_fences[m_current_frame]));
+    RHICommandList* cmd_list = m_rhi->GetCommandList(RHI::QueueType::Graphics);
 
-    VK_VERIFY(vkResetCommandBuffer(m_cmd_buffers[m_current_frame], 0));
+    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(cmd_list->GetNativeCmdList());
+
+    VK_VERIFY(vkResetCommandBuffer(buf, 0));
 
     UpdateUniformBuffer(m_current_frame);
 
     VkImage swapchain_image = *static_cast<VkImage*>(m_swapchain->GetNativeImage());
     VkImageView swapchain_image_view = *static_cast<VkImageView*>(m_swapchain->GetNativeImageView());
 
-    RecordCommandBuffer(m_cmd_buffers[m_current_frame], swapchain_image, swapchain_image_view);
+    RecordCommandBuffer(buf, swapchain_image, swapchain_image_view);
 
-    VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    VkSemaphore wait_semaphores[] = { GetVkSemaphore(m_image_available_semaphores[m_current_frame].get()) };
-    VkPipelineStageFlags wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = wait_semaphores;
-    submit_info.pWaitDstStageMask = wait_stages;
+    RHI::SubmitInfo submit_info = {};
+    submit_info.cmd_list_count = 1;
+    submit_info.cmd_lists = &cmd_list;
+    RHISemaphore* wait_semaphores[] = { m_image_available_semaphores[m_current_frame].get() };
+    submit_info.semaphores_to_wait = wait_semaphores;
+    submit_info.wait_semaphore_count = 1;
+    submit_info.semaphore_to_signal = m_render_finished_semaphores[m_current_frame].get();
+    RHI::PipelineStageFlags stages_to_wait[] = { RHI::PipelineStageFlags::ColorAttachmentOutput };
+    submit_info.stages_to_wait = stages_to_wait;
 
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &m_cmd_buffers[m_current_frame];
-
-    VkSemaphore signal_semaphores[] = { GetVkSemaphore(m_render_finished_semaphores[m_current_frame].get()) };
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = signal_semaphores;
-
-    VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, m_inflight_fences[m_current_frame]));
+    m_inflight_fences[m_current_frame] = m_rhi->SubmitCommandLists(submit_info);
 
     RHI::PresentInfo present_info = {};
     present_info.semaphore_count = 1;
@@ -1036,7 +1014,7 @@ void RHITestApp::CreateSyncObjects()
 {
     m_image_available_semaphores.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
     m_render_finished_semaphores.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
-    m_inflight_fences.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
+    m_inflight_fences.resize(m_max_frames_in_flight, {});
 
     VkFenceCreateInfo fence_info = {};
     fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1046,7 +1024,6 @@ void RHITestApp::CreateSyncObjects()
     {
         m_image_available_semaphores[i] = m_rhi->CreateGPUSemaphore();
         m_render_finished_semaphores[i] = m_rhi->CreateGPUSemaphore();
-        VK_VERIFY(vkCreateFence(m_vk_device, &fence_info, nullptr, &m_inflight_fences[i]));
     }
 }
 

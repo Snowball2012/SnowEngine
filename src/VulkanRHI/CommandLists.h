@@ -7,7 +7,7 @@
 class VulkanCommandListManager
 {
 private:
-	VulkanRHI* m_rhi = nullptr;
+	class VulkanRHI* m_rhi = nullptr;
 
 	std::array<packed_freelist<std::unique_ptr<class VulkanCommandList>>, size_t(RHI::QueueType::Count)> m_cmd_lists;
 	std::vector<VkFence> m_free_fences;
@@ -31,10 +31,12 @@ public:
 	~VulkanCommandListManager();
 
 	VulkanCommandList* GetCommandList(RHI::QueueType type);
-	void SubmitCommandLists(const RHI::SubmitInfo& info);
+	RHIFence SubmitCommandLists(const RHI::SubmitInfo& info);
 
 	void ProcessCompleted();
+
 	void WaitSubmittedUntilCompletion();
+
 };
 
 class VulkanCommandList : public RHICommandList
@@ -57,6 +59,8 @@ public:
 	virtual void* GetNativeCmdList() const { return (void*)&m_vk_cmd_buffer; }
 
 	virtual RHI::QueueType GetType() const override;
+
+	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }
 };

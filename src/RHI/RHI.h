@@ -6,6 +6,13 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 
+struct RHIFence
+{
+	uint64_t _1;
+	uint64_t _2;
+	uint64_t _3;
+};
+
 class RHI
 {
 public:
@@ -36,7 +43,6 @@ public:
 	enum class QueueType : uint8_t
 	{
 		Graphics = 0,
-		Compute = 1,
 		Count
 	};
 
@@ -46,7 +52,7 @@ public:
 		AllBits = 0x1,
 	};
 
-	virtual class RHICommandList* GetCommandList(QueueType type) = 0;
+	virtual class RHICommandList* GetCommandList(QueueType type) { return nullptr; };
 
 	// command lists here must belong to the same QueueType
 	struct SubmitInfo
@@ -58,7 +64,9 @@ public:
 		const RHI::PipelineStageFlags* stages_to_wait = nullptr;
 		class RHISemaphore* semaphore_to_signal = nullptr; // optional
 	};
-	virtual void SubmitCommandLists(const SubmitInfo& info) = 0;
+	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) = 0;
+
+	virtual void WaitForFenceCompletion(const RHIFence& fence) = 0;
 };
 
 class RHIObject

@@ -15,6 +15,13 @@ public:
 	virtual void WaitIdle() override
 	{
 	}
+	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) override
+	{
+		return RHIFence{};
+	}
+	virtual void WaitForFenceCompletion(const RHIFence& fence) override
+	{
+	}
 };
 
 D3D12RHI_API RHI* CreateD3D12RHI()

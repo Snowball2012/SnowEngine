@@ -54,6 +54,21 @@ VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)
 VulkanCommandListManager::~VulkanCommandListManager()
 {
     WaitSubmittedUntilCompletion();
+
+    for (const auto& queue_submitted_lists : m_submitted_lists)
+    {
+        assert(queue_submitted_lists.size() == 0);
+    }
+
+    for (auto& queue_cmd_lists : m_cmd_lists)
+    {
+        queue_cmd_lists.clear();
+    }
+
+    for (VkFence fence : m_free_fences)
+    {
+        vkDestroyFence(m_rhi->GetDevice(), fence, nullptr);
+    }
 }
 
 VulkanCommandList* VulkanCommandListManager::GetCommandList(RHI::QueueType type)
@@ -76,10 +91,10 @@ VulkanCommandList* VulkanCommandListManager::GetCommandList(RHI::QueueType type)
     return new_list;
 }
 
-void VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info)
+RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info)
 {
     if (info.cmd_list_count == 0)
-        return;
+        return RHIFence{};
 
     // Not necessary, but we have to do this somewhere at regular intervals. Why not here?
     ProcessCompleted();
@@ -129,12 +144,75 @@ void VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info)
     else
     {
         VkFenceCreateInfo fence_create_info = {};
+        fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         VK_VERIFY(vkCreateFence(m_rhi->GetDevice(), &fence_create_info, nullptr, &submitted_lists.completion_fence));
     }
     submitted_lists.lists.reserve(info.cmd_list_count);
-    submitted_lists.lists.insert(submitted_lists.lists.end(), info.cmd_lists, info.cmd_lists + info.cmd_list_count);
+    for (size_t i = 0; i < info.cmd_list_count; ++i)
+        submitted_lists.lists.emplace_back(static_cast<VulkanCommandList*>(*(info.cmd_lists + i)));
 
-    VkQueue vk_queue = m_rhi->GetQueue(info.cmd_lists[0]->GetType());
+    VulkanQueue* vk_queue = m_rhi->GetQueue(info.cmd_lists[0]->GetType());
 
-    VK_VERIFY(vkQueueSubmit(vk_queue, 1, &submit_info, submitted_lists.completion_fence));
+    VERIFY_NOT_EQUAL(vk_queue, nullptr);
+
+    VK_VERIFY(vkQueueSubmit(vk_queue->vk_handle, 1, &submit_info, submitted_lists.completion_fence));
+    vk_queue->submitted_counter++;
+
+    return RHIFence{
+        reinterpret_cast<uint64_t>(submitted_lists.completion_fence),
+        vk_queue->submitted_counter,
+        static_cast<uint64_t>(info.cmd_lists[0]->GetType()),
+    };
+}
+
+void VulkanCommandListManager::ProcessCompleted()
+{
+    boost::container::small_vector<VkFence, 8> fences_to_reset;
+    for (size_t queue_i = 0; queue_i < m_submitted_lists.size(); ++queue_i)
+    {
+        auto& submitted_lists = m_submitted_lists[queue_i];
+        auto& free_lists = m_free_lists[queue_i];
+        VulkanQueue* vk_queue = m_rhi->GetQueue(RHI::QueueType(queue_i));
+        VERIFY_NOT_EQUAL(vk_queue, nullptr);
+
+        while(!submitted_lists.empty())
+        {
+            auto& submitted_info = submitted_lists.front();
+            VkResult fence_status = vkGetFenceStatus(m_rhi->GetDevice(), submitted_info.completion_fence);
+            VERIFY_EQUALS(fence_status == VK_SUCCESS || fence_status == VK_NOT_READY, true);
+            const bool fence_completed = fence_status == VK_SUCCESS;
+            if (!fence_completed)
+                break;
+
+            vk_queue->completed_counter++;
+
+            for (VulkanCommandList* list : submitted_info.lists)
+                free_lists.emplace_back(list->GetListId());
+
+            fences_to_reset.push_back(submitted_info.completion_fence);
+
+            m_free_fences.push_back(submitted_info.completion_fence);
+
+            submitted_lists.pop();
+        }
+    }
+
+    if (!fences_to_reset.empty())
+        vkResetFences(m_rhi->GetDevice(), uint32_t(fences_to_reset.size()), fences_to_reset.data());
+}
+
+void VulkanCommandListManager::WaitSubmittedUntilCompletion()
+{
+    boost::container::static_vector<VkFence, size_t(RHI::QueueType::Count)> fences_to_wait;
+    for (size_t queue_i = 0; queue_i < m_submitted_lists.size(); ++queue_i)
+    {
+        auto& submitted_lists = m_submitted_lists[queue_i];
+
+        if (!submitted_lists.empty())
+            fences_to_wait.push_back(submitted_lists.back().completion_fence);
+            
+    }
+    VK_VERIFY(vkWaitForFences(m_rhi->GetDevice(), uint32_t(fences_to_wait.size()), fences_to_wait.data(), VK_TRUE, std::numeric_limits<uint64_t>::max()));
+
+    ProcessCompleted();
 }

@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
     <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Swapchain.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Validation.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>

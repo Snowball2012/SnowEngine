@@ -54,12 +54,11 @@ private:
 
 	// commands
 	VkCommandPool m_cmd_pool = VK_NULL_HANDLE;
-	std::vector<VkCommandBuffer> m_cmd_buffers;
 
 	// synchronization
 	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;
 	std::vector<RHIObjectPtr<RHISemaphore>> m_render_finished_semaphores;
-	std::vector<VkFence> m_inflight_fences;
+	std::vector<RHIFence> m_inflight_fences;
 	uint32_t m_current_frame = 0;
 
 	// resources
@@ -101,15 +100,7 @@ private:
 
 	std::vector<const char*> GetSDLExtensions() const;
 
-	SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
-
-	VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const;
-	VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& present_modes) const;
-	VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
-
 	void CreatePipeline();
-
-	void CreateCommandBuffer();
 
 	void RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view);
 
