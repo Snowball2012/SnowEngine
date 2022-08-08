@@ -133,6 +133,9 @@ public:
 
 	virtual RHI::QueueType GetType() const = 0;
 
+	virtual void Begin() = 0;
+	virtual void End() = 0;
+
 	virtual void* GetNativeCmdList() const = 0;
 };
 

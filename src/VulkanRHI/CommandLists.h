@@ -60,6 +60,9 @@ public:
 
 	virtual RHI::QueueType GetType() const override;
 
+	virtual void Begin() override;
+	virtual void End() override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }

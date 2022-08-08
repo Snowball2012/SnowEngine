@@ -42,7 +42,6 @@ private:
 	// device
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 	VkDevice m_vk_device = VK_NULL_HANDLE;
-	VkQueue m_graphics_queue = VK_NULL_HANDLE;
 
 	// surface
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
@@ -51,9 +50,6 @@ private:
 	VkDescriptorSetLayout m_descriptor_layout = VK_NULL_HANDLE;
 	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
 	VkPipeline m_graphics_pipeline = VK_NULL_HANDLE;
-
-	// commands
-	VkCommandPool m_cmd_pool = VK_NULL_HANDLE;
 
 	// synchronization
 	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;
@@ -139,8 +135,8 @@ private:
 		uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
 		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_mem);
 
-	VkCommandBuffer BeginSingleTimeCommands();
-	void EndSingleTimeCommands(VkCommandBuffer buf);
+	RHICommandList* BeginSingleTimeCommands();
+	void EndSingleTimeCommands(RHICommandList& buf);
 
 	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);

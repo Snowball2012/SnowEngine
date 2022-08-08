@@ -81,8 +81,6 @@ void RHITestApp::InitRHI()
     m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
 
     m_vk_device = *static_cast<VkDevice*>(m_rhi->GetNativeDevice());
-    m_graphics_queue = *static_cast<VkQueue*>(m_rhi->GetNativeGraphicsQueue());
-    m_cmd_pool = *static_cast<VkCommandPool*>(m_rhi->GetNativeCommandPool());
 
     CreateDescriptorSetLayout();
     CreatePipeline();
@@ -122,7 +120,7 @@ void RHITestApp::MainLoop()
         }
         DrawFrame();
     }
-    VK_VERIFY(vkDeviceWaitIdle(m_vk_device));
+    m_rhi->WaitIdle();
 }
 
 void RHITestApp::Cleanup()
@@ -190,7 +188,8 @@ void RHITestApp::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMem
 
 void RHITestApp::CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
 {
-    VkCommandBuffer cmd_buf = BeginSingleTimeCommands();
+    RHICommandList* list = BeginSingleTimeCommands();
+    VkCommandBuffer cmd_buf = *static_cast<VkCommandBuffer*>(list->GetNativeCmdList());;
 
     VkBufferCopy copy_region = {};
     copy_region.srcOffset = 0;
@@ -199,7 +198,7 @@ void RHITestApp::CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
 
     vkCmdCopyBuffer(cmd_buf, src, dst, 1, &copy_region);
 
-    EndSingleTimeCommands(cmd_buf);
+    EndSingleTimeCommands(*list);
 }
 
 void RHITestApp::CreateIndexBuffer()
@@ -295,7 +294,8 @@ void RHITestApp::UpdateUniformBuffer(uint32_t current_image)
 
 void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height)
 {
-    VkCommandBuffer cmd_buf = BeginSingleTimeCommands();
+    RHICommandList* list = BeginSingleTimeCommands();
+    VkCommandBuffer cmd_buf = *static_cast<VkCommandBuffer*>(list->GetNativeCmdList());;
 
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
@@ -313,7 +313,7 @@ void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, 
     vkCmdCopyBufferToImage(
         cmd_buf, src, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    EndSingleTimeCommands(cmd_buf);
+    EndSingleTimeCommands(*list);
 }
 
 void RHITestApp::CreateDescriptorPool()
@@ -469,47 +469,39 @@ void RHITestApp::CreateImage(uint32_t width, uint32_t height, VkFormat format, V
     VK_VERIFY(vkBindImageMemory(m_vk_device, image, image_mem, 0));
 }
 
-VkCommandBuffer RHITestApp::BeginSingleTimeCommands()
+RHICommandList* RHITestApp::BeginSingleTimeCommands()
 {
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandPool = m_cmd_pool;
-    alloc_info.commandBufferCount = 1;
+    RHICommandList* list = m_rhi->GetCommandList(RHI::QueueType::Graphics);
 
-    VkCommandBuffer buf;
-    VK_VERIFY(vkAllocateCommandBuffers(m_vk_device, &alloc_info, &buf));
+    list->Begin();
 
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    VK_VERIFY(vkBeginCommandBuffer(buf, &begin_info));
-
-    return buf;
+    return list;
 }
 
-void RHITestApp::EndSingleTimeCommands(VkCommandBuffer buffer)
+void RHITestApp::EndSingleTimeCommands(RHICommandList& list)
 {
-    VkSubmitInfo submit_info = {};
-    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &buffer;
+    list.End();
 
-    VK_VERIFY(vkEndCommandBuffer(buffer));
-    VK_VERIFY(vkQueueSubmit(m_graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
-    VK_VERIFY(vkQueueWaitIdle(m_graphics_queue));
+    RHI::SubmitInfo submit_info = {};
+    submit_info.wait_semaphore_count = 0;
+    submit_info.cmd_list_count = 1;
+    RHICommandList* lists[] = { &list };
+    submit_info.cmd_lists = lists;
 
-    vkFreeCommandBuffers(m_vk_device, m_cmd_pool, 1, &buffer);
+    RHIFence completion_fence = m_rhi->SubmitCommandLists(submit_info);
+
+    m_rhi->WaitForFenceCompletion(completion_fence);
 }
 
 void RHITestApp::TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
 {
-    VkCommandBuffer cmd_buf = BeginSingleTimeCommands();
+    RHICommandList* cmd_list = BeginSingleTimeCommands();
 
-    TransitionImageLayout(cmd_buf, image, old_layout, new_layout);
+    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(cmd_list->GetNativeCmdList());
 
-    EndSingleTimeCommands(cmd_buf);
+    TransitionImageLayout(buf, image, old_layout, new_layout);
+
+    EndSingleTimeCommands(*cmd_list);
 }
 
 void RHITestApp::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
@@ -1015,10 +1007,6 @@ void RHITestApp::CreateSyncObjects()
     m_image_available_semaphores.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
     m_render_finished_semaphores.resize(m_max_frames_in_flight, VK_NULL_HANDLE);
     m_inflight_fences.resize(m_max_frames_in_flight, {});
-
-    VkFenceCreateInfo fence_info = {};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {

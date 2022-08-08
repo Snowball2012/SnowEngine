@@ -46,6 +46,19 @@ RHI::QueueType VulkanCommandList::GetType() const
     return m_type;
 }
 
+void VulkanCommandList::Begin()
+{
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+    VK_VERIFY(vkBeginCommandBuffer(m_vk_cmd_buffer, &begin_info));
+}
+
+void VulkanCommandList::End()
+{
+    VK_VERIFY(vkEndCommandBuffer(m_vk_cmd_buffer));
+}
+
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)
     : m_rhi(rhi)
 {
