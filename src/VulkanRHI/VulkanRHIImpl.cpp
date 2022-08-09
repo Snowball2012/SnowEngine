@@ -6,6 +6,8 @@
 
 #include "CommandLists.h"
 
+#include "Shader.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -93,6 +95,21 @@ RHICommandList* VulkanRHI::GetCommandList(QueueType type)
     VERIFY_NOT_EQUAL(m_cmd_list_mgr, nullptr);
 
     return m_cmd_list_mgr->GetCommandList(type);
+}
+
+RHIShader* VulkanRHI::CreateShader(const ShaderCreateInfo& create_info)
+{
+    std::wstring filename = create_info.filename;
+    std::string entry_point = create_info.entry_point;
+    std::vector<::ShaderDefine> defines;
+    defines.resize(create_info.define_count);
+    for (size_t i = 0; i < defines.size(); ++i)
+    {
+        defines[i].name = create_info.defines[i].name;
+        defines[i].value = create_info.defines[i].value;
+    }
+    RHIShader* new_shader = new Shader(filename, create_info.frequency, entry_point, defines, nullptr);
+    return new_shader;
 }
 
 VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)

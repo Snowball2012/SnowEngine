@@ -47,3 +47,22 @@ if ((x) == (FailValue)) \
 
 #define NOTIMPL INSERT_DBGBREAK \
 	throw std::runtime_error(__FUNCTION__ " is not implemented!");
+
+#include <wrl.h>
+
+template<typename T>
+using ComPtr = Microsoft::WRL::ComPtr<T>;
+
+#ifdef NDEBUG
+#define SE_ENSURE( expr ) \
+		(!!(expr))	
+#else
+#define SE_ENSURE( expr ) \
+		((!!(expr)) || \
+		(_wassert(_CRT_WIDE(#expr), _CRT_WIDE(__FILE__), (unsigned)(__LINE__)), 0))
+#endif
+
+#define SE_ENSURE_HRES( expr )\
+		SE_ENSURE( SUCCEEDED(( expr )) )
+
+#include <dxcapi.h>

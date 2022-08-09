@@ -1,48 +1,42 @@
 #pragma once
 
-#include "stdafx.h"
+#include "StdAfx.h"
 
-#include "span.h"
-
-#include <dxcapi.h>
-
-enum class ShaderFrequency : uint8_t
-{
-    Vertex = 0,
-    Pixel,
-    Compute,
-    Raytracing,
-    Count
-};
+#include <RHI/RHI.h>
 
 struct ShaderDefine
 {
-    std::wstring name;
-    std::wstring value;
+    std::string name;
+    std::string value;
 };
 
-class Shader
+class Shader : public RHIShader
 {
 private:
-    ComPtr<IDxcBlob> m_bytecode_blob = nullptr;
+    ComPtr<struct IDxcBlob> m_bytecode_blob = nullptr;
 
     std::wstring m_filename;
-    std::wstring m_entrypoint;
-    ShaderFrequency m_frequency;
+    std::string m_entrypoint;
+    RHI::ShaderFrequency m_frequency;
     std::vector<ShaderDefine> m_defines;
 
 public:
 
-    Shader(std::wstring filename, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode);
-    Shader(const class ShaderSourceFile& source, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines = std::vector<ShaderDefine>());
+    Shader(std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<struct IDxcBlob> bytecode);
+    Shader(const class ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines = std::vector<ShaderDefine>());
 
-    IDxcBlob* GetNativeBytecode() const { return m_bytecode_blob.Get(); }
+    virtual void* GetNativeBytecode() const override { return m_bytecode_blob.Get(); }
+
+    // Inherited via RHIShader
+    virtual void AddRef() override;
+    virtual void Release() override;
 
     const wchar_t* GetFileName() const { return m_filename.c_str(); }
-    const wchar_t* GetEntryPoint() const { return m_entrypoint.c_str(); }
+    const char* GetEntryPoint() const { return m_entrypoint.c_str(); }
 
 private:
     void Compile(const ShaderSourceFile* source);
+
 };
 
 class ShaderSourceFile
@@ -71,7 +65,7 @@ public:
     static ShaderCompiler* Get();
 
     std::unique_ptr<ShaderSourceFile> LoadSourceFile(std::wstring filename);
-    ComPtr<IDxcBlob> CompileFromSource(const ShaderSourceFile& source, ShaderFrequency frequency, const std::wstring& entry_point, const span<const ShaderDefine>& defines);
+    ComPtr<IDxcBlob> CompileFromSource(const ShaderSourceFile& source, RHI::ShaderFrequency frequency, const std::string& entry_point, const span<const ShaderDefine>& defines);
 
 private:
     ShaderCompiler();

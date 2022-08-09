@@ -95,6 +95,8 @@ public:
 
 	virtual void WaitForFenceCompletion(const RHIFence& fence) override;
 
+	virtual RHIShader* CreateShader(const ShaderCreateInfo& create_info) override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }

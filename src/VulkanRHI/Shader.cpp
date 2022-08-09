@@ -1,10 +1,10 @@
-#include "stdafx.h"
+#include "StdAfx.h"
 
 #include "Shader.h"
 
-#include "span.h"
+#include <dxcapi.h>
 
-Shader::Shader(std::wstring filename, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
+Shader::Shader(std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_bytecode_blob(std::move(bytecode))
     , m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
     , m_frequency(frequency)
@@ -16,7 +16,7 @@ Shader::Shader(std::wstring filename, ShaderFrequency frequency, std::wstring en
     }
 }
 
-Shader::Shader(const ShaderSourceFile& source, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines)
+Shader::Shader(const ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines)
     : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point)), m_frequency(frequency), m_defines(std::move(defines))
 {
     Compile(&source);
@@ -47,6 +47,14 @@ void Shader::Compile(const ShaderSourceFile* source)
         throw std::runtime_error("shader compilation failed");
 }
 
+void Shader::AddRef()
+{
+}
+
+void Shader::Release()
+{
+}
+
 ShaderSourceFile::ShaderSourceFile(std::wstring filename, ComPtr<IDxcBlobEncoding> blob)
     : m_filename(std::move(filename)), m_blob(std::move(blob))
 {
@@ -74,13 +82,29 @@ std::unique_ptr<ShaderSourceFile> ShaderCompiler::LoadSourceFile(std::wstring fi
     return std::make_unique<ShaderSourceFile>(std::move(filename), std::move(shader_text));
 }
 
+namespace
+{
+    std::wstring WstringFromChar(const char* str)
+    {
+        // inefficient
+        std::wstring retval(size_t(strlen(str)), '\0');
+        wchar_t* dst = retval.data();
+        while (char c = *str++)
+        {
+            *dst++ = wchar_t(c);
+        }
+
+        return retval;
+    }
+}
+
 ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& source,
-    ShaderFrequency frequency, const std::wstring& entry_point, const span<const ShaderDefine>& defines)
+    RHI::ShaderFrequency frequency, const std::string& entry_point, const span<const ShaderDefine>& defines)
 {
     if (!SE_ENSURE(m_dxc_compiler))
         return nullptr;
 
-    LPCWSTR profiles[uint32_t(ShaderFrequency::Count)] =
+    LPCWSTR profiles[uint32_t(RHI::ShaderFrequency::Count)] =
     {
         L"vs_6_1",
         L"ps_6_1",
@@ -90,20 +114,26 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
 
     std::vector<DxcDefine> dxc_defines;
     dxc_defines.reserve(defines.size());
+
+    std::vector<std::wstring> temp_wstrings;
     for (const auto& define : defines)
     {
         auto& dxc_define = dxc_defines.emplace_back();
-        dxc_define.Name = define.name.c_str();
-        dxc_define.Value = define.value.empty() ? nullptr : define.value.c_str();
+        temp_wstrings.emplace_back(WstringFromChar(define.name.c_str()));
+        dxc_define.Name = temp_wstrings.back().c_str();
+        temp_wstrings.emplace_back(WstringFromChar(define.value.c_str()));
+        dxc_define.Value = temp_wstrings.back().empty() ? nullptr : temp_wstrings.back().c_str();
     }
 
     // generate spirv
     std::vector<LPCWSTR> args = { L"-spirv" };
 
+    std::wstring entry_point_wstr = WstringFromChar(entry_point.c_str());
+
     ComPtr<IDxcOperationResult> result = nullptr;
     if (!SE_ENSURE_HRES(m_dxc_compiler->Compile(
         source.GetNativeBlob(),
-        source.GetFilename(), entry_point.c_str(),
+        source.GetFilename(), entry_point_wstr.c_str(),
         profiles[uint8_t(frequency)], args.data(), uint32_t(args.size()), dxc_defines.data(), uint32_t(dxc_defines.size()),
         m_dxc_include_header.Get(),
         result.GetAddressOf())))

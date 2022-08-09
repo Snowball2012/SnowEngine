@@ -2,8 +2,6 @@
 
 #include "RHITestApp.h"
 
-#include "Shader.h"
-
 #include <VulkanRHI/VulkanRHI.h>
 #include <D3D12RHI/D3D12RHI.h>
 
@@ -747,27 +745,23 @@ namespace
 
 void RHITestApp::CreatePipeline()
 {
-    auto* compiler = ShaderCompiler::Get();
-    if (!SE_ENSURE(compiler))
-        throw std::runtime_error("failed to get shader compiler");
+    RHI::ShaderCreateInfo create_info = {};
+    create_info.filename = L"shaders/helloworld.hlsl";
 
-    auto shader_src = compiler->LoadSourceFile(L"shaders/helloworld.hlsl");
-    VERIFY_NOT_EQUAL(shader_src, nullptr);
+    create_info.frequency = RHI::ShaderFrequency::Vertex;
+    create_info.entry_point = "TriangleVS";
+    RHIShader* triangle_shader_vs = m_rhi->CreateShader(create_info);
 
-    Shader triangle_shader_vs(
-        *shader_src, ShaderFrequency::Vertex, L"TriangleVS");
-    Shader triangle_shader_ps(
-        *shader_src, ShaderFrequency::Pixel, L"TrianglePS");
+    create_info.frequency = RHI::ShaderFrequency::Pixel;
+    create_info.entry_point = "TrianglePS";
+    RHIShader* triangle_shader_ps = m_rhi->CreateShader(create_info);
 
-    auto vs_entrypoint = StringFromWchar(triangle_shader_vs.GetEntryPoint());
-    auto ps_entrypoint = StringFromWchar(triangle_shader_ps.GetEntryPoint());
-
-    IDxcBlob* result = triangle_shader_vs.GetNativeBytecode();
+    IDxcBlob* result = static_cast<IDxcBlob*>(triangle_shader_vs->GetNativeBytecode());
     VERIFY_NOT_EQUAL(result, nullptr);
 
     VkShaderModuleRAII vert_sm(*result, m_vk_device);
 
-    result = triangle_shader_ps.GetNativeBytecode();
+    result = static_cast<IDxcBlob*>(triangle_shader_ps->GetNativeBytecode());
     VERIFY_NOT_EQUAL(result, nullptr);
 
     VkShaderModuleRAII pix_sm(*result, m_vk_device);
@@ -776,13 +770,13 @@ void RHITestApp::CreatePipeline()
     vs_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vs_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vs_stage_info.module = vert_sm.sm;
-    vs_stage_info.pName = vs_entrypoint.c_str();
+    vs_stage_info.pName = triangle_shader_vs->GetEntryPoint();
 
     VkPipelineShaderStageCreateInfo ps_stage_info = {};
     ps_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ps_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     ps_stage_info.module = pix_sm.sm;
-    ps_stage_info.pName = ps_entrypoint.c_str();
+    ps_stage_info.pName = triangle_shader_ps->GetEntryPoint();
 
     VkPipelineShaderStageCreateInfo stages[] = { vs_stage_info, ps_stage_info };
 

@@ -67,6 +67,39 @@ public:
 	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) = 0;
 
 	virtual void WaitForFenceCompletion(const RHIFence& fence) = 0;
+
+	enum class ShaderFrequency : uint8_t
+	{
+		Vertex = 0,
+		Pixel,
+		Compute,
+		Raytracing,
+		Count
+	};
+
+	struct ShaderDefine
+	{
+		const char* name = nullptr;
+		const char* value = nullptr;
+	};
+	struct ShaderCreateInfo
+	{
+		const wchar_t* filename = nullptr;
+		ShaderFrequency frequency = ShaderFrequency::Vertex;
+		const char* entry_point = nullptr;
+		const ShaderDefine* defines = nullptr;
+		size_t define_count = 0;
+	};
+	// Shader stuff
+	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
+
+
+	struct GraphicsPSOCreateInfo
+	{
+		RHIShader* vs = nullptr;
+		RHIShader* ps = nullptr;
+	};
+	virtual class RHIPSO* CreatePSO(const GraphicsPSOCreateInfo& pso_info) { return nullptr; }
 };
 
 class RHIObject
@@ -137,6 +170,17 @@ public:
 	virtual void End() = 0;
 
 	virtual void* GetNativeCmdList() const = 0;
+};
+
+class RHIShader : public RHIObject
+{
+public:
+	virtual ~RHIShader() {}
+
+	// temp
+	virtual void* GetNativeBytecode() const = 0;
+
+	virtual const char* GetEntryPoint() const { return nullptr; }
 };
 
 template<typename T>
