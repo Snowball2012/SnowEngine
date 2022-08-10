@@ -706,29 +706,6 @@ std::vector<const char*> RHITestApp::GetSDLExtensions() const
 
 namespace
 {
-    struct VkShaderModuleRAII
-    {
-        VkShaderModule sm = VK_NULL_HANDLE;
-        VkDevice device = VK_NULL_HANDLE;
-
-        VkShaderModuleRAII(IDxcBlob& blob, VkDevice in_device)
-            : device(in_device)
-        {
-            VkShaderModuleCreateInfo create_info = {};
-            create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-            create_info.codeSize = blob.GetBufferSize();
-            create_info.pCode = reinterpret_cast<const uint32_t*>(blob.GetBufferPointer());
-
-            VK_VERIFY(vkCreateShaderModule(device, &create_info, nullptr, &sm));
-        }
-
-        ~VkShaderModuleRAII()
-        {
-            if (sm != VK_NULL_HANDLE)
-                vkDestroyShaderModule(device, sm, nullptr);
-        }
-    };
-
     std::string StringFromWchar(const wchar_t* wstr)
     {
         // inefficient
@@ -756,27 +733,9 @@ void RHITestApp::CreatePipeline()
     create_info.entry_point = "TrianglePS";
     RHIShader* triangle_shader_ps = m_rhi->CreateShader(create_info);
 
-    IDxcBlob* result = static_cast<IDxcBlob*>(triangle_shader_vs->GetNativeBytecode());
-    VERIFY_NOT_EQUAL(result, nullptr);
+    VkPipelineShaderStageCreateInfo vs_stage_info = *static_cast<const VkPipelineShaderStageCreateInfo*>(triangle_shader_vs->GetNativeData());
 
-    VkShaderModuleRAII vert_sm(*result, m_vk_device);
-
-    result = static_cast<IDxcBlob*>(triangle_shader_ps->GetNativeBytecode());
-    VERIFY_NOT_EQUAL(result, nullptr);
-
-    VkShaderModuleRAII pix_sm(*result, m_vk_device);
-
-    VkPipelineShaderStageCreateInfo vs_stage_info = {};
-    vs_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    vs_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vs_stage_info.module = vert_sm.sm;
-    vs_stage_info.pName = triangle_shader_vs->GetEntryPoint();
-
-    VkPipelineShaderStageCreateInfo ps_stage_info = {};
-    ps_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ps_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    ps_stage_info.module = pix_sm.sm;
-    ps_stage_info.pName = triangle_shader_ps->GetEntryPoint();
+    VkPipelineShaderStageCreateInfo ps_stage_info = *static_cast<const VkPipelineShaderStageCreateInfo*>(triangle_shader_ps->GetNativeData());;
 
     VkPipelineShaderStageCreateInfo stages[] = { vs_stage_info, ps_stage_info };
 

@@ -108,7 +108,7 @@ RHIShader* VulkanRHI::CreateShader(const ShaderCreateInfo& create_info)
         defines[i].name = create_info.defines[i].name;
         defines[i].value = create_info.defines[i].value;
     }
-    RHIShader* new_shader = new Shader(filename, create_info.frequency, entry_point, defines, nullptr);
+    RHIShader* new_shader = new Shader(this, filename, create_info.frequency, entry_point, defines, nullptr);
     return new_shader;
 }
 

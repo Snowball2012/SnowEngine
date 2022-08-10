@@ -4,22 +4,33 @@
 
 #include <dxcapi.h>
 
-Shader::Shader(std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
+#include "VulkanRHIImpl.h"
+
+Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_bytecode_blob(std::move(bytecode))
     , m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
     , m_frequency(frequency)
     , m_defines(std::move(defines))
+    , m_rhi(rhi)
 {
     if (!bytecode)
     {
         Compile(nullptr);
     }
+    CreateVkStage();
 }
 
-Shader::Shader(const ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines)
-    : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point)), m_frequency(frequency), m_defines(std::move(defines))
+Shader::Shader(VulkanRHI* rhi, const ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines)
+    : m_filename(source.GetFilename()), m_entrypoint(std::move(entry_point)), m_frequency(frequency), m_defines(std::move(defines)), m_rhi(rhi)
 {
     Compile(&source);
+    CreateVkStage();
+}
+
+Shader::~Shader()
+{
+    if (m_vk_stage.module != VK_NULL_HANDLE)
+        vkDestroyShaderModule(m_rhi->GetDevice(), m_vk_stage.module, nullptr);
 }
 
 std::unique_ptr<ShaderCompiler> ShaderCompiler::m_shared_instance(nullptr);
@@ -45,6 +56,43 @@ void Shader::Compile(const ShaderSourceFile* source)
 
     if (!m_bytecode_blob)
         throw std::runtime_error("shader compilation failed");
+}
+
+namespace
+{
+    VkShaderStageFlagBits FrequencyToVkStage(RHI::ShaderFrequency frequency)
+    {
+        VkShaderStageFlagBits retval = {};
+
+        switch (frequency)
+        {
+        case RHI::ShaderFrequency::Vertex:
+            retval = VK_SHADER_STAGE_VERTEX_BIT;
+            break;
+        case RHI::ShaderFrequency::Pixel:
+            retval = VK_SHADER_STAGE_FRAGMENT_BIT;
+            break;
+        default:
+            NOTIMPL;
+            break;
+        }
+
+        return retval;
+    }
+}
+
+void Shader::CreateVkStage()
+{
+    VkShaderModuleCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = m_bytecode_blob->GetBufferSize();
+    create_info.pCode = reinterpret_cast<const uint32_t*>(m_bytecode_blob->GetBufferPointer());
+
+    VK_VERIFY(vkCreateShaderModule(m_rhi->GetDevice(), &create_info, nullptr, &m_vk_stage.module));
+
+    m_vk_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    m_vk_stage.stage = FrequencyToVkStage(m_frequency);
+    m_vk_stage.pName = GetEntryPoint();
 }
 
 void Shader::AddRef()

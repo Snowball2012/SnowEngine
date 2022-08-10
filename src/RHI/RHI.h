@@ -178,7 +178,7 @@ public:
 	virtual ~RHIShader() {}
 
 	// temp
-	virtual void* GetNativeBytecode() const = 0;
+	virtual const void* GetNativeData() const = 0;
 
 	virtual const char* GetEntryPoint() const { return nullptr; }
 };

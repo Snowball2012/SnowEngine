@@ -20,12 +20,18 @@ private:
     RHI::ShaderFrequency m_frequency;
     std::vector<ShaderDefine> m_defines;
 
+    VkPipelineShaderStageCreateInfo m_vk_stage = {};
+
+    class VulkanRHI* m_rhi = nullptr;
+
 public:
 
-    Shader(std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<struct IDxcBlob> bytecode);
-    Shader(const class ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines = std::vector<ShaderDefine>());
+    Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<struct IDxcBlob> bytecode);
+    Shader(VulkanRHI* rhi, const class ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines = std::vector<ShaderDefine>());
 
-    virtual void* GetNativeBytecode() const override { return m_bytecode_blob.Get(); }
+    virtual ~Shader();
+
+    virtual const void* GetNativeData() const override { return (void*)&(GetVkStageInfo()); }
 
     // Inherited via RHIShader
     virtual void AddRef() override;
@@ -34,8 +40,11 @@ public:
     const wchar_t* GetFileName() const { return m_filename.c_str(); }
     const char* GetEntryPoint() const { return m_entrypoint.c_str(); }
 
+    const VkPipelineShaderStageCreateInfo& GetVkStageInfo() const { return m_vk_stage; }
+
 private:
     void Compile(const ShaderSourceFile* source);
+    void CreateVkStage();
 
 };
 
