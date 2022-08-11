@@ -118,6 +118,7 @@ inline void ForwardPassNode<Framegraph>::Run( Framegraph& framegraph, IGraphicsC
     cmd_list.ClearRenderTargetView( ctx.back_buffer_rtv, bgr_color, 0, nullptr );
     cmd_list.ClearRenderTargetView( ctx.ambient_rtv, bgr_color, 0, nullptr );
     cmd_list.ClearRenderTargetView( ctx.normals_rtv, bgr_color, 0, nullptr );
+    cmd_list.ClearRenderTargetView( ctx.motionvectors_rtv, bgr_color, 0, nullptr );
 
     cmd_list.RSSetViewports( 1, &view->viewport );
     cmd_list.RSSetScissorRects( 1, &view->scissor_rect );
