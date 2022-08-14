@@ -8,6 +8,8 @@
 
 #include "Shader.h"
 
+#include "PSO.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -63,6 +65,69 @@ RHISemaphore* VulkanRHI::CreateGPUSemaphore()
     return new_semaphore;
 }
 
+VkFormat VulkanRHI::GetVkFormat(RHIFormat format)
+{
+    VkFormat vk_format = VK_FORMAT_UNDEFINED;
+
+    switch (format)
+    {
+    case RHIFormat::Undefined:
+        vk_format = VK_FORMAT_UNDEFINED;
+        break;
+    case RHIFormat::R32G32B32_SFLOAT:
+        vk_format = VK_FORMAT_R32G32B32_SFLOAT;
+        break;
+    case RHIFormat::R32G32_SFLOAT:
+        vk_format = VK_FORMAT_R32G32_SFLOAT;
+        break;
+    default:
+        NOTIMPL;
+    }
+
+    return vk_format;
+}
+
+uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
+{
+    uint32_t size = 0;
+
+    switch (format)
+    {
+    case RHIFormat::Undefined:
+        size = 0;
+        break;
+    case RHIFormat::R32G32B32_SFLOAT:
+        size = 12;
+        break;
+    case RHIFormat::R32G32_SFLOAT:
+        size = 8;
+        break;
+    default:
+        NOTIMPL;
+    }
+
+    return size;
+}
+
+VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequency)
+{
+    VkVertexInputRate vk_inputrate = VK_VERTEX_INPUT_RATE_MAX_ENUM;
+
+    switch (frequency)
+    {
+    case RHIPrimitiveFrequency::PerVertex:
+        vk_inputrate = VK_VERTEX_INPUT_RATE_VERTEX;
+        break;
+    case RHIPrimitiveFrequency::PerInstance:
+        vk_inputrate = VK_VERTEX_INPUT_RATE_INSTANCE;
+        break;
+    default:
+        NOTIMPL;
+    }
+
+    return vk_inputrate;
+}
+
 void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
 {
     boost::container::small_vector<VkSemaphore, 4> semaphores;
@@ -110,6 +175,11 @@ RHIShader* VulkanRHI::CreateShader(const ShaderCreateInfo& create_info)
     }
     RHIShader* new_shader = new Shader(this, filename, create_info.frequency, entry_point, defines, nullptr);
     return new_shader;
+}
+
+RHIGraphicsPipeline* VulkanRHI::CreatePSO(const RHIGraphicsPipelineInfo& pso_info)
+{
+    return new VulkanGraphicsPSO(this, pso_info);
 }
 
 VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)

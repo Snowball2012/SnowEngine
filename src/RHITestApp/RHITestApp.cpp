@@ -739,20 +739,34 @@ void RHITestApp::CreatePipeline()
 
     VkPipelineShaderStageCreateInfo stages[] = { vs_stage_info, ps_stage_info };
 
-    VkPipelineVertexInputStateCreateInfo vertex_input_info = {};
-    auto binding_desc = Vertex::GetBindingDescription();
-    std::array<VkVertexInputAttributeDescription, 3> attribute_desc = Vertex::GetAttributeDescriptions();
+    auto vb_attributes = Vertex::GetRHIAttributes();
 
-    vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_input_info.vertexBindingDescriptionCount = 1;
-    vertex_input_info.pVertexBindingDescriptions = &binding_desc;
-    vertex_input_info.vertexAttributeDescriptionCount = uint32_t(attribute_desc.size());
-    vertex_input_info.pVertexAttributeDescriptions = attribute_desc.data();
+    RHIPrimitiveBufferLayout vb_layout = {};
+    vb_layout.attributes = vb_attributes.data();
+    vb_layout.attributes_count = vb_attributes.size();
+    vb_layout.stride = sizeof(Vertex);
 
-    VkPipelineInputAssemblyStateCreateInfo input_assembly = {};
-    input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    input_assembly.primitiveRestartEnable = VK_FALSE;
+    const RHIPrimitiveBufferLayout* buffers[] = { &vb_layout };
+
+    RHIPrimitiveFrequency frequencies[] = { RHIPrimitiveFrequency::PerVertex };
+
+    static_assert(_countof(buffers) == _countof(frequencies));
+
+    RHIInputAssemblerInfo ia_info = {};
+    ia_info.buffers_count = _countof(buffers);
+    ia_info.primitive_buffers = buffers;
+    ia_info.frequencies = frequencies;
+
+    RHIGraphicsPipelineInfo rhi_pipeline_info = {};
+
+    rhi_pipeline_info.input_assembler = &ia_info;
+    rhi_pipeline_info.vs = triangle_shader_vs;
+    rhi_pipeline_info.ps = triangle_shader_ps;
+
+    RHIGraphicsPipeline* rhi_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
+
+    const VkPipelineVertexInputStateCreateInfo* vertex_input_info = static_cast<const VkPipelineVertexInputStateCreateInfo*>(rhi_pipeline->GetNativeInputStateCreateInfo());
+    const VkPipelineInputAssemblyStateCreateInfo* input_assembly = static_cast<const VkPipelineInputAssemblyStateCreateInfo*>(rhi_pipeline->GetNativeInputAssemblyCreateInfo());
 
     VkViewport viewport = {};
     viewport.x = 0;
@@ -825,8 +839,8 @@ void RHITestApp::CreatePipeline()
     pipeline_info.stageCount = 2;
     pipeline_info.pStages = stages;
 
-    pipeline_info.pVertexInputState = &vertex_input_info;
-    pipeline_info.pInputAssemblyState = &input_assembly;
+    pipeline_info.pVertexInputState = vertex_input_info;
+    pipeline_info.pInputAssemblyState = input_assembly;
     pipeline_info.pViewportState = &viewport_state;
     pipeline_info.pRasterizationState = &rasterizer;
     pipeline_info.pMultisampleState = &multisampling;
@@ -974,36 +988,21 @@ void RHITestApp::RecreateSwapChain()
     CreatePipeline();
 }
 
-VkVertexInputBindingDescription Vertex::GetBindingDescription()
+std::array<RHIPrimitiveAttributeInfo, 3> Vertex::GetRHIAttributes()
 {
-    VkVertexInputBindingDescription binding_desc = {};
+    std::array<RHIPrimitiveAttributeInfo, 3> attribute_descs = {};
 
-    binding_desc.binding = 0;
-    binding_desc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-    binding_desc.stride = sizeof(Vertex);
-
-    return binding_desc;
-}
-
-std::array<VkVertexInputAttributeDescription, 3> Vertex::GetAttributeDescriptions()
-{
-    std::array<VkVertexInputAttributeDescription, 3> attribute_descs = {};
-
-    attribute_descs[0].binding = 0;
-    attribute_descs[0].location = 0;
+    attribute_descs[0].semantic = "POSITION";
+    attribute_descs[0].format = RHIFormat::R32G32_SFLOAT;
     attribute_descs[0].offset = offsetof(Vertex, pos);
-    attribute_descs[0].format = VK_FORMAT_R32G32_SFLOAT;
 
-    attribute_descs[1].binding = 0;
-    attribute_descs[1].location = 1;
+    attribute_descs[1].semantic = "TEXCOORD0";
+    attribute_descs[1].format = RHIFormat::R32G32B32_SFLOAT;
     attribute_descs[1].offset = offsetof(Vertex, color);
-    attribute_descs[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 
-    attribute_descs[2].binding = 0;
-    attribute_descs[2].location = 2;
+    attribute_descs[2].semantic = "TEXCOORD1";
+    attribute_descs[2].format = RHIFormat::R32G32_SFLOAT;
     attribute_descs[2].offset = offsetof(Vertex, texcoord);
-    attribute_descs[2].format = VK_FORMAT_R32G32_SFLOAT;
-
 
     return attribute_descs;
 }

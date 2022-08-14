@@ -93,13 +93,7 @@ public:
 	// Shader stuff
 	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
 
-
-	struct GraphicsPSOCreateInfo
-	{
-		RHIShader* vs = nullptr;
-		RHIShader* ps = nullptr;
-	};
-	virtual class RHIPSO* CreatePSO(const GraphicsPSOCreateInfo& pso_info) { return nullptr; }
+	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
 };
 
 class RHIObject
@@ -115,17 +109,16 @@ public:
 template<typename T>
 using RHIObjectPtr = boost::intrusive_ptr<T>;
 
-
-	inline void intrusive_ptr_add_ref(RHIObject* p)
-	{
-		if (p)
-			p->AddRef();
-	}
-	inline void intrusive_ptr_release(RHIObject* p)
-	{
-		if (p)
-			p->Release();
-	}
+inline void intrusive_ptr_add_ref(RHIObject* p)
+{
+	if (p)
+		p->AddRef();
+}
+inline void intrusive_ptr_release(RHIObject* p)
+{
+	if (p)
+		p->Release();
+}
 
 struct SwapChainCreateInfo
 {
@@ -181,6 +174,58 @@ public:
 	virtual const void* GetNativeData() const = 0;
 
 	virtual const char* GetEntryPoint() const { return nullptr; }
+};
+
+class RHIGraphicsPipeline : public RHIObject
+{
+public:
+	virtual ~RHIGraphicsPipeline() {}
+
+	// TEMP
+	virtual void* GetNativeInputStateCreateInfo() const { return nullptr; }
+	virtual void* GetNativeInputAssemblyCreateInfo() const { return nullptr; }
+};
+
+enum class RHIFormat : uint8_t
+{
+	Undefined = 0,
+	R32G32_SFLOAT,
+	R32G32B32_SFLOAT
+};
+
+enum class RHIPrimitiveFrequency : uint8_t
+{
+	PerVertex = 0,
+	PerInstance = 1
+};
+
+struct RHIPrimitiveAttributeInfo
+{
+	const char* semantic = nullptr;
+	RHIFormat format = RHIFormat::Undefined;
+	uint32_t offset = 0;
+};
+
+struct RHIPrimitiveBufferLayout
+{
+	const RHIPrimitiveAttributeInfo* attributes = nullptr;
+	size_t attributes_count = 0;
+	size_t stride = 0;
+};
+
+struct RHIInputAssemblerInfo
+{
+	const RHIPrimitiveBufferLayout** primitive_buffers = nullptr;
+	const RHIPrimitiveFrequency* frequencies = nullptr;
+	size_t buffers_count = 0;
+};
+
+struct RHIGraphicsPipelineInfo
+{
+	const RHIInputAssemblerInfo* input_assembler = nullptr;
+
+	RHIShader* vs = nullptr;
+	RHIShader* ps = nullptr;
 };
 
 template<typename T>

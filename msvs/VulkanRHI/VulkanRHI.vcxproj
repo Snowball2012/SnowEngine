@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
     <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Swapchain.h" />
@@ -29,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

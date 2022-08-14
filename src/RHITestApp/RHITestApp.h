@@ -17,8 +17,7 @@ struct Vertex
 	alignas(16) glm::vec3 color;
 	glm::vec2 texcoord;
 
-	static VkVertexInputBindingDescription GetBindingDescription();
-	static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescriptions();
+	static std::array<RHIPrimitiveAttributeInfo, 3> GetRHIAttributes();
 };
 
 struct Matrices

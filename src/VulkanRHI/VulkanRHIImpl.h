@@ -97,6 +97,8 @@ public:
 
 	virtual RHIShader* CreateShader(const ShaderCreateInfo& create_info) override;
 
+	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
@@ -115,6 +117,11 @@ public:
 	VulkanQueue* GetQueue(QueueType type);
 
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
+
+	static VkFormat GetVkFormat(RHIFormat format);
+	static uint32_t GetVkFormatSize(RHIFormat format);
+
+	static VkVertexInputRate GetVkVertexInputRate(RHIPrimitiveFrequency frequency);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);

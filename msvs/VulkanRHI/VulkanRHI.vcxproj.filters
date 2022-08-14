@@ -8,6 +8,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\Swapchain.h" />
     <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
@@ -17,5 +18,6 @@
     <ClCompile Include="..\..\src\VulkanRHI\Swapchain.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
   </ItemGroup>
 </Project>
