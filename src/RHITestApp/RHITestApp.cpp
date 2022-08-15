@@ -704,22 +704,6 @@ std::vector<const char*> RHITestApp::GetSDLExtensions() const
     return sdl_extensions;
 }
 
-namespace
-{
-    std::string StringFromWchar(const wchar_t* wstr)
-    {
-        // inefficient
-        std::string retval(size_t(lstrlenW(wstr)), '\0');
-        char* dst = retval.data();
-        while (wchar_t c = *wstr++)
-        {
-            *dst++ = char(c);
-        }
-
-        return retval;
-    }
-}
-
 void RHITestApp::CreatePipeline()
 {
     RHI::ShaderCreateInfo create_info = {};
@@ -732,12 +716,6 @@ void RHITestApp::CreatePipeline()
     create_info.frequency = RHI::ShaderFrequency::Pixel;
     create_info.entry_point = "TrianglePS";
     RHIShader* triangle_shader_ps = m_rhi->CreateShader(create_info);
-
-    VkPipelineShaderStageCreateInfo vs_stage_info = *static_cast<const VkPipelineShaderStageCreateInfo*>(triangle_shader_vs->GetNativeData());
-
-    VkPipelineShaderStageCreateInfo ps_stage_info = *static_cast<const VkPipelineShaderStageCreateInfo*>(triangle_shader_ps->GetNativeData());;
-
-    VkPipelineShaderStageCreateInfo stages[] = { vs_stage_info, ps_stage_info };
 
     auto vb_attributes = Vertex::GetRHIAttributes();
 
@@ -763,68 +741,14 @@ void RHITestApp::CreatePipeline()
     rhi_pipeline_info.vs = triangle_shader_vs;
     rhi_pipeline_info.ps = triangle_shader_ps;
 
+    RHIPipelineRTInfo rt_info = {};
+    rt_info.format = m_swapchain->GetFormat();
+    rhi_pipeline_info.rts_count = 1;
+    rhi_pipeline_info.rt_info = &rt_info;
+
     RHIGraphicsPipeline* rhi_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
 
-    const VkPipelineVertexInputStateCreateInfo* vertex_input_info = static_cast<const VkPipelineVertexInputStateCreateInfo*>(rhi_pipeline->GetNativeInputStateCreateInfo());
-    const VkPipelineInputAssemblyStateCreateInfo* input_assembly = static_cast<const VkPipelineInputAssemblyStateCreateInfo*>(rhi_pipeline->GetNativeInputAssemblyCreateInfo());
-
-    VkViewport viewport = {};
-    viewport.x = 0;
-    viewport.y = 0;
-    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
-    viewport.width = float(swapchain_extent.x);
-    viewport.height = float(swapchain_extent.y);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = VkExtent2D(swapchain_extent.x, swapchain_extent.y);
-
-    VkPipelineViewportStateCreateInfo viewport_state = {};
-    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewport_state.viewportCount = 1;
-    viewport_state.pViewports = &viewport;
-    viewport_state.scissorCount = 1;
-    viewport_state.pScissors = &scissor;
-
-    VkPipelineRasterizationStateCreateInfo rasterizer = {};
-    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizer.depthClampEnable = VK_FALSE;
-    rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo multisampling = {};
-    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    multisampling.minSampleShading = 1.0f;
-    multisampling.pSampleMask = nullptr;
-    multisampling.alphaToCoverageEnable = VK_FALSE;
-    multisampling.alphaToOneEnable = VK_FALSE;
-
-    VkPipelineColorBlendAttachmentState color_blend_attachment = {};
-    color_blend_attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    color_blend_attachment.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo color_blending = {};
-    color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    color_blending.logicOpEnable = VK_FALSE;
-    color_blending.attachmentCount = 1;
-    color_blending.pAttachments = &color_blend_attachment;
-
-    std::vector<VkDynamicState> dynamic_states =
-    {
-        VK_DYNAMIC_STATE_VIEWPORT
-    };
-
-    VkPipelineDynamicStateCreateInfo dynamic_state = {};
-    dynamic_state.dynamicStateCount = uint32_t(dynamic_states.size());
-    dynamic_state.pDynamicStates = dynamic_states.data();
+    VkGraphicsPipelineCreateInfo pipeline_info = *static_cast<const VkGraphicsPipelineCreateInfo*>(rhi_pipeline->GetNativePipelineCreateInfo());
 
     VkPipelineLayoutCreateInfo pipeline_layout_info = {};
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -832,35 +756,9 @@ void RHITestApp::CreatePipeline()
     pipeline_layout_info.pSetLayouts = &m_descriptor_layout;
     pipeline_layout_info.pushConstantRangeCount = 0;
 
-    VK_VERIFY(vkCreatePipelineLayout(m_vk_device, &pipeline_layout_info, nullptr, &m_pipeline_layout));
-
-    VkGraphicsPipelineCreateInfo pipeline_info = {};
-    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline_info.stageCount = 2;
-    pipeline_info.pStages = stages;
-
-    pipeline_info.pVertexInputState = vertex_input_info;
-    pipeline_info.pInputAssemblyState = input_assembly;
-    pipeline_info.pViewportState = &viewport_state;
-    pipeline_info.pRasterizationState = &rasterizer;
-    pipeline_info.pMultisampleState = &multisampling;
-    pipeline_info.pDepthStencilState = nullptr;
-
-    VkPipelineRenderingCreateInfo pipeline_rendering_info = {};
-    pipeline_rendering_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    pipeline_rendering_info.colorAttachmentCount = 1;
-    pipeline_rendering_info.pColorAttachmentFormats = (VkFormat*)m_swapchain->GetNativeFormat();
-    
-    pipeline_info.pNext = &pipeline_rendering_info;
-    pipeline_info.pColorBlendState = &color_blending;
-    pipeline_info.pDynamicState = nullptr;
+    VK_VERIFY(vkCreatePipelineLayout(m_vk_device, &pipeline_layout_info, nullptr, &m_pipeline_layout));    
 
     pipeline_info.layout = m_pipeline_layout;
-    pipeline_info.renderPass = nullptr;
-    pipeline_info.subpass = 0;
-
-    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info.basePipelineIndex = -1;
 
     VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
 }
@@ -891,6 +789,22 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_imag
     render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = { m_swapchain->GetExtent().x, m_swapchain->GetExtent().y } };
     render_info.layerCount = 1;
     vkCmdBeginRendering(buf, &render_info);
+
+    VkViewport viewport = {};
+    viewport.x = 0;
+    viewport.y = 0;
+    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
+    viewport.width = float(swapchain_extent.x);
+    viewport.height = float(swapchain_extent.y);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor = {};
+    scissor.offset = { 0, 0 };
+    scissor.extent = VkExtent2D(swapchain_extent.x, swapchain_extent.y);
+
+    vkCmdSetViewport(buf, 0, 1, &viewport);
+    vkCmdSetScissor(buf, 0, 1, &scissor);
 
     vkCmdBindPipeline(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
 

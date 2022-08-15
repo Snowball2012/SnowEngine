@@ -31,8 +31,6 @@ public:
 
     virtual ~Shader();
 
-    virtual const void* GetNativeData() const override { return (void*)&(GetVkStageInfo()); }
-
     // Inherited via RHIShader
     virtual void AddRef() override;
     virtual void Release() override;

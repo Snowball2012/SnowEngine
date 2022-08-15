@@ -119,6 +119,7 @@ public:
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 
 	static VkFormat GetVkFormat(RHIFormat format);
+	static RHIFormat GetRHIFormat(VkFormat format);
 	static uint32_t GetVkFormatSize(RHIFormat format);
 
 	static VkVertexInputRate GetVkVertexInputRate(RHIPrimitiveFrequency frequency);

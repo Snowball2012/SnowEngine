@@ -129,6 +129,11 @@ void VulkanSwapChain::Recreate()
     Init();
 }
 
+RHIFormat VulkanSwapChain::GetFormat() const
+{
+    return VulkanRHI::GetRHIFormat(m_swapchain_format.format);
+}
+
 VkSurfaceFormatKHR VulkanSwapChain::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& available_formats) const
 {
     for (const auto& format : available_formats)

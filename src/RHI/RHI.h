@@ -120,6 +120,14 @@ inline void intrusive_ptr_release(RHIObject* p)
 		p->Release();
 }
 
+enum class RHIFormat : uint8_t
+{
+	Undefined = 0,
+	R32G32_SFLOAT,
+	R32G32B32_SFLOAT,
+	B8G8R8A8_SRGB
+};
+
 struct SwapChainCreateInfo
 {
 	void* window_handle = nullptr;
@@ -137,8 +145,7 @@ public:
 
 	virtual void Recreate() = 0;
 
-	// temp, for PSO
-	virtual void* GetNativeFormat() const = 0;
+	virtual RHIFormat GetFormat() const { return RHIFormat::Undefined; }
 
 	virtual void* GetNativeImage() const = 0;
 	virtual void* GetNativeImageView() const = 0;
@@ -169,11 +176,6 @@ class RHIShader : public RHIObject
 {
 public:
 	virtual ~RHIShader() {}
-
-	// temp
-	virtual const void* GetNativeData() const = 0;
-
-	virtual const char* GetEntryPoint() const { return nullptr; }
 };
 
 class RHIGraphicsPipeline : public RHIObject
@@ -182,15 +184,7 @@ public:
 	virtual ~RHIGraphicsPipeline() {}
 
 	// TEMP
-	virtual void* GetNativeInputStateCreateInfo() const { return nullptr; }
-	virtual void* GetNativeInputAssemblyCreateInfo() const { return nullptr; }
-};
-
-enum class RHIFormat : uint8_t
-{
-	Undefined = 0,
-	R32G32_SFLOAT,
-	R32G32B32_SFLOAT
+	virtual void* GetNativePipelineCreateInfo() const { return nullptr; }
 };
 
 enum class RHIPrimitiveFrequency : uint8_t
@@ -220,12 +214,20 @@ struct RHIInputAssemblerInfo
 	size_t buffers_count = 0;
 };
 
+struct RHIPipelineRTInfo
+{
+	RHIFormat format = RHIFormat::Undefined;
+};
+
 struct RHIGraphicsPipelineInfo
 {
 	const RHIInputAssemblerInfo* input_assembler = nullptr;
 
 	RHIShader* vs = nullptr;
 	RHIShader* ps = nullptr;
+
+	const RHIPipelineRTInfo* rt_info = nullptr;
+	size_t rts_count = 0;
 };
 
 template<typename T>

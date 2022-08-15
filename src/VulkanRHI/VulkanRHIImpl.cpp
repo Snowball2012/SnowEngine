@@ -80,11 +80,39 @@ VkFormat VulkanRHI::GetVkFormat(RHIFormat format)
     case RHIFormat::R32G32_SFLOAT:
         vk_format = VK_FORMAT_R32G32_SFLOAT;
         break;
+    case RHIFormat::B8G8R8A8_SRGB:
+        vk_format = VK_FORMAT_B8G8R8A8_SRGB;
+        break;
     default:
         NOTIMPL;
     }
 
     return vk_format;
+}
+
+RHIFormat VulkanRHI::GetRHIFormat(VkFormat format)
+{
+    RHIFormat rhi_format = RHIFormat::Undefined;
+
+    switch (format)
+    {
+    case VK_FORMAT_UNDEFINED:
+        rhi_format = RHIFormat::Undefined;
+        break;
+    case VK_FORMAT_R32G32B32_SFLOAT:
+        rhi_format = RHIFormat::R32G32B32_SFLOAT;
+        break;
+    case VK_FORMAT_R32G32_SFLOAT:
+        rhi_format = RHIFormat::R32G32_SFLOAT;
+        break;
+    case VK_FORMAT_B8G8R8A8_SRGB:
+        rhi_format = RHIFormat::B8G8R8A8_SRGB;
+        break;
+    default:
+        NOTIMPL;
+    }
+
+    return rhi_format;
 }
 
 uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
@@ -101,6 +129,9 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
         break;
     case RHIFormat::R32G32_SFLOAT:
         size = 8;
+        break;
+    case RHIFormat::B8G8R8A8_SRGB:
+        size = 4;
         break;
     default:
         NOTIMPL;

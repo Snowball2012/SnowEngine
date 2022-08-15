@@ -44,8 +44,8 @@ public:
 	virtual glm::uvec2 GetExtent() const override;
 	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) override;
 	virtual void Recreate() override;
+	virtual RHIFormat GetFormat() const override;
 
-	virtual void* GetNativeFormat() const override { return (void*)&m_swapchain_format.format; }
 	virtual void* GetNativeImage() const override { return (void*)&m_swapchain_images[m_cur_image_index]; }
 	virtual void* GetNativeImageView() const override { return (void*)&m_swapchain_image_views[m_cur_image_index]; }
 
