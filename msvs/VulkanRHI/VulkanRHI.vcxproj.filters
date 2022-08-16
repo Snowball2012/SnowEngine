@@ -19,5 +19,6 @@
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\VulkanMemoryAllocatorImpl.cpp" />
   </ItemGroup>
 </Project>

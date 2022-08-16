@@ -49,6 +49,8 @@ using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 class VulkanRHI : public RHI
 {
 private:
+	static constexpr uint32_t VulkanVersion = VK_API_VERSION_1_3;
+
 	VkInstance m_vk_instance = VK_NULL_HANDLE;
 
 	IVulkanWindowInterface* m_window_iface = nullptr;
@@ -65,6 +67,8 @@ private:
 	};
 
 	VkDevice m_vk_device = VK_NULL_HANDLE;
+
+	VmaAllocator m_vma = VK_NULL_HANDLE;
 
 	QueueFamilyIndices m_queue_family_indices;
 
@@ -138,6 +142,8 @@ private:
 	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
 
 	void CreateLogicalDevice();
+
+	void CreateVMA();
 
 	VulkanSwapChain* CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info);
 

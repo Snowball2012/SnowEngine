@@ -38,6 +38,10 @@
     </ClCompile>
     <ClCompile Include="..\..\src\VulkanRHI\Swapchain.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Validation.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\VulkanMemoryAllocatorImpl.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

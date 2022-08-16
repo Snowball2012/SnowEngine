@@ -47,6 +47,9 @@ VulkanRHI::~VulkanRHI()
     m_main_swap_chain = nullptr;
 
     vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
+
+    vmaDestroyAllocator(m_vma);
+
     vkDestroyDevice(m_vk_device, nullptr);
     vkDestroySurfaceKHR(m_vk_instance, m_main_surface, nullptr);
     m_validation_callback.reset(); // we need to do this explicitly because VulkanValidationCallback requires valid VkInstance to destroy itself
@@ -56,6 +59,16 @@ VulkanRHI::~VulkanRHI()
 void VulkanRHI::WaitIdle()
 {
     VK_VERIFY(vkDeviceWaitIdle(m_vk_device));
+}
+
+void VulkanRHI::CreateVMA()
+{
+    VmaAllocatorCreateInfo create_info = {};
+    create_info.physicalDevice = m_vk_phys_device;
+    create_info.device = m_vk_device;
+    create_info.instance = m_vk_instance;
+    create_info.vulkanApiVersion = VulkanVersion;
+    VK_VERIFY(vmaCreateAllocator(&create_info, &m_vma));
 }
 
 RHISemaphore* VulkanRHI::CreateGPUSemaphore()
@@ -259,7 +272,7 @@ void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "No Engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    app_info.apiVersion = VK_API_VERSION_1_3;
+    app_info.apiVersion = VulkanVersion;
 
     VkInstanceCreateInfo create_info = {};
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

@@ -2,7 +2,7 @@
 
 #define NOMINMAX
 
-#include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
 
 #include <array>
 #include <algorithm>

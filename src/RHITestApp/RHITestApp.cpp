@@ -823,14 +823,6 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_imag
     VK_VERIFY(vkEndCommandBuffer(buf));
 }
 
-namespace
-{
-    VkSemaphore GetVkSemaphore(const RHISemaphore* semaphore)
-    {
-        return *static_cast<VkSemaphore*>(semaphore->GetNativeSemaphore());
-    }
-}
-
 void RHITestApp::DrawFrame()
 {
     m_rhi->WaitForFenceCompletion(m_inflight_fences[m_current_frame]);
