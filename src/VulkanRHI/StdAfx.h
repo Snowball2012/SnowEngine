@@ -66,3 +66,19 @@ using ComPtr = Microsoft::WRL::ComPtr<T>;
 		SE_ENSURE( SUCCEEDED(( expr )) )
 
 #include <dxcapi.h>
+
+#ifndef IMPLEMENT_SCOPED_ENUM_FLAGS
+#define IMPLEMENT_SCOPED_ENUM_FLAGS(T) \
+T operator|(T lhs, T rhs) \
+{ \
+	return T( \
+		std::underlying_type<T>::type(lhs) \
+		| std::underlying_type<T>::type(rhs)); \
+} \
+T operator&(T lhs, T rhs) \
+{ \
+	return T( \
+		std::underlying_type<T>::type(lhs) \
+		& std::underlying_type<T>::type(rhs)); \
+}
+#endif

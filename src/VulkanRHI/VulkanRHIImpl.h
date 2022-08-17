@@ -103,6 +103,8 @@ public:
 
 	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
 
+	virtual RHIUploadBuffer* CreateUploadBuffer(const UploadBufferInfo& buf_info) override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
@@ -120,6 +122,8 @@ public:
 
 	VulkanQueue* GetQueue(QueueType type);
 
+	VmaAllocator GetVMA() const { return m_vma; }
+
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 
 	static VkFormat GetVkFormat(RHIFormat format);
@@ -127,6 +131,8 @@ public:
 	static uint32_t GetVkFormatSize(RHIFormat format);
 
 	static VkVertexInputRate GetVkVertexInputRate(RHIPrimitiveFrequency frequency);
+
+	static VkBufferUsageFlags GetVkBufferUsageFlags(RHIBufferUsageFlags usage);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);

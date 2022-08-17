@@ -647,21 +647,40 @@ void RHITestApp::CreateVertexBuffer()
 
     VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
 
-    VkBuffer staging_buf = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buf_mem = VK_NULL_HANDLE;
-    CreateBuffer(
-        buffer_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staging_buf,
-        staging_buf_mem);
+    RHI::UploadBufferInfo staging_info = {};
 
-    void* data;
-    VK_VERIFY(vkMapMemory(m_vk_device, staging_buf_mem, 0, VK_WHOLE_SIZE, 0, &data));
+    staging_info.size = sizeof(vertices[0]) * vertices.size();
+    staging_info.usage = RHIBufferUsageFlags::TransferSrc;
 
-    memcpy(data, vertices.data(), size_t(buffer_size));
+    RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer(staging_info);
 
-    vkUnmapMemory(m_vk_device, staging_buf_mem);
+    VERIFY_NOT_EQUAL(staging_buf, nullptr);
+
+    staging_buf->WriteBytes(vertices.data(), staging_info.size, 0);
+
+    // temp
+    {
+        VkBuffer staging_buf = VK_NULL_HANDLE;
+        VkDeviceMemory staging_buf_mem = VK_NULL_HANDLE;
+        CreateBuffer(
+            buffer_size,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            staging_buf,
+            staging_buf_mem);
+
+        void* data;
+        VK_VERIFY(vkMapMemory(m_vk_device, staging_buf_mem, 0, VK_WHOLE_SIZE, 0, &data));
+
+        memcpy(data, vertices.data(), size_t(buffer_size));
+
+        vkUnmapMemory(m_vk_device, staging_buf_mem);
+
+        vkDestroyBuffer(m_vk_device, staging_buf, nullptr);
+        vkFreeMemory(m_vk_device, staging_buf_mem, nullptr);
+    }
+
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
 
     CreateBuffer(
         buffer_size,
@@ -670,10 +689,8 @@ void RHITestApp::CreateVertexBuffer()
         m_vertex_buffer,
         m_vb_memory);
 
-    CopyBuffer(staging_buf, m_vertex_buffer, buffer_size);
+    CopyBuffer(native_staging, m_vertex_buffer, buffer_size);
 
-    vkDestroyBuffer(m_vk_device, staging_buf, nullptr);
-    vkFreeMemory(m_vk_device, staging_buf_mem, nullptr);
 }
 
 uint32_t RHITestApp::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties)

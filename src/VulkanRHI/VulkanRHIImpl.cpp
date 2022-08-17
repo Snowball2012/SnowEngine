@@ -10,6 +10,8 @@
 
 #include "PSO.h"
 
+#include "Buffers.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -695,6 +697,11 @@ void VulkanRHI::WaitForFenceCompletion(const RHIFence& fence)
         return;
 
     VK_VERIFY(vkWaitForFences(m_vk_device, 1, &vk_fence, VK_TRUE, std::numeric_limits<uint64_t>::max()));
+}
+
+RHIUploadBuffer* VulkanRHI::CreateUploadBuffer(const RHI::UploadBufferInfo& buf_info)
+{
+    return new VulkanUploadBuffer(this, buf_info);
 }
 
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)

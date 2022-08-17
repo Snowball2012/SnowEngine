@@ -13,6 +13,32 @@ struct RHIFence
 	uint64_t _3;
 };
 
+#ifndef IMPLEMENT_SCOPED_ENUM_FLAGS
+#define IMPLEMENT_SCOPED_ENUM_FLAGS(T) \
+constexpr T operator|(T lhs, T rhs) \
+{ \
+	return T( \
+		std::underlying_type<T>::type(lhs) \
+		| std::underlying_type<T>::type(rhs)); \
+} \
+constexpr T operator&(T lhs, T rhs) \
+{ \
+	return T( \
+		std::underlying_type<T>::type(lhs) \
+		& std::underlying_type<T>::type(rhs)); \
+}
+#endif
+
+enum class RHIBufferUsageFlags : uint32_t
+{
+	None = 0,
+	TransferSrc = 0x1,
+	TransferDst = 0x2,
+	VertexBuffer = 0x4,
+	IndexBuffer = 0x8
+};
+IMPLEMENT_SCOPED_ENUM_FLAGS(RHIBufferUsageFlags)
+
 class RHI
 {
 public:
@@ -94,6 +120,13 @@ public:
 	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
 
 	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
+
+	struct UploadBufferInfo
+	{
+		uint64_t size = 0;
+		RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
+	};
+	virtual class RHIUploadBuffer* CreateUploadBuffer(const UploadBufferInfo& info) { return nullptr; }
 };
 
 class RHIObject
@@ -229,6 +262,23 @@ struct RHIGraphicsPipelineInfo
 	const RHIPipelineRTInfo* rt_info = nullptr;
 	size_t rts_count = 0;
 };
+
+class RHIBuffer : public RHIObject
+{
+public:
+	virtual ~RHIBuffer() override {}
+
+	virtual void* GetNativeBuffer() const { return nullptr; }
+};
+
+class RHIUploadBuffer : public RHIBuffer
+{
+public:
+	virtual ~RHIUploadBuffer() override {}
+
+	void WriteBytes(const void* src, size_t size, size_t offset) {}
+};
+using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
 
 template<typename T>
 using UniquePtrWithDeleter = std::unique_ptr<T, void(*)(T*)>;
