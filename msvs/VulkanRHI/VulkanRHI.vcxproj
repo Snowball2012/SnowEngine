@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\VulkanRHI\Buffers.h" />
     <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
     <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
@@ -29,6 +30,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\VulkanRHI\Buffers.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />

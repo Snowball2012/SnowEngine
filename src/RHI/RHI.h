@@ -15,13 +15,13 @@ struct RHIFence
 
 #ifndef IMPLEMENT_SCOPED_ENUM_FLAGS
 #define IMPLEMENT_SCOPED_ENUM_FLAGS(T) \
-constexpr T operator|(T lhs, T rhs) \
+inline constexpr T operator|(T lhs, T rhs) \
 { \
 	return T( \
 		std::underlying_type<T>::type(lhs) \
 		| std::underlying_type<T>::type(rhs)); \
 } \
-constexpr T operator&(T lhs, T rhs) \
+inline constexpr T operator&(T lhs, T rhs) \
 { \
 	return T( \
 		std::underlying_type<T>::type(lhs) \
@@ -35,7 +35,10 @@ enum class RHIBufferUsageFlags : uint32_t
 	TransferSrc = 0x1,
 	TransferDst = 0x2,
 	VertexBuffer = 0x4,
-	IndexBuffer = 0x8
+	IndexBuffer = 0x8,
+	UniformBuffer = 0x10,
+
+	NumFlags = 5
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS(RHIBufferUsageFlags)
 
@@ -276,7 +279,7 @@ class RHIUploadBuffer : public RHIBuffer
 public:
 	virtual ~RHIUploadBuffer() override {}
 
-	void WriteBytes(const void* src, size_t size, size_t offset) {}
+	virtual void WriteBytes(const void* src, size_t size, size_t offset = 0) {}
 };
 using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
 

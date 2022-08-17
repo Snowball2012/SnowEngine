@@ -19,5 +19,7 @@ public:
 	virtual void AddRef() override;
 	virtual void Release() override;
 
+	virtual void WriteBytes(const void* src, size_t size, size_t offset) override;
+
 	virtual void* GetNativeBuffer() const override { return (void*)&m_vk_buffer; }
 };

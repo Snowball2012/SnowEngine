@@ -30,6 +30,8 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 
     CreateLogicalDevice();
 
+    CreateVMA();
+
     CreateCommandPool();
 
     VulkanSwapChainCreateInfo swapchain_create_info = {};
@@ -153,6 +155,27 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
     }
 
     return size;
+}
+
+
+VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags(RHIBufferUsageFlags usage)
+{
+    VkBufferUsageFlags retval = 0;
+
+    auto add_flag = [&](auto rhiflag, auto vkflag)
+    {
+        retval |= ((usage & rhiflag) != RHIBufferUsageFlags::None) ? vkflag : 0;
+    };
+    
+    static_assert(int(RHIBufferUsageFlags::NumFlags) == 5);
+
+    add_flag(RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+    add_flag(RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+    add_flag(RHIBufferUsageFlags::VertexBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    add_flag(RHIBufferUsageFlags::IndexBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    add_flag(RHIBufferUsageFlags::UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+
+    return retval;
 }
 
 VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequency)

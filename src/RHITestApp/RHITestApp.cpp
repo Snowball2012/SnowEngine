@@ -126,14 +126,7 @@ void RHITestApp::Cleanup()
     std::cout << "Vulkan shutdown started\n";
 
     vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
-    for (size_t i = 0; i < m_uniform_buffers.size(); ++i)
-    {
-        vkDestroyBuffer(m_vk_device, m_uniform_buffers[i], nullptr);
-    }
-    for (size_t i = 0; i < m_uniform_buffers.size(); ++i)
-    {
-        vkFreeMemory(m_vk_device, m_ub_memory[i], nullptr);
-    }
+    m_uniform_buffers.clear();
     vkDestroyBuffer(m_vk_device, m_index_buffer, nullptr);
     vkFreeMemory(m_vk_device, m_ib_memory, nullptr);
     vkDestroyBuffer(m_vk_device, m_vertex_buffer, nullptr);
@@ -208,21 +201,22 @@ void RHITestApp::CreateIndexBuffer()
 
     VkDeviceSize buf_size = sizeof(indices[0]) * indices.size();
 
-    VkBuffer staging_buf = VK_NULL_HANDLE;
-    VkDeviceMemory staging_mem = VK_NULL_HANDLE;
-    CreateBuffer(buf_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging_buf, staging_mem);
+    RHI::UploadBufferInfo staging_info = {};
 
-    void* data = nullptr;
-    VK_VERIFY(vkMapMemory(m_vk_device, staging_mem, 0, VK_WHOLE_SIZE, 0, &data));
-    memcpy(data, indices.data(), size_t(buf_size));
-    vkUnmapMemory(m_vk_device, staging_mem);
+    staging_info.size = sizeof(indices[0]) * indices.size();
+    staging_info.usage = RHIBufferUsageFlags::TransferSrc;
+
+    RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer(staging_info);
+
+    VERIFY_NOT_EQUAL(staging_buf, nullptr);
+
+    staging_buf->WriteBytes(indices.data(), staging_info.size, 0);
+
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
 
     CreateBuffer(buf_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_ib_memory);
 
-    CopyBuffer(staging_buf, m_index_buffer, buf_size);
-
-    vkDestroyBuffer(m_vk_device, staging_buf, nullptr);
-    vkFreeMemory(m_vk_device, staging_mem, nullptr);
+    CopyBuffer(native_staging, m_index_buffer, buf_size);
 }
 
 void RHITestApp::CreateDescriptorSetLayout()
@@ -252,18 +246,15 @@ void RHITestApp::CreateDescriptorSetLayout()
 
 void RHITestApp::CreateUniformBuffers()
 {
-    VkDeviceSize buf_size = sizeof(Matrices);
-
     m_uniform_buffers.resize(m_max_frames_in_flight);
-    m_ub_memory.resize(m_max_frames_in_flight);
+
+    RHI::UploadBufferInfo uniform_info = {};
+    uniform_info.size = sizeof(Matrices);
+    uniform_info.usage = RHIBufferUsageFlags::UniformBuffer;
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
-        CreateBuffer(
-            buf_size,
-            VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            m_uniform_buffers[i], m_ub_memory[i]);
+        m_uniform_buffers[i] = m_rhi->CreateUploadBuffer(uniform_info);
     }
 }
 
@@ -283,11 +274,7 @@ void RHITestApp::UpdateUniformBuffer(uint32_t current_image)
     matrices.proj = glm::perspective(glm::radians(45.0f), float(swapchain_extent.x) / float(swapchain_extent.y), 0.1f, 10.0f);
     matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
 
-    void* data;
-    VK_VERIFY(vkMapMemory(m_vk_device, m_ub_memory[current_image], 0, VK_WHOLE_SIZE, 0, &data));
-    memcpy(data, &matrices, sizeof(matrices));
-    vkUnmapMemory(m_vk_device, m_ub_memory[current_image]);
-
+    m_uniform_buffers[current_image]->WriteBytes(&matrices, sizeof(matrices));
 }
 
 void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height)
@@ -349,7 +336,7 @@ void RHITestApp::CreateDescriptorSets()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         VkDescriptorBufferInfo buffer_info = {};
-        buffer_info.buffer = m_uniform_buffers[i];
+        buffer_info.buffer = *static_cast<VkBuffer*>(m_uniform_buffers[i]->GetNativeBuffer());
         buffer_info.offset = 0;
         buffer_info.range = VK_WHOLE_SIZE;
 
@@ -389,20 +376,19 @@ void RHITestApp::CreateTextureImage()
     VERIFY_NOT_EQUAL(pixels, nullptr);
 
     VkDeviceSize image_size = uint32_t(width) * uint32_t(height) * 4;
-    VkBuffer staging_buffer;
-    VkDeviceMemory staging_mem;
 
-    CreateBuffer(
-        image_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staging_buffer,
-        staging_mem);
+    RHI::UploadBufferInfo staging_info = {};
 
-    void* data;
-    VK_VERIFY(vkMapMemory(m_vk_device, staging_mem, 0, VK_WHOLE_SIZE, 0, &data));
-    memcpy(data, pixels, size_t(image_size));
-    vkUnmapMemory(m_vk_device, staging_mem);
+    staging_info.size = image_size;
+    staging_info.usage = RHIBufferUsageFlags::TransferSrc;
+
+    RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer(staging_info);
+
+    VERIFY_NOT_EQUAL(staging_buf, nullptr);
+
+    staging_buf->WriteBytes(pixels, staging_info.size, 0);
+
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
 
     stbi_image_free(pixels);
 
@@ -420,15 +406,12 @@ void RHITestApp::CreateTextureImage()
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    CopyBufferToImage(staging_buffer, m_texture_image, uint32_t(width), uint32_t(height));
+    CopyBufferToImage(native_staging, m_texture_image, uint32_t(width), uint32_t(height));
 
     TransitionImageLayoutAndFlush(
         m_texture_image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    vkDestroyBuffer(m_vk_device, staging_buffer, nullptr);
-    vkFreeMemory(m_vk_device, staging_mem, nullptr);
 }
 
 void RHITestApp::CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_mem)
@@ -657,28 +640,6 @@ void RHITestApp::CreateVertexBuffer()
     VERIFY_NOT_EQUAL(staging_buf, nullptr);
 
     staging_buf->WriteBytes(vertices.data(), staging_info.size, 0);
-
-    // temp
-    {
-        VkBuffer staging_buf = VK_NULL_HANDLE;
-        VkDeviceMemory staging_buf_mem = VK_NULL_HANDLE;
-        CreateBuffer(
-            buffer_size,
-            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            staging_buf,
-            staging_buf_mem);
-
-        void* data;
-        VK_VERIFY(vkMapMemory(m_vk_device, staging_buf_mem, 0, VK_WHOLE_SIZE, 0, &data));
-
-        memcpy(data, vertices.data(), size_t(buffer_size));
-
-        vkUnmapMemory(m_vk_device, staging_buf_mem);
-
-        vkDestroyBuffer(m_vk_device, staging_buf, nullptr);
-        vkFreeMemory(m_vk_device, staging_buf_mem, nullptr);
-    }
 
     VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
 

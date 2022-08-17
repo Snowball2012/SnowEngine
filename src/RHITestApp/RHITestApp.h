@@ -61,8 +61,7 @@ private:
 	VkDeviceMemory m_vb_memory = VK_NULL_HANDLE;
 	VkBuffer m_index_buffer = VK_NULL_HANDLE;
 	VkDeviceMemory m_ib_memory = VK_NULL_HANDLE;
-	std::vector<VkBuffer> m_uniform_buffers;
-	std::vector<VkDeviceMemory> m_ub_memory;
+	std::vector<RHIUploadBufferPtr> m_uniform_buffers;
 	// images
 	VkImage m_texture_image = VK_NULL_HANDLE;
 	VkDeviceMemory m_texture_memory = VK_NULL_HANDLE;

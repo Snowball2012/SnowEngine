@@ -69,13 +69,13 @@ using ComPtr = Microsoft::WRL::ComPtr<T>;
 
 #ifndef IMPLEMENT_SCOPED_ENUM_FLAGS
 #define IMPLEMENT_SCOPED_ENUM_FLAGS(T) \
-T operator|(T lhs, T rhs) \
+inline constexpr T operator|(T lhs, T rhs) \
 { \
 	return T( \
 		std::underlying_type<T>::type(lhs) \
 		| std::underlying_type<T>::type(rhs)); \
 } \
-T operator&(T lhs, T rhs) \
+inline constexpr T operator&(T lhs, T rhs) \
 { \
 	return T( \
 		std::underlying_type<T>::type(lhs) \

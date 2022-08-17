@@ -16,31 +16,14 @@ VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::UploadBufferIn
     vk_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo vma_alloc_info = {};
-    vma_alloc_info.
-    vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info,  )
-
-    VkBuffer staging_buf = VK_NULL_HANDLE;
-    VkDeviceMemory staging_buf_mem = VK_NULL_HANDLE;
-    CreateBuffer(
-        buffer_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staging_buf,
-        staging_buf_mem);
-
-    void* data;
-    VK_VERIFY(vkMapMemory(m_vk_device, staging_buf_mem, 0, VK_WHOLE_SIZE, 0, &data));
-
-    memcpy(data, vertices.data(), size_t(buffer_size));
-
-    vkUnmapMemory(m_vk_device, staging_buf_mem);
-
-    vkDestroyBuffer(m_vk_device, staging_buf, nullptr);
-    vkFreeMemory(m_vk_device, staging_buf_mem, nullptr);
+    vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    vma_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr);
 }
 
 VulkanUploadBuffer::~VulkanUploadBuffer()
 {
+    vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
 }
 
 void VulkanUploadBuffer::AddRef()
@@ -49,4 +32,12 @@ void VulkanUploadBuffer::AddRef()
 
 void VulkanUploadBuffer::Release()
 {
+}
+
+void VulkanUploadBuffer::WriteBytes(const void* src, size_t size, size_t offset)
+{
+    VmaAllocationInfo info;
+    vmaGetAllocationInfo(m_rhi->GetVMA(), m_allocation, &info);
+    VERIFY_NOT_EQUAL(info.pMappedData, nullptr);
+    memcpy((uint8_t*)info.pMappedData + offset, src, size);
 }
