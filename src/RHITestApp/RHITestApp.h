@@ -57,10 +57,8 @@ private:
 	uint32_t m_current_frame = 0;
 
 	// resources
-	VkBuffer m_vertex_buffer = VK_NULL_HANDLE;
-	VkDeviceMemory m_vb_memory = VK_NULL_HANDLE;
-	VkBuffer m_index_buffer = VK_NULL_HANDLE;
-	VkDeviceMemory m_ib_memory = VK_NULL_HANDLE;
+	RHIBufferPtr m_vertex_buffer = nullptr;
+	RHIBufferPtr m_index_buffer = nullptr;
 	std::vector<RHIUploadBufferPtr> m_uniform_buffers;
 	// images
 	VkImage m_texture_image = VK_NULL_HANDLE;
@@ -96,21 +94,17 @@ private:
 
 	void CreatePipeline();
 
-	void RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view);
+	void RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapchain);
 
 	void DrawFrame();
 
 	void CreateSyncObjects();
-
-	void RecreateSwapChain();
 
 	void CleanupPipeline();
 
 	void CreateVertexBuffer();
 
 	void CreateIndexBuffer();
-
-	void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& buffer_mem);
 
 	void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
 	void CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height);

@@ -127,10 +127,8 @@ void RHITestApp::Cleanup()
 
     vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
     m_uniform_buffers.clear();
-    vkDestroyBuffer(m_vk_device, m_index_buffer, nullptr);
-    vkFreeMemory(m_vk_device, m_ib_memory, nullptr);
-    vkDestroyBuffer(m_vk_device, m_vertex_buffer, nullptr);
-    vkFreeMemory(m_vk_device, m_vb_memory, nullptr);
+    m_index_buffer = nullptr;
+    m_vertex_buffer = nullptr;
 
     vkDestroySampler(m_vk_device, m_texture_sampler, nullptr);
     vkDestroyImageView(m_vk_device, m_texture_view, nullptr);
@@ -146,35 +144,10 @@ void RHITestApp::Cleanup()
     std::cout << "RHI shutdown complete\n";
 }
 
-
 void RHITestApp::CleanupPipeline()
 {
     vkDestroyPipeline(m_vk_device, m_graphics_pipeline, nullptr);
     vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
-
-}
-
-void RHITestApp::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, VkBuffer& buffer, VkDeviceMemory& buffer_mem)
-{
-    VkBufferCreateInfo buffer_info = {};
-    buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buffer_info.size = size;
-    buffer_info.usage = usage;
-    buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VK_VERIFY(vkCreateBuffer(m_vk_device, &buffer_info, nullptr, &buffer));
-
-    VkMemoryRequirements mem_requirements = {};
-    vkGetBufferMemoryRequirements(m_vk_device, buffer, &mem_requirements);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_requirements.size;
-    alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits, props);
-
-    VK_VERIFY(vkAllocateMemory(m_vk_device, &alloc_info, nullptr, &buffer_mem));
-
-    VK_VERIFY(vkBindBufferMemory(m_vk_device, buffer, buffer_mem, 0));
 }
 
 void RHITestApp::CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
@@ -201,7 +174,7 @@ void RHITestApp::CreateIndexBuffer()
 
     VkDeviceSize buf_size = sizeof(indices[0]) * indices.size();
 
-    RHI::UploadBufferInfo staging_info = {};
+    RHI::BufferInfo staging_info = {};
 
     staging_info.size = sizeof(indices[0]) * indices.size();
     staging_info.usage = RHIBufferUsageFlags::TransferSrc;
@@ -212,11 +185,15 @@ void RHITestApp::CreateIndexBuffer()
 
     staging_buf->WriteBytes(indices.data(), staging_info.size, 0);
 
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
 
-    CreateBuffer(buf_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_index_buffer, m_ib_memory);
+    RHI::BufferInfo buf_info = {};
+    buf_info.size = staging_info.size;
+    buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::TransferDst;
+    m_index_buffer = m_rhi->CreateDeviceBuffer(buf_info);
+    VkBuffer native_index = *static_cast<VkBuffer*>(m_index_buffer->GetNativeBuffer());
 
-    CopyBuffer(native_staging, m_index_buffer, buf_size);
+    CopyBuffer(native_staging, native_index, buf_size);
 }
 
 void RHITestApp::CreateDescriptorSetLayout()
@@ -248,7 +225,7 @@ void RHITestApp::CreateUniformBuffers()
 {
     m_uniform_buffers.resize(m_max_frames_in_flight);
 
-    RHI::UploadBufferInfo uniform_info = {};
+    RHI::BufferInfo uniform_info = {};
     uniform_info.size = sizeof(Matrices);
     uniform_info.usage = RHIBufferUsageFlags::UniformBuffer;
 
@@ -336,7 +313,7 @@ void RHITestApp::CreateDescriptorSets()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         VkDescriptorBufferInfo buffer_info = {};
-        buffer_info.buffer = *static_cast<VkBuffer*>(m_uniform_buffers[i]->GetNativeBuffer());
+        buffer_info.buffer = *static_cast<VkBuffer*>(m_uniform_buffers[i]->GetBuffer()->GetNativeBuffer());
         buffer_info.offset = 0;
         buffer_info.range = VK_WHOLE_SIZE;
 
@@ -377,7 +354,7 @@ void RHITestApp::CreateTextureImage()
 
     VkDeviceSize image_size = uint32_t(width) * uint32_t(height) * 4;
 
-    RHI::UploadBufferInfo staging_info = {};
+    RHI::BufferInfo staging_info = {};
 
     staging_info.size = image_size;
     staging_info.usage = RHIBufferUsageFlags::TransferSrc;
@@ -388,7 +365,7 @@ void RHITestApp::CreateTextureImage()
 
     staging_buf->WriteBytes(pixels, staging_info.size, 0);
 
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
 
     stbi_image_free(pixels);
 
@@ -630,7 +607,7 @@ void RHITestApp::CreateVertexBuffer()
 
     VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
 
-    RHI::UploadBufferInfo staging_info = {};
+    RHI::BufferInfo staging_info = {};
 
     staging_info.size = sizeof(vertices[0]) * vertices.size();
     staging_info.usage = RHIBufferUsageFlags::TransferSrc;
@@ -641,16 +618,15 @@ void RHITestApp::CreateVertexBuffer()
 
     staging_buf->WriteBytes(vertices.data(), staging_info.size, 0);
 
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetNativeBuffer());
+    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
 
-    CreateBuffer(
-        buffer_size,
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        m_vertex_buffer,
-        m_vb_memory);
+    RHI::BufferInfo buf_info = {};
+    buf_info.size = staging_info.size;
+    buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::TransferDst;
+    m_vertex_buffer = m_rhi->CreateDeviceBuffer(buf_info);
+    VkBuffer native_vertex = *static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer());
 
-    CopyBuffer(native_staging, m_vertex_buffer, buffer_size);
+    CopyBuffer(native_staging, native_vertex, buffer_size);
 
 }
 
@@ -741,8 +717,14 @@ void RHITestApp::CreatePipeline()
     VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
 }
 
-void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_image, VkImageView swapchain_image_view)
+void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapchain)
 {
+    VkImage swapchain_image = *static_cast<VkImage*>(swapchain.GetNativeImage());
+    VkImageView swapchain_image_view = *static_cast<VkImageView*>(swapchain.GetNativeImageView());
+    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(list.GetNativeCmdList());
+
+    VK_VERIFY(vkResetCommandBuffer(buf, 0));
+
     VkCommandBufferBeginInfo begin_info = {};
     begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
@@ -789,8 +771,8 @@ void RHITestApp::RecordCommandBuffer(VkCommandBuffer buf, VkImage swapchain_imag
     vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
 
     VkDeviceSize offsets[] = { 0 };
-    vkCmdBindVertexBuffers(buf, 0, 1, &m_vertex_buffer, offsets);
-    vkCmdBindIndexBuffer(buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(buf, 0, 1, static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer()), offsets);
+    vkCmdBindIndexBuffer(buf, *static_cast<VkBuffer*>(m_index_buffer->GetNativeBuffer()), 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdDrawIndexed(buf, 6, 1, 0, 0, 0);
 
@@ -807,29 +789,17 @@ void RHITestApp::DrawFrame()
     
     if (m_fb_resized)
     {
-        RecreateSwapChain();
+        m_swapchain->Recreate();
         m_fb_resized = false;
     }
     bool swapchain_recreated = false;
     m_swapchain->AcquireNextImage(m_image_available_semaphores[m_current_frame].get(), swapchain_recreated);
-    if (swapchain_recreated)
-    {
-        CleanupPipeline();
-        CreatePipeline();
-    }
 
     RHICommandList* cmd_list = m_rhi->GetCommandList(RHI::QueueType::Graphics);
 
-    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(cmd_list->GetNativeCmdList());
-
-    VK_VERIFY(vkResetCommandBuffer(buf, 0));
-
     UpdateUniformBuffer(m_current_frame);
 
-    VkImage swapchain_image = *static_cast<VkImage*>(m_swapchain->GetNativeImage());
-    VkImageView swapchain_image_view = *static_cast<VkImageView*>(m_swapchain->GetNativeImageView());
-
-    RecordCommandBuffer(buf, swapchain_image, swapchain_image_view);
+    RecordCommandBuffer(*cmd_list, *m_swapchain);
 
     RHI::SubmitInfo submit_info = {};
     submit_info.cmd_list_count = 1;
@@ -864,12 +834,6 @@ void RHITestApp::CreateSyncObjects()
         m_image_available_semaphores[i] = m_rhi->CreateGPUSemaphore();
         m_render_finished_semaphores[i] = m_rhi->CreateGPUSemaphore();
     }
-}
-
-void RHITestApp::RecreateSwapChain()
-{
-    m_swapchain->Recreate();
-    CreatePipeline();
 }
 
 std::array<RHIPrimitiveAttributeInfo, 3> Vertex::GetRHIAttributes()

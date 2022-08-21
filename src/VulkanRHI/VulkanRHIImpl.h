@@ -103,14 +103,13 @@ public:
 
 	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
 
-	virtual RHIUploadBuffer* CreateUploadBuffer(const UploadBufferInfo& buf_info) override;
+	virtual RHIBuffer* CreateDeviceBuffer(const BufferInfo& buf_info) override;
+	virtual RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& buf_info) override;
 
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
-	virtual void* GetNativeSurface() const override { return (void*)&m_main_surface; }
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
 	virtual void* GetNativeGraphicsQueue() const override { return (void*)&m_graphics_queue; }
-	virtual void* GetNativeCommandPool() const override { return (void*)&m_cmd_pool; }
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }

@@ -5,8 +5,7 @@
 #include "VulkanRHIImpl.h"
 
 
-
-VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::UploadBufferInfo& info)
+VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaAllocationCreateFlags alloc_create_flags)
 	: m_rhi(rhi)
 {
     VkBufferCreateInfo vk_create_info = {};
@@ -17,13 +16,30 @@ VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::UploadBufferIn
 
     VmaAllocationCreateInfo vma_alloc_info = {};
     vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-    vma_alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-    vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr);
+    vma_alloc_info.flags = alloc_create_flags;
+    VK_VERIFY(vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr));
+}
+
+void VulkanBuffer::GetAllocationInfo(VmaAllocationInfo& info)
+{
+    vmaGetAllocationInfo(m_rhi->GetVMA(), m_allocation, &info);
+}
+
+VulkanBuffer::~VulkanBuffer()
+{
+    vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
+}
+
+
+VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info)
+{
+    m_buffer = new VulkanBuffer(
+        rhi, info,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 }
 
 VulkanUploadBuffer::~VulkanUploadBuffer()
 {
-    vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
 }
 
 void VulkanUploadBuffer::AddRef()
@@ -37,7 +53,7 @@ void VulkanUploadBuffer::Release()
 void VulkanUploadBuffer::WriteBytes(const void* src, size_t size, size_t offset)
 {
     VmaAllocationInfo info;
-    vmaGetAllocationInfo(m_rhi->GetVMA(), m_allocation, &info);
+    m_buffer->GetAllocationInfo(info);
     VERIFY_NOT_EQUAL(info.pMappedData, nullptr);
     memcpy((uint8_t*)info.pMappedData + offset, src, size);
 }

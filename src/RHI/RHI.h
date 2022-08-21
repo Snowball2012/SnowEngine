@@ -49,10 +49,8 @@ public:
 
 	// temp functions, to be removed
 	virtual void* GetNativePhysDevice() const { return nullptr; }
-	virtual void* GetNativeSurface() const { return nullptr; }
 	virtual void* GetNativeDevice() const { return nullptr; }
 	virtual void* GetNativeGraphicsQueue() const { return nullptr; }
-	virtual void* GetNativeCommandPool() const { return nullptr; }
 
 	// window_handle must outlive the swap chain
 	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
@@ -124,12 +122,14 @@ public:
 
 	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
 
-	struct UploadBufferInfo
+	struct BufferInfo
 	{
 		uint64_t size = 0;
 		RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
 	};
-	virtual class RHIUploadBuffer* CreateUploadBuffer(const UploadBufferInfo& info) { return nullptr; }
+	virtual class RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& info) { return nullptr; }
+
+	virtual class RHIBuffer* CreateDeviceBuffer(const BufferInfo& info) { return nullptr; }
 };
 
 class RHIObject
@@ -273,11 +273,16 @@ public:
 
 	virtual void* GetNativeBuffer() const { return nullptr; }
 };
+using RHIBufferPtr = RHIObjectPtr<RHIBuffer>;
 
-class RHIUploadBuffer : public RHIBuffer
+class RHIUploadBuffer : public RHIObject
 {
 public:
 	virtual ~RHIUploadBuffer() override {}
+
+	// For rhi needs
+	virtual RHIBuffer* GetBuffer() { return nullptr; }
+	virtual const RHIBuffer* GetBuffer() const { return nullptr; }
 
 	virtual void WriteBytes(const void* src, size_t size, size_t offset = 0) {}
 };
