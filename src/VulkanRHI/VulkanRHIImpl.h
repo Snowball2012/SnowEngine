@@ -106,6 +106,8 @@ public:
 	virtual RHIBuffer* CreateDeviceBuffer(const BufferInfo& buf_info) override;
 	virtual RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& buf_info) override;
 
+	virtual RHITexture* CreateTexture(const TextureInfo& tex_info) override;
+
 	// TEMP
 	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
@@ -132,6 +134,9 @@ public:
 	static VkVertexInputRate GetVkVertexInputRate(RHIPrimitiveFrequency frequency);
 
 	static VkBufferUsageFlags GetVkBufferUsageFlags(RHIBufferUsageFlags usage);
+	static VkImageUsageFlags GetVkImageUsageFlags(RHITextureUsageFlags usage);
+
+	static VkImageType GetVkImageType(RHITextureDimensions dimensions);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);

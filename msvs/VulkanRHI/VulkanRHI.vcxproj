@@ -25,6 +25,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
     <ClInclude Include="..\..\src\VulkanRHI\StdAfx.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Swapchain.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Textures.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Validation.h" />
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHI.h" />
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
@@ -39,6 +40,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\..\src\VulkanRHI\Swapchain.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Textures.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Validation.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\VulkanMemoryAllocatorImpl.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>

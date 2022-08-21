@@ -12,6 +12,8 @@
 
 #include "Buffers.h"
 
+#include "Textures.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -100,6 +102,9 @@ VkFormat VulkanRHI::GetVkFormat(RHIFormat format)
     case RHIFormat::B8G8R8A8_SRGB:
         vk_format = VK_FORMAT_B8G8R8A8_SRGB;
         break;
+    case RHIFormat::R8G8B8A8_SRGB:
+        vk_format = VK_FORMAT_R8G8B8A8_SRGB;
+        break;
     default:
         NOTIMPL;
     }
@@ -125,6 +130,9 @@ RHIFormat VulkanRHI::GetRHIFormat(VkFormat format)
     case VK_FORMAT_B8G8R8A8_SRGB:
         rhi_format = RHIFormat::B8G8R8A8_SRGB;
         break;
+    case VK_FORMAT_R8G8B8A8_SRGB:
+        rhi_format = RHIFormat::R8G8B8A8_SRGB;
+        break;
     default:
         NOTIMPL;
     }
@@ -148,6 +156,7 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
         size = 8;
         break;
     case RHIFormat::B8G8R8A8_SRGB:
+    case RHIFormat::R8G8B8A8_SRGB:
         size = 4;
         break;
     default:
@@ -156,7 +165,6 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
 
     return size;
 }
-
 
 VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags(RHIBufferUsageFlags usage)
 {
@@ -178,6 +186,24 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags(RHIBufferUsageFlags usage)
     return retval;
 }
 
+VkImageUsageFlags VulkanRHI::GetVkImageUsageFlags(RHITextureUsageFlags usage)
+{
+    VkImageUsageFlags retval = 0;
+
+    auto add_flag = [&](auto rhiflag, auto vkflag)
+    {
+        retval |= ((usage & rhiflag) != RHITextureUsageFlags::None) ? vkflag : 0;
+    };
+
+    static_assert(int(RHITextureUsageFlags::NumFlags) == 3);
+
+    add_flag(RHITextureUsageFlags::TransferSrc, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+    add_flag(RHITextureUsageFlags::TransferDst, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+    add_flag(RHITextureUsageFlags::SRV, VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    return retval;
+}
+
 VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequency)
 {
     VkVertexInputRate vk_inputrate = VK_VERTEX_INPUT_RATE_MAX_ENUM;
@@ -195,6 +221,21 @@ VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequenc
     }
 
     return vk_inputrate;
+}
+
+VkImageType VulkanRHI::GetVkImageType(RHITextureDimensions dimensions)
+{
+    switch (dimensions)
+    {
+    case RHITextureDimensions::T1D:
+        return VK_IMAGE_TYPE_1D;
+    case RHITextureDimensions::T2D:
+        return VK_IMAGE_TYPE_2D;
+    case RHITextureDimensions::T3D:
+        return VK_IMAGE_TYPE_3D;
+    }
+
+    NOTIMPL;
 }
 
 void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
@@ -729,7 +770,12 @@ RHIUploadBuffer* VulkanRHI::CreateUploadBuffer(const RHI::BufferInfo& buf_info)
 
 RHIBuffer* VulkanRHI::CreateDeviceBuffer(const BufferInfo& buf_info)
 {
-    return new VulkanBuffer(this, buf_info, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+    return new VulkanBuffer(this, buf_info, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0);
+}
+
+RHITexture* VulkanRHI::CreateTexture(const TextureInfo& tex_info)
+{
+    return new VulkanTexture(this, tex_info);
 }
 
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)

@@ -61,8 +61,7 @@ private:
 	RHIBufferPtr m_index_buffer = nullptr;
 	std::vector<RHIUploadBufferPtr> m_uniform_buffers;
 	// images
-	VkImage m_texture_image = VK_NULL_HANDLE;
-	VkDeviceMemory m_texture_memory = VK_NULL_HANDLE;
+	RHITexturePtr m_texture = nullptr;
 	VkImageView m_texture_view = VK_NULL_HANDLE;
 	VkSampler m_texture_sampler = VK_NULL_HANDLE;
 
@@ -109,8 +108,6 @@ private:
 	void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t size);
 	void CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height);
 
-	uint32_t FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
-
 	void CreateDescriptorSetLayout();
 
 	void CreateUniformBuffers();
@@ -124,8 +121,8 @@ private:
 	void CreateTextureImage();
 
 	void CreateImage(
-		uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage,
-		VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_mem);
+		uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage,
+		RHITexturePtr& image);
 
 	RHICommandList* BeginSingleTimeCommands();
 	void EndSingleTimeCommands(RHICommandList& buf);

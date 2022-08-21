@@ -132,8 +132,7 @@ void RHITestApp::Cleanup()
 
     vkDestroySampler(m_vk_device, m_texture_sampler, nullptr);
     vkDestroyImageView(m_vk_device, m_texture_view, nullptr);
-    vkDestroyImage(m_vk_device, m_texture_image, nullptr);
-    vkFreeMemory(m_vk_device, m_texture_memory, nullptr);
+    m_texture = nullptr;
 
     m_swapchain = nullptr;
     CleanupPipeline();
@@ -366,59 +365,39 @@ void RHITestApp::CreateTextureImage()
     // image creation
     CreateImage(
         uint32_t(width), uint32_t(height),
-        VK_FORMAT_R8G8B8A8_SRGB,
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        m_texture_image, m_texture_memory);
+        RHIFormat::R8G8B8A8_SRGB,
+        RHITextureUsageFlags::SRV | RHITextureUsageFlags::TransferDst,
+        m_texture);
 
+    VkImage image = *static_cast<VkImage*>(m_texture->GetNativeTexture());
     TransitionImageLayoutAndFlush(
-        m_texture_image,
+        image,
         VK_IMAGE_LAYOUT_UNDEFINED,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    CopyBufferToImage(native_staging, m_texture_image, uint32_t(width), uint32_t(height));
+    CopyBufferToImage(native_staging, image, uint32_t(width), uint32_t(height));
 
     TransitionImageLayoutAndFlush(
-        m_texture_image,
+        image,
         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-void RHITestApp::CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& image_mem)
+void RHITestApp::CreateImage(
+    uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage,
+    RHITexturePtr& image)
 {
-    VkImageCreateInfo image_info = {};
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = VK_IMAGE_TYPE_2D;
-    image_info.extent.width = width;
-    image_info.extent.height = height;
-    image_info.extent.depth = 1;
-    image_info.mipLevels = 1;
-    image_info.arrayLayers = 1;
+    RHI::TextureInfo tex_info = {};
+    tex_info.dimensions = RHITextureDimensions::T2D;
+    tex_info.width = width;
+    tex_info.height = height;
+    tex_info.depth = 1;
+    tex_info.mips = 1;
+    tex_info.array_layers = 1;
+    tex_info.format = format;
+    tex_info.usage = usage;
 
-    image_info.format = format;
-    image_info.tiling = tiling;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    image_info.usage = usage;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    image_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_info.flags = 0;
-
-    VK_VERIFY(vkCreateImage(m_vk_device, &image_info, nullptr, &image));
-
-    VkMemoryRequirements mem_requirements = {};
-    vkGetImageMemoryRequirements(m_vk_device, image, &mem_requirements);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_requirements.size;
-    alloc_info.memoryTypeIndex = FindMemoryType(mem_requirements.memoryTypeBits, properties);
-
-    VK_VERIFY(vkAllocateMemory(m_vk_device, &alloc_info, nullptr, &image_mem));
-
-    VK_VERIFY(vkBindImageMemory(m_vk_device, image, image_mem, 0));
+    image = m_rhi->CreateTexture(tex_info);
 }
 
 RHICommandList* RHITestApp::BeginSingleTimeCommands()
@@ -537,8 +516,8 @@ void RHITestApp::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkIma
 
 void RHITestApp::CreateTextureImageView()
 {
-    m_texture_view = CreateImageView(m_texture_image, VK_FORMAT_R8G8B8A8_SRGB);
-
+    VkImage image = *static_cast<VkImage*>(m_texture->GetNativeTexture());
+    m_texture_view = CreateImageView(image, VK_FORMAT_R8G8B8A8_SRGB);
 }
 
 VkImageView RHITestApp::CreateImageView(VkImage image, VkFormat format)
@@ -620,23 +599,6 @@ void RHITestApp::CreateVertexBuffer()
     CopyBuffer(*staging_buf->GetBuffer(), *m_vertex_buffer, buffer_size);
 }
 
-uint32_t RHITestApp::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties)
-{
-    VkPhysicalDeviceMemoryProperties mem_properties = {};
-    vkGetPhysicalDeviceMemoryProperties(m_vk_phys_device, &mem_properties);
-
-    for (uint32_t i = 0; i < mem_properties.memoryTypeCount; ++i)
-    {
-        if (type_filter & (1 << i) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
-    }
-
-    bool mem_type_found = false;
-    VERIFY_EQUALS(mem_type_found, true);
-
-    return uint32_t(-1);
-}
-
 std::vector<const char*> RHITestApp::GetSDLExtensions() const
 {
     uint32_t sdl_extension_count = 0;
@@ -709,7 +671,7 @@ void RHITestApp::CreatePipeline()
 
 void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapchain)
 {
-    VkImage swapchain_image = *static_cast<VkImage*>(swapchain.GetNativeImage());
+    VkImage swapchain_image = *static_cast<VkImage*>(swapchain.GetTexture()->GetNativeTexture());
     VkImageView swapchain_image_view = *static_cast<VkImageView*>(swapchain.GetNativeImageView());
     VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(list.GetNativeCmdList());
 

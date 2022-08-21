@@ -42,6 +42,33 @@ enum class RHIBufferUsageFlags : uint32_t
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS(RHIBufferUsageFlags)
 
+enum class RHITextureDimensions : uint8_t
+{
+	T1D,
+	T2D,
+	T3D
+};
+
+enum class RHITextureUsageFlags : uint32_t
+{
+	None = 0,
+	TransferSrc = 0x1,
+	TransferDst = 0x2,
+	SRV = 0x4,
+
+	NumFlags = 3
+};
+IMPLEMENT_SCOPED_ENUM_FLAGS(RHITextureUsageFlags)
+
+enum class RHIFormat : uint8_t
+{
+	Undefined = 0,
+	R32G32_SFLOAT,
+	R32G32B32_SFLOAT,
+	B8G8R8A8_SRGB,
+	R8G8B8A8_SRGB
+};
+
 class RHI
 {
 public:
@@ -128,8 +155,23 @@ public:
 		RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
 	};
 	virtual class RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& info) { return nullptr; }
-
 	virtual class RHIBuffer* CreateDeviceBuffer(const BufferInfo& info) { return nullptr; }
+
+	struct TextureInfo
+	{
+		RHITextureDimensions dimensions = RHITextureDimensions::T2D;
+		RHIFormat format = RHIFormat::Undefined;
+
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t depth = 0;
+
+		uint32_t mips = 0;
+		uint32_t array_layers = 0;
+
+		RHITextureUsageFlags usage = RHITextureUsageFlags::None;
+	};
+	virtual class RHITexture* CreateTexture(const TextureInfo& info) { return nullptr; }
 };
 
 class RHIObject
@@ -156,14 +198,6 @@ inline void intrusive_ptr_release(RHIObject* p)
 		p->Release();
 }
 
-enum class RHIFormat : uint8_t
-{
-	Undefined = 0,
-	R32G32_SFLOAT,
-	R32G32B32_SFLOAT,
-	B8G8R8A8_SRGB
-};
-
 struct SwapChainCreateInfo
 {
 	void* window_handle = nullptr;
@@ -183,7 +217,8 @@ public:
 
 	virtual RHIFormat GetFormat() const { return RHIFormat::Undefined; }
 
-	virtual void* GetNativeImage() const = 0;
+	virtual const RHITexture* GetTexture() const { return nullptr; }
+
 	virtual void* GetNativeImageView() const = 0;
 };
 
@@ -295,6 +330,15 @@ public:
 	virtual void WriteBytes(const void* src, size_t size, size_t offset = 0) {}
 };
 using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
+
+class RHITexture : public RHIObject
+{
+public:
+	virtual ~RHITexture() override {}
+
+	virtual void* GetNativeTexture() const { return nullptr; }
+};
+using RHITexturePtr = RHIObjectPtr<RHITexture>;
 
 template<typename T>
 using UniquePtrWithDeleter = std::unique_ptr<T, void(*)(T*)>;

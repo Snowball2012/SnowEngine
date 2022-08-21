@@ -11,7 +11,7 @@ class VulkanBuffer : public RHIBuffer
 	VmaAllocation m_allocation = VK_NULL_HANDLE;
 
 public:
-	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaAllocationCreateFlags alloc_create_flags);
+	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags);
 
 	virtual ~VulkanBuffer() override;
 

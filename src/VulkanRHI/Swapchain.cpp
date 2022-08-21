@@ -65,14 +65,21 @@ void VulkanSwapChain::Init()
 
     VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, nullptr));
 
-    m_swapchain_images.resize(image_count);
-    VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, m_swapchain_images.data()));
+    m_swapchain_images.clear();
+    m_swapchain_images.reserve(image_count);
+    std::vector<VkImage> images;
+    images.resize(image_count);
+    VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, images.data()));
+    for (size_t i = 0; i < image_count; ++i)
+    {
+        m_swapchain_images.emplace_back(images[i]);
+    }
 
     m_swapchain_image_views.resize(image_count);
     for (uint32_t i = 0; i < image_count; ++i)
     {
-        m_swapchain_image_views[i] = m_rhi->CreateImageView(m_swapchain_images[i], m_swapchain_format.format);
-        m_rhi->TransitionImageLayoutAndFlush(m_swapchain_images[i], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        m_swapchain_image_views[i] = m_rhi->CreateImageView(m_swapchain_images[i].GetVkImage(), m_swapchain_format.format);
+        m_rhi->TransitionImageLayoutAndFlush(m_swapchain_images[i].GetVkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 }
 

@@ -5,7 +5,7 @@
 #include "VulkanRHIImpl.h"
 
 
-VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaAllocationCreateFlags alloc_create_flags)
+VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags)
 	: m_rhi(rhi)
 {
     VkBufferCreateInfo vk_create_info = {};
@@ -15,7 +15,7 @@ VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaAlloc
     vk_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo vma_alloc_info = {};
-    vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+    vma_alloc_info.usage = usage;
     vma_alloc_info.flags = alloc_create_flags;
     VK_VERIFY(vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr));
 }
@@ -34,7 +34,7 @@ VulkanBuffer::~VulkanBuffer()
 VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info)
 {
     m_buffer = new VulkanBuffer(
-        rhi, info,
+        rhi, info, VMA_MEMORY_USAGE_AUTO,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
 }
 
