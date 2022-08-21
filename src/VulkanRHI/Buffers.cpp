@@ -4,6 +4,7 @@
 
 #include "VulkanRHIImpl.h"
 
+IMPLEMENT_RHI_OBJECT(VulkanBuffer)
 
 VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags)
 	: m_rhi(rhi)
@@ -30,8 +31,10 @@ VulkanBuffer::~VulkanBuffer()
     vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
 }
 
+IMPLEMENT_RHI_OBJECT(VulkanUploadBuffer)
 
 VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info)
+    : m_rhi(rhi)
 {
     m_buffer = new VulkanBuffer(
         rhi, info, VMA_MEMORY_USAGE_AUTO,
@@ -39,14 +42,6 @@ VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& in
 }
 
 VulkanUploadBuffer::~VulkanUploadBuffer()
-{
-}
-
-void VulkanUploadBuffer::AddRef()
-{
-}
-
-void VulkanUploadBuffer::Release()
 {
 }
 

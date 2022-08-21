@@ -6,7 +6,8 @@
 
 class VulkanBuffer : public RHIBuffer
 {
-	class VulkanRHI* m_rhi = nullptr;
+	GENERATE_RHI_OBJECT_BODY()
+
 	VkBuffer m_vk_buffer = VK_NULL_HANDLE;
 	VmaAllocation m_allocation = VK_NULL_HANDLE;
 
@@ -14,10 +15,6 @@ public:
 	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags);
 
 	virtual ~VulkanBuffer() override;
-
-	// Inherited via RHIBuffer
-	virtual void AddRef() override {}
-	virtual void Release() override {}
 
 	virtual void* GetNativeBuffer() const override { return (void*)&m_vk_buffer; }
 
@@ -28,16 +25,14 @@ public:
 
 class VulkanUploadBuffer : public RHIUploadBuffer
 {
+	GENERATE_RHI_OBJECT_BODY()
+
 	RHIObjectPtr<VulkanBuffer> m_buffer = nullptr;
 
 public:
 	VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info);
 
 	virtual ~VulkanUploadBuffer() override;
-
-	// Inherited via RHIUploadBuffer
-	virtual void AddRef() override;
-	virtual void Release() override;
 
 	virtual void WriteBytes(const void* src, size_t size, size_t offset) override;
 

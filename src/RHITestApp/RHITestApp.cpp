@@ -138,6 +138,14 @@ void RHITestApp::Cleanup()
     CleanupPipeline();
     vkDestroyDescriptorSetLayout(m_vk_device, m_descriptor_layout, nullptr);
 
+    m_vertex_buffer = nullptr;
+    m_index_buffer = nullptr;
+    m_uniform_buffers.clear();
+    m_texture = nullptr;
+    m_image_available_semaphores.clear();
+    m_render_finished_semaphores.clear();
+    m_inflight_fences.clear();
+
     m_rhi.reset();
 
     std::cout << "RHI shutdown complete\n";
@@ -617,11 +625,11 @@ void RHITestApp::CreatePipeline()
 
     create_info.frequency = RHI::ShaderFrequency::Vertex;
     create_info.entry_point = "TriangleVS";
-    RHIShader* triangle_shader_vs = m_rhi->CreateShader(create_info);
+    RHIObjectPtr<RHIShader> triangle_shader_vs = m_rhi->CreateShader(create_info);
 
     create_info.frequency = RHI::ShaderFrequency::Pixel;
     create_info.entry_point = "TrianglePS";
-    RHIShader* triangle_shader_ps = m_rhi->CreateShader(create_info);
+    RHIObjectPtr<RHIShader> triangle_shader_ps = m_rhi->CreateShader(create_info);
 
     auto vb_attributes = Vertex::GetRHIAttributes();
 
@@ -644,15 +652,15 @@ void RHITestApp::CreatePipeline()
     RHIGraphicsPipelineInfo rhi_pipeline_info = {};
 
     rhi_pipeline_info.input_assembler = &ia_info;
-    rhi_pipeline_info.vs = triangle_shader_vs;
-    rhi_pipeline_info.ps = triangle_shader_ps;
+    rhi_pipeline_info.vs = triangle_shader_vs.get();
+    rhi_pipeline_info.ps = triangle_shader_ps.get();
 
     RHIPipelineRTInfo rt_info = {};
     rt_info.format = m_swapchain->GetFormat();
     rhi_pipeline_info.rts_count = 1;
     rhi_pipeline_info.rt_info = &rt_info;
 
-    RHIGraphicsPipeline* rhi_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
+    RHIObjectPtr<RHIGraphicsPipeline> rhi_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
 
     VkGraphicsPipelineCreateInfo pipeline_info = *static_cast<const VkGraphicsPipelineCreateInfo*>(rhi_pipeline->GetNativePipelineCreateInfo());
 

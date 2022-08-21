@@ -20,6 +20,8 @@ struct VulkanSwapChainCreateInfo : SwapChainCreateInfo
 
 class VulkanSwapChain : public RHISwapChain
 {
+	GENERATE_RHI_OBJECT_BODY()
+
 private:
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
@@ -30,8 +32,6 @@ private:
 
 	const VulkanSwapChainCreateInfo m_create_info;
 
-	class VulkanRHI* m_rhi = nullptr;
-
 	uint32_t m_cur_image_index = -1;
 
 public:
@@ -41,8 +41,6 @@ public:
 	virtual ~VulkanSwapChain() override;
 
 	// Inherited via RHISwapChain
-	virtual void AddRef() override;
-	virtual void Release() override;
 	virtual glm::uvec2 GetExtent() const override;
 	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) override;
 	virtual void Recreate() override;

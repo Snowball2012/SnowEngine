@@ -6,6 +6,8 @@
 
 #include "VulkanRHIImpl.h"
 
+IMPLEMENT_RHI_OBJECT(Shader)
+
 Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_bytecode_blob(std::move(bytecode))
     , m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
@@ -93,14 +95,6 @@ void Shader::CreateVkStage()
     m_vk_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     m_vk_stage.stage = FrequencyToVkStage(m_frequency);
     m_vk_stage.pName = GetEntryPoint();
-}
-
-void Shader::AddRef()
-{
-}
-
-void Shader::Release()
-{
 }
 
 ShaderSourceFile::ShaderSourceFile(std::wstring filename, ComPtr<IDxcBlobEncoding> blob)

@@ -9,13 +9,7 @@ VulkanTextureBase::VulkanTextureBase(VkImage image)
 {
 }
 
-void VulkanTextureBase::AddRef()
-{
-}
-
-void VulkanTextureBase::Release()
-{
-}
+IMPLEMENT_RHI_OBJECT(VulkanTexture)
 
 VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
 	:VulkanTextureBase(VK_NULL_HANDLE), m_rhi(rhi)
@@ -50,12 +44,4 @@ VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
 VulkanTexture::~VulkanTexture()
 {
 	vmaDestroyImage(m_rhi->GetVMA(), m_image, m_allocation);
-}
-
-void VulkanTexture::AddRef()
-{
-}
-
-void VulkanTexture::Release()
-{
 }

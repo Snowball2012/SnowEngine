@@ -10,8 +10,8 @@
 
 class VulkanSemaphore : public RHISemaphore
 {
+	GENERATE_RHI_OBJECT_BODY()
 private:
-	VulkanRHI* m_rhi = nullptr;
 	VkSemaphore m_vk_semaphore = VK_NULL_HANDLE;
 
 public:
@@ -22,9 +22,6 @@ public:
 	virtual void* GetNativeSemaphore() const override { return (void*)&m_vk_semaphore; }
 
 	VkSemaphore GetVkSemaphore() const { return m_vk_semaphore; }
-
-	virtual void AddRef() override;
-	virtual void Release() override;
 };
 
 struct QueueFamilyIndices
@@ -81,6 +78,8 @@ private:
 
 	std::unique_ptr<class VulkanCommandListManager> m_cmd_list_mgr;
 
+	std::vector<RHIObject*> m_objects_to_delete;
+
 public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
@@ -124,6 +123,9 @@ public:
 	VulkanQueue* GetQueue(QueueType type);
 
 	VmaAllocator GetVMA() const { return m_vma; }
+
+	// Has to be thread-safe
+	void DeferredDestroyRHIObject(RHIObject* obj);
 
 	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
 

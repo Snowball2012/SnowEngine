@@ -48,11 +48,24 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 
 VulkanRHI::~VulkanRHI()
 {
+    WaitIdle();
+
     m_cmd_list_mgr = nullptr;
 
     m_main_swap_chain = nullptr;
 
     vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
+
+    // temp destruction. Should be done in submitted command list wait code
+    do
+    {
+        auto objects_to_delete_temp = std::move(m_objects_to_delete);
+        m_objects_to_delete.clear();
+        for (RHIObject* obj : objects_to_delete_temp)
+        {
+            delete obj;
+        }
+    } while (!m_objects_to_delete.empty());
 
     vmaDestroyAllocator(m_vma);
 
@@ -80,7 +93,6 @@ void VulkanRHI::CreateVMA()
 RHISemaphore* VulkanRHI::CreateGPUSemaphore()
 {
     RHISemaphore* new_semaphore = new VulkanSemaphore(this);
-    new_semaphore->AddRef();
     return new_semaphore;
 }
 
@@ -164,6 +176,11 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
     }
 
     return size;
+}
+
+void VulkanRHI::DeferredDestroyRHIObject(RHIObject* obj)
+{
+    m_objects_to_delete.emplace_back(obj);
 }
 
 VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags(RHIBufferUsageFlags usage)
@@ -614,7 +631,6 @@ void VulkanRHI::CreateCommandPool()
 VulkanSwapChain* VulkanRHI::CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info)
 {
     VulkanSwapChain* swap_chain = new VulkanSwapChain(this, create_info);
-    swap_chain->AddRef();
     return swap_chain;
 }
 
@@ -805,6 +821,8 @@ QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surfa
     return indices;
 }
 
+IMPLEMENT_RHI_OBJECT(VulkanSemaphore)
+
 VulkanSemaphore::VulkanSemaphore(VulkanRHI* rhi)
     : m_rhi(rhi)
 {
@@ -814,16 +832,10 @@ VulkanSemaphore::VulkanSemaphore(VulkanRHI* rhi)
     VK_VERIFY(vkCreateSemaphore(m_rhi->GetDevice(), &sem_info, nullptr, &m_vk_semaphore));
 }
 
+
 VulkanSemaphore::~VulkanSemaphore()
 {
     if (m_vk_semaphore != VK_NULL_HANDLE)
         vkDestroySemaphore(m_rhi->GetDevice(), m_vk_semaphore, nullptr);
 }
 
-void VulkanSemaphore::AddRef()
-{
-}
-
-void VulkanSemaphore::Release()
-{
-}

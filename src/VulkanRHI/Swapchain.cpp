@@ -4,6 +4,8 @@
 
 #include "VulkanRHIImpl.h"
 
+IMPLEMENT_RHI_OBJECT(VulkanSwapChain)
+
 VulkanSwapChain::VulkanSwapChain(VulkanRHI* rhi, const VulkanSwapChainCreateInfo& create_info)
     : m_rhi(rhi), m_surface(create_info.surface), m_create_info(create_info)
 {
@@ -95,14 +97,6 @@ void VulkanSwapChain::Cleanup()
         vkDestroyImageView(m_rhi->GetDevice(), view, nullptr);
 
     vkDestroySwapchainKHR(m_rhi->GetDevice(), m_swapchain, nullptr);
-}
-
-void VulkanSwapChain::AddRef()
-{
-}
-
-void VulkanSwapChain::Release()
-{
 }
 
 glm::uvec2 VulkanSwapChain::GetExtent() const

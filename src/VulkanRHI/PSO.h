@@ -8,7 +8,7 @@
 
 class VulkanGraphicsPSO : public RHIGraphicsPipeline
 {
-	class VulkanRHI* m_rhi = nullptr;
+	GENERATE_RHI_OBJECT_BODY()
 
 	VkPipelineShaderStageCreateInfo m_stages[2];
 
@@ -42,10 +42,6 @@ public:
 	VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineInfo& info);
 
 	virtual void* GetNativePipelineCreateInfo() const override { return (void*)&m_pipeline_info; }
-
-	// Inherited via RHIGraphicsPipeline
-	virtual void AddRef() override;
-	virtual void Release() override;
 
 private:
 	void InitRasterizer(const RHIGraphicsPipelineInfo& info);

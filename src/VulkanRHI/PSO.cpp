@@ -4,6 +4,8 @@
 
 #include "VulkanRHIImpl.h"
 
+IMPLEMENT_RHI_OBJECT(VulkanGraphicsPSO)
+
 VulkanGraphicsPSO::VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineInfo& info)
 	: m_rhi(rhi), m_vs(static_cast<Shader*>(info.vs)), m_ps(static_cast<Shader*>(info.ps))
 {
@@ -28,14 +30,6 @@ VulkanGraphicsPSO::VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineIn
 
 	m_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 	m_pipeline_info.basePipelineIndex = -1;
-}
-
-void VulkanGraphicsPSO::AddRef()
-{
-}
-
-void VulkanGraphicsPSO::Release()
-{
 }
 
 void VulkanGraphicsPSO::InitRasterizer(const RHIGraphicsPipelineInfo& info)

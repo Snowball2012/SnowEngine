@@ -12,6 +12,8 @@ struct ShaderDefine
 
 class Shader : public RHIShader
 {
+    GENERATE_RHI_OBJECT_BODY()
+
 private:
     ComPtr<struct IDxcBlob> m_bytecode_blob = nullptr;
 
@@ -22,18 +24,12 @@ private:
 
     VkPipelineShaderStageCreateInfo m_vk_stage = {};
 
-    class VulkanRHI* m_rhi = nullptr;
-
 public:
 
     Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<struct IDxcBlob> bytecode);
     Shader(VulkanRHI* rhi, const class ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines = std::vector<ShaderDefine>());
 
     virtual ~Shader();
-
-    // Inherited via RHIShader
-    virtual void AddRef() override;
-    virtual void Release() override;
 
     const wchar_t* GetFileName() const { return m_filename.c_str(); }
     const char* GetEntryPoint() const { return m_entrypoint.c_str(); }

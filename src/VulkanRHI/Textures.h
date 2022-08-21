@@ -5,6 +5,7 @@
 #include "RHI/RHI.h"
 
 // This wrapper does not actually owns a texture. Swapchain have to return RHITexture wrappers for it's images, but this wrappers mustn't own the texture
+// That's why it does not use GENERATE_RHIOBJECT_BODY macro
 class VulkanTextureBase : public RHITexture
 {
 protected:
@@ -17,8 +18,8 @@ public:
 	virtual ~VulkanTextureBase() override {}
 
 	// Inherited via RHITexture
-	virtual void AddRef() override;
-	virtual void Release() override;
+	virtual void AddRef() override {}
+	virtual void Release() override {}
 
 	virtual void* GetNativeTexture() const { return (void*)&m_image; }
 
@@ -27,15 +28,12 @@ public:
 
 class VulkanTexture : public VulkanTextureBase
 {
-	class VulkanRHI* m_rhi = nullptr;
+	GENERATE_RHI_OBJECT_BODY()
+
 	VmaAllocation m_allocation = VK_NULL_HANDLE;
 
 public:
 	VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info);
 
 	virtual ~VulkanTexture() override;
-
-	// Inherited via RHITexture
-	virtual void AddRef() override;
-	virtual void Release() override;
 };
