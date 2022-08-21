@@ -63,6 +63,8 @@ public:
 	virtual void Begin() override;
 	virtual void End() override;
 
+	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }

@@ -205,6 +205,14 @@ public:
 	virtual void Begin() = 0;
 	virtual void End() = 0;
 
+	struct CopyRegion
+	{
+		size_t src_offset = 0;
+		size_t dst_offset = 0;
+		size_t size = 0;
+	};
+	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) {}
+
 	virtual void* GetNativeCmdList() const = 0;
 };
 

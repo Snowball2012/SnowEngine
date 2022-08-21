@@ -3,6 +3,7 @@
 #include "CommandLists.h"
 
 #include "VulkanRHIImpl.h"
+#include <VulkanRHI/Buffers.h>
 
 VulkanCommandList::VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id)
     : m_rhi(rhi), m_type(type), m_list_id(list_id)
@@ -57,6 +58,27 @@ void VulkanCommandList::Begin()
 void VulkanCommandList::End()
 {
     VK_VERIFY(vkEndCommandBuffer(m_vk_cmd_buffer));
+}
+
+void VulkanCommandList::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions)
+{
+    VERIFY_NOT_EQUAL(region_count, 0);
+    VERIFY_NOT_EQUAL(regions, nullptr);
+    boost::container::small_vector<VkBufferCopy, 4> copy_regions;
+    for (size_t i = 0; i < region_count; ++i)
+    {
+        auto& vk_region = copy_regions.emplace_back();
+        vk_region.srcOffset = regions[i].src_offset;
+        vk_region.dstOffset = regions[i].dst_offset;
+        vk_region.size = regions[i].size;
+    }
+
+    VulkanBuffer& dst_impl = static_cast<VulkanBuffer&>(dst);
+    VulkanBuffer& src_impl = static_cast<VulkanBuffer&>(src);
+
+    vkCmdCopyBuffer(
+        m_vk_cmd_buffer, src_impl.GetVkBuffer(), dst_impl.GetVkBuffer(),
+        uint32_t(copy_regions.size()), copy_regions.data());
 }
 
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)

@@ -150,17 +150,15 @@ void RHITestApp::CleanupPipeline()
     vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
 }
 
-void RHITestApp::CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size)
+void RHITestApp::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t size)
 {
     RHICommandList* list = BeginSingleTimeCommands();
-    VkCommandBuffer cmd_buf = *static_cast<VkCommandBuffer*>(list->GetNativeCmdList());;
 
-    VkBufferCopy copy_region = {};
-    copy_region.srcOffset = 0;
-    copy_region.dstOffset = 0;
+    RHICommandList::CopyRegion copy_region = {};
+    copy_region.src_offset = 0;
+    copy_region.dst_offset = 0;
     copy_region.size = size;
-
-    vkCmdCopyBuffer(cmd_buf, src, dst, 1, &copy_region);
+    list->CopyBuffer(src, dst, 1, &copy_region);
 
     EndSingleTimeCommands(*list);
 }
@@ -180,20 +178,16 @@ void RHITestApp::CreateIndexBuffer()
     staging_info.usage = RHIBufferUsageFlags::TransferSrc;
 
     RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer(staging_info);
-
     VERIFY_NOT_EQUAL(staging_buf, nullptr);
 
     staging_buf->WriteBytes(indices.data(), staging_info.size, 0);
-
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
 
     RHI::BufferInfo buf_info = {};
     buf_info.size = staging_info.size;
     buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::TransferDst;
     m_index_buffer = m_rhi->CreateDeviceBuffer(buf_info);
-    VkBuffer native_index = *static_cast<VkBuffer*>(m_index_buffer->GetNativeBuffer());
 
-    CopyBuffer(native_staging, native_index, buf_size);
+    CopyBuffer(*staging_buf->GetBuffer(), *m_index_buffer, buf_info.size);
 }
 
 void RHITestApp::CreateDescriptorSetLayout()
@@ -605,11 +599,10 @@ void RHITestApp::CreateVertexBuffer()
         {{-0.5f, 0.5f}, {1, 0, 1}, {1, 1}}
     };
 
-    VkDeviceSize buffer_size = sizeof(vertices[0]) * vertices.size();
+    size_t buffer_size = sizeof(vertices[0]) * vertices.size();
 
     RHI::BufferInfo staging_info = {};
-
-    staging_info.size = sizeof(vertices[0]) * vertices.size();
+    staging_info.size = buffer_size;
     staging_info.usage = RHIBufferUsageFlags::TransferSrc;
 
     RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer(staging_info);
@@ -618,16 +611,13 @@ void RHITestApp::CreateVertexBuffer()
 
     staging_buf->WriteBytes(vertices.data(), staging_info.size, 0);
 
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
-
     RHI::BufferInfo buf_info = {};
-    buf_info.size = staging_info.size;
+    buf_info.size = buffer_size;
     buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::TransferDst;
+
     m_vertex_buffer = m_rhi->CreateDeviceBuffer(buf_info);
-    VkBuffer native_vertex = *static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer());
 
-    CopyBuffer(native_staging, native_vertex, buffer_size);
-
+    CopyBuffer(*staging_buf->GetBuffer(), *m_vertex_buffer, buffer_size);
 }
 
 uint32_t RHITestApp::FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties)

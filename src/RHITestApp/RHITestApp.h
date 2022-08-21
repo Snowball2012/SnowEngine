@@ -106,7 +106,7 @@ private:
 
 	void CreateIndexBuffer();
 
-	void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size);
+	void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t size);
 	void CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height);
 
 	uint32_t FindMemoryType(uint32_t type_filter, VkMemoryPropertyFlags properties);
