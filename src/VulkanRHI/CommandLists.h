@@ -65,7 +65,18 @@ public:
 
 	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) override;
 
+	virtual void DrawIndexed(
+		uint32_t index_count,
+		uint32_t instance_count,
+		uint32_t first_index,
+		int32_t vertex_offset,
+		uint32_t first_instance) override;
+
+	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }
 };
+
+IMPLEMENT_RHI_INTERFACE(RHICommandList, VulkanCommandList)

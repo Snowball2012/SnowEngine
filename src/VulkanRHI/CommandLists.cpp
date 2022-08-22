@@ -73,12 +73,28 @@ void VulkanCommandList::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region
         vk_region.size = regions[i].size;
     }
 
-    VulkanBuffer& dst_impl = static_cast<VulkanBuffer&>(dst);
-    VulkanBuffer& src_impl = static_cast<VulkanBuffer&>(src);
-
     vkCmdCopyBuffer(
-        m_vk_cmd_buffer, src_impl.GetVkBuffer(), dst_impl.GetVkBuffer(),
+        m_vk_cmd_buffer, RHIImpl(src).GetVkBuffer(), RHIImpl(dst).GetVkBuffer(),
         uint32_t(copy_regions.size()), copy_regions.data());
+}
+
+void VulkanCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
+{
+    vkCmdDrawIndexed(m_vk_cmd_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
+
+void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
+{
+    VkIndexType vk_type = VK_INDEX_TYPE_MAX_ENUM;
+    switch (type)
+    {
+    case RHIIndexBufferType::UInt16: vk_type = VK_INDEX_TYPE_UINT16; break;
+    case RHIIndexBufferType::UInt32: vk_type = VK_INDEX_TYPE_UINT32; break;
+    default:
+        NOTIMPL;
+    }
+
+    vkCmdBindIndexBuffer(m_vk_cmd_buffer, RHIImpl(index_buf).GetVkBuffer(), offset, vk_type);
 }
 
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)

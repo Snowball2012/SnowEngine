@@ -230,6 +230,12 @@ public:
 	virtual void* GetNativeSemaphore() const = 0;
 };
 
+enum class RHIIndexBufferType
+{
+	UInt16,
+	UInt32
+};
+
 class RHICommandList
 {
 public:
@@ -247,6 +253,15 @@ public:
 		size_t size = 0;
 	};
 	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) {}
+
+	virtual void DrawIndexed(
+		uint32_t index_count,
+		uint32_t instance_count,
+		uint32_t first_index,
+		int32_t vertex_offset,
+		uint32_t first_instance) {}
+
+	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {};
 
 	virtual void* GetNativeCmdList() const = 0;
 };

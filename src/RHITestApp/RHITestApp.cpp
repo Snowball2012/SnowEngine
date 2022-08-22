@@ -732,9 +732,9 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(buf, 0, 1, static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer()), offsets);
-    vkCmdBindIndexBuffer(buf, *static_cast<VkBuffer*>(m_index_buffer->GetNativeBuffer()), 0, VK_INDEX_TYPE_UINT16);
+    list.SetIndexBuffer(*m_index_buffer, RHIIndexBufferType::UInt16, 0);
 
-    vkCmdDrawIndexed(buf, 6, 1, 0, 0, 0);
+    list.DrawIndexed(6, 1, 0, 0, 0);
 
     vkCmdEndRendering(buf);
 

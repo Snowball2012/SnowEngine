@@ -102,3 +102,18 @@ protected: \
 #define IMPLEMENT_RHI_OBJECT(ClassName) \
 	void ClassName::AddRef() { m_ref_counter++; } \
 	void ClassName::Release() { if (--m_ref_counter <= 0) m_rhi->DeferredDestroyRHIObject(this); }
+
+template<typename T>
+struct RHIImplClass
+{
+	using Type = void;
+};
+
+template<typename T>
+RHIImplClass<T>::Type& RHIImpl(T& obj) { return static_cast<RHIImplClass<T>::Type&>(obj); }
+
+#define IMPLEMENT_RHI_INTERFACE(InterfaceType, VulkanType) \
+template<> struct RHIImplClass<InterfaceType> \
+{ \
+	using Type = VulkanType; \
+};
