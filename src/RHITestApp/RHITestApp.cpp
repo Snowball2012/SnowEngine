@@ -136,7 +136,6 @@ void RHITestApp::Cleanup()
 
     m_swapchain = nullptr;
     CleanupPipeline();
-    vkDestroyDescriptorSetLayout(m_vk_device, m_descriptor_layout, nullptr);
 
     m_vertex_buffer = nullptr;
     m_index_buffer = nullptr;
@@ -153,8 +152,8 @@ void RHITestApp::Cleanup()
 
 void RHITestApp::CleanupPipeline()
 {
-    vkDestroyPipeline(m_vk_device, m_graphics_pipeline, nullptr);
-    vkDestroyPipelineLayout(m_vk_device, m_pipeline_layout, nullptr);
+    m_rhi_graphics_pipeline = nullptr;
+    m_shader_bindings_layout = nullptr;
 }
 
 void RHITestApp::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t size)
@@ -199,27 +198,24 @@ void RHITestApp::CreateIndexBuffer()
 
 void RHITestApp::CreateDescriptorSetLayout()
 {
-    VkDescriptorSetLayoutBinding mat_lb = {};
-    mat_lb.binding = 0;
-    mat_lb.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    mat_lb.descriptorCount = 1;
-    mat_lb.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    mat_lb.pImmutableSamplers = nullptr;
+    RHI::ShaderBindingInfo bindings[3] = {};
+    bindings[0].type = RHIShaderBindingType::ConstantBuffer;
+    bindings[0].count = 1;
+    bindings[0].stages = RHIShaderStageFlags::VertexShader;
 
-    VkDescriptorSetLayoutBinding sampler_lb = {};
-    sampler_lb.binding = 1;
-    sampler_lb.descriptorCount = 1;
-    sampler_lb.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    sampler_lb.pImmutableSamplers = nullptr;
-    sampler_lb.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    bindings[1].type = RHIShaderBindingType::TextureSRV;
+    bindings[1].count = 1;
+    bindings[1].stages = RHIShaderStageFlags::PixelShader;
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = { mat_lb, sampler_lb };
-    VkDescriptorSetLayoutCreateInfo layout_info = {};
-    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.bindingCount = uint32_t(bindings.size());
-    layout_info.pBindings = bindings.data();
+    bindings[2].type = RHIShaderBindingType::Sampler;
+    bindings[2].count = 1;
+    bindings[2].stages = RHIShaderStageFlags::PixelShader;
 
-    VK_VERIFY(vkCreateDescriptorSetLayout(m_vk_device, &layout_info, nullptr, &m_descriptor_layout));
+    RHI::ShaderBindingLayoutInfo layout_info = {};
+    layout_info.bindings = bindings;
+    layout_info.binding_count = std::size(bindings);
+
+    m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout(layout_info);
 }
 
 void RHITestApp::CreateUniformBuffers()
@@ -300,7 +296,8 @@ void RHITestApp::CreateDescriptorPool()
 
 void RHITestApp::CreateDescriptorSets()
 {
-    std::vector<VkDescriptorSetLayout> layouts(m_max_frames_in_flight, m_descriptor_layout);
+    VkDescriptorSetLayout descriptor_layout = *static_cast<VkDescriptorSetLayout*>(m_shader_bindings_layout->GetNativeDescLayout());
+    std::vector<VkDescriptorSetLayout> layouts(m_max_frames_in_flight, descriptor_layout);
 
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -321,9 +318,12 @@ void RHITestApp::CreateDescriptorSets()
         VkDescriptorImageInfo image_info = {};
         image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         image_info.imageView = m_texture_view;
-        image_info.sampler = m_texture_sampler;
+        image_info.sampler = nullptr;
 
-        std::array<VkWriteDescriptorSet, 2> desc_writes = {};
+        VkDescriptorImageInfo sampler_info = {};
+        sampler_info.sampler = m_texture_sampler;
+
+        std::array<VkWriteDescriptorSet, 3> desc_writes = {};
         desc_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         desc_writes[0].dstSet = m_desc_sets[i];
         desc_writes[0].dstBinding = 0;
@@ -336,9 +336,17 @@ void RHITestApp::CreateDescriptorSets()
         desc_writes[1].dstSet = m_desc_sets[i];
         desc_writes[1].dstBinding = 1;
         desc_writes[1].dstArrayElement = 0;
-        desc_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        desc_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         desc_writes[1].descriptorCount = 1;
         desc_writes[1].pImageInfo = &image_info;
+
+        desc_writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_writes[2].dstSet = m_desc_sets[i];
+        desc_writes[2].dstBinding = 2;
+        desc_writes[2].dstArrayElement = 0;
+        desc_writes[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+        desc_writes[2].descriptorCount = 1;
+        desc_writes[2].pImageInfo = &sampler_info;
 
         vkUpdateDescriptorSets(m_vk_device, uint32_t(desc_writes.size()), desc_writes.data(), 0, nullptr);
     }
@@ -659,22 +667,9 @@ void RHITestApp::CreatePipeline()
     rt_info.format = m_swapchain->GetFormat();
     rhi_pipeline_info.rts_count = 1;
     rhi_pipeline_info.rt_info = &rt_info;
+    rhi_pipeline_info.binding_layout = m_shader_bindings_layout.get();
 
-    RHIObjectPtr<RHIGraphicsPipeline> rhi_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
-
-    VkGraphicsPipelineCreateInfo pipeline_info = *static_cast<const VkGraphicsPipelineCreateInfo*>(rhi_pipeline->GetNativePipelineCreateInfo());
-
-    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &m_descriptor_layout;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-
-    VK_VERIFY(vkCreatePipelineLayout(m_vk_device, &pipeline_layout_info, nullptr, &m_pipeline_layout));    
-
-    pipeline_info.layout = m_pipeline_layout;
-
-    VK_VERIFY(vkCreateGraphicsPipelines(m_vk_device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_graphics_pipeline));
+    m_rhi_graphics_pipeline = m_rhi->CreatePSO(rhi_pipeline_info);
 }
 
 void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapchain)
@@ -726,9 +721,11 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
     vkCmdSetViewport(buf, 0, 1, &viewport);
     vkCmdSetScissor(buf, 0, 1, &scissor);
 
-    vkCmdBindPipeline(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphics_pipeline);
+    list.SetPSO(*m_rhi_graphics_pipeline);
 
-    vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
+    VkPipelineLayout pipeline_layout = *static_cast<VkPipelineLayout*>(m_shader_bindings_layout->GetNativePipelineLayout());
+
+    vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
 
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(buf, 0, 1, static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer()), offsets);
@@ -768,7 +765,7 @@ void RHITestApp::DrawFrame()
     submit_info.semaphores_to_wait = wait_semaphores;
     submit_info.wait_semaphore_count = 1;
     submit_info.semaphore_to_signal = m_render_finished_semaphores[m_current_frame].get();
-    RHI::PipelineStageFlags stages_to_wait[] = { RHI::PipelineStageFlags::ColorAttachmentOutput };
+    RHIPipelineStageFlags stages_to_wait[] = { RHIPipelineStageFlags::ColorAttachmentOutput };
     submit_info.stages_to_wait = stages_to_wait;
 
     m_inflight_fences[m_current_frame] = m_rhi->SubmitCommandLists(submit_info);

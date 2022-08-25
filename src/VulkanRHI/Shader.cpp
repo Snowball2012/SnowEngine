@@ -210,3 +210,53 @@ ShaderCompiler::ShaderCompiler()
     SE_ENSURE_HRES(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(m_dxc_compiler.GetAddressOf())));
     SE_ENSURE_HRES(m_dxc_utils->CreateDefaultIncludeHandler(&m_dxc_include_header));
 }
+
+
+IMPLEMENT_RHI_OBJECT(VulkanShaderBindingLayout)
+
+VulkanShaderBindingLayout::~VulkanShaderBindingLayout()
+{
+    if (m_vk_pipeline_layout)
+        vkDestroyPipelineLayout(m_rhi->GetDevice(), m_vk_pipeline_layout, nullptr);
+    if (m_vk_desc_layout)
+        vkDestroyDescriptorSetLayout(m_rhi->GetDevice(), m_vk_desc_layout, nullptr);
+}
+
+VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::ShaderBindingLayoutInfo& info)
+    : m_rhi(rhi)
+{
+    boost::container::small_vector<VkDescriptorSetLayoutBinding, 16> vk_bindings;
+    vk_bindings.resize(info.binding_count);
+
+    for (size_t i = 0; i < info.binding_count; ++i)
+    {
+        auto& vk_bind = vk_bindings[i];
+        auto& rhi_bind = info.bindings[i];
+
+        if (rhi_bind.count <= 0)
+        {
+            NOTIMPL; // bindless is not supported right now
+        }
+
+        vk_bind.binding = uint32_t(i);
+        vk_bind.descriptorCount = uint32_t(rhi_bind.count);
+        vk_bind.pImmutableSamplers = nullptr;
+        vk_bind.stageFlags = VulkanRHI::GetVkShaderStageFlags(rhi_bind.stages);
+        vk_bind.descriptorType = VulkanRHI::GetVkDescriptorType(rhi_bind.type);
+    }
+
+    VkDescriptorSetLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.bindingCount = uint32_t(vk_bindings.size());
+    layout_info.pBindings = vk_bindings.data();
+
+    VK_VERIFY(vkCreateDescriptorSetLayout(m_rhi->GetDevice(), &layout_info, nullptr, &m_vk_desc_layout));
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &m_vk_desc_layout;
+    pipeline_layout_info.pushConstantRangeCount = 0;
+
+    VK_VERIFY(vkCreatePipelineLayout(m_rhi->GetDevice(), &pipeline_layout_info, nullptr, &m_vk_pipeline_layout));
+}

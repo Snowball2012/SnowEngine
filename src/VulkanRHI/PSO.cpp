@@ -30,6 +30,18 @@ VulkanGraphicsPSO::VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineIn
 
 	m_pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
 	m_pipeline_info.basePipelineIndex = -1;
+
+	VERIFY_NOT_EQUAL(info.binding_layout, nullptr);
+	m_shader_bindings = &RHIImpl(*info.binding_layout);
+
+	m_pipeline_info.layout = m_shader_bindings->GetVkPipelineLayout();
+
+	VK_VERIFY(vkCreateGraphicsPipelines(m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &m_vk_pipeline));
+}
+
+VulkanGraphicsPSO::~VulkanGraphicsPSO()
+{
+	vkDestroyPipeline(m_rhi->GetDevice(), m_vk_pipeline, nullptr);
 }
 
 void VulkanGraphicsPSO::InitRasterizer(const RHIGraphicsPipelineInfo& info)

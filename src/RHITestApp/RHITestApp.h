@@ -46,9 +46,8 @@ private:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 
 	// pipeline
-	VkDescriptorSetLayout m_descriptor_layout = VK_NULL_HANDLE;
-	VkPipelineLayout m_pipeline_layout = VK_NULL_HANDLE;
-	VkPipeline m_graphics_pipeline = VK_NULL_HANDLE;
+	RHIShaderBindingLayoutPtr m_shader_bindings_layout = nullptr;
+	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
 
 	// synchronization
 	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;

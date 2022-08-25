@@ -178,6 +178,30 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
     return size;
 }
 
+VkDescriptorType VulkanRHI::GetVkDescriptorType(RHIShaderBindingType type)
+{
+    VkDescriptorType vk_type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+
+    switch (type)
+    {
+    case RHIShaderBindingType::ConstantBuffer:
+        vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        break;
+
+    case RHIShaderBindingType::TextureSRV:
+        vk_type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        break;
+
+    case RHIShaderBindingType::Sampler:
+        vk_type = VK_DESCRIPTOR_TYPE_SAMPLER;
+        break;
+    default:
+        NOTIMPL;
+    }
+
+    return vk_type;
+}
+
 void VulkanRHI::DeferredDestroyRHIObject(RHIObject* obj)
 {
     m_objects_to_delete.emplace_back(obj);
@@ -309,24 +333,52 @@ RHIGraphicsPipeline* VulkanRHI::CreatePSO(const RHIGraphicsPipelineInfo& pso_inf
     return new VulkanGraphicsPSO(this, pso_info);
 }
 
-VkPipelineStageFlagBits VulkanRHI::GetVkStageFlags(PipelineStageFlags rhi_flags)
+RHIShaderBindingLayout* VulkanRHI::CreateShaderBindingLayout(const ShaderBindingLayoutInfo& info)
+{
+    return new VulkanShaderBindingLayout(this, info);
+}
+
+VkPipelineStageFlagBits VulkanRHI::GetVkPipelineStageFlags(RHIPipelineStageFlags rhi_flags)
 {
     uint64_t res_raw = 0;
     uint64_t checked_flags = 0;
 
-    auto add_flag = [&res_raw, &checked_flags, rhi_flags](PipelineStageFlags rhi_flag, VkPipelineStageFlagBits vk_flag)
+    auto add_flag = [&res_raw, &checked_flags, rhi_flags](RHIPipelineStageFlags rhi_flag, VkPipelineStageFlagBits vk_flag)
     {
         res_raw |= (uint64_t(rhi_flags) & uint64_t(rhi_flag)) ? vk_flag : 0;
         checked_flags |= uint64_t(rhi_flag);
     };
 
-    add_flag(PipelineStageFlags::ColorAttachmentOutput, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    add_flag(RHIPipelineStageFlags::ColorAttachmentOutput, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    add_flag(RHIPipelineStageFlags::VertexShader, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+    add_flag(RHIPipelineStageFlags::PixelShader, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 #ifndef NDEBUG
-    VERIFY_EQUALS(checked_flags & uint64_t(rhi_flags), uint64_t(PipelineStageFlags::AllBits) & uint64_t(rhi_flags)); // some flags were not handled if this fires
+    VERIFY_EQUALS(checked_flags & uint64_t(rhi_flags), uint64_t(RHIPipelineStageFlags::AllBits) & uint64_t(rhi_flags)); // some flags were not handled if this fires
 #endif
 
     return VkPipelineStageFlagBits(res_raw);
+}
+
+VkShaderStageFlagBits VulkanRHI::GetVkShaderStageFlags(RHIShaderStageFlags rhi_flags)
+{
+    uint64_t res_raw = 0;
+    uint64_t checked_flags = 0;
+
+    auto add_flag = [&res_raw, &checked_flags, rhi_flags](RHIShaderStageFlags rhi_flag, VkShaderStageFlagBits vk_flag)
+    {
+        res_raw |= (uint64_t(rhi_flags) & uint64_t(rhi_flag)) ? vk_flag : 0;
+        checked_flags |= uint64_t(rhi_flag);
+    };
+
+    add_flag(RHIShaderStageFlags::VertexShader, VK_SHADER_STAGE_VERTEX_BIT);
+    add_flag(RHIShaderStageFlags::PixelShader, VK_SHADER_STAGE_FRAGMENT_BIT);
+
+#ifndef NDEBUG
+    VERIFY_EQUALS(checked_flags & uint64_t(rhi_flags), uint64_t(RHIPipelineStageFlags::AllBits) & uint64_t(rhi_flags)); // some flags were not handled if this fires
+#endif
+
+    return VkShaderStageFlagBits(res_raw);
 }
 
 VulkanQueue* VulkanRHI::GetQueue(QueueType type)

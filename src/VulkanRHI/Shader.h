@@ -39,7 +39,6 @@ public:
 private:
     void Compile(const ShaderSourceFile* source);
     void CreateVkStage();
-
 };
 
 class ShaderSourceFile
@@ -73,3 +72,23 @@ public:
 private:
     ShaderCompiler();
 };
+
+class VulkanShaderBindingLayout : public RHIShaderBindingLayout
+{
+    GENERATE_RHI_OBJECT_BODY()
+
+    VkDescriptorSetLayout m_vk_desc_layout = VK_NULL_HANDLE;
+    VkPipelineLayout m_vk_pipeline_layout = VK_NULL_HANDLE;
+
+public:
+    virtual ~VulkanShaderBindingLayout() override;
+
+    VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::ShaderBindingLayoutInfo& info);
+
+    // TEMP
+    virtual void* GetNativePipelineLayout() const override { return (void*)&m_vk_pipeline_layout; }
+    virtual void* GetNativeDescLayout() const override { return (void*)&m_vk_desc_layout; }
+
+    VkPipelineLayout GetVkPipelineLayout() const { return m_vk_pipeline_layout; }
+};
+IMPLEMENT_RHI_INTERFACE(RHIShaderBindingLayout, VulkanShaderBindingLayout)

@@ -72,6 +72,8 @@ public:
 		int32_t vertex_offset,
 		uint32_t first_instance) override;
 
+	virtual void SetPSO(RHIGraphicsPipeline& pso) override;
+
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) override;
 
 	CmdListId GetListId() const { return m_list_id; }

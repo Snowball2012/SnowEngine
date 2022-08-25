@@ -4,6 +4,7 @@
 
 #include "VulkanRHIImpl.h"
 #include <VulkanRHI/Buffers.h>
+#include <VulkanRHI/PSO.h>
 
 VulkanCommandList::VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id)
     : m_rhi(rhi), m_type(type), m_list_id(list_id)
@@ -81,6 +82,11 @@ void VulkanCommandList::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region
 void VulkanCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
 {
     vkCmdDrawIndexed(m_vk_cmd_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
+}
+
+void VulkanCommandList::SetPSO(RHIGraphicsPipeline& pso)
+{
+    vkCmdBindPipeline(m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, RHIImpl(pso).GetVkPipeline());
 }
 
 void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
@@ -170,7 +176,7 @@ RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& inf
     for (size_t i = 0; i < info.wait_semaphore_count; ++i)
     {
         semaphores_to_wait.emplace_back(static_cast<VulkanSemaphore*>(info.semaphores_to_wait[i])->GetVkSemaphore());
-        stages_to_wait.emplace_back(VulkanRHI::GetVkStageFlags(info.stages_to_wait[i]));
+        stages_to_wait.emplace_back(VulkanRHI::GetVkPipelineStageFlags(info.stages_to_wait[i]));
     }
 
     submit_info.waitSemaphoreCount = uint32_t(semaphores_to_wait.size());

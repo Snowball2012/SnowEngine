@@ -15,9 +15,9 @@ struct Matrices
 
 [[vk::binding(0)]] ConstantBuffer<Matrices> obj_data : register(b0);
 
-[[vk::combinedImageSampler]] [[vk::binding(1)]]
+[[vk::binding(1)]]
 Texture2D<float4> TextureObject;
-[[vk::combinedImageSampler]] [[vk::binding(1)]]
+[[vk::binding(2)]]
 SamplerState TextureObject_Sampler;
 
 

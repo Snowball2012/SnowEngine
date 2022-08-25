@@ -34,6 +34,9 @@ class VulkanGraphicsPSO : public RHIGraphicsPipeline
 
 	VkGraphicsPipelineCreateInfo m_pipeline_info = {};
 
+	VkPipeline m_vk_pipeline = VK_NULL_HANDLE;
+
+	RHIObjectPtr<VulkanShaderBindingLayout> m_shader_bindings = nullptr;
 	RHIObjectPtr<Shader> m_vs = nullptr;
 	RHIObjectPtr<Shader> m_ps = nullptr;
 
@@ -41,7 +44,9 @@ public:
 
 	VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineInfo& info);
 
-	virtual void* GetNativePipelineCreateInfo() const override { return (void*)&m_pipeline_info; }
+	virtual ~VulkanGraphicsPSO() override;
+
+	VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
 
 private:
 	void InitRasterizer(const RHIGraphicsPipelineInfo& info);
@@ -51,3 +56,4 @@ private:
 	void InitColorBlending(const RHIGraphicsPipelineInfo& info);
 	void InitDynamicRendering(const RHIGraphicsPipelineInfo& info);
 };
+IMPLEMENT_RHI_INTERFACE(RHIGraphicsPipeline, VulkanGraphicsPSO)

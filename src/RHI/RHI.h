@@ -42,6 +42,29 @@ enum class RHIBufferUsageFlags : uint32_t
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS(RHIBufferUsageFlags)
 
+enum class RHIPipelineStageFlags : uint32_t
+{
+	ColorAttachmentOutput = 0x00000001,
+	VertexShader = 0x00000002,
+	PixelShader = 0x00000004,
+
+	AllBits = 0x00000007,
+
+	NumFlags = 3,
+};
+IMPLEMENT_SCOPED_ENUM_FLAGS(RHIPipelineStageFlags)
+
+enum class RHIShaderStageFlags : uint32_t
+{
+	VertexShader = 0x00000001,
+	PixelShader = 0x00000002,
+	
+	AllBits = 0x00000003,
+	
+	NumFlags = 2,
+};
+IMPLEMENT_SCOPED_ENUM_FLAGS(RHIShaderStageFlags)
+
 enum class RHITextureDimensions : uint8_t
 {
 	T1D,
@@ -52,6 +75,7 @@ enum class RHITextureDimensions : uint8_t
 enum class RHITextureUsageFlags : uint32_t
 {
 	None = 0,
+
 	TransferSrc = 0x1,
 	TransferDst = 0x2,
 	SRV = 0x4,
@@ -67,6 +91,13 @@ enum class RHIFormat : uint8_t
 	R32G32B32_SFLOAT,
 	B8G8R8A8_SRGB,
 	R8G8B8A8_SRGB
+};
+
+enum class RHIShaderBindingType : uint8_t
+{
+	ConstantBuffer = 0,
+	TextureSRV,
+	Sampler
 };
 
 class RHI
@@ -100,12 +131,6 @@ public:
 		Count
 	};
 
-	enum class PipelineStageFlags : uint32_t
-	{
-		ColorAttachmentOutput = 0x00000001,
-		AllBits = 0x1,
-	};
-
 	virtual class RHICommandList* GetCommandList(QueueType type) { return nullptr; };
 
 	// command lists here must belong to the same QueueType
@@ -115,7 +140,7 @@ public:
 		class RHICommandList* const* cmd_lists = nullptr;
 		size_t wait_semaphore_count = 0;
 		class RHISemaphore* const* semaphores_to_wait = nullptr;
-		const RHI::PipelineStageFlags* stages_to_wait = nullptr;
+		const RHIPipelineStageFlags* stages_to_wait = nullptr;
 		class RHISemaphore* semaphore_to_signal = nullptr; // optional
 	};
 	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) = 0;
@@ -147,6 +172,20 @@ public:
 	// Shader stuff
 	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
 
+	struct ShaderBindingInfo
+	{
+		RHIShaderBindingType type = RHIShaderBindingType::ConstantBuffer;
+		RHIShaderStageFlags stages = RHIShaderStageFlags::AllBits;
+		int32_t count = 1; // negative means unbound bindless
+	};
+
+	struct ShaderBindingLayoutInfo
+	{
+		const ShaderBindingInfo* bindings = nullptr;
+		size_t binding_count = 0;
+	};
+	virtual class RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& layout_info) { return nullptr; }
+	
 	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
 
 	struct BufferInfo
@@ -261,6 +300,8 @@ public:
 		int32_t vertex_offset,
 		uint32_t first_instance) {}
 
+	virtual void SetPSO(RHIGraphicsPipeline& pso) {}
+
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {};
 
 	virtual void* GetNativeCmdList() const = 0;
@@ -276,10 +317,19 @@ class RHIGraphicsPipeline : public RHIObject
 {
 public:
 	virtual ~RHIGraphicsPipeline() {}
+};
+using RHIGraphicsPipelinePtr = RHIObjectPtr<RHIGraphicsPipeline>;
+
+class RHIShaderBindingLayout : public RHIObject
+{
+public:
+	virtual ~RHIShaderBindingLayout() {}
 
 	// TEMP
-	virtual void* GetNativePipelineCreateInfo() const { return nullptr; }
+	virtual void* GetNativePipelineLayout() const { return nullptr; }
+	virtual void* GetNativeDescLayout() const { return nullptr; }
 };
+using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 
 enum class RHIPrimitiveFrequency : uint8_t
 {
@@ -319,6 +369,8 @@ struct RHIGraphicsPipelineInfo
 
 	RHIShader* vs = nullptr;
 	RHIShader* ps = nullptr;
+
+	RHIShaderBindingLayout* binding_layout = nullptr;
 
 	const RHIPipelineRTInfo* rt_info = nullptr;
 	size_t rts_count = 0;

@@ -100,6 +100,8 @@ public:
 
 	virtual RHIShader* CreateShader(const ShaderCreateInfo& create_info) override;
 
+	virtual RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& info) override;
+
 	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
 
 	virtual RHIBuffer* CreateDeviceBuffer(const BufferInfo& buf_info) override;
@@ -127,7 +129,8 @@ public:
 	// Has to be thread-safe
 	void DeferredDestroyRHIObject(RHIObject* obj);
 
-	static VkPipelineStageFlagBits GetVkStageFlags(PipelineStageFlags rhi_flags);
+	static VkPipelineStageFlagBits GetVkPipelineStageFlags(RHIPipelineStageFlags rhi_flags);
+	static VkShaderStageFlagBits GetVkShaderStageFlags(RHIShaderStageFlags rhi_flags);
 
 	static VkFormat GetVkFormat(RHIFormat format);
 	static RHIFormat GetRHIFormat(VkFormat format);
@@ -139,6 +142,8 @@ public:
 	static VkImageUsageFlags GetVkImageUsageFlags(RHITextureUsageFlags usage);
 
 	static VkImageType GetVkImageType(RHITextureDimensions dimensions);
+
+	static VkDescriptorType GetVkDescriptorType(RHIShaderBindingType type);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);
