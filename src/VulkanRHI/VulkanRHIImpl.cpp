@@ -333,6 +333,11 @@ RHIGraphicsPipeline* VulkanRHI::CreatePSO(const RHIGraphicsPipelineInfo& pso_inf
     return new VulkanGraphicsPSO(this, pso_info);
 }
 
+RHIShaderBindingTableLayout* VulkanRHI::CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info)
+{
+    return new VulkanShaderBindingTableLayout(this, info);
+}
+
 RHIShaderBindingLayout* VulkanRHI::CreateShaderBindingLayout(const ShaderBindingLayoutInfo& info)
 {
     return new VulkanShaderBindingLayout(this, info);

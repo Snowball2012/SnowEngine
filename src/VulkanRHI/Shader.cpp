@@ -218,20 +218,50 @@ VulkanShaderBindingLayout::~VulkanShaderBindingLayout()
 {
     if (m_vk_pipeline_layout)
         vkDestroyPipelineLayout(m_rhi->GetDevice(), m_vk_pipeline_layout, nullptr);
-    if (m_vk_desc_layout)
-        vkDestroyDescriptorSetLayout(m_rhi->GetDevice(), m_vk_desc_layout, nullptr);
 }
 
 VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::ShaderBindingLayoutInfo& info)
     : m_rhi(rhi)
 {
-    boost::container::small_vector<VkDescriptorSetLayoutBinding, 16> vk_bindings;
-    vk_bindings.resize(info.binding_count);
+    m_layout_infos.resize(info.table_count);
+    boost::container::small_vector<VkDescriptorSetLayout, 16> vk_desc_layouts;
+    vk_desc_layouts.resize(info.table_count);
 
-    for (size_t i = 0; i < info.binding_count; ++i)
+    for (size_t binding_idx = 0; binding_idx < info.table_count; ++binding_idx)
+    {
+        auto& binding_info = info.tables[binding_idx];
+        m_layout_infos[binding_idx] = &RHIImpl(*binding_info);
+        vk_desc_layouts[binding_idx] = m_layout_infos[binding_idx]->GetVkDescriptorSetLayout();
+    }
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipeline_layout_info.setLayoutCount = uint32_t(vk_desc_layouts.size());
+    pipeline_layout_info.pSetLayouts = vk_desc_layouts.data();
+    pipeline_layout_info.pushConstantRangeCount = 0;
+
+    VK_VERIFY(vkCreatePipelineLayout(m_rhi->GetDevice(), &pipeline_layout_info, nullptr, &m_vk_pipeline_layout));
+}
+
+
+IMPLEMENT_RHI_OBJECT(VulkanShaderBindingTableLayout)
+
+VulkanShaderBindingTableLayout::~VulkanShaderBindingTableLayout()
+{
+    if (m_vk_desc_set_layout)
+        vkDestroyDescriptorSetLayout(m_rhi->GetDevice(), m_vk_desc_set_layout, nullptr);
+}
+
+VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::ShaderBindingTableLayoutInfo& info)
+    : m_rhi(rhi)
+{
+    boost::container::small_vector<VkDescriptorSetLayoutBinding, 16> vk_bindings;
+    vk_bindings.resize(info.range_count);
+
+    for (size_t i = 0; i < info.range_count; ++i)
     {
         auto& vk_bind = vk_bindings[i];
-        auto& rhi_bind = info.bindings[i];
+        auto& rhi_bind = info.ranges[i];
 
         if (rhi_bind.count <= 0)
         {
@@ -250,13 +280,5 @@ VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::
     layout_info.bindingCount = uint32_t(vk_bindings.size());
     layout_info.pBindings = vk_bindings.data();
 
-    VK_VERIFY(vkCreateDescriptorSetLayout(m_rhi->GetDevice(), &layout_info, nullptr, &m_vk_desc_layout));
-
-    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
-    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipeline_layout_info.setLayoutCount = 1;
-    pipeline_layout_info.pSetLayouts = &m_vk_desc_layout;
-    pipeline_layout_info.pushConstantRangeCount = 0;
-
-    VK_VERIFY(vkCreatePipelineLayout(m_rhi->GetDevice(), &pipeline_layout_info, nullptr, &m_vk_pipeline_layout));
+    VK_VERIFY(vkCreateDescriptorSetLayout(m_rhi->GetDevice(), &layout_info, nullptr, &m_vk_desc_set_layout));
 }

@@ -46,6 +46,7 @@ private:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 
 	// pipeline
+	RHIShaderBindingTableLayoutPtr m_binding_table_layout = nullptr;
 	RHIShaderBindingLayoutPtr m_shader_bindings_layout = nullptr;
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
 
@@ -67,6 +68,7 @@ private:
 	// descriptors
 	VkDescriptorPool m_desc_pool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> m_desc_sets;
+	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
 
 	bool m_fb_resized = false;
 

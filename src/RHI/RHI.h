@@ -172,18 +172,29 @@ public:
 	// Shader stuff
 	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
 
-	struct ShaderBindingInfo
+
+	struct ShaderViewRange
 	{
 		RHIShaderBindingType type = RHIShaderBindingType::ConstantBuffer;
-		RHIShaderStageFlags stages = RHIShaderStageFlags::AllBits;
 		int32_t count = 1; // negative means unbound bindless
+		RHIShaderStageFlags stages = RHIShaderStageFlags::AllBits; // used only in CreateShaderBindingLayout
 	};
+
+	struct ShaderBindingTableLayoutInfo
+	{
+		const ShaderViewRange* ranges = nullptr;
+		size_t range_count = 0;
+	};
+	virtual class RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) { return nullptr; }
+
+	virtual class RHIShaderBindingTable* CreateShaderBindingTable(const RHIShaderBindingTableLayout& layout) { return nullptr; }
 
 	struct ShaderBindingLayoutInfo
 	{
-		const ShaderBindingInfo* bindings = nullptr;
-		size_t binding_count = 0;
+		RHIShaderBindingTableLayout* const* tables = nullptr;
+		size_t table_count = 0;
 	};
+
 	virtual class RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& layout_info) { return nullptr; }
 	
 	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
@@ -211,6 +222,25 @@ public:
 		RHITextureUsageFlags usage = RHITextureUsageFlags::None;
 	};
 	virtual class RHITexture* CreateTexture(const TextureInfo& info) { return nullptr; }
+
+	struct CBVInfo
+	{
+		RHIBuffer* buffer = nullptr;
+	};
+	virtual class RHICBV* CreateCBV(const CBVInfo& info) { return nullptr; }
+
+	struct TextureSRVInfo
+	{
+		RHITexture* texture = nullptr;
+	};
+	virtual class RHITextureSRV* CreateSRV(const TextureSRVInfo& info) { return nullptr; }
+
+	struct SamplerInfo
+	{
+		float mip_bias = 0.0f;
+		bool enable_anisotropy = false;
+	};
+	virtual class RHISampler* CreateSampler(const SamplerInfo& info) { return nullptr; }
 };
 
 class RHIObject
@@ -327,9 +357,23 @@ public:
 
 	// TEMP
 	virtual void* GetNativePipelineLayout() const { return nullptr; }
-	virtual void* GetNativeDescLayout() const { return nullptr; }
 };
 using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
+
+class RHIShaderBindingTable : public RHIObject
+{
+public:
+	virtual ~RHIShaderBindingTable() {}
+};
+using RHIShaderBindingTablePtr = RHIObjectPtr<RHIShaderBindingTable>;
+
+class RHIShaderBindingTableLayout : public RHIObject
+{
+public:
+	virtual ~RHIShaderBindingTableLayout() {}
+	virtual void* GetNativeDescLayout() const { return nullptr; }
+};
+using RHIShaderBindingTableLayoutPtr = RHIObjectPtr<RHIShaderBindingTableLayout>;
 
 enum class RHIPrimitiveFrequency : uint8_t
 {
@@ -406,6 +450,25 @@ public:
 	virtual void* GetNativeTexture() const { return nullptr; }
 };
 using RHITexturePtr = RHIObjectPtr<RHITexture>;
+
+// Views
+class RHICBV : public RHIObject
+{
+public:
+	virtual ~RHICBV() override {}
+};
+
+class RHITextureSRV : public RHIObject
+{
+public:
+	virtual ~RHITextureSRV() override {}
+};
+
+class RHISampler : public RHIObject
+{
+public:
+	virtual ~RHISampler() override {}
+};
 
 template<typename T>
 using UniquePtrWithDeleter = std::unique_ptr<T, void(*)(T*)>;

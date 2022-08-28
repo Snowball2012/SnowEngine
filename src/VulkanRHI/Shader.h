@@ -73,11 +73,28 @@ private:
     ShaderCompiler();
 };
 
+class VulkanShaderBindingTableLayout : public RHIShaderBindingTableLayout
+{
+    GENERATE_RHI_OBJECT_BODY()
+
+    VkDescriptorSetLayout m_vk_desc_set_layout = VK_NULL_HANDLE;
+
+public:
+    virtual ~VulkanShaderBindingTableLayout() override;
+
+    VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::ShaderBindingTableLayoutInfo& info);
+
+    virtual void* GetNativeDescLayout() const override { return (void*)&m_vk_desc_set_layout; }
+
+    VkDescriptorSetLayout GetVkDescriptorSetLayout() const { return m_vk_desc_set_layout; }
+};
+IMPLEMENT_RHI_INTERFACE(RHIShaderBindingTableLayout, VulkanShaderBindingTableLayout);
+
 class VulkanShaderBindingLayout : public RHIShaderBindingLayout
 {
     GENERATE_RHI_OBJECT_BODY()
 
-    VkDescriptorSetLayout m_vk_desc_layout = VK_NULL_HANDLE;
+    std::vector<RHIObjectPtr<VulkanShaderBindingTableLayout>> m_layout_infos;
     VkPipelineLayout m_vk_pipeline_layout = VK_NULL_HANDLE;
 
 public:
@@ -87,7 +104,6 @@ public:
 
     // TEMP
     virtual void* GetNativePipelineLayout() const override { return (void*)&m_vk_pipeline_layout; }
-    virtual void* GetNativeDescLayout() const override { return (void*)&m_vk_desc_layout; }
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_vk_pipeline_layout; }
 };

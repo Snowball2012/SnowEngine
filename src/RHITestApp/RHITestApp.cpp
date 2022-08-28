@@ -153,6 +153,7 @@ void RHITestApp::Cleanup()
 void RHITestApp::CleanupPipeline()
 {
     m_rhi_graphics_pipeline = nullptr;
+    m_binding_table_layout = nullptr;
     m_shader_bindings_layout = nullptr;
 }
 
@@ -198,22 +199,29 @@ void RHITestApp::CreateIndexBuffer()
 
 void RHITestApp::CreateDescriptorSetLayout()
 {
-    RHI::ShaderBindingInfo bindings[3] = {};
-    bindings[0].type = RHIShaderBindingType::ConstantBuffer;
-    bindings[0].count = 1;
-    bindings[0].stages = RHIShaderStageFlags::VertexShader;
+    RHI::ShaderViewRange ranges[3] = {};
+    ranges[0].type = RHIShaderBindingType::ConstantBuffer;
+    ranges[0].count = 1;
+    ranges[0].stages = RHIShaderStageFlags::VertexShader;
 
-    bindings[1].type = RHIShaderBindingType::TextureSRV;
-    bindings[1].count = 1;
-    bindings[1].stages = RHIShaderStageFlags::PixelShader;
+    ranges[1].type = RHIShaderBindingType::TextureSRV;
+    ranges[1].count = 1;
+    ranges[1].stages = RHIShaderStageFlags::PixelShader;
 
-    bindings[2].type = RHIShaderBindingType::Sampler;
-    bindings[2].count = 1;
-    bindings[2].stages = RHIShaderStageFlags::PixelShader;
+    ranges[2].type = RHIShaderBindingType::Sampler;
+    ranges[2].count = 1;
+    ranges[2].stages = RHIShaderStageFlags::PixelShader;
+
+    RHI::ShaderBindingTableLayoutInfo binding_table = {};
+    binding_table.ranges = ranges;
+    binding_table.range_count = std::size(ranges);
+
+    m_binding_table_layout = m_rhi->CreateShaderBindingTableLayout(binding_table);
 
     RHI::ShaderBindingLayoutInfo layout_info = {};
-    layout_info.bindings = bindings;
-    layout_info.binding_count = std::size(bindings);
+    RHIShaderBindingTableLayout* tables[1] = { m_binding_table_layout.get() };
+    layout_info.tables = tables;
+    layout_info.table_count = std::size(tables);
 
     m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout(layout_info);
 }
@@ -283,8 +291,6 @@ void RHITestApp::CreateDescriptorPool()
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     pool_sizes[1].descriptorCount = uint32_t(m_max_frames_in_flight);
 
-
-
     VkDescriptorPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     pool_info.poolSizeCount = uint32_t(pool_sizes.size());
@@ -296,7 +302,7 @@ void RHITestApp::CreateDescriptorPool()
 
 void RHITestApp::CreateDescriptorSets()
 {
-    VkDescriptorSetLayout descriptor_layout = *static_cast<VkDescriptorSetLayout*>(m_shader_bindings_layout->GetNativeDescLayout());
+    VkDescriptorSetLayout descriptor_layout = *static_cast<VkDescriptorSetLayout*>(m_binding_table_layout->GetNativeDescLayout());
     std::vector<VkDescriptorSetLayout> layouts(m_max_frames_in_flight, descriptor_layout);
 
     VkDescriptorSetAllocateInfo alloc_info = {};
