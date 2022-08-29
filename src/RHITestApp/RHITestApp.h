@@ -39,7 +39,6 @@ private:
 	std::unique_ptr<struct SDLVulkanWindowInterface> m_window_iface = nullptr;
 
 	// device
-	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 	VkDevice m_vk_device = VK_NULL_HANDLE;
 
 	// surface
@@ -63,7 +62,7 @@ private:
 	// images
 	RHITexturePtr m_texture = nullptr;
 	VkImageView m_texture_view = VK_NULL_HANDLE;
-	VkSampler m_texture_sampler = VK_NULL_HANDLE;
+	RHISamplerPtr m_texture_sampler = nullptr;
 
 	// descriptors
 	VkDescriptorPool m_desc_pool = VK_NULL_HANDLE;
@@ -71,11 +70,6 @@ private:
 	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
 
 	bool m_fb_resized = false;
-
-	std::vector<const char*> m_required_device_extensions =
-	{
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME
-	};
 
 	RHIPtr m_rhi;
 

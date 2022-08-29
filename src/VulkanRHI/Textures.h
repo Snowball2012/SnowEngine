@@ -37,3 +37,17 @@ public:
 
 	virtual ~VulkanTexture() override;
 };
+
+class VulkanSampler : public RHISampler
+{
+	GENERATE_RHI_OBJECT_BODY()
+
+	VkSampler m_sampler = VK_NULL_HANDLE;
+public:
+	VulkanSampler(VulkanRHI* rhi, const RHI::SamplerInfo& info);
+
+	virtual ~VulkanSampler() override;
+
+	virtual void* GetNativeSampler() const override { return (void*)&m_sampler; }
+};
+IMPLEMENT_RHI_INTERFACE(RHISampler, VulkanSampler)

@@ -76,7 +76,6 @@ void RHITestApp::InitRHI()
 
     m_swapchain = m_rhi->GetMainSwapChain();
     // temp
-    m_vk_phys_device = *static_cast<VkPhysicalDevice*>(m_rhi->GetNativePhysDevice());
 
     m_vk_device = *static_cast<VkDevice*>(m_rhi->GetNativeDevice());
 
@@ -130,7 +129,7 @@ void RHITestApp::Cleanup()
     m_index_buffer = nullptr;
     m_vertex_buffer = nullptr;
 
-    vkDestroySampler(m_vk_device, m_texture_sampler, nullptr);
+    m_texture_sampler = nullptr;
     vkDestroyImageView(m_vk_device, m_texture_view, nullptr);
     m_texture = nullptr;
 
@@ -327,7 +326,7 @@ void RHITestApp::CreateDescriptorSets()
         image_info.sampler = nullptr;
 
         VkDescriptorImageInfo sampler_info = {};
-        sampler_info.sampler = m_texture_sampler;
+        sampler_info.sampler = *static_cast<VkSampler*>(m_texture_sampler->GetNativeSampler());
 
         std::array<VkWriteDescriptorSet, 3> desc_writes = {};
         desc_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -569,25 +568,9 @@ VkImageView RHITestApp::CreateImageView(VkImage image, VkFormat format)
 
 void RHITestApp::CreateTextureSampler()
 {
-    VkSamplerCreateInfo sampler_info = {};
-    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampler_info.magFilter = VK_FILTER_LINEAR;
-    sampler_info.minFilter = VK_FILTER_LINEAR;
-    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-    VkPhysicalDeviceProperties properties = {};
-    vkGetPhysicalDeviceProperties(m_vk_phys_device, &properties);
-
-    sampler_info.anisotropyEnable = VK_TRUE;
-    sampler_info.maxAnisotropy = std::min<float>(8.0f, properties.limits.maxSamplerAnisotropy);
-    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-
-    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    sampler_info.mipLodBias = 0.0f;
-
-    VK_VERIFY(vkCreateSampler(m_vk_device, &sampler_info, nullptr, &m_texture_sampler));
+    RHI::SamplerInfo info = {};
+    info.enable_anisotropy = true;
+    m_texture_sampler = m_rhi->CreateSampler(info);
 }
 
 void RHITestApp::CreateVertexBuffer()

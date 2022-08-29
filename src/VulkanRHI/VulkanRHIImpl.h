@@ -58,6 +58,8 @@ private:
 
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
 
+	VkPhysicalDeviceProperties m_vk_phys_device_props = {};
+
 	std::vector<const char*> m_required_device_extensions =
 	{
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -110,10 +112,10 @@ public:
 
 	virtual RHITexture* CreateTexture(const TextureInfo& tex_info) override;
 
+	virtual RHISampler* CreateSampler(const SamplerInfo& info) override;
+
 	// TEMP
-	virtual void* GetNativePhysDevice() const override { return (void*)&m_vk_phys_device; }
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
-	virtual void* GetNativeGraphicsQueue() const override { return (void*)&m_graphics_queue; }
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
@@ -126,6 +128,8 @@ public:
 	VulkanQueue* GetQueue(QueueType type);
 
 	VmaAllocator GetVMA() const { return m_vma; }
+
+	const VkPhysicalDeviceProperties& GetPhysDeviceProps() const { return m_vk_phys_device_props; }
 
 	// Has to be thread-safe
 	void DeferredDestroyRHIObject(RHIObject* obj);

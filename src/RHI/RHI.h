@@ -106,9 +106,7 @@ public:
 	virtual ~RHI() {};
 
 	// temp functions, to be removed
-	virtual void* GetNativePhysDevice() const { return nullptr; }
 	virtual void* GetNativeDevice() const { return nullptr; }
-	virtual void* GetNativeGraphicsQueue() const { return nullptr; }
 
 	// window_handle must outlive the swap chain
 	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
@@ -468,7 +466,10 @@ class RHISampler : public RHIObject
 {
 public:
 	virtual ~RHISampler() override {}
+
+	virtual void* GetNativeSampler() const { return nullptr; }
 };
+using RHISamplerPtr = RHIObjectPtr<RHISampler>;
 
 template<typename T>
 using UniquePtrWithDeleter = std::unique_ptr<T, void(*)(T*)>;

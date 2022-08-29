@@ -547,6 +547,8 @@ void VulkanRHI::PickPhysicalDevice(VkSurfaceKHR surface)
     if (!m_vk_phys_device)
         throw std::runtime_error("Error: failed to find a suitable GPU");
 
+    vkGetPhysicalDeviceProperties(m_vk_phys_device, &m_vk_phys_device_props);
+
     std::cout << "Picked physical device:\n\t";
     LogDevice(m_vk_phys_device);
     std::cout << std::endl;
@@ -849,6 +851,11 @@ RHIBuffer* VulkanRHI::CreateDeviceBuffer(const BufferInfo& buf_info)
 RHITexture* VulkanRHI::CreateTexture(const TextureInfo& tex_info)
 {
     return new VulkanTexture(this, tex_info);
+}
+
+RHISampler* VulkanRHI::CreateSampler(const SamplerInfo& info)
+{
+    return new VulkanSampler(this, info);
 }
 
 QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
