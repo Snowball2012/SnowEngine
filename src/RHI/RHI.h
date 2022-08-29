@@ -107,6 +107,7 @@ public:
 
 	// temp functions, to be removed
 	virtual void* GetNativeDevice() const { return nullptr; }
+	virtual void* GetNativeDescPool() const { return nullptr; }
 
 	// window_handle must outlive the swap chain
 	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }

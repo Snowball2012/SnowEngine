@@ -44,11 +44,15 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
     m_main_swap_chain = CreateSwapChainInternal(swapchain_create_info);
 
     m_cmd_list_mgr = std::make_unique<VulkanCommandListManager>(this);
+
+    CreateDescriptorPool();
 }
 
 VulkanRHI::~VulkanRHI()
 {
     WaitIdle();
+
+    vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
 
     m_cmd_list_mgr = nullptr;
 
@@ -813,6 +817,30 @@ void VulkanRHI::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImag
         0, nullptr,
         0, nullptr,
         1, &barrier);
+}
+
+void VulkanRHI::CreateDescriptorPool()
+{
+    constexpr uint32_t descriptor_count_ub = 1024;
+    constexpr uint32_t descriptor_count_image = 1024;
+    constexpr uint32_t descriptor_count_sampler = 128;
+    constexpr uint32_t descriptor_set_count = 1024;
+
+    std::array<VkDescriptorPoolSize, 3> pool_sizes = {};
+    pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    pool_sizes[0].descriptorCount = descriptor_count_ub;
+    pool_sizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    pool_sizes[1].descriptorCount = descriptor_count_image;
+    pool_sizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLER;
+    pool_sizes[2].descriptorCount = descriptor_count_sampler;
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.poolSizeCount = uint32_t(pool_sizes.size());
+    pool_info.pPoolSizes = pool_sizes.data();
+    pool_info.maxSets = descriptor_set_count;
+
+    VK_VERIFY(vkCreateDescriptorPool(m_vk_device, &pool_info, nullptr, &m_desc_pool));
 }
 
 RHIFence VulkanRHI::SubmitCommandLists(const SubmitInfo& info)

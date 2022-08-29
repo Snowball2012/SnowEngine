@@ -78,6 +78,8 @@ private:
 
 	VkCommandPool m_cmd_pool = VK_NULL_HANDLE;
 
+	VkDescriptorPool m_desc_pool = VK_NULL_HANDLE;
+
 	std::unique_ptr<class VulkanCommandListManager> m_cmd_list_mgr;
 
 	std::vector<RHIObject*> m_objects_to_delete;
@@ -116,6 +118,7 @@ public:
 
 	// TEMP
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
+	virtual void* GetNativeDescPool() const override { return (void*)&m_desc_pool; }
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
@@ -130,6 +133,8 @@ public:
 	VmaAllocator GetVMA() const { return m_vma; }
 
 	const VkPhysicalDeviceProperties& GetPhysDeviceProps() const { return m_vk_phys_device_props; }
+
+	VkDescriptorPool GetVkDescriptorPool() const { return m_desc_pool; }
 
 	// Has to be thread-safe
 	void DeferredDestroyRHIObject(RHIObject* obj);
@@ -170,6 +175,8 @@ private:
 	VulkanSwapChain* CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info);
 
 	void CreateCommandPool();
+
+	void CreateDescriptorPool();
 
 	VkCommandBuffer BeginSingleTimeCommands();
 	void EndSingleTimeCommands(VkCommandBuffer buf);

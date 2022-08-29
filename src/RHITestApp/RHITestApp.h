@@ -109,8 +109,6 @@ private:
 
 	void UpdateUniformBuffer(uint32_t current_image);
 
-	void CreateDescriptorPool();
-
 	void CreateDescriptorSets();
 
 	void CreateTextureImage();

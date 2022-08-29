@@ -88,7 +88,7 @@ void RHITestApp::InitRHI()
     CreateVertexBuffer();
     CreateIndexBuffer();
     CreateUniformBuffers();
-    CreateDescriptorPool();
+    m_desc_pool = *static_cast<VkDescriptorPool*>(m_rhi->GetNativeDescPool());
     CreateDescriptorSets();
 
     std::cout << "RHI initialization complete\n";
@@ -122,9 +122,8 @@ void RHITestApp::MainLoop()
 
 void RHITestApp::Cleanup()
 {
-    std::cout << "Vulkan shutdown started\n";
+    std::cout << "RHI shutdown started\n";
 
-    vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
     m_uniform_buffers.clear();
     m_index_buffer = nullptr;
     m_vertex_buffer = nullptr;
@@ -280,23 +279,6 @@ void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, 
         cmd_buf, src, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
     EndSingleTimeCommands(*list);
-}
-
-void RHITestApp::CreateDescriptorPool()
-{
-    std::array<VkDescriptorPoolSize, 2> pool_sizes = {};
-    pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    pool_sizes[0].descriptorCount = uint32_t(m_max_frames_in_flight);
-    pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    pool_sizes[1].descriptorCount = uint32_t(m_max_frames_in_flight);
-
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.poolSizeCount = uint32_t(pool_sizes.size());
-    pool_info.pPoolSizes = pool_sizes.data();
-    pool_info.maxSets = uint32_t(m_max_frames_in_flight);
-
-    VK_VERIFY(vkCreateDescriptorPool(m_vk_device, &pool_info, nullptr, &m_desc_pool));
 }
 
 void RHITestApp::CreateDescriptorSets()
