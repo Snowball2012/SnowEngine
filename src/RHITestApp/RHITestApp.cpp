@@ -175,8 +175,6 @@ void RHITestApp::CreateIndexBuffer()
         0, 1, 2, 2, 3, 0
     };
 
-    VkDeviceSize buf_size = sizeof(indices[0]) * indices.size();
-
     RHI::BufferInfo staging_info = {};
 
     staging_info.size = sizeof(indices[0]) * indices.size();
@@ -227,6 +225,7 @@ void RHITestApp::CreateDescriptorSetLayout()
 void RHITestApp::CreateUniformBuffers()
 {
     m_uniform_buffers.resize(m_max_frames_in_flight);
+    m_uniform_buffer_views.resize(m_max_frames_in_flight);
 
     RHI::BufferInfo uniform_info = {};
     uniform_info.size = sizeof(Matrices);
@@ -235,6 +234,9 @@ void RHITestApp::CreateUniformBuffers()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         m_uniform_buffers[i] = m_rhi->CreateUploadBuffer(uniform_info);
+        RHI::CBVInfo view_info = {};
+        view_info.buffer = m_uniform_buffers[i]->GetBuffer();
+        m_uniform_buffer_views[i] = m_rhi->CreateCBV(view_info);
     }
 }
 
@@ -292,11 +294,16 @@ void RHITestApp::CreateDescriptorSets()
     alloc_info.descriptorSetCount = m_max_frames_in_flight;
     alloc_info.pSetLayouts = layouts.data();
 
+    m_binding_tables.resize(m_max_frames_in_flight);
     m_desc_sets.resize(m_max_frames_in_flight);
     VK_VERIFY(vkAllocateDescriptorSets(m_vk_device, &alloc_info, m_desc_sets.data()));
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
+        m_binding_tables[i] = m_rhi->CreateShaderBindingTable(*m_binding_table_layout);
+        m_binding_tables[i]->BindCBV(0, 0, *m_uniform_buffer_views[i]);
+        m_binding_tables[i]->FlushBinds();
+
         VkDescriptorBufferInfo buffer_info = {};
         buffer_info.buffer = *static_cast<VkBuffer*>(m_uniform_buffers[i]->GetBuffer()->GetNativeBuffer());
         buffer_info.offset = 0;
@@ -696,6 +703,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     VkPipelineLayout pipeline_layout = *static_cast<VkPipelineLayout*>(m_shader_bindings_layout->GetNativePipelineLayout());
 
+    list.BindTable(0, *m_binding_tables[m_current_frame]);
     vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
 
     VkDeviceSize offsets[] = { 0 };

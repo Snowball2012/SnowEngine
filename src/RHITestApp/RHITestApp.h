@@ -59,6 +59,7 @@ private:
 	RHIBufferPtr m_vertex_buffer = nullptr;
 	RHIBufferPtr m_index_buffer = nullptr;
 	std::vector<RHIUploadBufferPtr> m_uniform_buffers;
+	std::vector<RHICBVPtr> m_uniform_buffer_views;
 	// images
 	RHITexturePtr m_texture = nullptr;
 	VkImageView m_texture_view = VK_NULL_HANDLE;

@@ -331,6 +331,8 @@ public:
 
 	virtual void SetPSO(RHIGraphicsPipeline& pso) {}
 
+	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) {}
+
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {};
 
 	virtual void* GetNativeCmdList() const = 0;
@@ -362,6 +364,12 @@ using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 class RHIShaderBindingTable : public RHIObject
 {
 public:
+	void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) {}
+	void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) {}
+	void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& srv) {}
+
+	void FlushBinds() {}
+
 	virtual ~RHIShaderBindingTable() {}
 };
 using RHIShaderBindingTablePtr = RHIObjectPtr<RHIShaderBindingTable>;
@@ -456,12 +464,14 @@ class RHICBV : public RHIObject
 public:
 	virtual ~RHICBV() override {}
 };
+using RHICBVPtr = RHIObjectPtr<RHICBV>;
 
 class RHITextureSRV : public RHIObject
 {
 public:
 	virtual ~RHITextureSRV() override {}
 };
+using RHITextureSRVPtr = RHIObjectPtr<RHITextureSRV>;
 
 class RHISampler : public RHIObject
 {
