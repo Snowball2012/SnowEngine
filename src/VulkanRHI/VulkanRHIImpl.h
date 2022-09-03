@@ -141,6 +141,9 @@ public:
 
 	VkDescriptorPool GetVkDescriptorPool() const { return m_desc_pool; }
 
+	// Should probably be thread-safe
+	void DeferImageLayoutTransition(VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout);
+
 	// Has to be thread-safe
 	void DeferredDestroyRHIObject(RHIObject* obj);
 
@@ -159,6 +162,10 @@ public:
 	static VkImageType GetVkImageType(RHITextureDimensions dimensions);
 
 	static VkDescriptorType GetVkDescriptorType(RHIShaderBindingType type);
+
+	static VkImageLayout GetVkImageLayout(RHITextureLayout layout);
+
+	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);
@@ -184,8 +191,5 @@ private:
 	void CreateDescriptorPool();
 
 	VkCommandBuffer BeginSingleTimeCommands();
-	void EndSingleTimeCommands(VkCommandBuffer buf);
-
-	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
-
+	void EndSingleTimeCommands(VkCommandBuffer buf);	
 };

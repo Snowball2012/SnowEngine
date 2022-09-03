@@ -123,9 +123,23 @@ void VulkanCommandList::BindTable(size_t slot_idx, RHIShaderBindingTable& table)
         uint32_t(std::size(sets)), sets, 0, nullptr);    
 }
 
+void VulkanCommandList::EndPass()
+{
+    vkCmdEndRendering(m_vk_cmd_buffer);
+}
+
+void VulkanCommandList::Reset()
+{
+    VK_VERIFY(vkResetCommandBuffer(m_vk_cmd_buffer, 0));
+}
+
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)
     : m_rhi(rhi)
 {
+    for (auto& id : m_deferred_layout_transitions_lists)
+    {
+        id = nullptr;
+    }
 }
 
 VulkanCommandListManager::~VulkanCommandListManager()
@@ -173,6 +187,8 @@ RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& inf
     if (info.cmd_list_count == 0)
         return RHIFence{};
 
+    const size_t queue_idx = size_t(info.cmd_lists[0]->GetType());
+
     // Not necessary, but we have to do this somewhere at regular intervals. Why not here?
     ProcessCompleted();
 
@@ -185,10 +201,19 @@ RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& inf
     boost::container::small_vector<VkSemaphore, typical_num_lists> semaphores_to_wait;
     boost::container::small_vector<VkPipelineStageFlags, typical_num_lists> stages_to_wait;
 
-    cmd_lists.reserve(info.cmd_list_count);
+    const bool has_deferred_layout_transitions = m_deferred_layout_transitions_lists[queue_idx] != nullptr;
+
+    const size_t total_cmd_list_count = info.cmd_list_count + (has_deferred_layout_transitions ? 1 : 0);
+    cmd_lists.reserve(total_cmd_list_count);
+
+    // Deferred transitions must be queued first
+    if (has_deferred_layout_transitions)
+    {
+        cmd_lists.emplace_back(m_deferred_layout_transitions_lists[queue_idx]->GetVkCmdList());
+    }
     for (size_t i = 0; i < info.cmd_list_count; ++i)
     {
-        cmd_lists.emplace_back(static_cast<VulkanCommandList*>(info.cmd_lists[i])->GetVkCmdList());
+        cmd_lists.emplace_back(RHIImpl(info.cmd_lists[i])->GetVkCmdList());
     }
 
     semaphores_to_wait.reserve(info.wait_semaphore_count);
@@ -210,7 +235,7 @@ RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& inf
     submit_info.signalSemaphoreCount = info.semaphore_to_signal ? 1 : 0;
     submit_info.pSignalSemaphores = (semaphore_to_signal != VK_NULL_HANDLE) ? &semaphore_to_signal : nullptr;
 
-    auto& submitted_lists = m_submitted_lists[size_t(info.cmd_lists[0]->GetType())].emplace();
+    auto& submitted_lists = m_submitted_lists[queue_idx].emplace();
     submitted_lists.completion_fence = VK_NULL_HANDLE;
     
     if (!m_free_fences.empty())
@@ -224,9 +249,16 @@ RHIFence VulkanCommandListManager::SubmitCommandLists(const RHI::SubmitInfo& inf
         fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         VK_VERIFY(vkCreateFence(m_rhi->GetDevice(), &fence_create_info, nullptr, &submitted_lists.completion_fence));
     }
-    submitted_lists.lists.reserve(info.cmd_list_count);
+
+    submitted_lists.lists.reserve(total_cmd_list_count);
+    if (has_deferred_layout_transitions)
+    {
+        m_deferred_layout_transitions_lists[queue_idx]->End();
+        submitted_lists.lists.emplace_back(m_deferred_layout_transitions_lists[queue_idx]);
+        m_deferred_layout_transitions_lists[queue_idx] = nullptr;
+    }
     for (size_t i = 0; i < info.cmd_list_count; ++i)
-        submitted_lists.lists.emplace_back(static_cast<VulkanCommandList*>(*(info.cmd_lists + i)));
+        submitted_lists.lists.emplace_back(RHIImpl(*(info.cmd_lists + i)));    
 
     VulkanQueue* vk_queue = m_rhi->GetQueue(info.cmd_lists[0]->GetType());
 
@@ -292,4 +324,18 @@ void VulkanCommandListManager::WaitSubmittedUntilCompletion()
     VK_VERIFY(vkWaitForFences(m_rhi->GetDevice(), uint32_t(fences_to_wait.size()), fences_to_wait.data(), VK_TRUE, std::numeric_limits<uint64_t>::max()));
 
     ProcessCompleted();
+}
+
+void VulkanCommandListManager::DeferImageLayoutTransition(VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout)
+{
+    VERIFY_EQUALS(queue_type < RHI::QueueType::Count, true);
+    VulkanCommandList*& cmd_list = m_deferred_layout_transitions_lists[size_t(queue_type)];
+
+    if (!cmd_list)
+    {
+        cmd_list = RHIImpl(m_rhi->GetCommandList(queue_type));
+        cmd_list->Begin();
+    }
+
+    m_rhi->TransitionImageLayout(cmd_list->GetVkCmdList(), image, old_layout, new_layout);
 }

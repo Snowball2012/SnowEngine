@@ -328,13 +328,10 @@ void RHITestApp::CreateTextureImage()
         uint32_t(width), uint32_t(height),
         RHIFormat::R8G8B8A8_SRGB,
         RHITextureUsageFlags::SRV | RHITextureUsageFlags::TransferDst,
+        RHITextureLayout::TransferDst,
         m_texture);
 
     VkImage image = *static_cast<VkImage*>(m_texture->GetNativeTexture());
-    TransitionImageLayoutAndFlush(
-        image,
-        VK_IMAGE_LAYOUT_UNDEFINED,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     CopyBufferToImage(native_staging, image, uint32_t(width), uint32_t(height));
 
@@ -345,7 +342,7 @@ void RHITestApp::CreateTextureImage()
 }
 
 void RHITestApp::CreateImage(
-    uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage,
+    uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage, RHITextureLayout layout,
     RHITexturePtr& image)
 {
     RHI::TextureInfo tex_info = {};
@@ -357,6 +354,7 @@ void RHITestApp::CreateImage(
     tex_info.array_layers = 1;
     tex_info.format = format;
     tex_info.usage = usage;
+    tex_info.initial_layout = layout;
 
     image = m_rhi->CreateTexture(tex_info);
 }
@@ -482,31 +480,6 @@ void RHITestApp::CreateTextureImageView()
     m_texture_srv = m_rhi->CreateSRV(srv_info);
 }
 
-VkImageView RHITestApp::CreateImageView(VkImage image, VkFormat format)
-{
-    VkImageViewCreateInfo view_info = {};
-    view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    view_info.image = image;
-    view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    view_info.format = format;
-    view_info.subresourceRange.baseMipLevel = 0;
-    view_info.subresourceRange.levelCount = 1;
-    view_info.subresourceRange.baseArrayLayer = 0;
-    view_info.subresourceRange.layerCount = 1;
-    view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-    view_info.components =
-    {
-        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
-    };
-
-    VkImageView view = VK_NULL_HANDLE;
-    VK_VERIFY(vkCreateImageView(m_vk_device, &view_info, nullptr, &view));
-
-    return view;
-}
-
 void RHITestApp::CreateTextureSampler()
 {
     RHI::SamplerInfo info = {};
@@ -608,12 +581,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
     VkImageView swapchain_image_view = *static_cast<VkImageView*>(swapchain.GetNativeImageView());
     VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(list.GetNativeCmdList());
 
-    VK_VERIFY(vkResetCommandBuffer(buf, 0));
-
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-    VK_VERIFY(vkBeginCommandBuffer(buf, &begin_info));
+    list.Begin();
 
     TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -634,6 +602,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
     render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = { m_swapchain->GetExtent().x, m_swapchain->GetExtent().y } };
     render_info.layerCount = 1;
     vkCmdBeginRendering(buf, &render_info);
+    list.BeginPass();
 
     VkViewport viewport = {};
     viewport.x = 0;
@@ -661,11 +630,11 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     list.DrawIndexed(6, 1, 0, 0, 0);
 
-    vkCmdEndRendering(buf);
+    list.EndPass();
 
     TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-    VK_VERIFY(vkEndCommandBuffer(buf));
+    list.End();
 }
 
 void RHITestApp::DrawFrame()

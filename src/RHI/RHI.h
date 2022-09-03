@@ -101,6 +101,12 @@ enum class RHIShaderBindingType : uint8_t
 	Sampler
 };
 
+enum class RHITextureLayout : uint8_t
+{
+	Undefined = 0,
+	TransferDst
+};
+
 class RHI
 {
 public:
@@ -220,6 +226,10 @@ public:
 		uint32_t array_layers = 0;
 
 		RHITextureUsageFlags usage = RHITextureUsageFlags::None;
+
+		RHITextureLayout initial_layout = RHITextureLayout::Undefined;
+
+		RHI::QueueType initial_queue = RHI::QueueType::Graphics;
 	};
 	virtual class RHITexture* CreateTexture(const TextureInfo& info) { return nullptr; }
 
@@ -335,6 +345,9 @@ public:
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) {}
 
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {};
+
+	virtual void BeginPass() {}
+	virtual void EndPass() {}
 
 	virtual void* GetNativeCmdList() const = 0;
 };

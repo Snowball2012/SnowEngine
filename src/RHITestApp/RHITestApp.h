@@ -113,7 +113,7 @@ private:
 	void CreateTextureImage();
 
 	void CreateImage(
-		uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage,
+		uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage, RHITextureLayout layout,
 		RHITexturePtr& image);
 
 	RHICommandList* BeginSingleTimeCommands();
@@ -123,8 +123,6 @@ private:
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
 	void CreateTextureImageView();
-
-	VkImageView CreateImageView(VkImage image, VkFormat format);
 
 	void CreateTextureSampler();
 

@@ -39,6 +39,14 @@ VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
 	vma_alloc_info.flags = 0;
 	VK_VERIFY(vmaCreateImage(m_rhi->GetVMA(), &image_info, &vma_alloc_info, &m_image, &m_allocation, nullptr));
+
+	VkImageLayout desired_layout = VulkanRHI::GetVkImageLayout(info.initial_layout);
+	if (desired_layout != VK_IMAGE_LAYOUT_UNDEFINED)
+	{
+		// image has to be created in specified layout, but Vulkan only allows for VK_IMAGE_LAYOUT_UNDEFINED and VK_IMAGE_LAYOUT_PREINITIALIZED
+		// insert deferred layout transition here. it will happen at the next SubmitCommandLists
+		m_rhi->DeferImageLayoutTransition(m_image, info.initial_queue, VK_IMAGE_LAYOUT_UNDEFINED, desired_layout);
+	}
 }
 
 VulkanTexture::~VulkanTexture()

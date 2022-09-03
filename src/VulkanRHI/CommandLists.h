@@ -26,6 +26,8 @@ private:
 	};
 	std::array<std::queue<SubmittedListsInfo>, size_t(RHI::QueueType::Count)> m_submitted_lists;
 
+	std::array<VulkanCommandList*, size_t(RHI::QueueType::Count)> m_deferred_layout_transitions_lists;
+
 public:
 	VulkanCommandListManager(VulkanRHI* rhi);
 	~VulkanCommandListManager();
@@ -36,6 +38,8 @@ public:
 	void ProcessCompleted();
 
 	void WaitSubmittedUntilCompletion();
+
+	void DeferImageLayoutTransition(VkImage image, RHI::QueueType queue, VkImageLayout old_layout, VkImageLayout new_layout);
 
 };
 
@@ -80,9 +84,13 @@ public:
 
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) override;
 
+	virtual void EndPass() override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }
+
+	void Reset();
 };
 
 IMPLEMENT_RHI_INTERFACE(RHICommandList, VulkanCommandList)

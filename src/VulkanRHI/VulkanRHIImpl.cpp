@@ -199,6 +199,11 @@ uint32_t VulkanRHI::GetVkFormatSize(RHIFormat format)
     return size;
 }
 
+void VulkanRHI::DeferImageLayoutTransition(VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout)
+{
+    m_cmd_list_mgr->DeferImageLayoutTransition(image, queue_type, old_layout, new_layout);
+}
+
 VkDescriptorType VulkanRHI::GetVkDescriptorType(RHIShaderBindingType type)
 {
     VkDescriptorType vk_type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -301,6 +306,19 @@ VkImageType VulkanRHI::GetVkImageType(RHITextureDimensions dimensions)
     NOTIMPL;
 }
 
+VkImageLayout VulkanRHI::GetVkImageLayout(RHITextureLayout layout)
+{
+    switch (layout)
+    {
+    case RHITextureLayout::Undefined:
+        return VK_IMAGE_LAYOUT_UNDEFINED;
+    case RHITextureLayout::TransferDst:
+        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    }
+
+    NOTIMPL;
+}
+
 void VulkanRHI::Present(RHISwapChain& swap_chain, const PresentInfo& info)
 {
     boost::container::small_vector<VkSemaphore, 4> semaphores;
@@ -332,7 +350,11 @@ RHICommandList* VulkanRHI::GetCommandList(QueueType type)
 {
     VERIFY_NOT_EQUAL(m_cmd_list_mgr, nullptr);
 
-    return m_cmd_list_mgr->GetCommandList(type);
+    VulkanCommandList* cmd_list = m_cmd_list_mgr->GetCommandList(type);
+
+    cmd_list->Reset();
+
+    return cmd_list;
 }
 
 RHIShader* VulkanRHI::CreateShader(const ShaderCreateInfo& create_info)
