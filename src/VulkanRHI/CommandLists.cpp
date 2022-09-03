@@ -59,6 +59,7 @@ void VulkanCommandList::Begin()
 void VulkanCommandList::End()
 {
     VK_VERIFY(vkEndCommandBuffer(m_vk_cmd_buffer));
+    m_currently_bound_pso = nullptr;
 }
 
 void VulkanCommandList::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions)
@@ -87,6 +88,7 @@ void VulkanCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_coun
 void VulkanCommandList::SetPSO(RHIGraphicsPipeline& pso)
 {
     vkCmdBindPipeline(m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, RHIImpl(pso).GetVkPipeline());
+    m_currently_bound_pso = &RHIImpl(pso);
 }
 
 void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
@@ -101,6 +103,24 @@ void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType 
     }
 
     vkCmdBindIndexBuffer(m_vk_cmd_buffer, RHIImpl(index_buf).GetVkBuffer(), offset, vk_type);
+}
+
+void VulkanCommandList::BindTable(size_t slot_idx, RHIShaderBindingTable& table)
+{
+    VERIFY_NOT_EQUAL(m_currently_bound_pso, nullptr);
+
+    VulkanShaderBindingTable& sbt = RHIImpl(table);
+
+    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    VERIFY_EQUALS(m_type, RHI::QueueType::Graphics);
+
+    sbt.FlushBinds();
+    VkDescriptorSet sets[] = { sbt.GetVkDescriptorSet() };
+
+    vkCmdBindDescriptorSets(
+        m_vk_cmd_buffer, bind_point,
+        m_currently_bound_pso->GetVkPipelineLayout(), uint32_t(slot_idx),
+        uint32_t(std::size(sets)), sets, 0, nullptr);    
 }
 
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)

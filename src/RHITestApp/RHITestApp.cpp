@@ -88,7 +88,6 @@ void RHITestApp::InitRHI()
     CreateVertexBuffer();
     CreateIndexBuffer();
     CreateUniformBuffers();
-    m_desc_pool = *static_cast<VkDescriptorPool*>(m_rhi->GetNativeDescPool());
     CreateDescriptorSets();
 
     std::cout << "RHI initialization complete\n";
@@ -124,12 +123,14 @@ void RHITestApp::Cleanup()
 {
     std::cout << "RHI shutdown started\n";
 
+    m_binding_tables.clear();
+    m_uniform_buffer_views.clear();
     m_uniform_buffers.clear();
     m_index_buffer = nullptr;
     m_vertex_buffer = nullptr;
 
     m_texture_sampler = nullptr;
-    vkDestroyImageView(m_vk_device, m_texture_view, nullptr);
+    m_texture_srv = nullptr;
     m_texture = nullptr;
 
     m_swapchain = nullptr;
@@ -285,66 +286,16 @@ void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, 
 
 void RHITestApp::CreateDescriptorSets()
 {
-    VkDescriptorSetLayout descriptor_layout = *static_cast<VkDescriptorSetLayout*>(m_binding_table_layout->GetNativeDescLayout());
-    std::vector<VkDescriptorSetLayout> layouts(m_max_frames_in_flight, descriptor_layout);
-
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = m_desc_pool;
-    alloc_info.descriptorSetCount = m_max_frames_in_flight;
-    alloc_info.pSetLayouts = layouts.data();
-
     m_binding_tables.resize(m_max_frames_in_flight);
-    m_desc_sets.resize(m_max_frames_in_flight);
-    VK_VERIFY(vkAllocateDescriptorSets(m_vk_device, &alloc_info, m_desc_sets.data()));
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         m_binding_tables[i] = m_rhi->CreateShaderBindingTable(*m_binding_table_layout);
         m_binding_tables[i]->BindCBV(0, 0, *m_uniform_buffer_views[i]);
-        m_binding_tables[i]->FlushBinds();
-
-        VkDescriptorBufferInfo buffer_info = {};
-        buffer_info.buffer = *static_cast<VkBuffer*>(m_uniform_buffers[i]->GetBuffer()->GetNativeBuffer());
-        buffer_info.offset = 0;
-        buffer_info.range = VK_WHOLE_SIZE;
-
-        VkDescriptorImageInfo image_info = {};
-        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        image_info.imageView = m_texture_view;
-        image_info.sampler = nullptr;
-
-        VkDescriptorImageInfo sampler_info = {};
-        sampler_info.sampler = *static_cast<VkSampler*>(m_texture_sampler->GetNativeSampler());
-
-        std::array<VkWriteDescriptorSet, 3> desc_writes = {};
-        desc_writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        desc_writes[0].dstSet = m_desc_sets[i];
-        desc_writes[0].dstBinding = 0;
-        desc_writes[0].dstArrayElement = 0;
-        desc_writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        desc_writes[0].descriptorCount = 1;
-        desc_writes[0].pBufferInfo = &buffer_info;
-
-        desc_writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        desc_writes[1].dstSet = m_desc_sets[i];
-        desc_writes[1].dstBinding = 1;
-        desc_writes[1].dstArrayElement = 0;
-        desc_writes[1].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        desc_writes[1].descriptorCount = 1;
-        desc_writes[1].pImageInfo = &image_info;
-
-        desc_writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        desc_writes[2].dstSet = m_desc_sets[i];
-        desc_writes[2].dstBinding = 2;
-        desc_writes[2].dstArrayElement = 0;
-        desc_writes[2].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-        desc_writes[2].descriptorCount = 1;
-        desc_writes[2].pImageInfo = &sampler_info;
-
-        vkUpdateDescriptorSets(m_vk_device, uint32_t(desc_writes.size()), desc_writes.data(), 0, nullptr);
+        m_binding_tables[i]->BindSRV(1, 0, *m_texture_srv);
+        m_binding_tables[i]->BindSampler(2, 0, *m_texture_sampler);
+        m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindTable
     }
-
 }
 
 void RHITestApp::CreateTextureImage()
@@ -526,8 +477,9 @@ void RHITestApp::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkIma
 
 void RHITestApp::CreateTextureImageView()
 {
-    VkImage image = *static_cast<VkImage*>(m_texture->GetNativeTexture());
-    m_texture_view = CreateImageView(image, VK_FORMAT_R8G8B8A8_SRGB);
+    RHI::TextureSRVInfo srv_info = {};
+    srv_info.texture = m_texture.get();
+    m_texture_srv = m_rhi->CreateSRV(srv_info);
 }
 
 VkImageView RHITestApp::CreateImageView(VkImage image, VkFormat format)
@@ -701,11 +653,8 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     list.SetPSO(*m_rhi_graphics_pipeline);
 
-    VkPipelineLayout pipeline_layout = *static_cast<VkPipelineLayout*>(m_shader_bindings_layout->GetNativePipelineLayout());
-
     list.BindTable(0, *m_binding_tables[m_current_frame]);
-    vkCmdBindDescriptorSets(buf, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, 1, &m_desc_sets[m_current_frame], 0, nullptr);
-
+    
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindVertexBuffers(buf, 0, 1, static_cast<VkBuffer*>(m_vertex_buffer->GetNativeBuffer()), offsets);
     list.SetIndexBuffer(*m_index_buffer, RHIIndexBufferType::UInt16, 0);

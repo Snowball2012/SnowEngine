@@ -108,3 +108,33 @@ public:
     VkPipelineLayout GetVkPipelineLayout() const { return m_vk_pipeline_layout; }
 };
 IMPLEMENT_RHI_INTERFACE(RHIShaderBindingLayout, VulkanShaderBindingLayout)
+
+class VulkanShaderBindingTable : public RHIShaderBindingTable
+{
+    GENERATE_RHI_OBJECT_BODY()
+
+    VkDescriptorSet m_vk_desc_set = VK_NULL_HANDLE;
+    RHIObjectPtr<VulkanShaderBindingTableLayout> m_sbt_layout = nullptr;
+
+    boost::container::small_vector<VkWriteDescriptorSet, 4> m_pending_writes;
+
+    // we need this to make sure pBufferInfo and such are valid at the time of FlushBinds
+    boost::container::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_views;
+
+public:
+    virtual ~VulkanShaderBindingTable() override;
+
+    VulkanShaderBindingTable(VulkanRHI* rhi, RHIShaderBindingTableLayout& layout);
+
+    virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) override;
+    virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) override;
+    virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& srv) override;
+
+    virtual void FlushBinds() override;
+
+    VkDescriptorSet GetVkDescriptorSet() const { return m_vk_desc_set; }
+
+private:
+    void InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const;
+};
+IMPLEMENT_RHI_INTERFACE(RHIShaderBindingTable, VulkanShaderBindingTable)

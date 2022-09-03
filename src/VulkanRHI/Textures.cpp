@@ -4,15 +4,15 @@
 
 #include "VulkanRHIImpl.h"
 
-VulkanTextureBase::VulkanTextureBase(VkImage image)
-	: m_image(image)
+VulkanTextureBase::VulkanTextureBase(VkImage image, const RHI::TextureInfo& info)
+	: m_image(image), m_info(info)
 {
 }
 
 IMPLEMENT_RHI_OBJECT(VulkanTexture)
 
 VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
-	:VulkanTextureBase(VK_NULL_HANDLE), m_rhi(rhi)
+	:VulkanTextureBase(VK_NULL_HANDLE, info), m_rhi(rhi)
 {
 	VkImageCreateInfo image_info = {};
 
@@ -75,6 +75,8 @@ VulkanSampler::VulkanSampler(VulkanRHI* rhi, const RHI::SamplerInfo& info)
 	sampler_info.mipLodBias = info.mip_bias;
 
 	VK_VERIFY(vkCreateSampler(m_rhi->GetDevice(), &sampler_info, nullptr, &m_sampler));
+
+	m_desc_info.sampler = m_sampler;
 }
 
 VulkanSampler::~VulkanSampler()

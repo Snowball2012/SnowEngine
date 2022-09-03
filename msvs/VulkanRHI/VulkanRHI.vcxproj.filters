@@ -11,6 +11,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Buffers.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Textures.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\ResourceViews.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
@@ -24,5 +25,6 @@
     <ClCompile Include="..\..\src\VulkanRHI\VulkanMemoryAllocatorImpl.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Buffers.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Textures.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\ResourceViews.cpp" />
   </ItemGroup>
 </Project>

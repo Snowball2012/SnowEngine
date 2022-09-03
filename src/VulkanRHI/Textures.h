@@ -11,20 +11,26 @@ class VulkanTextureBase : public RHITexture
 protected:
 	VkImage m_image = VK_NULL_HANDLE;
 
+	RHI::TextureInfo m_info = {};
+
 public:
 	VulkanTextureBase() = default;
-	VulkanTextureBase(VkImage image);
+	VulkanTextureBase(VkImage image, const RHI::TextureInfo& info);
 
 	virtual ~VulkanTextureBase() override {}
 
 	// Inherited via RHITexture
+	// Intentionally blank
 	virtual void AddRef() override {}
 	virtual void Release() override {}
 
 	virtual void* GetNativeTexture() const { return (void*)&m_image; }
 
 	VkImage GetVkImage() const { return m_image; }
+
+	const RHI::TextureInfo& GetInfo() const { return m_info; }
 };
+IMPLEMENT_RHI_INTERFACE(RHITexture, VulkanTextureBase)
 
 class VulkanTexture : public VulkanTextureBase
 {
@@ -43,11 +49,13 @@ class VulkanSampler : public RHISampler
 	GENERATE_RHI_OBJECT_BODY()
 
 	VkSampler m_sampler = VK_NULL_HANDLE;
+
+	VkDescriptorImageInfo m_desc_info = {};
 public:
 	VulkanSampler(VulkanRHI* rhi, const RHI::SamplerInfo& info);
 
 	virtual ~VulkanSampler() override;
 
-	virtual void* GetNativeSampler() const override { return (void*)&m_sampler; }
+	const VkDescriptorImageInfo* GetVkImageInfo() const { return &m_desc_info; }
 };
 IMPLEMENT_RHI_INTERFACE(RHISampler, VulkanSampler)

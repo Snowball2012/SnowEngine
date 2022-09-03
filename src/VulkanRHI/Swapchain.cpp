@@ -72,9 +72,21 @@ void VulkanSwapChain::Init()
     std::vector<VkImage> images;
     images.resize(image_count);
     VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, images.data()));
+
+
+    RHI::TextureInfo info = {};
+    info.dimensions = RHITextureDimensions::T2D;
+    info.depth = 1;
+    info.width = size_t(m_swapchain_size_pixels.width);
+    info.height = size_t(m_swapchain_size_pixels.height);
+    info.mips = 1;
+    info.format = VulkanRHI::GetRHIFormat(m_swapchain_format.format);
+    info.array_layers = 0;
+    info.usage = RHITextureUsageFlags::RTV;
+
     for (size_t i = 0; i < image_count; ++i)
     {
-        m_swapchain_images.emplace_back(images[i]);
+        m_swapchain_images.emplace_back(images[i], info);
     }
 
     m_swapchain_image_views.resize(image_count);

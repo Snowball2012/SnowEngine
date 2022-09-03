@@ -62,12 +62,10 @@ private:
 	std::vector<RHICBVPtr> m_uniform_buffer_views;
 	// images
 	RHITexturePtr m_texture = nullptr;
-	VkImageView m_texture_view = VK_NULL_HANDLE;
+	RHITextureSRVPtr m_texture_srv = nullptr;
 	RHISamplerPtr m_texture_sampler = nullptr;
 
 	// descriptors
-	VkDescriptorPool m_desc_pool = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSet> m_desc_sets;
 	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
 
 	bool m_fb_resized = false;

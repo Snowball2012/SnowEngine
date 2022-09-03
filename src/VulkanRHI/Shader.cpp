@@ -6,6 +6,8 @@
 
 #include "VulkanRHIImpl.h"
 
+#include "ResourceViews.h"
+
 IMPLEMENT_RHI_OBJECT(Shader)
 
 Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
@@ -281,4 +283,94 @@ VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, c
     layout_info.pBindings = vk_bindings.data();
 
     VK_VERIFY(vkCreateDescriptorSetLayout(m_rhi->GetDevice(), &layout_info, nullptr, &m_vk_desc_set_layout));
+}
+
+
+IMPLEMENT_RHI_OBJECT(VulkanShaderBindingTable)
+
+VulkanShaderBindingTable::~VulkanShaderBindingTable()
+{
+    if (m_vk_desc_set)
+        vkFreeDescriptorSets(m_rhi->GetDevice(), m_rhi->GetVkDescriptorPool(), 1, &m_vk_desc_set);
+}
+
+VulkanShaderBindingTable::VulkanShaderBindingTable(VulkanRHI* rhi, RHIShaderBindingTableLayout& layout)
+    : m_rhi(rhi)
+{
+    m_sbt_layout = &RHIImpl(layout);
+
+    VkDescriptorSetLayout vk_layout = m_sbt_layout->GetVkDescriptorSetLayout();
+
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = m_rhi->GetVkDescriptorPool();
+    alloc_info.descriptorSetCount = 1;
+    alloc_info.pSetLayouts = &vk_layout;
+
+    VK_VERIFY(vkAllocateDescriptorSets(m_rhi->GetDevice(), &alloc_info, &m_vk_desc_set));
+}
+
+void VulkanShaderBindingTable::BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv)
+{
+    auto& vk_cbv = RHIImpl(cbv);
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct(write_struct, range_idx, idx_in_range);
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write_struct.pBufferInfo = vk_cbv.GetVkBufferInfo();
+
+    m_referenced_views.emplace_back(&vk_cbv);
+}
+
+void VulkanShaderBindingTable::BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv)
+{
+    auto& vk_srv = RHIImpl(srv);
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct(write_struct, range_idx, idx_in_range);
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    write_struct.pImageInfo = vk_srv.GetVkImageInfo();
+
+    m_referenced_views.emplace_back(&vk_srv);
+}
+
+void VulkanShaderBindingTable::BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler)
+{
+    auto& vk_sampler = RHIImpl(sampler);
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct(write_struct, range_idx, idx_in_range);
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
+    write_struct.pImageInfo = vk_sampler.GetVkImageInfo();
+
+    m_referenced_views.emplace_back(&vk_sampler);
+}
+
+void VulkanShaderBindingTable::FlushBinds()
+{
+    if (m_pending_writes.empty())
+        return;
+
+    vkUpdateDescriptorSets(
+        m_rhi->GetDevice(),
+        uint32_t(m_pending_writes.size()), m_pending_writes.data(),
+        0, nullptr);
+
+    m_pending_writes.clear();
+    m_referenced_views.clear();
+}
+
+void VulkanShaderBindingTable::InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const
+{
+    write_struct.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+
+    write_struct.dstSet = m_vk_desc_set;
+    write_struct.dstBinding = uint32_t(range_idx);
+    write_struct.dstArrayElement = uint32_t(idx_in_range);
 }

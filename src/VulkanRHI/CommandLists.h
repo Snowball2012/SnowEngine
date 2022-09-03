@@ -52,6 +52,8 @@ private:
 	CmdListId m_list_id = CmdListId::nullid;
 	class VulkanRHI* m_rhi = nullptr;
 
+	class VulkanGraphicsPSO* m_currently_bound_pso = nullptr;
+
 public:
 	VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id);
 	virtual ~VulkanCommandList();
@@ -75,6 +77,8 @@ public:
 	virtual void SetPSO(RHIGraphicsPipeline& pso) override;
 
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) override;
+
+	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) override;
 
 	CmdListId GetListId() const { return m_list_id; }
 

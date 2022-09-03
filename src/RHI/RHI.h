@@ -79,8 +79,9 @@ enum class RHITextureUsageFlags : uint32_t
 	TransferSrc = 0x1,
 	TransferDst = 0x2,
 	SRV = 0x4,
+	RTV = 0x8,
 
-	NumFlags = 3
+	NumFlags = 4
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS(RHITextureUsageFlags)
 
@@ -186,7 +187,7 @@ public:
 	};
 	virtual class RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) { return nullptr; }
 
-	virtual class RHIShaderBindingTable* CreateShaderBindingTable(const RHIShaderBindingTableLayout& layout) { return nullptr; }
+	virtual class RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) { return nullptr; }
 
 	struct ShaderBindingLayoutInfo
 	{
@@ -364,11 +365,11 @@ using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 class RHIShaderBindingTable : public RHIObject
 {
 public:
-	void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) {}
-	void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) {}
-	void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& srv) {}
+	virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) {}
+	virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) {}
+	virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler) {}
 
-	void FlushBinds() {}
+	virtual void FlushBinds() {}
 
 	virtual ~RHIShaderBindingTable() {}
 };
@@ -477,8 +478,6 @@ class RHISampler : public RHIObject
 {
 public:
 	virtual ~RHISampler() override {}
-
-	virtual void* GetNativeSampler() const { return nullptr; }
 };
 using RHISamplerPtr = RHIObjectPtr<RHISampler>;
 

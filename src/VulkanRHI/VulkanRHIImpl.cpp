@@ -14,6 +14,8 @@
 
 #include "Textures.h"
 
+#include "ResourceViews.h"
+
 VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 {
     CreateVkInstance(info);
@@ -52,13 +54,9 @@ VulkanRHI::~VulkanRHI()
 {
     WaitIdle();
 
-    vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
-
     m_cmd_list_mgr = nullptr;
 
     m_main_swap_chain = nullptr;
-
-    vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
 
     // temp destruction. Should be done in submitted command list wait code
     do
@@ -70,6 +68,10 @@ VulkanRHI::~VulkanRHI()
             delete obj;
         }
     } while (!m_objects_to_delete.empty());
+
+    vkDestroyDescriptorPool(m_vk_device, m_desc_pool, nullptr);
+
+    vkDestroyCommandPool(m_vk_device, m_cmd_pool, nullptr);
 
     vmaDestroyAllocator(m_vma);
 
@@ -98,6 +100,21 @@ RHISemaphore* VulkanRHI::CreateGPUSemaphore()
 {
     RHISemaphore* new_semaphore = new VulkanSemaphore(this);
     return new_semaphore;
+}
+
+RHIShaderBindingTable* VulkanRHI::CreateShaderBindingTable(RHIShaderBindingTableLayout& layout)
+{
+    return new VulkanShaderBindingTable(this, layout);
+}
+
+RHICBV* VulkanRHI::CreateCBV(const CBVInfo& info)
+{
+    return new VulkanCBV(this, info);
+}
+
+RHITextureSRV* VulkanRHI::CreateSRV(const TextureSRVInfo& info)
+{
+    return new VulkanTextureSRV(this, info);
 }
 
 VkFormat VulkanRHI::GetVkFormat(RHIFormat format)
@@ -240,11 +257,12 @@ VkImageUsageFlags VulkanRHI::GetVkImageUsageFlags(RHITextureUsageFlags usage)
         retval |= ((usage & rhiflag) != RHITextureUsageFlags::None) ? vkflag : 0;
     };
 
-    static_assert(int(RHITextureUsageFlags::NumFlags) == 3);
+    static_assert(int(RHITextureUsageFlags::NumFlags) == 4);
 
     add_flag(RHITextureUsageFlags::TransferSrc, VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
     add_flag(RHITextureUsageFlags::TransferDst, VK_IMAGE_USAGE_TRANSFER_DST_BIT);
     add_flag(RHITextureUsageFlags::SRV, VK_IMAGE_USAGE_SAMPLED_BIT);
+    add_flag(RHITextureUsageFlags::RTV, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 
     return retval;
 }
@@ -839,6 +857,7 @@ void VulkanRHI::CreateDescriptorPool()
     pool_info.poolSizeCount = uint32_t(pool_sizes.size());
     pool_info.pPoolSizes = pool_sizes.data();
     pool_info.maxSets = descriptor_set_count;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     VK_VERIFY(vkCreateDescriptorPool(m_vk_device, &pool_info, nullptr, &m_desc_pool));
 }

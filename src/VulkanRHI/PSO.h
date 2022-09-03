@@ -47,6 +47,7 @@ public:
 	virtual ~VulkanGraphicsPSO() override;
 
 	VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
+	VkPipelineLayout GetVkPipelineLayout() const { return m_shader_bindings->GetVkPipelineLayout(); }
 
 private:
 	void InitRasterizer(const RHIGraphicsPipelineInfo& info);

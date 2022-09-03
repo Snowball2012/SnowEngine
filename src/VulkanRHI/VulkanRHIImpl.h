@@ -116,6 +116,11 @@ public:
 
 	virtual RHISampler* CreateSampler(const SamplerInfo& info) override;
 
+	virtual RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) override;
+
+	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
+	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;
+
 	// TEMP
 	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
 	virtual void* GetNativeDescPool() const override { return (void*)&m_desc_pool; }
