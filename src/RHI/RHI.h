@@ -115,10 +115,6 @@ class RHI
 public:
 	virtual ~RHI() {};
 
-	// temp functions, to be removed
-	virtual void* GetNativeDevice() const { return nullptr; }
-	virtual void* GetNativeDescPool() const { return nullptr; }
-
 	// window_handle must outlive the swap chain
 	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
 	virtual RHISwapChain* GetMainSwapChain() { return nullptr; }
@@ -334,6 +330,16 @@ struct RHITextureBarrier
 	RHITextureLayout layout_dst = RHITextureLayout::Undefined;
 };
 
+struct RHIBufferTextureCopyRegion
+{
+	size_t buffer_offset = 0;
+	size_t buffer_row_stride = 0; // 0 means tightly packed
+	size_t buffer_texture_height = 0; // for 3d texture copies. 0 means tightly packed
+	size_t texture_offset[3] = { 0,0,0 };
+	size_t texture_extent[3] = { 0,0,0 };
+	RHITextureSubresourceRange texture_subresource = {};
+};
+
 class RHICommandList
 {
 public:
@@ -369,6 +375,10 @@ public:
 
 	virtual void BeginPass() {}
 	virtual void EndPass() {}
+
+	virtual void CopyBufferToTexture(
+		const RHIBuffer& buf, RHITexture& texture,
+		const RHIBufferTextureCopyRegion* regions, size_t region_count) {}
 
 	virtual void* GetNativeCmdList() const = 0;
 };

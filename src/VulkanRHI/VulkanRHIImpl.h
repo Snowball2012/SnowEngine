@@ -121,10 +121,6 @@ public:
 	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
 	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;
 
-	// TEMP
-	virtual void* GetNativeDevice() const override { return (void*)&m_vk_device; }
-	virtual void* GetNativeDescPool() const override { return (void*)&m_desc_pool; }
-
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_queue_family_indices; }

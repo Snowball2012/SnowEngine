@@ -45,8 +45,8 @@ if ((x) == (FailValue)) \
 
 #define VK_VERIFY(x) VERIFY_EQUALS(x, VK_SUCCESS)
 
-#define NOTIMPL INSERT_DBGBREAK \
-	throw std::runtime_error(__FUNCTION__ " is not implemented!");
+#define NOTIMPL do { INSERT_DBGBREAK \
+	throw std::runtime_error(__FUNCTION__ " is not implemented!"); } while(0);
 
 #include <wrl.h>
 
@@ -111,6 +111,9 @@ struct RHIImplClass
 
 template<typename T>
 RHIImplClass<T>::Type& RHIImpl(T& obj) { return static_cast<RHIImplClass<T>::Type&>(obj); }
+
+template<typename T>
+const typename RHIImplClass<T>::Type& RHIImpl(const T& obj) { return static_cast<const RHIImplClass<T>::Type&>(obj); }
 
 template<typename T>
 RHIImplClass<T>::Type* RHIImpl(T* obj) { return static_cast<RHIImplClass<T>::Type*>(obj); }

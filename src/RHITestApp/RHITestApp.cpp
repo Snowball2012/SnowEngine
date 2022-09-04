@@ -75,9 +75,6 @@ void RHITestApp::InitRHI()
         m_rhi = CreateD3D12RHI_RAII();
 
     m_swapchain = m_rhi->GetMainSwapChain();
-    // temp
-
-    m_vk_device = *static_cast<VkDevice*>(m_rhi->GetNativeDevice());
 
     CreateDescriptorSetLayout();
     CreatePipeline();
@@ -260,26 +257,18 @@ void RHITestApp::UpdateUniformBuffer(uint32_t current_image)
     m_uniform_buffers[current_image]->WriteBytes(&matrices, sizeof(matrices));
 }
 
-void RHITestApp::CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height)
+void RHITestApp::CopyBufferToImage(RHIBuffer& src, RHITexture& texture, uint32_t width, uint32_t height)
 {
     RHICommandList* list = BeginSingleTimeCommands();
-    VkCommandBuffer cmd_buf = *static_cast<VkCommandBuffer*>(list->GetNativeCmdList());;
 
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
+    RHIBufferTextureCopyRegion region = {};
+    region.texture_subresource.mip_count = 1;
+    region.texture_subresource.array_count = 1;
+    region.texture_extent[0] = width;
+    region.texture_extent[1] = height;
+    region.texture_extent[2] = 1;
 
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
-
-    vkCmdCopyBufferToImage(
-        cmd_buf, src, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+    list->CopyBufferToTexture(src, texture, &region, 1);
 
     EndSingleTimeCommands(*list);
 }
@@ -319,8 +308,6 @@ void RHITestApp::CreateTextureImage()
 
     staging_buf->WriteBytes(pixels, staging_info.size, 0);
 
-    VkBuffer native_staging = *static_cast<VkBuffer*>(staging_buf->GetBuffer()->GetNativeBuffer());
-
     stbi_image_free(pixels);
 
     // image creation
@@ -331,9 +318,7 @@ void RHITestApp::CreateTextureImage()
         RHITextureLayout::TransferDst,
         m_texture);
 
-    VkImage image = *static_cast<VkImage*>(m_texture->GetNativeTexture());
-
-    CopyBufferToImage(native_staging, image, uint32_t(width), uint32_t(height));
+    CopyBufferToImage(*staging_buf->GetBuffer(), *m_texture, uint32_t(width), uint32_t(height));
 
     TransitionImageLayoutAndFlush(
         *m_texture,

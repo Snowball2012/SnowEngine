@@ -38,9 +38,6 @@ private:
 
 	std::unique_ptr<struct SDLVulkanWindowInterface> m_window_iface = nullptr;
 
-	// device
-	VkDevice m_vk_device = VK_NULL_HANDLE;
-
 	// surface
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 
@@ -100,7 +97,7 @@ private:
 	void CreateIndexBuffer();
 
 	void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t size);
-	void CopyBufferToImage(VkBuffer src, VkImage image, uint32_t width, uint32_t height);
+	void CopyBufferToImage(RHIBuffer& src, RHITexture& image, uint32_t width, uint32_t height);
 
 	void CreateDescriptorSetLayout();
 
