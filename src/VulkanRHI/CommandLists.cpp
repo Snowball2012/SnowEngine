@@ -128,6 +128,39 @@ void VulkanCommandList::EndPass()
     vkCmdEndRendering(m_vk_cmd_buffer);
 }
 
+void VulkanCommandList::TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count)
+{
+    VkPipelineStageFlags src_stage = 0;
+    VkPipelineStageFlags dst_stage = 0;
+
+    boost::container::small_vector<VkImageMemoryBarrier, 4> vk_barriers;
+    vk_barriers.resize(barrier_count);
+    for (size_t i = 0; i < barrier_count; ++i)
+    {
+        const RHITextureBarrier& rhi_barrier = barriers[i];
+        VkImageMemoryBarrier& vk_barrier = vk_barriers[i];
+        VkImageLayout src_layout = VulkanRHI::GetVkImageLayout(rhi_barrier.layout_src);
+        VkImageLayout dst_layout = VulkanRHI::GetVkImageLayout(rhi_barrier.layout_dst);
+
+        VulkanRHI::GetStagesAndAccessMasksForLayoutBarrier(
+            src_layout, dst_layout, src_stage, dst_stage, vk_barrier);
+
+        vk_barrier.image = RHIImpl(rhi_barrier.texture)->GetVkImage();
+        vk_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        vk_barrier.subresourceRange.baseMipLevel = rhi_barrier.subresources.mip_base;
+        vk_barrier.subresourceRange.levelCount = rhi_barrier.subresources.mip_count;
+        vk_barrier.subresourceRange.baseArrayLayer = rhi_barrier.subresources.array_base;
+        vk_barrier.subresourceRange.layerCount = rhi_barrier.subresources.array_count;
+    }
+
+    vkCmdPipelineBarrier(
+        m_vk_cmd_buffer,
+        src_stage, dst_stage, 0,
+        0, nullptr,
+        0, nullptr,
+        uint32_t(vk_barriers.size()), vk_barriers.data());
+}
+
 void VulkanCommandList::Reset()
 {
     VK_VERIFY(vkResetCommandBuffer(m_vk_cmd_buffer, 0));

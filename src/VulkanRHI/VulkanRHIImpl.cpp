@@ -312,6 +312,16 @@ VkImageLayout VulkanRHI::GetVkImageLayout(RHITextureLayout layout)
     {
     case RHITextureLayout::Undefined:
         return VK_IMAGE_LAYOUT_UNDEFINED;
+
+    case RHITextureLayout::ShaderReadOnly:
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    case RHITextureLayout::RenderTarget:
+        return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    case RHITextureLayout::Present:
+        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
     case RHITextureLayout::TransferDst:
         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     }
@@ -857,6 +867,66 @@ void VulkanRHI::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImag
         0, nullptr,
         0, nullptr,
         1, &barrier);
+}
+
+void VulkanRHI::GetStagesAndAccessMasksForLayoutBarrier(VkImageLayout old_layout, VkImageLayout new_layout, VkPipelineStageFlags& src_stage, VkPipelineStageFlags& dst_stage, VkImageMemoryBarrier& barrier)
+{
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = 0;
+
+    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = 0;
+
+        src_stage |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = 0;
+
+        src_stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else
+    {
+        bool unsupported_layout_transition = true;
+        VERIFY_EQUALS(unsupported_layout_transition, false);
+    }
 }
 
 void VulkanRHI::CreateDescriptorPool()

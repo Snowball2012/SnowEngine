@@ -336,9 +336,9 @@ void RHITestApp::CreateTextureImage()
     CopyBufferToImage(native_staging, image, uint32_t(width), uint32_t(height));
 
     TransitionImageLayoutAndFlush(
-        image,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        *m_texture,
+        RHITextureLayout::TransferDst,
+        RHITextureLayout::ShaderReadOnly);
 }
 
 void RHITestApp::CreateImage(
@@ -383,94 +383,25 @@ void RHITestApp::EndSingleTimeCommands(RHICommandList& list)
     m_rhi->WaitForFenceCompletion(completion_fence);
 }
 
-void RHITestApp::TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
+void RHITestApp::TransitionImageLayoutAndFlush(RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout)
 {
     RHICommandList* cmd_list = BeginSingleTimeCommands();
 
-    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(cmd_list->GetNativeCmdList());
-
-    TransitionImageLayout(buf, image, old_layout, new_layout);
+    TransitionImageLayout(*cmd_list, texture, old_layout, new_layout);
 
     EndSingleTimeCommands(*cmd_list);
 }
 
-void RHITestApp::TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout)
+void RHITestApp::TransitionImageLayout(RHICommandList& cmd_list, RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout)
 {
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = old_layout;
-    barrier.newLayout = new_layout;
+    RHITextureBarrier barrier = {};
+    barrier.layout_src = old_layout;
+    barrier.layout_dst = new_layout;
+    barrier.texture = &texture;
+    barrier.subresources.mip_count = 1;
+    barrier.subresources.array_count = 1;
 
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = 0;
-
-    VkPipelineStageFlags src_stage = 0;
-    VkPipelineStageFlags dst_stage = 0;
-
-    if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else if (old_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-    {
-        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrier.dstAccessMask = 0;
-
-        src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    }
-    else if (old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    }
-
-    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = 0;
-
-        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    }
-    else
-    {
-        bool unsupported_layout_transition = true;
-        VERIFY_EQUALS(unsupported_layout_transition, false);
-    }
-
-    vkCmdPipelineBarrier(
-        buf,
-        src_stage, dst_stage,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier);
+    cmd_list.TextureBarriers(&barrier, 1);
 }
 
 void RHITestApp::CreateTextureImageView()
@@ -583,7 +514,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     list.Begin();
 
-    TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    TransitionImageLayout(list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget);
 
     VkRenderingInfo render_info = {};
     render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -632,7 +563,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     list.EndPass();
 
-    TransitionImageLayout(buf, swapchain_image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    TransitionImageLayout(list, *swapchain.GetTexture(), RHITextureLayout::RenderTarget, RHITextureLayout::Present);
 
     list.End();
 }

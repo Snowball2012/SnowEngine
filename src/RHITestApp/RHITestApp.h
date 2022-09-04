@@ -119,8 +119,8 @@ private:
 	RHICommandList* BeginSingleTimeCommands();
 	void EndSingleTimeCommands(RHICommandList& buf);
 
-	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
-	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+	void TransitionImageLayoutAndFlush(RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout);
+	void TransitionImageLayout(RHICommandList& cmd_list, RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout);
 
 	void CreateTextureImageView();
 

@@ -142,6 +142,8 @@ public:
 	VkDescriptorPool GetVkDescriptorPool() const { return m_desc_pool; }
 
 	// Should probably be thread-safe
+	// This method places an image layout transition call before any command list is executed on the next submit
+	// Should probably be used only to transition textures to their initial layout on creation
 	void DeferImageLayoutTransition(VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout);
 
 	// Has to be thread-safe
@@ -164,6 +166,11 @@ public:
 	static VkDescriptorType GetVkDescriptorType(RHIShaderBindingType type);
 
 	static VkImageLayout GetVkImageLayout(RHITextureLayout layout);
+
+	static void GetStagesAndAccessMasksForLayoutBarrier(
+		VkImageLayout src_layout, VkImageLayout dst_layout,
+		VkPipelineStageFlags& src_stage, VkPipelineStageFlags& dst_stage,
+		VkImageMemoryBarrier& barrier);
 
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 

@@ -104,7 +104,10 @@ enum class RHIShaderBindingType : uint8_t
 enum class RHITextureLayout : uint8_t
 {
 	Undefined = 0,
-	TransferDst
+	ShaderReadOnly,
+	RenderTarget,
+	TransferDst,
+	Present
 };
 
 class RHI
@@ -296,7 +299,7 @@ public:
 
 	virtual RHIFormat GetFormat() const { return RHIFormat::Undefined; }
 
-	virtual const RHITexture* GetTexture() const { return nullptr; }
+	virtual RHITexture* GetTexture() { return nullptr; }
 
 	virtual void* GetNativeImageView() const = 0;
 };
@@ -313,6 +316,22 @@ enum class RHIIndexBufferType
 {
 	UInt16,
 	UInt32
+};
+
+struct RHITextureSubresourceRange
+{
+	uint32_t mip_base = 0;
+	uint32_t mip_count = 0;
+	uint32_t array_base = 0;
+	uint32_t array_count = 0;
+};
+
+struct RHITextureBarrier
+{
+	RHITexture* texture = nullptr;
+	RHITextureSubresourceRange subresources;
+	RHITextureLayout layout_src = RHITextureLayout::Undefined;
+	RHITextureLayout layout_dst = RHITextureLayout::Undefined;
 };
 
 class RHICommandList
@@ -344,7 +363,9 @@ public:
 
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) {}
 
-	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {};
+	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {}
+
+	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) {}
 
 	virtual void BeginPass() {}
 	virtual void EndPass() {}

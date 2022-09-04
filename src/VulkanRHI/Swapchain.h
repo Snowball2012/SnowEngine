@@ -45,7 +45,7 @@ public:
 	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) override;
 	virtual void Recreate() override;
 	virtual RHIFormat GetFormat() const override;
-	virtual const RHITexture* GetTexture() const override { return &m_swapchain_images[m_cur_image_index]; }
+	virtual RHITexture* GetTexture() override { return &m_swapchain_images[m_cur_image_index]; }
 
 	virtual void* GetNativeImageView() const override { return (void*)&m_swapchain_image_views[m_cur_image_index]; }
 

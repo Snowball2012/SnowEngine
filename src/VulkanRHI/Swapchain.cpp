@@ -73,7 +73,6 @@ void VulkanSwapChain::Init()
     images.resize(image_count);
     VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, images.data()));
 
-
     RHI::TextureInfo info = {};
     info.dimensions = RHITextureDimensions::T2D;
     info.depth = 1;
