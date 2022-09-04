@@ -19,8 +19,6 @@ public:
 
 	virtual ~VulkanSemaphore() override;
 
-	virtual void* GetNativeSemaphore() const override { return (void*)&m_vk_semaphore; }
-
 	VkSemaphore GetVkSemaphore() const { return m_vk_semaphore; }
 };
 

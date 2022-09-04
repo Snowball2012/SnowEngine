@@ -16,8 +16,6 @@ public:
 
 	virtual ~VulkanBuffer() override;
 
-	virtual void* GetNativeBuffer() const override { return (void*)&m_vk_buffer; }
-
 	void GetAllocationInfo(VmaAllocationInfo& info);
 
 	VkBuffer GetVkBuffer() const { return m_vk_buffer; }

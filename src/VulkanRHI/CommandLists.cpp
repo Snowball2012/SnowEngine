@@ -91,6 +91,34 @@ void VulkanCommandList::SetPSO(RHIGraphicsPipeline& pso)
     m_currently_bound_pso = &RHIImpl(pso);
 }
 
+void VulkanCommandList::SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets)
+{
+    boost::container::small_vector<VkBuffer, 4> vk_buffers;
+    vk_buffers.resize(buffers_count);
+
+    for (size_t i = 0; i < buffers_count; ++i)
+    {
+        VkBuffer& vk_buffer = vk_buffers[i];
+        const VulkanBuffer& rhi_buffer = RHIImpl(buffers[i]);
+
+        vk_buffer = rhi_buffer.GetVkBuffer();
+    }
+
+    const VkDeviceSize* offsets = opt_offsets;
+
+    boost::container::small_vector<VkDeviceSize, 4> offsets_storage;
+    if (!offsets)
+    {
+        offsets_storage.resize(buffers_count, 0);
+        offsets = offsets_storage.data();
+    }
+
+    vkCmdBindVertexBuffers(
+        m_vk_cmd_buffer, first_binding,
+        uint32_t(buffers_count), vk_buffers.data(),
+        offsets);
+}
+
 void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
 {
     VkIndexType vk_type = VK_INDEX_TYPE_MAX_ENUM;
@@ -218,7 +246,7 @@ void VulkanCommandList::SetViewports(size_t first_viewport, const RHIViewport* v
         vk_viewport.maxDepth = rhi_viewport.max_depth;
     }
 
-    vkCmdSetViewport(m_vk_cmd_buffer, first_viewport, uint32_t(vk_viewports.size()), vk_viewports.data());
+    vkCmdSetViewport(m_vk_cmd_buffer, uint32_t(first_viewport), uint32_t(vk_viewports.size()), vk_viewports.data());
 }
 
 void VulkanCommandList::SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count)
@@ -235,7 +263,7 @@ void VulkanCommandList::SetScissors(size_t first_scissor, const RHIRect2D* sciss
         vk_scissor.extent = VkExtent2D(rhi_scissor.extent.x, rhi_scissor.extent.y);
     }
 
-    vkCmdSetScissor(m_vk_cmd_buffer, first_scissor, uint32_t(vk_scissors.size()), vk_scissors.data());
+    vkCmdSetScissor(m_vk_cmd_buffer, uint32_t(first_scissor), uint32_t(vk_scissors.size()), vk_scissors.data());
 }
 
 void VulkanCommandList::Reset()

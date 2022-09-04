@@ -80,6 +80,7 @@ public:
 
 	virtual void SetPSO(RHIGraphicsPipeline& pso) override;
 
+	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) override;
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) override;
 
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) override;

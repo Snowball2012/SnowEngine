@@ -84,8 +84,6 @@ public:
 
     VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::ShaderBindingTableLayoutInfo& info);
 
-    virtual void* GetNativeDescLayout() const override { return (void*)&m_vk_desc_set_layout; }
-
     VkDescriptorSetLayout GetVkDescriptorSetLayout() const { return m_vk_desc_set_layout; }
 };
 IMPLEMENT_RHI_INTERFACE(RHIShaderBindingTableLayout, VulkanShaderBindingTableLayout);
@@ -101,9 +99,6 @@ public:
     virtual ~VulkanShaderBindingLayout() override;
 
     VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::ShaderBindingLayoutInfo& info);
-
-    // TEMP
-    virtual void* GetNativePipelineLayout() const override { return (void*)&m_vk_pipeline_layout; }
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_vk_pipeline_layout; }
 };

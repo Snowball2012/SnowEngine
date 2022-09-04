@@ -304,8 +304,6 @@ class RHISemaphore : public RHIObject
 {
 public:
 	virtual ~RHISemaphore() {}
-
-	virtual void* GetNativeSemaphore() const = 0;
 };
 
 enum class RHIIndexBufferType
@@ -385,6 +383,7 @@ public:
 
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) {}
 
+	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) {}
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {}
 
 	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) {}
@@ -419,9 +418,6 @@ class RHIShaderBindingLayout : public RHIObject
 {
 public:
 	virtual ~RHIShaderBindingLayout() {}
-
-	// TEMP
-	virtual void* GetNativePipelineLayout() const { return nullptr; }
 };
 using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 
@@ -442,7 +438,6 @@ class RHIShaderBindingTableLayout : public RHIObject
 {
 public:
 	virtual ~RHIShaderBindingTableLayout() {}
-	virtual void* GetNativeDescLayout() const { return nullptr; }
 };
 using RHIShaderBindingTableLayoutPtr = RHIObjectPtr<RHIShaderBindingTableLayout>;
 
@@ -495,8 +490,6 @@ class RHIBuffer : public RHIObject
 {
 public:
 	virtual ~RHIBuffer() override {}
-
-	virtual void* GetNativeBuffer() const { return nullptr; }
 };
 using RHIBufferPtr = RHIObjectPtr<RHIBuffer>;
 
