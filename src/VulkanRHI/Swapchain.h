@@ -5,6 +5,7 @@
 #include <RHI/RHI.h>
 
 #include "Textures.h"
+#include "ResourceViews.h"
 
 struct SwapChainSupportDetails
 {
@@ -25,8 +26,8 @@ class VulkanSwapChain : public RHISwapChain
 private:
 	VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 	VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
-	std::vector<VulkanTextureBase> m_swapchain_images;
-	std::vector<VkImageView> m_swapchain_image_views;
+	std::vector<RHIObjectPtr<VulkanTextureBase>> m_swapchain_images;
+	std::vector<RHIObjectPtr<VulkanRTV>> m_swapchain_image_views;
 	VkExtent2D m_swapchain_size_pixels = { 0, 0 };
 	VkSurfaceFormatKHR m_swapchain_format = {};
 
@@ -45,9 +46,9 @@ public:
 	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) override;
 	virtual void Recreate() override;
 	virtual RHIFormat GetFormat() const override;
-	virtual RHITexture* GetTexture() override { return &m_swapchain_images[m_cur_image_index]; }
+	virtual RHITexture* GetTexture() override { return m_swapchain_images[m_cur_image_index].get(); }
 
-	virtual void* GetNativeImageView() const override { return (void*)&m_swapchain_image_views[m_cur_image_index]; }
+	virtual RHIRTV* GetRTV() override { return m_swapchain_image_views[m_cur_image_index].get(); }
 
 	VkSwapchainKHR GetVkSwapchain() const { return m_swapchain; }
 	uint32_t GetCurrentImageIndex() const { return m_cur_image_index; }

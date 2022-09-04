@@ -41,3 +41,19 @@ public:
 };
 IMPLEMENT_RHI_INTERFACE(RHITextureSRV, VulkanTextureSRV)
 
+class VulkanRTV : public RHIRTV
+{
+	GENERATE_RHI_OBJECT_BODY()
+
+	RHIObjectPtr<VulkanTextureBase> m_texture = nullptr;
+
+	VkImageView m_vk_image_view = VK_NULL_HANDLE;
+public:
+	virtual ~VulkanRTV() override;
+
+	VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info);
+
+	VkImageView GetVkImageView() const { return m_vk_image_view; }
+};
+IMPLEMENT_RHI_INTERFACE(RHIRTV, VulkanRTV)
+

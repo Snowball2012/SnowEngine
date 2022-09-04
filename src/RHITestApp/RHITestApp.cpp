@@ -493,32 +493,21 @@ void RHITestApp::CreatePipeline()
 
 void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapchain)
 {
-    VkImage swapchain_image = *static_cast<VkImage*>(swapchain.GetTexture()->GetNativeTexture());
-    VkImageView swapchain_image_view = *static_cast<VkImageView*>(swapchain.GetNativeImageView());
-    VkCommandBuffer buf = *static_cast<VkCommandBuffer*>(list.GetNativeCmdList());
-
     list.Begin();
 
     TransitionImageLayout(list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget);
 
-    VkRenderingInfo render_info = {};
-    render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-    render_info.colorAttachmentCount = 1;
+    RHIPassRTVInfo rt = {};
+    rt.load_op = RHILoadOp::Clear;
+    rt.store_op = RHIStoreOp::Store;
+    rt.rtv = m_swapchain->GetRTV();
+    rt.clear_value.float32[3] = 1.0f;
 
-    VkRenderingAttachmentInfo color_attachment = {};
-    color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    VkClearValue clear_color = { {{0.0f,0.0f,0.0f,1.0f}} };
-    color_attachment.clearValue = clear_color;
-    color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    color_attachment.imageView = swapchain_image_view;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
-    render_info.pColorAttachments = &color_attachment;
-    render_info.renderArea = VkRect2D{ .offset = VkOffset2D{}, .extent = { m_swapchain->GetExtent().x, m_swapchain->GetExtent().y } };
-    render_info.layerCount = 1;
-    vkCmdBeginRendering(buf, &render_info);
-    list.BeginPass();
+    RHIPassInfo pass_info = {};
+    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2(0,0), .extent = m_swapchain->GetExtent() };
+    pass_info.render_targets = &rt;
+    pass_info.render_targets_count = 1;
+    list.BeginPass(pass_info);
 
     RHIViewport viewport = {};
     viewport.x = 0;

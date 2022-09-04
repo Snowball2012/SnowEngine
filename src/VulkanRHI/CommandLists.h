@@ -62,8 +62,6 @@ public:
 	VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id);
 	virtual ~VulkanCommandList();
 
-	virtual void* GetNativeCmdList() const { return (void*)&m_vk_cmd_buffer; }
-
 	virtual RHI::QueueType GetType() const override;
 
 	virtual void Begin() override;
@@ -85,6 +83,7 @@ public:
 
 	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) override;
 
+	virtual void BeginPass(const RHIPassInfo& pass_info) override;
 	virtual void EndPass() override;
 
 	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) override;

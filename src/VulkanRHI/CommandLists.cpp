@@ -151,6 +151,37 @@ void VulkanCommandList::BindTable(size_t slot_idx, RHIShaderBindingTable& table)
         uint32_t(std::size(sets)), sets, 0, nullptr);    
 }
 
+void VulkanCommandList::BeginPass(const RHIPassInfo& pass_info)
+{
+    boost::container::small_vector<VkRenderingAttachmentInfo, 4> vk_attachments;
+    vk_attachments.resize(pass_info.render_targets_count);
+
+    for (size_t i = 0; i < pass_info.render_targets_count; ++i)
+    {
+        auto& vk_attachment = vk_attachments[i];
+        const auto& rhi_rt = pass_info.render_targets[i];
+
+        vk_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+
+        memcpy(&vk_attachment.clearValue.color, &rhi_rt.clear_value, sizeof(vk_attachment.clearValue.color));
+
+        vk_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vk_attachment.imageView = RHIImpl(rhi_rt.rtv)->GetVkImageView();
+        vk_attachment.loadOp = VulkanRHI::GetVkLoadOp(rhi_rt.load_op);
+        vk_attachment.storeOp = VulkanRHI::GetVkStoreOp(rhi_rt.store_op);
+    }
+
+    VkRenderingInfo render_info = {};
+    render_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    render_info.colorAttachmentCount = uint32_t(pass_info.render_targets_count);
+    render_info.pColorAttachments = vk_attachments.data();
+    render_info.renderArea.offset = VkOffset2D(pass_info.render_area.offset.x, pass_info.render_area.offset.y);
+    render_info.renderArea.extent = VkExtent2D(pass_info.render_area.extent.x, pass_info.render_area.extent.y);
+    render_info.layerCount = 1;
+
+    vkCmdBeginRendering(m_vk_cmd_buffer, &render_info);
+}
+
 void VulkanCommandList::EndPass()
 {
     vkCmdEndRendering(m_vk_cmd_buffer);

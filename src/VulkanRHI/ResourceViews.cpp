@@ -63,3 +63,23 @@ VulkanTextureSRV::VulkanTextureSRV(VulkanRHI* rhi, const RHI::TextureSRVInfo& in
 	m_view_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 	m_view_info.sampler = nullptr;
 }
+
+
+IMPLEMENT_RHI_OBJECT(VulkanRTV)
+
+VulkanRTV::~VulkanRTV()
+{
+    if (m_vk_image_view)
+        vkDestroyImageView(m_rhi->GetDevice(), m_vk_image_view, nullptr);
+}
+
+VulkanRTV::VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info)
+    : m_rhi(rhi)
+{
+    m_vk_image_view = m_rhi->CreateImageView(
+        RHIImpl(info.texture)->GetVkImage(),
+        VulkanRHI::GetVkFormat(info.format));
+    VERIFY_NOT_EQUAL(info.texture, nullptr);
+
+    m_texture = &RHIImpl(*info.texture);
+}

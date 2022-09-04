@@ -73,26 +73,31 @@ void VulkanSwapChain::Init()
     images.resize(image_count);
     VK_VERIFY(vkGetSwapchainImagesKHR(vk_device, m_swapchain, &image_count, images.data()));
 
-    RHI::TextureInfo info = {};
-    info.dimensions = RHITextureDimensions::T2D;
-    info.depth = 1;
-    info.width = size_t(m_swapchain_size_pixels.width);
-    info.height = size_t(m_swapchain_size_pixels.height);
-    info.mips = 1;
-    info.format = VulkanRHI::GetRHIFormat(m_swapchain_format.format);
-    info.array_layers = 0;
-    info.usage = RHITextureUsageFlags::RTV;
+    RHI::TextureInfo tex_info = {};
+    tex_info.dimensions = RHITextureDimensions::T2D;
+    tex_info.depth = 1;
+    tex_info.width = size_t(m_swapchain_size_pixels.width);
+    tex_info.height = size_t(m_swapchain_size_pixels.height);
+    tex_info.mips = 1;
+    tex_info.format = VulkanRHI::GetRHIFormat(m_swapchain_format.format);
+    tex_info.array_layers = 0;
+    tex_info.usage = RHITextureUsageFlags::RTV;
 
     for (size_t i = 0; i < image_count; ++i)
     {
-        m_swapchain_images.emplace_back(images[i], info);
+        m_swapchain_images.emplace_back(new VulkanTextureBase(images[i], tex_info));
     }
 
     m_swapchain_image_views.resize(image_count);
     for (uint32_t i = 0; i < image_count; ++i)
     {
-        m_swapchain_image_views[i] = m_rhi->CreateImageView(m_swapchain_images[i].GetVkImage(), m_swapchain_format.format);
-        m_rhi->TransitionImageLayoutAndFlush(m_swapchain_images[i].GetVkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        RHI::RTVInfo rtv_info = {};
+        rtv_info.texture = m_swapchain_images[i].get();
+        rtv_info.format = tex_info.format;
+
+        m_swapchain_image_views[i] = RHIImpl(m_rhi->CreateRTV(rtv_info));
+        m_rhi->DeferImageLayoutTransition(m_swapchain_images[i]->GetVkImage(), RHI::QueueType::Graphics, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        //m_rhi->TransitionImageLayoutAndFlush(m_swapchain_images[i].GetVkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 }
 
@@ -104,8 +109,7 @@ VulkanSwapChain::~VulkanSwapChain()
 
 void VulkanSwapChain::Cleanup()
 {
-    for (auto& view : m_swapchain_image_views)
-        vkDestroyImageView(m_rhi->GetDevice(), view, nullptr);
+    m_swapchain_image_views.clear();
 
     vkDestroySwapchainKHR(m_rhi->GetDevice(), m_swapchain, nullptr);
 }

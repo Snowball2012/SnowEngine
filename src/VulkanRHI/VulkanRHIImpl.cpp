@@ -43,20 +43,20 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
     swapchain_create_info.surface_num = 2;
     swapchain_create_info.window_handle = info.main_window_handle;
 
-    m_main_swap_chain = CreateSwapChainInternal(swapchain_create_info);
-
     m_cmd_list_mgr = std::make_unique<VulkanCommandListManager>(this);
 
     CreateDescriptorPool();
+
+    m_main_swap_chain = CreateSwapChainInternal(swapchain_create_info);
 }
 
 VulkanRHI::~VulkanRHI()
 {
     WaitIdle();
 
-    m_cmd_list_mgr = nullptr;
-
     m_main_swap_chain = nullptr;
+
+    m_cmd_list_mgr = nullptr;
 
     // temp destruction. Should be done in submitted command list wait code
     do
@@ -115,6 +115,11 @@ RHICBV* VulkanRHI::CreateCBV(const CBVInfo& info)
 RHITextureSRV* VulkanRHI::CreateSRV(const TextureSRVInfo& info)
 {
     return new VulkanTextureSRV(this, info);
+}
+
+RHIRTV* VulkanRHI::CreateRTV(const RTVInfo& info)
+{
+    return new VulkanRTV(this, info);
 }
 
 VkFormat VulkanRHI::GetVkFormat(RHIFormat format)
@@ -927,6 +932,34 @@ void VulkanRHI::GetStagesAndAccessMasksForLayoutBarrier(VkImageLayout old_layout
         bool unsupported_layout_transition = true;
         VERIFY_EQUALS(unsupported_layout_transition, false);
     }
+}
+
+VkAttachmentLoadOp VulkanRHI::GetVkLoadOp(RHILoadOp op)
+{
+    switch (op)
+    {
+    case RHILoadOp::DontCare:
+        return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    case RHILoadOp::Clear:
+        return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    case RHILoadOp::PreserveContents:
+        return VK_ATTACHMENT_LOAD_OP_LOAD;
+    }
+    
+    NOTIMPL;
+}
+
+VkAttachmentStoreOp VulkanRHI::GetVkStoreOp(RHIStoreOp op)
+{
+    switch (op)
+    {
+    case RHIStoreOp::DontCare:
+        return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    case RHIStoreOp::Store:
+        return VK_ATTACHMENT_STORE_OP_STORE;
+    }
+
+    NOTIMPL;
 }
 
 void VulkanRHI::CreateDescriptorPool()

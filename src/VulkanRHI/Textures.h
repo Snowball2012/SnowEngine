@@ -24,8 +24,6 @@ public:
 	virtual void AddRef() override {}
 	virtual void Release() override {}
 
-	virtual void* GetNativeTexture() const { return (void*)&m_image; }
-
 	VkImage GetVkImage() const { return m_image; }
 
 	const RHI::TextureInfo& GetInfo() const { return m_info; }

@@ -244,6 +244,13 @@ public:
 	};
 	virtual class RHITextureSRV* CreateSRV(const TextureSRVInfo& info) { return nullptr; }
 
+	struct RTVInfo
+	{
+		RHITexture* texture = nullptr;
+		RHIFormat format = RHIFormat::Undefined;
+	};
+	virtual class RHIRTV* CreateRTV(const RTVInfo& info) { return nullptr; }
+
 	struct SamplerInfo
 	{
 		float mip_bias = 0.0f;
@@ -297,7 +304,7 @@ public:
 
 	virtual RHITexture* GetTexture() { return nullptr; }
 
-	virtual void* GetNativeImageView() const = 0;
+	virtual RHIRTV* GetRTV() { return nullptr; }
 };
 
 class RHISemaphore : public RHIObject
@@ -354,6 +361,42 @@ struct RHIRect2D
 	glm::uvec2 extent = glm::uvec2(0, 0);
 };
 
+enum class RHILoadOp : uint8_t
+{
+	DontCare = 0,
+	PreserveContents,
+	Clear
+};
+
+enum class RHIStoreOp : uint8_t
+{
+	DontCare = 0,
+	Store
+};
+
+union RHIClearColorValue
+{
+	float float32[4];
+	int32_t int32[4];
+	uint32_t uint32[4];
+};
+
+struct RHIPassRTVInfo
+{
+	class RHIRTV* rtv = nullptr;
+	RHILoadOp load_op = RHILoadOp::DontCare;
+	RHIStoreOp store_op = RHIStoreOp::DontCare;
+	RHIClearColorValue clear_value = { {0,0,0,0} };
+};
+
+struct RHIPassInfo
+{
+	const RHIPassRTVInfo* render_targets = nullptr;
+	size_t render_targets_count = 0;
+
+	RHIRect2D render_area = {};
+};
+
 class RHICommandList
 {
 public:
@@ -388,7 +431,7 @@ public:
 
 	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) {}
 
-	virtual void BeginPass() {}
+	virtual void BeginPass(const RHIPassInfo& pass_info) {}
 	virtual void EndPass() {}
 
 	virtual void CopyBufferToTexture(
@@ -397,8 +440,6 @@ public:
 
 	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) {}
 	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) {}
-
-	virtual void* GetNativeCmdList() const = 0;
 };
 
 class RHIShader : public RHIObject
@@ -510,8 +551,6 @@ class RHITexture : public RHIObject
 {
 public:
 	virtual ~RHITexture() override {}
-
-	virtual void* GetNativeTexture() const { return nullptr; }
 };
 using RHITexturePtr = RHIObjectPtr<RHITexture>;
 
@@ -529,6 +568,13 @@ public:
 	virtual ~RHITextureSRV() override {}
 };
 using RHITextureSRVPtr = RHIObjectPtr<RHITextureSRV>;
+
+class RHIRTV : public RHIObject
+{
+public:
+	virtual ~RHIRTV() override {}
+};
+using RHIRTVPtr = RHIObjectPtr<RHIRTV>;
 
 class RHISampler : public RHIObject
 {

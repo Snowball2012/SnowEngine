@@ -118,6 +118,7 @@ public:
 
 	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
 	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;
+	virtual RHIRTV* CreateRTV(const RTVInfo& info) override;
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
@@ -165,6 +166,9 @@ public:
 		VkImageLayout src_layout, VkImageLayout dst_layout,
 		VkPipelineStageFlags& src_stage, VkPipelineStageFlags& dst_stage,
 		VkImageMemoryBarrier& barrier);
+
+	static VkAttachmentLoadOp GetVkLoadOp(RHILoadOp op);
+	static VkAttachmentStoreOp GetVkStoreOp(RHIStoreOp op);
 
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
