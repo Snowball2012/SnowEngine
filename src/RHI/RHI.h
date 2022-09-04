@@ -340,6 +340,22 @@ struct RHIBufferTextureCopyRegion
 	RHITextureSubresourceRange texture_subresource = {};
 };
 
+struct RHIViewport
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+    float min_depth = 0.0f;
+    float max_depth = 0.0f;
+};
+
+struct RHIRect2D
+{
+	glm::ivec2 offset = glm::ivec2(0, 0);
+	glm::uvec2 extent = glm::uvec2(0, 0);
+};
+
 class RHICommandList
 {
 public:
@@ -379,6 +395,9 @@ public:
 	virtual void CopyBufferToTexture(
 		const RHIBuffer& buf, RHITexture& texture,
 		const RHIBufferTextureCopyRegion* regions, size_t region_count) {}
+
+	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) {}
+	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) {}
 
 	virtual void* GetNativeCmdList() const = 0;
 };

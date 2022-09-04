@@ -92,6 +92,9 @@ public:
 		const RHIBuffer& buf, RHITexture& texture,
 		const RHIBufferTextureCopyRegion* regions, size_t region_count) override;
 
+	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) override;
+	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }

@@ -520,21 +520,21 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
     vkCmdBeginRendering(buf, &render_info);
     list.BeginPass();
 
-    VkViewport viewport = {};
+    RHIViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
     glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
     viewport.width = float(swapchain_extent.x);
     viewport.height = float(swapchain_extent.y);
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    viewport.min_depth = 0.0f;
+    viewport.max_depth = 1.0f;
 
-    VkRect2D scissor = {};
+    RHIRect2D scissor = {};
     scissor.offset = { 0, 0 };
-    scissor.extent = VkExtent2D(swapchain_extent.x, swapchain_extent.y);
+    scissor.extent = swapchain_extent;
 
-    vkCmdSetViewport(buf, 0, 1, &viewport);
-    vkCmdSetScissor(buf, 0, 1, &scissor);
+    list.SetViewports(0, &viewport, 1);
+    list.SetScissors(0, &scissor, 1);
 
     list.SetPSO(*m_rhi_graphics_pipeline);
 

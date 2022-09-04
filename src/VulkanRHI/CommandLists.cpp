@@ -200,6 +200,44 @@ void VulkanCommandList::CopyBufferToTexture(const RHIBuffer& buf, RHITexture& te
         uint32_t(vk_regions.size()), vk_regions.data());
 }
 
+void VulkanCommandList::SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count)
+{
+    boost::container::small_vector<VkViewport, 4> vk_viewports;
+    vk_viewports.resize(viewports_count);
+
+    for (size_t i = 0; i < viewports_count; ++i)
+    {
+        VkViewport& vk_viewport = vk_viewports[i];
+        const RHIViewport& rhi_viewport = viewports[i];
+
+        vk_viewport.x = rhi_viewport.x;
+        vk_viewport.y = rhi_viewport.y;
+        vk_viewport.width = rhi_viewport.width;
+        vk_viewport.height = rhi_viewport.height;
+        vk_viewport.minDepth = rhi_viewport.min_depth;
+        vk_viewport.maxDepth = rhi_viewport.max_depth;
+    }
+
+    vkCmdSetViewport(m_vk_cmd_buffer, first_viewport, uint32_t(vk_viewports.size()), vk_viewports.data());
+}
+
+void VulkanCommandList::SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count)
+{
+    boost::container::small_vector<VkRect2D, 4> vk_scissors;
+    vk_scissors.resize(scissors_count);
+
+    for (size_t i = 0; i < scissors_count; ++i)
+    {
+        VkRect2D& vk_scissor = vk_scissors[i];
+        const RHIRect2D& rhi_scissor = scissors[i];
+
+        vk_scissor.offset = VkOffset2D(rhi_scissor.offset.x, rhi_scissor.offset.y);
+        vk_scissor.extent = VkExtent2D(rhi_scissor.extent.x, rhi_scissor.extent.y);
+    }
+
+    vkCmdSetScissor(m_vk_cmd_buffer, first_scissor, uint32_t(vk_scissors.size()), vk_scissors.data());
+}
+
 void VulkanCommandList::Reset()
 {
     VK_VERIFY(vkResetCommandBuffer(m_vk_cmd_buffer, 0));
