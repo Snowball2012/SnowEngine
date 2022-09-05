@@ -1,6 +1,6 @@
 #pragma once
 
-#include <RHI/RHICommon.h>
+#include <Core/RHICommon.h>
 
 #include <vma/vk_mem_alloc.h>
 

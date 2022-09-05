@@ -2,8 +2,12 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClInclude Include="..\..\src\D3D12RHI\D3D12RHI.h" />
+    <ClInclude Include="..\..\src\D3D12RHI\D3D12RHIImpl.h" />
+    <ClInclude Include="..\..\src\D3D12RHI\StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\D3D12RHI\D3D12RHI.cpp" />
+    <ClCompile Include="..\..\src\D3D12RHI\D3D12RHIImpl.cpp" />
+    <ClCompile Include="..\..\src\D3D12RHI\StdAfx.cpp" />
   </ItemGroup>
 </Project>

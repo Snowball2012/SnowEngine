@@ -20,9 +20,16 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\D3D12RHI\D3D12RHI.h" />
+    <ClInclude Include="..\..\src\D3D12RHI\D3D12RHIImpl.h" />
+    <ClInclude Include="..\..\src\D3D12RHI\StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\D3D12RHI\D3D12RHI.cpp" />
+    <ClCompile Include="..\..\src\D3D12RHI\D3D12RHIImpl.cpp" />
+    <ClCompile Include="..\..\src\D3D12RHI\StdAfx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -134,9 +141,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;D3D12RHI_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include</AdditionalIncludeDirectories>
     </ClCompile>
@@ -155,9 +161,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;D3D12RHI_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PrecompiledHeaderFile>
-      </PrecompiledHeaderFile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include</AdditionalIncludeDirectories>
     </ClCompile>

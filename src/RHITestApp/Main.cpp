@@ -2,10 +2,20 @@
 
 #include "RHITestApp.h"
 
+#include "D3D12TestApp.h"
+
+
+#define TEST_D3D12
+
+#ifdef TEST_D3D12
+using AppClass = D3D12TestApp;
+#else
+using AppClass = RHITestApp;
+#endif
 
 int main(int argc, char** argv)
 {
-    RHITestApp app;
+    AppClass app;
 
     try
     {

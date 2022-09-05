@@ -5,11 +5,15 @@
     <ClCompile Include="..\..\src\RHITestApp\RHITestApp.cpp" />
     <ClCompile Include="..\..\src\RHITestApp\StdAfx.cpp" />
     <ClCompile Include="..\..\src\RHITestApp\stb_image.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\D3D12TestApp.cpp" />
+    <ClCompile Include="..\..\src\RHITestApp\RenderResources.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\RHITestApp\RHITestApp.h" />
     <ClInclude Include="..\..\src\RHITestApp\StdAfx.h" />
     <ClInclude Include="..\..\src\RHITestApp\span.h" />
     <ClInclude Include="..\..\src\RHITestApp\stb_image.h" />
+    <ClInclude Include="..\..\src\RHITestApp\D3D12TestApp.h" />
+    <ClInclude Include="..\..\src\RHITestApp\RenderResources.h" />
   </ItemGroup>
 </Project>

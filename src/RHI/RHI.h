@@ -1,10 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <boost/intrusive_ptr.hpp>
-
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
+#include <Core/Core.h>
 
 struct RHIFence
 {
@@ -12,22 +8,6 @@ struct RHIFence
 	uint64_t _2;
 	uint64_t _3;
 };
-
-#ifndef IMPLEMENT_SCOPED_ENUM_FLAGS
-#define IMPLEMENT_SCOPED_ENUM_FLAGS(T) \
-inline constexpr T operator|(T lhs, T rhs) \
-{ \
-	return T( \
-		std::underlying_type<T>::type(lhs) \
-		| std::underlying_type<T>::type(rhs)); \
-} \
-inline constexpr T operator&(T lhs, T rhs) \
-{ \
-	return T( \
-		std::underlying_type<T>::type(lhs) \
-		& std::underlying_type<T>::type(rhs)); \
-}
-#endif
 
 enum class RHIBufferUsageFlags : uint32_t
 {

@@ -4,27 +4,13 @@
 
 #include <RHI/RHI.h>
 
+#include "RenderResources.h"
+
 struct SwapChainSupportDetails
 {
 	VkSurfaceCapabilitiesKHR capabilities = {};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
-};
-
-struct Vertex
-{
-	glm::vec2 pos;
-	alignas(16) glm::vec3 color;
-	glm::vec2 texcoord;
-
-	static std::array<RHIPrimitiveAttributeInfo, 3> GetRHIAttributes();
-};
-
-struct Matrices
-{
-	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
 };
 
 class RHITestApp
