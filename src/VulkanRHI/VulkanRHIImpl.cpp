@@ -38,14 +38,14 @@ VulkanRHI::VulkanRHI(const VulkanRHICreateInfo& info)
 
     CreateCommandPool();
 
+    m_cmd_list_mgr = std::make_unique<VulkanCommandListManager>(this);
+
+    CreateDescriptorPool();
+
     VulkanSwapChainCreateInfo swapchain_create_info = {};
     swapchain_create_info.surface = m_main_surface;
     swapchain_create_info.surface_num = 2;
     swapchain_create_info.window_handle = info.main_window_handle;
-
-    m_cmd_list_mgr = std::make_unique<VulkanCommandListManager>(this);
-
-    CreateDescriptorPool();
 
     m_main_swap_chain = CreateSwapChainInternal(swapchain_create_info);
 }
