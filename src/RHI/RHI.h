@@ -96,19 +96,19 @@ public:
 	virtual ~RHI() {};
 
 	// window_handle must outlive the swap chain
-	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { return nullptr; }
-	virtual RHISwapChain* GetMainSwapChain() { return nullptr; }
+	virtual class RHISwapChain* CreateSwapChain(const struct SwapChainCreateInfo& create_info) { NOTIMPL; return nullptr; }
+	virtual RHISwapChain* GetMainSwapChain() { NOTIMPL; return nullptr; }
 
-	virtual class RHISemaphore* CreateGPUSemaphore() { return nullptr; }
+	virtual class RHISemaphore* CreateGPUSemaphore() { NOTIMPL; return nullptr; }
 
 	struct PresentInfo
 	{
 		class RHISemaphore** wait_semaphores = nullptr;
 		size_t semaphore_count = 0;
 	};
-	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) = 0;
+	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) { NOTIMPL; }
 
-	virtual void WaitIdle() = 0;
+	virtual void WaitIdle() { NOTIMPL; };
 
 	enum class QueueType : uint8_t
 	{
@@ -116,7 +116,7 @@ public:
 		Count
 	};
 
-	virtual class RHICommandList* GetCommandList(QueueType type) { return nullptr; };
+	virtual class RHICommandList* GetCommandList(QueueType type) { NOTIMPL; return nullptr; }
 
 	// command lists here must belong to the same QueueType
 	struct SubmitInfo
@@ -128,9 +128,9 @@ public:
 		const RHIPipelineStageFlags* stages_to_wait = nullptr;
 		class RHISemaphore* semaphore_to_signal = nullptr; // optional
 	};
-	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) = 0;
+	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) { NOTIMPL; }
 
-	virtual void WaitForFenceCompletion(const RHIFence& fence) = 0;
+	virtual void WaitForFenceCompletion(const RHIFence& fence) { NOTIMPL; }
 
 	enum class ShaderFrequency : uint8_t
 	{
@@ -155,7 +155,7 @@ public:
 		size_t define_count = 0;
 	};
 	// Shader stuff
-	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { return nullptr; }
+	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { NOTIMPL; return nullptr; }
 
 
 	struct ShaderViewRange
@@ -170,9 +170,9 @@ public:
 		const ShaderViewRange* ranges = nullptr;
 		size_t range_count = 0;
 	};
-	virtual class RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) { return nullptr; }
+	virtual class RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) { NOTIMPL; return nullptr; }
 
-	virtual class RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) { return nullptr; }
+	virtual class RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) { NOTIMPL; return nullptr; }
 
 	struct ShaderBindingLayoutInfo
 	{
@@ -180,17 +180,17 @@ public:
 		size_t table_count = 0;
 	};
 
-	virtual class RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& layout_info) { return nullptr; }
+	virtual class RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& layout_info) { NOTIMPL; return nullptr; }
 	
-	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { return nullptr; }
+	virtual class RHIGraphicsPipeline* CreatePSO(const struct RHIGraphicsPipelineInfo& pso_info) { NOTIMPL; return nullptr; }
 
 	struct BufferInfo
 	{
 		uint64_t size = 0;
 		RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
 	};
-	virtual class RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& info) { return nullptr; }
-	virtual class RHIBuffer* CreateDeviceBuffer(const BufferInfo& info) { return nullptr; }
+	virtual class RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& info) { NOTIMPL; return nullptr; }
+	virtual class RHIBuffer* CreateDeviceBuffer(const BufferInfo& info) { NOTIMPL; return nullptr; }
 
 	struct TextureInfo
 	{
@@ -210,33 +210,33 @@ public:
 
 		RHI::QueueType initial_queue = RHI::QueueType::Graphics;
 	};
-	virtual class RHITexture* CreateTexture(const TextureInfo& info) { return nullptr; }
+	virtual class RHITexture* CreateTexture(const TextureInfo& info) { NOTIMPL; return nullptr; }
 
 	struct CBVInfo
 	{
 		RHIBuffer* buffer = nullptr;
 	};
-	virtual class RHICBV* CreateCBV(const CBVInfo& info) { return nullptr; }
+	virtual class RHICBV* CreateCBV(const CBVInfo& info) { NOTIMPL; return nullptr; }
 
 	struct TextureSRVInfo
 	{
 		RHITexture* texture = nullptr;
 	};
-	virtual class RHITextureSRV* CreateSRV(const TextureSRVInfo& info) { return nullptr; }
+	virtual class RHITextureSRV* CreateSRV(const TextureSRVInfo& info) { NOTIMPL; return nullptr; }
 
 	struct RTVInfo
 	{
 		RHITexture* texture = nullptr;
 		RHIFormat format = RHIFormat::Undefined;
 	};
-	virtual class RHIRTV* CreateRTV(const RTVInfo& info) { return nullptr; }
+	virtual class RHIRTV* CreateRTV(const RTVInfo& info) { NOTIMPL; return nullptr; }
 
 	struct SamplerInfo
 	{
 		float mip_bias = 0.0f;
 		bool enable_anisotropy = false;
 	};
-	virtual class RHISampler* CreateSampler(const SamplerInfo& info) { return nullptr; }
+	virtual class RHISampler* CreateSampler(const SamplerInfo& info) { NOTIMPL; return nullptr; }
 };
 
 class RHIObject
@@ -272,19 +272,19 @@ struct SwapChainCreateInfo
 class RHISwapChain : public RHIObject
 {
 public:
-	virtual ~RHISwapChain() {}
+	virtual ~RHISwapChain() { NOTIMPL; }
 
-	virtual glm::uvec2 GetExtent() const = 0;
+	virtual glm::uvec2 GetExtent() const { NOTIMPL;	}
 
-	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) = 0;
+	virtual void AcquireNextImage(class RHISemaphore* semaphore_to_signal, bool& out_recreated) { NOTIMPL; }
 
-	virtual void Recreate() = 0;
+	virtual void Recreate() { NOTIMPL; }
 
-	virtual RHIFormat GetFormat() const { return RHIFormat::Undefined; }
+	virtual RHIFormat GetFormat() const { NOTIMPL; return RHIFormat::Undefined; }
 
-	virtual RHITexture* GetTexture() { return nullptr; }
+	virtual RHITexture* GetTexture() { NOTIMPL; return nullptr; }
 
-	virtual RHIRTV* GetRTV() { return nullptr; }
+	virtual RHIRTV* GetRTV() { NOTIMPL; return nullptr; }
 };
 
 class RHISemaphore : public RHIObject
@@ -382,10 +382,10 @@ class RHICommandList
 public:
 	virtual ~RHICommandList() {}
 
-	virtual RHI::QueueType GetType() const = 0;
+	virtual RHI::QueueType GetType() const { NOTIMPL; }
 
-	virtual void Begin() = 0;
-	virtual void End() = 0;
+	virtual void Begin() { NOTIMPL; }
+	virtual void End() { NOTIMPL; }
 
 	struct CopyRegion
 	{
@@ -393,33 +393,33 @@ public:
 		size_t dst_offset = 0;
 		size_t size = 0;
 	};
-	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) {}
+	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) { NOTIMPL; }
 
 	virtual void DrawIndexed(
 		uint32_t index_count,
 		uint32_t instance_count,
 		uint32_t first_index,
 		int32_t vertex_offset,
-		uint32_t first_instance) {}
+		uint32_t first_instance) { NOTIMPL; }
 
-	virtual void SetPSO(RHIGraphicsPipeline& pso) {}
+	virtual void SetPSO(RHIGraphicsPipeline& pso) { NOTIMPL; }
 
-	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) {}
+	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) { NOTIMPL; }
 
-	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) {}
-	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) {}
+	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) { NOTIMPL; }
+	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) { NOTIMPL; }
 
-	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) {}
+	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) { NOTIMPL; }
 
-	virtual void BeginPass(const RHIPassInfo& pass_info) {}
-	virtual void EndPass() {}
+	virtual void BeginPass(const RHIPassInfo& pass_info) { NOTIMPL; }
+	virtual void EndPass() { NOTIMPL; }
 
 	virtual void CopyBufferToTexture(
 		const RHIBuffer& buf, RHITexture& texture,
-		const RHIBufferTextureCopyRegion* regions, size_t region_count) {}
+		const RHIBufferTextureCopyRegion* regions, size_t region_count) { NOTIMPL; }
 
-	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) {}
-	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) {}
+	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) { NOTIMPL; }
+	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) { NOTIMPL; }
 };
 
 class RHIShader : public RHIObject
@@ -445,11 +445,11 @@ using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 class RHIShaderBindingTable : public RHIObject
 {
 public:
-	virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) {}
-	virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) {}
-	virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler) {}
+	virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) { NOTIMPL; }
+	virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) { NOTIMPL; }
+	virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler) { NOTIMPL; }
 
-	virtual void FlushBinds() {}
+	virtual void FlushBinds() { NOTIMPL; }
 
 	virtual ~RHIShaderBindingTable() {}
 };
@@ -520,10 +520,10 @@ public:
 	virtual ~RHIUploadBuffer() override {}
 
 	// For rhi needs
-	virtual RHIBuffer* GetBuffer() { return nullptr; }
-	virtual const RHIBuffer* GetBuffer() const { return nullptr; }
+	virtual RHIBuffer* GetBuffer() { NOTIMPL; return nullptr; }
+	virtual const RHIBuffer* GetBuffer() const { NOTIMPL; return nullptr; }
 
-	virtual void WriteBytes(const void* src, size_t size, size_t offset = 0) {}
+	virtual void WriteBytes(const void* src, size_t size, size_t offset = 0) { NOTIMPL; }
 };
 using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
 
