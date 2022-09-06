@@ -272,7 +272,7 @@ struct SwapChainCreateInfo
 class RHISwapChain : public RHIObject
 {
 public:
-	virtual ~RHISwapChain() { NOTIMPL; }
+	virtual ~RHISwapChain() { }
 
 	virtual glm::uvec2 GetExtent() const { NOTIMPL;	}
 

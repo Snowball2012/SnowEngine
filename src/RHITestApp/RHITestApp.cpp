@@ -51,7 +51,8 @@ void RHITestApp::InitRHI()
 {
     std::cout << "RHI initialization started\n";
 
-    if (true)
+    const bool use_vulkan = true;
+    if (use_vulkan)
     {
         auto external_extensions = GetSDLExtensions();
         VulkanRHICreateInfo create_info;
@@ -72,7 +73,10 @@ void RHITestApp::InitRHI()
         m_rhi = CreateVulkanRHI_RAII(create_info);
     }
     else
-        m_rhi = CreateD3D12RHI_RAII();
+    {
+        // d3d12 path
+        NOTIMPL;
+    }
 
     m_swapchain = m_rhi->GetMainSwapChain();
 

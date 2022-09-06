@@ -32,7 +32,24 @@ void D3D12TestApp::InitRHI()
 {
     std::cout << "RHI initialization started\n";
 
-    m_rhi = CreateD3D12RHI_RAII();
+    D3D12RHICreateInfo create_info = {};
+
+#ifdef NDEBUG
+    create_info.enable_validation = false;
+#else
+    create_info.enable_validation = true;
+#endif
+
+    HWND hwnd = nullptr;
+    {
+        SDL_SysWMinfo wmInfo;
+        SDL_VERSION(&wmInfo.version);
+        SDL_GetWindowWMInfo(m_main_wnd, &wmInfo);
+        hwnd = wmInfo.info.win.window;
+    }
+    create_info.main_window_handle = hwnd;
+
+    m_rhi = CreateD3D12RHI_RAII(create_info);
 
     std::cout << "RHI initialization complete\n";
 }
