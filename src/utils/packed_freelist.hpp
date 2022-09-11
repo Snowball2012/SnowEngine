@@ -143,9 +143,14 @@ void packed_freelist<T, base_container>::clear( ) noexcept
 {
     m_packed_data.clear();
     m_backlinks.clear();
+
+    m_free_head = m_freelist.empty() ? FREE_END : 0;
+
+    if (m_freelist.empty())
+        return;
+
     m_freelist.back().next_free = FREE_END;
     m_freelist.back().slot_cnt++;
-    m_free_head = m_freelist.empty() ? FREE_END : 0;
     for ( uint32_t i = 0, end = uint32_t( m_freelist.size() ) - 1; i < end; ++i )
     {
         m_freelist[i].next_free = i + 1;

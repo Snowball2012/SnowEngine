@@ -16,6 +16,8 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/intrusive_ptr.hpp>
 
+namespace bc = boost::container;
+
 #include <windows.h>
 
 #define GLM_FORCE_RADIANS
