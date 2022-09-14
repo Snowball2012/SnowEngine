@@ -67,7 +67,7 @@ RHIFence D3D12CommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info
 
     // semaphore part is WIP
     {
-        NOTIMPL;
+        //NOTIMPL;
     }
 
     auto& submitted_lists = m_submitted_lists[queue_idx].emplace();
@@ -89,6 +89,18 @@ RHIFence D3D12CommandListManager::SubmitCommandLists(const RHI::SubmitInfo& info
         0,
         static_cast<uint64_t>(info.cmd_lists[0]->GetType()),
     };
+}
+
+void D3D12CommandListManager::WaitForFence(const RHIFence& fence)
+{
+    RHI::QueueType queue_type = static_cast<RHI::QueueType>(fence._3);
+    uint64_t signal_value = fence._1;
+
+    D3DQueue* queue = m_rhi->GetQueue(queue_type);
+    if (!queue)
+        return;
+
+    queue->WaitForSignal(signal_value);
 }
 
 void D3D12CommandListManager::ProcessCompleted()
@@ -135,8 +147,15 @@ void D3D12CommandListManager::WaitSubmittedUntilCompletion()
 }
 
 D3D12CommandList::D3D12CommandList(D3D12RHI* rhi, RHI::QueueType type, CmdListId list_id)
-    : m_rhi(rhi)
+    : m_rhi(rhi), m_type(type), m_list_id(list_id)
 {
+    auto* device = rhi->GetDevice();
+    auto d3d_type = D3D12RHI::GetD3DCommandListType(type);
+    HR_VERIFY(device->CreateCommandAllocator(d3d_type, IID_PPV_ARGS(m_d3d_cmd_allocator.GetAddressOf())));
+    HR_VERIFY(device->CreateCommandList(0, d3d_type, m_d3d_cmd_allocator.Get(), nullptr, IID_PPV_ARGS(m_d3d_cmd_list.GetAddressOf())));
+
+    // command list was created in open state, close it
+    End();
 }
 
 D3D12CommandList::~D3D12CommandList()
@@ -145,6 +164,21 @@ D3D12CommandList::~D3D12CommandList()
 
 RHI::QueueType D3D12CommandList::GetType() const
 {
-    NOTIMPL;
-    return RHI::QueueType();
+    return m_type;
+}
+
+void D3D12CommandList::Begin()
+{
+    Reset();
+}
+
+void D3D12CommandList::End()
+{
+    HR_VERIFY(m_d3d_cmd_list->Close());
+}
+
+void D3D12CommandList::Reset()
+{
+    HR_VERIFY(m_d3d_cmd_allocator->Reset());
+    HR_VERIFY(m_d3d_cmd_list->Reset(m_d3d_cmd_allocator.Get(), nullptr));
 }

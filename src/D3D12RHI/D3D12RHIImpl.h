@@ -55,18 +55,16 @@ public:
 	}
 	virtual void WaitIdle() override;
 
-	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) override
-	{
-		NOTIMPL; return RHIFence{};
-	}
-	virtual void WaitForFenceCompletion(const RHIFence& fence) override
-	{
-		NOTIMPL;
-	}
+	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) override;
+	virtual void WaitForFenceCompletion(const RHIFence& fence) override;
+
+	virtual RHICommandList* GetCommandList(QueueType type);
 
 	ID3D12Device* GetDevice() const { return m_d3d_device.Get(); }
 
 	D3DQueue* GetQueue(RHI::QueueType type) const;
+
+	static D3D12_COMMAND_LIST_TYPE GetD3DCommandListType(RHI::QueueType type);
 
 
 private:

@@ -51,6 +51,8 @@ void D3D12TestApp::InitRHI()
 
     m_rhi = CreateD3D12RHI_RAII(create_info);
 
+    CreateSyncObjects();
+
     std::cout << "RHI initialization complete\n";
 }
 
@@ -84,6 +86,8 @@ void D3D12TestApp::Cleanup()
 {
     std::cout << "RHI shutdown started\n";
 
+    m_inflight_fences.clear();
+
     m_rhi.reset();
 
     std::cout << "RHI shutdown complete\n";
@@ -91,11 +95,48 @@ void D3D12TestApp::Cleanup()
 
 void D3D12TestApp::DrawFrame()
 {
+    m_rhi->WaitForFenceCompletion(m_inflight_fences[m_current_frame]);
+
     if (m_fb_resized)
     {
         // Recreate swapchain
         m_fb_resized = false;
     }
 
+    RHICommandList* cmd_list = m_rhi->GetCommandList(RHI::QueueType::Graphics);
+
+    cmd_list->Begin();
+
+    cmd_list->End();
+
+    RHI::SubmitInfo submit_info = {};
+    submit_info.cmd_list_count = 1;
+    submit_info.cmd_lists = &cmd_list;
+    //submit_info.semaphore_to_signal = m_render_finished_semaphores[m_current_frame].get();
+    RHIPipelineStageFlags stages_to_wait[] = { RHIPipelineStageFlags::ColorAttachmentOutput };
+    submit_info.stages_to_wait = stages_to_wait;
+
+    m_inflight_fences[m_current_frame] = m_rhi->SubmitCommandLists(submit_info);
+
+    //RHI::PresentInfo present_info = {};
+    //present_info.semaphore_count = 1;
+    //RHISemaphore* wait_semaphore = m_render_finished_semaphores[m_current_frame].get();
+    //present_info.wait_semaphores = &wait_semaphore;
+
+    //m_rhi->Present(*m_swapchain, present_info);
+
     m_current_frame = (m_current_frame + 1) % m_max_frames_in_flight;
+}
+
+void D3D12TestApp::CreateSyncObjects()
+{
+    m_image_available_semaphores.resize(m_max_frames_in_flight, nullptr);
+    m_render_finished_semaphores.resize(m_max_frames_in_flight, nullptr);
+    m_inflight_fences.resize(m_max_frames_in_flight, {});
+
+    //for (size_t i = 0; i < m_max_frames_in_flight; ++i)
+    //{
+    //    m_image_available_semaphores[i] = m_rhi->CreateGPUSemaphore();
+    //    m_render_finished_semaphores[i] = m_rhi->CreateGPUSemaphore();
+    //}
 }

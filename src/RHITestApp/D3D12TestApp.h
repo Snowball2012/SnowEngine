@@ -15,6 +15,9 @@ private:
 
 	struct SDL_Window* m_main_wnd = nullptr;
 
+	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;
+	std::vector<RHIObjectPtr<RHISemaphore>> m_render_finished_semaphores;
+	std::vector<RHIFence> m_inflight_fences;
 	uint32_t m_current_frame = 0;
 
 	bool m_fb_resized = false;
@@ -33,4 +36,6 @@ private:
 	void Cleanup();
 
 	void DrawFrame();
+
+	void CreateSyncObjects();
 };

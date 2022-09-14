@@ -32,6 +32,8 @@ public:
 	D3D12CommandList* GetCommandList(RHI::QueueType type);
 	RHIFence SubmitCommandLists(const RHI::SubmitInfo& info);
 
+	void WaitForFence(const RHIFence& fence);
+
 	void ProcessCompleted();
 
 	void WaitSubmittedUntilCompletion();
@@ -45,7 +47,7 @@ public:
 
 private:
 
-	ComPtr<ID3D12CommandList> m_d3d_cmd_list = nullptr;
+	ComPtr<ID3D12GraphicsCommandList> m_d3d_cmd_list = nullptr;
 	ComPtr<ID3D12CommandAllocator> m_d3d_cmd_allocator = nullptr;
 	RHI::QueueType m_type = RHI::QueueType::Graphics;
 	CmdListId m_list_id = CmdListId::nullid;
@@ -57,9 +59,14 @@ public:
 
 	virtual RHI::QueueType GetType() const override;
 
+	virtual void Begin() override;
+	virtual void End() override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
-	ID3D12CommandList* GetD3DCmdList() const { return m_d3d_cmd_list.Get(); }
+	ID3D12GraphicsCommandList* GetD3DCmdList() const { return m_d3d_cmd_list.Get(); }
+
+	void Reset();
 };
 
 IMPLEMENT_RHI_INTERFACE(RHICommandList, D3D12CommandList)

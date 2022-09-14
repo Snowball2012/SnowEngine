@@ -35,12 +35,38 @@ void D3D12RHI::WaitIdle()
         m_graphics_queue->Flush();
 }
 
+RHIFence D3D12RHI::SubmitCommandLists(const SubmitInfo& info)
+{
+    return m_cmd_list_mgr->SubmitCommandLists(info);
+}
+
+void D3D12RHI::WaitForFenceCompletion(const RHIFence& fence)
+{
+    return m_cmd_list_mgr->WaitForFence(fence);
+}
+
+RHICommandList* D3D12RHI::GetCommandList(QueueType type)
+{
+    return m_cmd_list_mgr->GetCommandList(type);
+}
+
 D3DQueue* D3D12RHI::GetQueue(RHI::QueueType type) const
 {
     switch (type)
     {
     case RHI::QueueType::Graphics:
         return m_graphics_queue.get();
+    }
+
+    NOTIMPL;
+}
+
+D3D12_COMMAND_LIST_TYPE D3D12RHI::GetD3DCommandListType(RHI::QueueType type)
+{
+    switch (type)
+    {
+    case RHI::QueueType::Graphics:
+        return D3D12_COMMAND_LIST_TYPE_DIRECT;
     }
 
     NOTIMPL;
