@@ -51,6 +51,8 @@ void D3D12TestApp::InitRHI()
 
     m_rhi = CreateD3D12RHI_RAII(create_info);
 
+    m_swapchain = m_rhi->GetMainSwapChain();
+
     CreateSyncObjects();
 
     std::cout << "RHI initialization complete\n";

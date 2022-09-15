@@ -6,12 +6,21 @@
 
 #include "CommandLists.h"
 
+#include "Swapchain.h"
+
 D3D12RHI::D3D12RHI(const D3D12RHICreateInfo& info)
 {
 	CreateDevice(info);
     CreateQueues();
 
     m_cmd_list_mgr = std::make_unique<D3D12CommandListManager>(this);
+
+
+    SwapChainCreateInfo swapchain_create_info = {};
+    swapchain_create_info.surface_num = 2;
+    swapchain_create_info.window_handle = info.main_window_handle;
+
+    m_main_swapchain = CreateSwapChainInternal(swapchain_create_info);
 }
 
 D3D12RHI::~D3D12RHI()
@@ -70,6 +79,16 @@ D3D12_COMMAND_LIST_TYPE D3D12RHI::GetD3DCommandListType(RHI::QueueType type)
     }
 
     NOTIMPL;
+}
+
+void D3D12RHI::DeferredDestroyRHIObject(RHIObject* obj)
+{
+    NOTIMPL;
+}
+
+D3DSwapchain* D3D12RHI::CreateSwapChainInternal(const SwapChainCreateInfo& create_info)
+{
+    return new D3DSwapchain(this, create_info);
 }
 
 void D3D12RHI::CreateDevice(const D3D12RHICreateInfo& info)

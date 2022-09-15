@@ -24,6 +24,8 @@ private:
 
 	RHIPtr m_rhi;
 
+	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
+
 public:
 	D3D12TestApp();
 	~D3D12TestApp();

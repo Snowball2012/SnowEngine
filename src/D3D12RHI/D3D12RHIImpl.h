@@ -41,7 +41,9 @@ private:
 	std::unique_ptr<D3DQueue> m_graphics_queue = nullptr;
 
 	// command lists
-	std::unique_ptr<class D3D12CommandListManager> m_cmd_list_mgr;
+	std::unique_ptr<class D3D12CommandListManager> m_cmd_list_mgr = nullptr;
+
+	RHIObjectPtr<class D3DSwapchain> m_main_swapchain = nullptr;
 
 public:
 
@@ -66,8 +68,11 @@ public:
 
 	static D3D12_COMMAND_LIST_TYPE GetD3DCommandListType(RHI::QueueType type);
 
+	void DeferredDestroyRHIObject(RHIObject* obj);
 
 private:
+
+	class D3DSwapchain* CreateSwapChainInternal(const SwapChainCreateInfo& create_info);
 
 	void CreateDevice(const D3D12RHICreateInfo& info);
 

@@ -23,6 +23,7 @@
     <ClInclude Include="..\..\src\D3D12RHI\D3D12RHI.h" />
     <ClInclude Include="..\..\src\D3D12RHI\D3D12RHIImpl.h" />
     <ClInclude Include="..\..\src\D3D12RHI\StdAfx.h" />
+    <ClInclude Include="..\..\src\D3D12RHI\Swapchain.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\D3D12RHI\CommandLists.cpp" />
@@ -32,6 +33,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\src\D3D12RHI\Swapchain.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

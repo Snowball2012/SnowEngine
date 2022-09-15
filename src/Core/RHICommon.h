@@ -13,12 +13,6 @@ public: \
 	virtual void Release() override; \
 private:
 
-// use this macro to define RHIObject body
-#define GENERATE_RHI_OBJECT_BODY() \
-protected: \
-	class VulkanRHI* m_rhi = nullptr; \
-	GENERATE_RHI_OBJECT_BODY_NO_RHI()
-
 
 #define IMPLEMENT_RHI_OBJECT(ClassName) \
 	void ClassName::AddRef() { m_ref_counter++; } \
