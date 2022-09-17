@@ -7,8 +7,7 @@
 
 #define PER_PASS_CB_BINDING b0
 #include "../bindings/pass_cb.hlsli"
-
-#include "../lib/math_utils.hlsli"
+#include "../lib/colorspaces.hlsli"
 
 struct HBAOSettings
 {
@@ -27,6 +26,8 @@ SamplerState linear_wrap_sampler : register( s0 );
 
 Texture2D hyperbolic_depth_map : register( t0 );
 Texture2D normal_map : register( t1 );
+Texture2D direct_lighting_map : register(t2);
+Texture2D indirect_lighting_map : register(t3);
 
 float calc_occlusion( float3 origin2sample, float3 normal, float max_r )
 {
@@ -38,7 +39,7 @@ float calc_occlusion( float3 origin2sample, float3 normal, float max_r )
 
 float4 reconstruct_position_vs( float2 uv )
 {
-    float4 ndc = float4( uv, hyperbolic_depth_map.Sample( linear_wrap_sampler, uv ).r, 1.0f );
+    float4 ndc = float4( uv, hyperbolic_depth_map.SampleLevel( linear_wrap_sampler, uv, 0 ).r, 1.0f );
     ndc.xy *= 2.0f;
     ndc.xy = float2( ndc.x - 1.0f, 1.0f - ndc.y );
 
@@ -91,10 +92,10 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     float2 rotation = random_rotation( seed );
 
     // origin sample setup
-    origin_uv += rotation / ( 2.0f * settings.render_target_size );
 
     float3 origin_vs = reconstruct_position_vs( origin_uv ).xyz;
     float3 normal_vs = reconstruct_normal_vs( origin_uv );
+    float3 direct_lighting = direct_lighting_map.Sample(linear_wrap_sampler, origin_uv).rgb;
 
     // direction marching setup
     const int ndirs = 4;
@@ -111,7 +112,10 @@ float main( float4 coord : SV_POSITION ) : SV_TARGET
     
     const float max_r = settings.max_r;
     const int nsamples = settings.nsamples_per_direction;
-    
+
+    if (percieved_brightness(direct_lighting) > 1.0e-3f)
+        return 1;
+
     float2 sample_step_uv = uv_sample_step( max_r * rcp( float( nsamples ) ), length( origin_vs ) );
 
     float occlusion = 0.0f;

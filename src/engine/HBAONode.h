@@ -14,7 +14,8 @@ public:
         >;
     using WriteRes = std::tuple
         <
-        ResourceInState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_RENDER_TARGET>
+        ResourceInState<SSAOBuffer_Noisy, D3D12_RESOURCE_STATE_RENDER_TARGET>,
+        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE>
         >;
     using ReadRes = std::tuple
         <
@@ -45,7 +46,9 @@ public:
         auto& depth_buffer = framegraph.GetRes<DepthStencilBuffer>();
         auto& forward_cb = framegraph.GetRes<ForwardPassCB>();
         auto& settings = framegraph.GetRes<HBAOSettings>();
+        auto& direct_light_buffer = framegraph.GetRes<HDRBuffer>();
         if ( ! normal_buffer || ! depth_buffer
+             || ! direct_light_buffer
              || ! forward_cb || ! settings )
             throw SnowEngineException( "missing resource" );
         
@@ -78,6 +81,7 @@ public:
         HBAOPass::Context ctx;
         ctx.depth_srv = depth_buffer->srv;
         ctx.normals_srv = normal_buffer->srv;
+        ctx.direct_lighting_srv = direct_light_buffer->srv[0];
         ctx.pass_cb = forward_cb->pass_cb;
         ctx.ssao_rtv = ssao_buffer->rtv;
         ctx.settings = settings->data;

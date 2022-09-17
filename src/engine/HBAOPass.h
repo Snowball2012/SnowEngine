@@ -26,6 +26,7 @@ public:
         Settings settings;
         D3D12_GPU_DESCRIPTOR_HANDLE depth_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE normals_srv;
+        D3D12_GPU_DESCRIPTOR_HANDLE direct_lighting_srv;
         D3D12_GPU_VIRTUAL_ADDRESS pass_cb;
         D3D12_CPU_DESCRIPTOR_HANDLE ssao_rtv;
     };

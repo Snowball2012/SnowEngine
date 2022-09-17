@@ -58,6 +58,7 @@ void HBAOPass::Draw( const Context& context )
     m_cmd_list->SetGraphicsRootDescriptorTable( 1, context.depth_srv );
     m_cmd_list->SetGraphicsRootDescriptorTable( 2, context.normals_srv );
     m_cmd_list->SetGraphicsRoot32BitConstants( 3, 5, &context.settings, 0 );
+    m_cmd_list->SetGraphicsRootDescriptorTable(4, context.direct_lighting_srv);
 
     m_cmd_list->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP );
     m_cmd_list->IASetIndexBuffer( nullptr );
@@ -81,20 +82,24 @@ ComPtr<ID3D12RootSignature> HBAOPass::BuildRootSignature( ID3D12Device& device )
     b1 - settings
     t0 - depth
     t1 - normals
+    t2 - direct lighting
     */
 
-    constexpr int nparams = 4;
+    constexpr int nparams = 5;
 
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
     slot_root_parameter[0].InitAsConstantBufferView( 0, 0, D3D12_SHADER_VISIBILITY_PIXEL );
 
-    CD3DX12_DESCRIPTOR_RANGE desc_table[2];
+    CD3DX12_DESCRIPTOR_RANGE desc_table[4];
     desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
     desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );
+    desc_table[2].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 2);
+    desc_table[3].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 3);
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
     slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 1 );
     slot_root_parameter[3].InitAsConstants( 5, 1, 0, D3D12_SHADER_VISIBILITY_PIXEL );
+    slot_root_parameter[4].InitAsDescriptorTable(1, desc_table + 2);
 
     CD3DX12_STATIC_SAMPLER_DESC samplers[2] = {
         CD3DX12_STATIC_SAMPLER_DESC( // linear
