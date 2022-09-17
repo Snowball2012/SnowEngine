@@ -38,8 +38,8 @@ DirectX::XMMATRIX TemporalAA::JitterProjection( const DirectX::XMMATRIX& proj, f
     XMMATRIX proj_jittered = proj;
     if ( m_jitter_proj )
     {
-        const float sample_size_x = 2.0f * m_jitter_val / width;
-        const float sample_size_y = 2.0f * m_jitter_val / height;
+        const float sample_size_x = m_jitter_val / width;
+        const float sample_size_y = m_jitter_val / height;
 
         proj_jittered.r[2].m128_f32[0] += m_cur_jitter[0] * sample_size_x;
         proj_jittered.r[2].m128_f32[1] += m_cur_jitter[1] * sample_size_y;
