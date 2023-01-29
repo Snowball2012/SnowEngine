@@ -65,4 +65,22 @@ float3 srgb_OETF( float3 color )
     return lerp( linear_part, gamma_part, color > ((float3)0.0031308f) );
 }
 
+float3 reinhard( float3 c )
+{
+    return c / ( float3( 1, 1, 1 ) + c );
+}
+
+float3 reinhard_extended( float3 c, float3 whitepoint )
+{
+    return c * (float3(1, 1, 1) + c / (whitepoint * whitepoint)) / (float3(1, 1, 1) + c);
+}
+
+float3 reinhard_extended_luminance( float3 c, float3 whitepoint )
+{
+    float w_l = percieved_brightness( whitepoint );
+    float c_l = percieved_brightness( c );
+    float tonemapped_l = c_l * ( 1 + c_l / sqr( w_l * w_l ) ) / ( 1 + c_l );
+    return c * tonemapped_l / c_l;
+}
+
 #endif

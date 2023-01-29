@@ -103,6 +103,7 @@ struct SSAOTexture_Transposed : TrackedResource
 struct TonemapNodeSettings
 {
     float whitepoint_luminance;
+    bool enable_reinhard;
 };
 
 struct HBAOSettings

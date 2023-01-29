@@ -54,6 +54,7 @@ public:
         float min_luminance = 1.e-2f;
         float bloom_mip = 4.0f;
         float bloom_strength = 0.1f;
+        bool enable_reinhard = false;
     };
 
     struct RTSettings

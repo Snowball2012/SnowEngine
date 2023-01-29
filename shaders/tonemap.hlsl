@@ -1,19 +1,31 @@
 #include "lib/colorspaces.hlsli"
 #include "lib/math_utils.hlsli"
 
-cbuffer TonemapSettigns : register( b0 )
+cbuffer TonemapSettings : register( b0 )
 {
     float whitepoint_luminance;
+    float enable_reinhard;
 }
 
 SamplerState linear_clamp_sampler : register( s0 );
 
 Texture2D frame : register( t0 );
+Texture2D avg_radiance_frame : register( t1 );
 
 RWTexture2D<float4> output : register( u0 );
 
 static const int GROUP_SIZE_X = 8;
 static const int GROUP_SIZE_Y = 8;
+
+float calc_scene_key( float avg_luminance )
+{
+    return 1.03f - 2.0f / ( 2.0f + log10( avg_luminance + 1.0f ) );
+}
+
+float3 calc_exposure( float avg_luminance )
+{
+    return calc_scene_key( avg_luminance ) * rcp( max( float3( 1, 1, 1 ) * 1.e-6f, calc_white_point( avg_luminance ) ) );
+}
 
 [numthreads(GROUP_SIZE_X, GROUP_SIZE_Y, 1)]
 void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_GroupThreadID )
@@ -38,8 +50,35 @@ void main( uint3 _thread : SV_DispatchThreadID, uint3 thread_in_group : SV_Group
     
     float3 white_point = calc_white_point( whitepoint_luminance );
 
-    // simple linear tonemapping, no curves
-    float3 normalized_color = cur_radiance.rgb / white_point;
+	float3 tonemapped = float3( 0, 0, 0 );
 
-    output[thread.xy] = float4( srgb_OETF( normalized_color ), cur_radiance.a );
+	if ( enable_reinhard )
+	{
+        const bool use_autoexposure = true;
+
+        if ( use_autoexposure )
+        {
+            // standard "scene key" formula was derived in the assumption it gets fed to Reinhard tonemapper
+            // (https://resources.mpi-inf.mpg.de/hdr/peffects/krawczyk05sccg.pdf)
+            // It should use real luminance values to make sense (the curve was fitted using real-world luminance values from photography)
+            float4 avg_radiance = avg_radiance_frame.SampleLevel( linear_clamp_sampler, float2( 0.5f, 0.5f ), 0 );
+            float avg_luminance = photopic_luminance( avg_radiance );
+            float exposure = calc_exposure( avg_luminance );
+
+            cur_radiance *= exposure;
+
+            tonemapped = reinhard( cur_radiance );
+        }
+        else
+        {
+            tonemapped = reinhard_extended_luminance( cur_radiance, white_point );
+        }
+    }
+    else
+    {
+        // simple linear tonemapping, no curves
+        tonemapped = cur_radiance.rgb / white_point;
+    }
+
+    output[thread.xy] = float4( srgb_OETF( tonemapped ), cur_radiance.a );
 }

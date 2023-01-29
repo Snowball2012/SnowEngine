@@ -18,6 +18,7 @@ public:
     using ReadRes = std::tuple
         <
         ResourceInState<HDRBuffer_Final, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
+        ResourceInState<HDRBuffer, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE>,
         TonemapNodeSettings
         >;
     using CloseRes = std::tuple
@@ -35,9 +36,10 @@ public:
         OPTICK_EVENT();
         auto& sdr_buffer = framegraph.GetRes<SDRBuffer>();
         auto& hdr_buffer = framegraph.GetRes<HDRBuffer_Final>();
+        auto& hdr_buffer_pre_taa = framegraph.GetRes<HDRBuffer>();
         auto& settings = framegraph.GetRes<TonemapNodeSettings>();
 
-        if ( ! sdr_buffer || ! hdr_buffer || ! settings )
+        if ( ! sdr_buffer || ! hdr_buffer || ! hdr_buffer_pre_taa || ! settings )
             throw SnowEngineException( "missing resource" );
         
         PIXBeginEvent( &cmd_list, PIX_COLOR( 200, 210, 230 ), "Tonemapping" );
@@ -48,9 +50,11 @@ public:
         ctx.frame_size[1] = uint32_t( sdr_buffer->viewport.Height );
 
         ctx.gpu_data.whitepoint_luminance = settings->whitepoint_luminance;
+        ctx.gpu_data.enable_reinhard = settings->enable_reinhard ? 1.0f : 0.0f;
         
         ctx.sdr_uav = sdr_buffer->uav;
         ctx.hdr_srv = hdr_buffer->srv;
+        ctx.avg_radiance_srv = hdr_buffer_pre_taa->srv[std::max<uint32_t>( hdr_buffer_pre_taa->nmips - 2, 0 )];
 
         m_pass.Draw( ctx );
 

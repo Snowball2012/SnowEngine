@@ -15,12 +15,15 @@ public:
     struct ShaderData
     {
         float whitepoint_luminance;
+        float enable_reinhard;
     };
 
     struct Context
     {
         D3D12_GPU_DESCRIPTOR_HANDLE hdr_srv;
         D3D12_GPU_DESCRIPTOR_HANDLE sdr_uav;
+        D3D12_GPU_DESCRIPTOR_HANDLE avg_radiance_srv;
+
         ShaderData gpu_data;
         uint32_t frame_size[2];
     };

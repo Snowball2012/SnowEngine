@@ -35,9 +35,11 @@ void ToneMappingPass::Draw( const Context& context )
 {
     assert( m_cmd_list );
 
-    m_cmd_list->SetComputeRoot32BitConstants( 0, 1, &context.gpu_data, 0 );
+    m_cmd_list->SetComputeRoot32BitConstants( 0, 2, &context.gpu_data, 0 );
     m_cmd_list->SetComputeRootDescriptorTable( 1, context.hdr_srv );
     m_cmd_list->SetComputeRootDescriptorTable( 2, context.sdr_uav );
+    m_cmd_list->SetComputeRootDescriptorTable( 3, context.avg_radiance_srv );
+
 
     constexpr uint32_t GroupSizeX = 8;
     constexpr uint32_t GroupSizeY = 8;
@@ -55,6 +57,7 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
     0 - constants( min luminance, max luminance, enable blending )
     1 - hdr texture srv
     2 - sdr uav
+    3 - avg radiance srv
 
     Shader register bindings
     b0 - constants
@@ -62,16 +65,18 @@ ComPtr<ID3D12RootSignature> ToneMappingPass::BuildRootSignature( ID3D12Device& d
     u0 - uav
     */
 
-    constexpr int nparams = 3;
+    constexpr int nparams = 4;
 
     CD3DX12_ROOT_PARAMETER slot_root_parameter[nparams];
 
-    slot_root_parameter[0].InitAsConstants( 1, 0 );
-    CD3DX12_DESCRIPTOR_RANGE desc_table[2];
+    slot_root_parameter[0].InitAsConstants( 2, 0 );
+    CD3DX12_DESCRIPTOR_RANGE desc_table[3];
     desc_table[0].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0 );
     slot_root_parameter[1].InitAsDescriptorTable( 1, desc_table );
     desc_table[1].Init( D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0 );
     slot_root_parameter[2].InitAsDescriptorTable( 1, desc_table + 1 );
+    desc_table[2].Init( D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 1 );
+    slot_root_parameter[3].InitAsDescriptorTable( 1, desc_table + 2 );
 
     CD3DX12_STATIC_SAMPLER_DESC linear_clamp_sampler( 0, D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP );
     CD3DX12_ROOT_SIGNATURE_DESC root_sig_desc( nparams, slot_root_parameter,

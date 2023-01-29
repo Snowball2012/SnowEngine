@@ -421,6 +421,7 @@ void Renderer::Draw( const RenderTask& task, const SceneContext& scene_ctx, cons
 
         TonemapNodeSettings tonemap_settings;
         tonemap_settings.whitepoint_luminance = m_tonemap_settings.max_luminance;
+        tonemap_settings.enable_reinhard = m_tonemap_settings.enable_reinhard;
         m_framegraph.SetRes( tonemap_settings );
 
         auto downsampler_cb = CreateDownscaleCB( upload_allocator );

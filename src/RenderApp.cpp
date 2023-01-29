@@ -173,6 +173,7 @@ void RenderApp::UpdateGUI()
             ImGui::SliderFloat( "Min luminance", &m_renderer->m_tonemap_settings.min_luminance, 0.f, 20000.0f, "%.2f" );
             ImGui::SliderFloat( "Bloom strength", &m_renderer->m_tonemap_settings.bloom_strength, 0.f, 10.0f, "%.2f" );
             ImGui::SliderFloat( "Bloom mip", &m_renderer->m_tonemap_settings.bloom_mip, 0.f, 10.0f, "%.2f" );
+            ImGui::Checkbox( "Enable Reinhard", &m_renderer->m_tonemap_settings.enable_reinhard );
             ImGui::EndChild();
         }
 
