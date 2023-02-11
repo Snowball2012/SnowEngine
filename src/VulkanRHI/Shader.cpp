@@ -19,9 +19,13 @@ Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequ
 {
     if (!bytecode)
     {
-        Compile(nullptr);
+        if ( !Compile( nullptr ) )
+            throw std::runtime_error( "Shader compilation failed" );
     }
+
     CreateVkStage();
+
+    m_rhi->RegisterLoadedShader( *this );
 }
 
 Shader::Shader(VulkanRHI* rhi, const ShaderSourceFile& source, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines)
@@ -33,18 +37,32 @@ Shader::Shader(VulkanRHI* rhi, const ShaderSourceFile& source, RHI::ShaderFreque
 
 Shader::~Shader()
 {
-    if (m_vk_stage.module != VK_NULL_HANDLE)
-        vkDestroyShaderModule(m_rhi->GetDevice(), m_vk_stage.module, nullptr);
+    m_rhi->UnregisterLoadedShader( *this );
+    CleanupShaderStage();
 }
 
 std::unique_ptr<ShaderCompiler> ShaderCompiler::m_shared_instance(nullptr);
 
-void Shader::Compile(const ShaderSourceFile* source)
+bool Shader::Recompile()
+{
+    if ( !Compile( nullptr ) )
+    {
+        return false;
+    }
+
+    CleanupShaderStage();
+
+    CreateVkStage();
+
+    return true;
+}
+
+bool Shader::Compile(const ShaderSourceFile* source)
 {
     auto* compiler = ShaderCompiler::Get();
 
-    if (!SE_ENSURE(compiler))
-        throw std::runtime_error("failed to get shader compiler");
+    if ( !SE_ENSURE( compiler ) )
+        return false;
 
     std::unique_ptr<ShaderSourceFile> source_holder = nullptr;
     if (!source)
@@ -53,13 +71,15 @@ void Shader::Compile(const ShaderSourceFile* source)
         source = source_holder.get();
     }
 
-    if (SE_ENSURE(source))
-        m_bytecode_blob = compiler->CompileFromSource(*source, m_frequency, m_entrypoint, make_span(m_defines));
+    if ( SE_ENSURE( source ) )
+        m_bytecode_blob = compiler->CompileFromSource( *source, m_frequency, m_entrypoint, make_span( m_defines ) );
     else
-        throw std::runtime_error("no source file");
+        return false;
 
-    if (!m_bytecode_blob)
-        throw std::runtime_error("shader compilation failed");
+    if ( !m_bytecode_blob )
+        return false;
+
+    return true;
 }
 
 namespace
@@ -97,6 +117,15 @@ void Shader::CreateVkStage()
     m_vk_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     m_vk_stage.stage = FrequencyToVkStage(m_frequency);
     m_vk_stage.pName = GetEntryPoint();
+}
+
+void Shader::CleanupShaderStage()
+{
+    if ( m_vk_stage.module != VK_NULL_HANDLE )
+        vkDestroyShaderModule( m_rhi->GetDevice(), m_vk_stage.module, nullptr );
+
+    m_vk_stage = VkPipelineShaderStageCreateInfo {};
+
 }
 
 ShaderSourceFile::ShaderSourceFile(std::wstring filename, ComPtr<IDxcBlobEncoding> blob)

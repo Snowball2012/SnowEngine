@@ -5,7 +5,7 @@
 #include "D3D12TestApp.h"
 
 
-#define TEST_D3D12
+//#define TEST_D3D12
 
 #ifdef TEST_D3D12
 using AppClass = D3D12TestApp;

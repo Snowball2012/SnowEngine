@@ -49,6 +49,8 @@ public:
 	VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
 	VkPipelineLayout GetVkPipelineLayout() const { return m_shader_bindings->GetVkPipelineLayout(); }
 
+	bool Recompile();
+
 private:
 	void InitRasterizer(const RHIGraphicsPipelineInfo& info);
 	void InitInputAssembly(const RHIGraphicsPipelineInfo& info);

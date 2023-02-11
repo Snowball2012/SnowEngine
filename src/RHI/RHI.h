@@ -237,6 +237,9 @@ public:
 		bool enable_anisotropy = false;
 	};
 	virtual class RHISampler* CreateSampler(const SamplerInfo& info) { NOTIMPL; return nullptr; }
+
+	// Causes a full pipeline flush
+	virtual bool ReloadAllShaders() { NOTIMPL; return false; }
 };
 
 class RHIObject

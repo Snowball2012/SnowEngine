@@ -36,9 +36,13 @@ public:
 
     const VkPipelineShaderStageCreateInfo& GetVkStageInfo() const { return m_vk_stage; }
 
+    bool Recompile();
+
 private:
-    void Compile(const ShaderSourceFile* source);
+    bool Compile(const ShaderSourceFile* source);
     void CreateVkStage();
+
+    void CleanupShaderStage();
 };
 
 class ShaderSourceFile

@@ -2,6 +2,7 @@
 
 #define NOMINMAX
 
+#include <atomic>
 #include <array>
 #include <algorithm>
 #include <iostream>
@@ -85,3 +86,42 @@ inline constexpr T operator&(T lhs, T rhs) \
 		& std::underlying_type<T>::type(rhs)); \
 }
 #endif
+
+class SpinLock
+{
+	std::atomic<bool> m_lock = false;
+
+public:
+	void Lock()
+	{
+		while ( m_lock.exchange( true, std::memory_order_acquire ) )
+		{
+			//noop
+		}
+	}
+	void Unlock()
+	{
+		m_lock.store( false, std::memory_order_release );
+	}
+
+	~SpinLock()
+	{
+		Unlock();
+	}
+};
+
+class ScopedSpinLock
+{
+	SpinLock& m_spinlock;
+
+public:
+	ScopedSpinLock( SpinLock& lock ) : m_spinlock( lock )
+	{
+		m_spinlock.Lock();
+	}
+
+	~ScopedSpinLock()
+	{
+		m_spinlock.Unlock();
+	}
+};

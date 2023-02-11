@@ -987,6 +987,74 @@ void VulkanRHI::CreateDescriptorPool()
     VK_VERIFY(vkCreateDescriptorPool(m_vk_device, &pool_info, nullptr, &m_desc_pool));
 }
 
+void VulkanRHI::RegisterLoadedShader( Shader& shader )
+{
+    ScopedSpinLock cs( m_loaded_shaders_lock );
+
+    m_loaded_shaders.insert( &shader );
+}
+
+void VulkanRHI::UnregisterLoadedShader( Shader& shader )
+{
+    ScopedSpinLock cs( m_loaded_shaders_lock );
+
+    m_loaded_shaders.erase( &shader );
+}
+
+void VulkanRHI::RegisterLoadedPSO( VulkanGraphicsPSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_psos.insert( &pso );
+}
+
+void VulkanRHI::UnregisterLoadedPSO( VulkanGraphicsPSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_psos.erase( &pso );
+}
+
+bool VulkanRHI::ReloadAllPipelines()
+{
+    std::cout << "Reload PSOs: start" << std::endl;
+
+    WaitIdle();
+
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    bool succeeded = true;
+    for ( VulkanGraphicsPSO* pso : m_loaded_psos )
+    {
+        succeeded &= pso->Recompile();
+    }
+
+    std::cout << "Reload PSOs: " << ( succeeded ? "succeeded" : "failed" ) << std::endl;
+
+    return succeeded;
+}
+
+bool VulkanRHI::ReloadAllShaders()
+{
+    std::cout << "Reload shaders: start" << std::endl;
+
+    WaitIdle();
+
+    ScopedSpinLock cs( m_loaded_shaders_lock );
+
+    bool succeeded = true;
+    for ( Shader* shader : m_loaded_shaders )
+    {
+        succeeded &= shader->Recompile();
+    }
+
+    succeeded &= ReloadAllPipelines();
+
+    std::cout << "Reload shaders: " << ( succeeded ? "succeeded" : "failed" ) << std::endl;
+
+    return succeeded;
+}
+
 RHIFence VulkanRHI::SubmitCommandLists(const SubmitInfo& info)
 {
     VERIFY_NOT_EQUAL(m_cmd_list_mgr, nullptr);

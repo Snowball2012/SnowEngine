@@ -82,6 +82,12 @@ private:
 
 	std::vector<RHIObject*> m_objects_to_delete;
 
+	SpinLock m_loaded_shaders_lock;
+	std::set<class Shader*> m_loaded_shaders;
+
+	SpinLock m_loaded_psos_lock;
+	std::set<class VulkanGraphicsPSO*> m_loaded_psos;
+
 public:
 	VulkanRHI(const VulkanRHICreateInfo& info);
 	virtual ~VulkanRHI() override;
@@ -119,6 +125,8 @@ public:
 	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
 	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;
 	virtual RHIRTV* CreateRTV(const RTVInfo& info) override;
+
+	virtual bool ReloadAllShaders() override;
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
@@ -171,6 +179,14 @@ public:
 	static VkAttachmentStoreOp GetVkStoreOp(RHIStoreOp op);
 
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+
+	void RegisterLoadedShader( Shader& shader );
+	void UnregisterLoadedShader( Shader& shader );
+
+	void RegisterLoadedPSO( VulkanGraphicsPSO& pso );
+	void UnregisterLoadedPSO( VulkanGraphicsPSO& pso );
+
+	bool ReloadAllPipelines();
 
 private:
 	void CreateVkInstance(const VulkanRHICreateInfo& info);

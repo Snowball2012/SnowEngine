@@ -37,11 +37,36 @@ VulkanGraphicsPSO::VulkanGraphicsPSO(VulkanRHI* rhi, const RHIGraphicsPipelineIn
 	m_pipeline_info.layout = m_shader_bindings->GetVkPipelineLayout();
 
 	VK_VERIFY(vkCreateGraphicsPipelines(m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &m_vk_pipeline));
+
+	m_rhi->RegisterLoadedPSO( *this );
 }
 
 VulkanGraphicsPSO::~VulkanGraphicsPSO()
 {
+	m_rhi->UnregisterLoadedPSO( *this );
+
 	vkDestroyPipeline(m_rhi->GetDevice(), m_vk_pipeline, nullptr);
+}
+
+bool VulkanGraphicsPSO::Recompile()
+{
+	// assumes only shader stages may change
+
+	int i = 0;
+
+	if ( m_vs )
+		m_stages[i++] = m_vs->GetVkStageInfo();
+
+	if ( m_ps )
+		m_stages[i++] = m_ps->GetVkStageInfo();
+
+	m_pipeline_info.pStages = m_stages;
+
+	vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
+
+	VkResult res = vkCreateGraphicsPipelines( m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &m_vk_pipeline );
+
+	return res == VK_SUCCESS;
 }
 
 void VulkanGraphicsPSO::InitRasterizer(const RHIGraphicsPipelineInfo& info)
