@@ -181,17 +181,27 @@ PixelOut main_ps(PixelIn pin)
     float3 to_camera = normalize( -pin.pos_v );
     float cos_nv = saturate( dot( to_camera, normal ) );
 
+    roughness *= material.albedo_color.w;
+
     // calc direct
     PixelOut res;
+    float2 plane_ndc = pin.pos.xy / ( pass_params.render_target_size - 1.0f ) * 2.0f - 1.0f;
+    float2 seed = frac( plane_ndc + pass_params.total_time );
+    float2 random_val = random_from_seed( seed );
 
     res.direct_lighting.rgb = make_float3( 0.0f );
     for ( int light_idx = 0; light_idx < pass_params.n_parallel_lights; ++light_idx )
     {
         ParallelLight light = pass_params.parallel_lights[light_idx];
 
-        float3 light_radiance = light.strength * parallel_direct_lighting( diffuse_albedo, fresnel_r0,
-                                                                           light.dir, to_camera, normal, cos_nv,
-                                                                           roughness );
+        float3 cone_sample = uniform_sample_cone( random_val, light.half_angle_sin_2 ).xyz;
+        float3 ray_dir = apply_cone_sample_to_direction( cone_sample, light.dir );
+
+        float3 light_radiance =
+            light.strength
+            * parallel_direct_lighting(
+                diffuse_albedo, fresnel_r0,
+                ray_dir, to_camera, normal, cos_nv, roughness);
 
         #if RAYTRACED_SHADOWS
             float2 shadowmask_uv = pin.pos.xy * pass_params.render_target_size_inv;
@@ -208,7 +218,7 @@ PixelOut main_ps(PixelIn pin)
     
     res.ambient_lighting.rgb = float3( ibl_radiance_multiplier * diffuse_albedo * irradiance_map.Sample( linear_wrap_sampler, irradiance_dir.xyz ).xyz );
     
-    float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0.1, 1, pow( roughness, 0.5f ) ) * 6.0f ).xyz;
+    float3 prefiltered_spec_radiance = reflection_probe.SampleLevel( linear_wrap_sampler, reflection_dir.xyz, lerp( 0, 1, pow( roughness, 2 ) ) * 6.0f ).xyz;
     float2 env_brdf = brdf_lut.Sample( linear_wrap_sampler, float2( cos_nv, roughness ) ).xy;
 
     res.ambient_lighting.rgb += ibl_radiance_multiplier * prefiltered_spec_radiance

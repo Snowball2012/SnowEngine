@@ -3,7 +3,7 @@
 
 #include "math_utils.hlsli"
 
-static const float GGX_ROUGHNESS_REMAPPED_MIN = 0.4f;
+static const float GGX_ROUGHNESS_REMAPPED_MIN = 0.0f;
 
 // all outputs are not normalized
 float3 halfvector( float3 to_source, float3 to_camera )

@@ -233,6 +233,12 @@ void RenderApp::UpdateGUI()
         {
             const StaticSubmesh_Deprecated& submesh = m_renderer->GetScene().GetROScene().AllStaticSubmeshes()[obj_mesh->mesh];
 
+            MaterialPBR* material = m_renderer->GetScene().ModifyMaterial( obj_mesh->material );
+            if ( material )
+            {
+                ImGui::SliderFloat( "Roughness", &material->Modify().albedo_color.w, 0, 1 );
+            }
+
             DirectX::XMVECTOR box_center_ws = XMLoadFloat3( &submesh.Box().Center );
 
             box_center_ws.m128_f32[3] = 1.0f;
@@ -503,7 +509,7 @@ void RenderApp::UpdateEditorContext()
         if ( current_edit_mat.valid() )
         {
             if ( auto* material = m_renderer->GetScene().ModifyMaterial( current_edit_mat ) )
-                material->Modify().albedo_color = DirectX::XMFLOAT4( 1, 1, 1, 1 );
+                material->Modify().albedo_color = DirectX::XMFLOAT4( 1, 1, 1, material->Modify().albedo_color.w );
         }
 
         current_edit_mat = closest_material;
