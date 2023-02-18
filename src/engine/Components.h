@@ -47,6 +47,8 @@ public:
     EnvMapID GetSkybox() const noexcept { return m_skybox; }
     EnvMapID& SetSkybox() noexcept { return m_skybox; }
 
+    DirectX::XMFLOAT3 GenerateRayFromNDC( float x, float y ) const;
+
 private:
     Data m_data;
     EnvMapID m_skybox = EnvMapID::nullid;
@@ -57,4 +59,27 @@ inline void Camera::SavePrevFrameData() noexcept
     m_data.pos_prev = m_data.pos;
     m_data.dir_prev = m_data.dir;
     m_data.up_prev = m_data.up;
+}
+
+inline DirectX::XMFLOAT3 Camera::GenerateRayFromNDC( float x, float y ) const
+{
+    if ( m_data.type != Type::Perspective )
+        NOTIMPL;
+
+    DirectX::XMVECTOR forward = XMLoadFloat3( &m_data.dir );
+    DirectX::XMVECTOR up = XMLoadFloat3( &m_data.up );
+    DirectX::XMVECTOR right = DirectX::XMVector3Normalize( DirectX::XMVector3Cross( up, forward ) );
+    up = DirectX::XMVector3Cross( forward, right );
+    DirectX::XMFLOAT3 right3;
+    XMStoreFloat3( &right3, right );
+    DirectX::XMFLOAT3 up3;
+    XMStoreFloat3( &up3, up );
+
+    float half_height = std::tan( m_data.fov_y * 0.5 );
+    float half_width = half_height * m_data.aspect_ratio;
+    DirectX::XMFLOAT3 ray = m_data.dir + up3 * y * half_height + right3 * half_width * x;
+
+    XMFloat3Normalize( ray );
+
+    return ray;
 }

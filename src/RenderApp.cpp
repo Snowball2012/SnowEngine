@@ -67,6 +67,8 @@ void RenderApp::Update( const GameTimer& gt )
     OPTICK_EVENT();
     ReadKeyboardState( gt );
 
+    UpdateEditorContext();
+
     UpdateGUI();
 
     if ( m_cur_state == State::Loading )
@@ -220,6 +222,33 @@ void RenderApp::UpdateGUI()
                 m_renderer->SetSkybox( m_console.Skybox );
         }
     }
+
+    if ( m_edit_object.valid() )
+    {
+        ImGui::Begin( "Object properties", nullptr );
+
+        Transform* obj_tf = m_renderer->GetScene().GetWorld().GetComponent<Transform>( m_edit_object );
+        DrawableMesh* obj_mesh = m_renderer->GetScene().GetWorld().GetComponent<DrawableMesh>( m_edit_object );
+        if ( obj_tf && obj_mesh )
+        {
+            const StaticSubmesh_Deprecated& submesh = m_renderer->GetScene().GetROScene().AllStaticSubmeshes()[obj_mesh->mesh];
+
+            DirectX::XMVECTOR box_center_ws = XMLoadFloat3( &submesh.Box().Center );
+
+            box_center_ws.m128_f32[3] = 1.0f;
+            box_center_ws = DirectX::XMVector4Transform( box_center_ws, obj_tf->local2world );
+
+            box_center_ws = DirectX::XMVectorDivide( box_center_ws, DirectX::XMVectorReplicate( box_center_ws.m128_f32[3] ) );
+
+            ImGui::Text( "Position: %f %f %f",
+                box_center_ws.m128_f32[0],
+                box_center_ws.m128_f32[1],
+                box_center_ws.m128_f32[2] );
+        }
+
+        ImGui::End();
+    }
+
     ImGui::Render();
 }
 
@@ -356,54 +385,28 @@ void RenderApp::UpdateHighlightedObject()
 
 		DirectX::XMVECTOR camera_pos_ws = XMLoadFloat3( &cam_data.pos );
 		camera_pos_ws.m128_f32[3] = 1.0f;
-		DirectX::XMVECTOR camera_dir_ws = XMLoadFloat3( &cam_data.dir );
-		float closest_dist = FLT_MAX;
-		MaterialID closest_material = MaterialID::nullid;
-		for ( const auto& [id, transform, mesh_with_material] : m_renderer->GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
-		{
-			if ( !mesh_with_material.show )
-				continue;
 
-			if ( id == m_highlight_cube )
-				continue;
+        float ndc_x = float( m_last_mouse_pos.x ) / float( mClientWidth );
+        float ndc_y = float( m_last_mouse_pos.y ) / float( mClientHeight );
+        ndc_x = ndc_x * 2.0f - 1.0f;
+        ndc_y = 1.0f - ndc_y * 2.0f;
+        DirectX::XMFLOAT3 ray_dir_ws = cam_ptr->GenerateRayFromNDC( ndc_x, ndc_y );
 
-			DirectX::XMVECTOR det;
-			DirectX::XMMATRIX world2local = DirectX::XMMatrixInverse( &det, transform.local2world );
-			DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( camera_pos_ws, world2local );
-			DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( camera_dir_ws, world2local );
+		DirectX::XMVECTOR ray_dir_ws_xm = XMLoadFloat3( &ray_dir_ws );
 
-			const StaticSubmesh_Deprecated* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh ); 
-			if ( ! submesh )
-				continue;
+        DirectX::XMFLOAT3 intersection_pt;
 
-			float ray_to_box_dist;
-			if ( ! submesh->Box().Intersects(camera_pos_local, DirectX::XMVector3Normalize( camera_dir_local ), ray_to_box_dist ) )
-				continue;
+        auto intersection_entity = CastRayToWorld( camera_pos_ws, ray_dir_ws_xm, intersection_pt );
 
-			const StaticMesh* mesh = scene.GetROScene().AllStaticMeshes().try_get( submesh->GetMesh() );
-			if ( ! mesh )
-				continue;
-
-			const auto& vertices = mesh->Vertices();
-			const auto& indices = mesh->Indices();
-
-			for ( size_t i = 0; i < indices.size(); i += 3 )
-			{
-				auto intersection_res = IntersectRayTriangle(
-					&vertices[indices[i]].pos.x,  &vertices[indices[i+1]].pos.x,  &vertices[indices[i+2]].pos.x,
-					camera_pos_local.m128_f32, camera_dir_local.m128_f32);
-
-				if ( intersection_res.HitDetected( std::sqrt(FLT_EPSILON), FLT_EPSILON, FLT_EPSILON ) )
-				{
-					const float distance = intersection_res.coords.m128_f32[2];
-					if ( closest_dist > distance )
-					{
-						closest_dist = distance;
-						closest_material = mesh_with_material.material;
-					}
-				}
-			}
-		}
+        MaterialID closest_material = MaterialID::nullid;
+        if ( intersection_entity.valid() )
+        {
+            DrawableMesh* mesh = m_renderer->GetScene().GetWorld().GetComponent<DrawableMesh>( intersection_entity );
+            if ( mesh )
+            {
+                closest_material = mesh->material;
+            }
+        }
 
 		if ( closest_material.valid() )
 		{
@@ -413,7 +416,7 @@ void RenderApp::UpdateHighlightedObject()
 				cube_tf->local2world =
 					DirectX::XMMatrixScaling( 0.1f, 0.1f, 0.1f )
 					* DirectX::XMMatrixTranslationFromVector(
-						DirectX::XMVectorMultiplyAdd( camera_dir_ws, DirectX::XMVectorReplicate( closest_dist ), camera_pos_ws ) );
+						DirectX::XMLoadFloat3( &intersection_pt ) );
 		}
 		else
 		{
@@ -443,6 +446,145 @@ void RenderApp::UpdateHighlightedObject()
 			}
 		}		
 	}
+}
+
+void RenderApp::UpdateEditorContext()
+{
+    if ( !m_mouse_click_lmb )
+        return;
+
+    OPTICK_EVENT();
+
+    // Cast a ray into the scene, find an entity
+    float ndc_x = float( m_mouse_click_pos.x ) / float( mClientWidth );
+    float ndc_y = float( m_mouse_click_pos.y ) / float( mClientHeight );
+    ndc_x = ndc_x * 2.0f - 1.0f;
+    ndc_y = 1.0f - ndc_y * 2.0f;
+
+    auto& scene = m_renderer->GetScene();
+    Camera* cam_ptr = m_renderer->GetScene().GetWorld().GetComponent<Camera>( m_camera );
+    if ( !cam_ptr )
+        throw SnowEngineException( "no main camera" );
+
+    const Camera::Data& cam_data = cam_ptr->GetData();
+
+    // find NDC for clicked pixel
+    DirectX::XMFLOAT3 ray_dir_ws = cam_ptr->GenerateRayFromNDC( ndc_x, ndc_y );
+
+    DirectX::XMVECTOR camera_pos_ws = XMLoadFloat3( &cam_data.pos );
+
+    DirectX::XMFLOAT3 intersection_pt;
+
+    auto intersection_entity = CastRayToWorld( XMLoadFloat3( &cam_data.pos ), XMLoadFloat3( &ray_dir_ws ), intersection_pt );
+
+    MaterialID closest_material = MaterialID::nullid;
+    if ( intersection_entity.valid() )
+    {
+        DrawableMesh* mesh = m_renderer->GetScene().GetWorld().GetComponent<DrawableMesh>( intersection_entity );
+        if ( mesh )
+        {
+            closest_material = mesh->material;
+        }
+    }
+
+    if ( intersection_entity != m_edit_object )
+    {
+        MaterialID current_edit_mat = MaterialID::nullid;
+
+        if ( m_edit_object.valid() )
+        {
+            DrawableMesh* mesh = m_renderer->GetScene().GetWorld().GetComponent<DrawableMesh>( m_edit_object );
+            if ( mesh )
+            {
+                current_edit_mat = mesh->material;
+            }
+        }
+        
+        if ( current_edit_mat.valid() )
+        {
+            if ( auto* material = m_renderer->GetScene().ModifyMaterial( current_edit_mat ) )
+                material->Modify().albedo_color = DirectX::XMFLOAT4( 1, 1, 1, 1 );
+        }
+
+        current_edit_mat = closest_material;
+        if ( current_edit_mat.valid() )
+        {
+            if ( auto* material = m_renderer->GetScene().ModifyMaterial( current_edit_mat ) )
+            {
+                m_highlighted_diffuse = material->Modify().albedo_color;
+                material->Modify().albedo_color.x = 0.1f;
+                material->Modify().albedo_color.y = 2.0f;
+                material->Modify().albedo_color.z = 0.1f;
+            }
+        }
+
+        m_edit_object = intersection_entity;
+    }
+
+    m_mouse_click_lmb = false;
+}
+
+World::Entity RenderApp::CastRayToWorld( DirectX::XMVECTOR origin, DirectX::XMVECTOR dir, DirectX::XMFLOAT3& intersection ) const
+{
+    origin.m128_f32[3] = 1.0f;
+    dir.m128_f32[3] = 0.0f;
+
+    float closest_dist = FLT_MAX;
+    World::Entity closest_entity = World::Entity::nullid;
+
+    auto& scene = m_renderer->GetScene();
+    for ( const auto& [id, transform, mesh_with_material] : m_renderer->GetScene().GetWorld().CreateView<Transform, DrawableMesh>() )
+    {
+        if ( !mesh_with_material.show )
+            continue;
+
+        if ( id == m_highlight_cube )
+            continue;
+
+        DirectX::XMVECTOR det;
+        DirectX::XMMATRIX world2local = DirectX::XMMatrixInverse( &det, transform.local2world );
+        DirectX::XMVECTOR camera_pos_local = DirectX::XMVector4Transform( origin, world2local );
+        DirectX::XMVECTOR camera_dir_local = DirectX::XMVector4Transform( dir, world2local );
+        
+        const StaticSubmesh_Deprecated* submesh = scene.GetROScene().AllStaticSubmeshes().try_get( mesh_with_material.mesh );
+        if ( !submesh )
+            continue;
+
+        float ray_to_box_dist;
+        if ( !submesh->Box().Intersects( camera_pos_local, DirectX::XMVector3Normalize( camera_dir_local ), ray_to_box_dist ) )
+            continue;
+
+        const StaticMesh* mesh = scene.GetROScene().AllStaticMeshes().try_get( submesh->GetMesh() );
+        if ( !mesh )
+            continue;
+
+        const auto& vertices = mesh->Vertices();
+        const auto& indices = mesh->Indices();
+
+        for ( size_t i = 0; i < indices.size(); i += 3 )
+        {
+            auto intersection_res = IntersectRayTriangle(
+                &vertices[indices[i]].pos.x, &vertices[indices[i + 1]].pos.x, &vertices[indices[i + 2]].pos.x,
+                camera_pos_local.m128_f32, camera_dir_local.m128_f32 );
+
+            if ( intersection_res.HitDetected( std::sqrt( FLT_EPSILON ), FLT_EPSILON, FLT_EPSILON ) )
+            {
+                const float distance = intersection_res.coords.m128_f32[2];
+                if ( closest_dist > distance )
+                {
+                    closest_dist = distance;
+                    closest_entity = id;
+                }
+            }
+        }
+    }
+
+    if ( closest_entity.valid() )
+    {
+        XMVECTOR intersection_xm = DirectX::XMVectorMultiplyAdd( dir, DirectX::XMVectorReplicate( closest_dist ), origin );
+        XMStoreFloat3( &intersection, intersection_xm );
+    }
+    return closest_entity;
 }
 
 void RenderApp::ReadKeyboardState( const GameTimer& gt )
@@ -488,6 +630,13 @@ void RenderApp::OnMouseDown( WPARAM btn_state, int x, int y )
         m_last_mouse_pos.x = x;
         m_last_mouse_pos.y = y;
 
+        if ( ( btn_state & MK_LBUTTON ) != 0 )
+        {
+            m_mouse_moved_when_down = false;
+            m_mouse_click_lmb = false;
+            m_mouse_lmb_down = true;
+        }
+
         SetCapture( mhMainWnd );
     }
 }
@@ -496,6 +645,13 @@ void RenderApp::OnMouseUp( WPARAM btn_state, int x, int y )
 {
     if ( ! ImGui::GetIO().WantCaptureMouse )
     {
+        if ( !m_mouse_moved_when_down && m_mouse_lmb_down )
+        {
+            m_mouse_click_lmb = true;
+            m_mouse_click_pos.x = x;
+            m_mouse_click_pos.y = y;
+            m_mouse_lmb_down = false;
+        }
         ReleaseCapture();
     }
 }
@@ -513,6 +669,8 @@ void RenderApp::OnMouseMove( WPARAM btnState, int x, int y )
             // Update angles based on input to orbit camera around box.
             m_theta -= dx;
             m_phi -= dy;
+
+            m_mouse_moved_when_down = true;
 
             // Restrict the angle phi.
             m_phi = boost::algorithm::clamp( m_phi, 0.1f, XM_PI - 0.1f );

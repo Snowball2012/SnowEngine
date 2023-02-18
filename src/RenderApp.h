@@ -36,6 +36,9 @@ private:
     void UpdateCamera();
     void UpdateLights();
 	void UpdateHighlightedObject();
+    void UpdateEditorContext();
+
+    World::Entity CastRayToWorld( DirectX::XMVECTOR origin, DirectX::XMVECTOR dir, DirectX::XMFLOAT3& intersection ) const;
 
     // input
     void ReadKeyboardState( const GameTimer& gt );
@@ -126,8 +129,16 @@ private:
 	DirectX::XMFLOAT4 m_highlighted_diffuse;
 	World::Entity m_highlight_cube = World::Entity::nullid;
 
+    // Edit context
+    World::Entity m_edit_object = World::Entity::nullid;
+
+
     // inputs
     std::unique_ptr<DirectX::Keyboard> m_keyboard;
     POINT m_last_mouse_pos;
+    bool m_mouse_moved_when_down = false;
+    bool m_mouse_click_lmb = false;
+    bool m_mouse_lmb_down = false;
+    POINT m_mouse_click_pos;
     LPSTR m_cmd_line;
 };
