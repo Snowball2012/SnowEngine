@@ -45,6 +45,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RHITestApp", "msvs\RHITestA
 		{0BD1E9B2-BF5B-4637-949F-3FF801966B7C} = {0BD1E9B2-BF5B-4637-949F-3FF801966B7C}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sandbox", "msvs\Sandbox\Sandbox.vcxproj", "{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -87,6 +89,10 @@ Global
 		{F7293078-F6E2-423B-8DE1-F3980E1D349D}.Debug|x64.Build.0 = Debug|x64
 		{F7293078-F6E2-423B-8DE1-F3980E1D349D}.Release|x64.ActiveCfg = Release|x64
 		{F7293078-F6E2-423B-8DE1-F3980E1D349D}.Release|x64.Build.0 = Release|x64
+		{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}.Debug|x64.ActiveCfg = Debug|x64
+		{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}.Debug|x64.Build.0 = Debug|x64
+		{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}.Release|x64.ActiveCfg = Release|x64
+		{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
