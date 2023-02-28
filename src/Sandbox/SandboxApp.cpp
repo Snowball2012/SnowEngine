@@ -7,6 +7,8 @@
 
 #include <ImguiBackend/ImguiBackend.h>
 
+#include <imgui/imgui.h>
+
 SandboxApp::SandboxApp()
     : m_rhi( nullptr, []( auto* ) {} )
 {
@@ -113,6 +115,8 @@ void SandboxApp::MainLoop()
     {
         while ( SDL_PollEvent( &event ) )
         {
+            auto imgui_event_res = m_imgui->ProcessEvent( &event );
+
             if ( event.type == SDL_QUIT )
             {
                 running = false;
@@ -124,6 +128,15 @@ void SandboxApp::MainLoop()
                 int height = 0;
                 SDL_GetWindowSize( m_main_wnd, &width, &height );
                 m_window_size = glm::ivec2( width, height );
+            }
+
+            if ( !imgui_event_res.wantsCaptureKeyboard )
+            {
+                // forward keyboard event
+            }
+            if ( !imgui_event_res.wantsCaptureMouse )
+            {
+                // forward mouse event
             }
         }
         DrawFrame();
@@ -312,7 +325,7 @@ void SandboxApp::CreateTextureImage()
 
     VERIFY_NOT_EQUAL( pixels, nullptr );
 
-    VkDeviceSize image_size = uint32_t( width ) * uint32_t( height ) * 4;
+    uint64_t image_size = uint32_t( width ) * uint32_t( height ) * 4;
 
     RHI::BufferInfo staging_info = {};
 
@@ -422,7 +435,7 @@ void SandboxApp::CreateTextureSampler()
 
 void SandboxApp::InitImGUI()
 {
-    m_imgui = std::make_unique<ImguiBackend>( m_main_wnd );
+    m_imgui = std::make_unique<ImguiBackend>( m_main_wnd, m_rhi.get() );
 }
 
 void SandboxApp::CreateVertexBuffer()
@@ -581,6 +594,11 @@ void SandboxApp::DrawFrame()
 
     RecordCommandBuffer( *cmd_list, *m_swapchain );
 
+    RHICommandList* imgui_cl = m_imgui->RenderFrame();
+
+    if ( imgui_cl != nullptr )
+        NOTIMPL;
+
     RHI::SubmitInfo submit_info = {};
     submit_info.cmd_list_count = 1;
     submit_info.cmd_lists = &cmd_list;
@@ -601,6 +619,16 @@ void SandboxApp::DrawFrame()
     m_rhi->Present( *m_swapchain, present_info );
 
     m_current_frame = ( m_current_frame + 1 ) % m_max_frames_in_flight;
+}
+
+void SandboxApp::DrawGUI()
+{
+    bool window_open = true;
+    ImGui::Begin( "Hello Imgui", nullptr, ImGuiWindowFlags_None );
+    {
+        ImGui::ColorEdit4( "Color", m_guicolortest );
+    }
+    ImGui::End();
 }
 
 void SandboxApp::CreateSyncObjects()

@@ -71,7 +71,8 @@ enum class RHIFormat : uint8_t
 	R32G32_SFLOAT,
 	R32G32B32_SFLOAT,
 	B8G8R8A8_SRGB,
-	R8G8B8A8_SRGB
+	R8G8B8A8_SRGB,
+	R8G8B8A8_UNORM
 };
 
 enum class RHIShaderBindingType : uint8_t

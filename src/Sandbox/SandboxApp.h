@@ -57,6 +57,8 @@ private:
 
 	std::unique_ptr<class ImguiBackend> m_imgui;
 
+	float m_guicolortest[4];
+
 public:
 	SandboxApp();
 	~SandboxApp();
@@ -75,6 +77,8 @@ private:
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
 
 	void DrawFrame();
+
+	void DrawGUI();
 
 	void CreateSyncObjects();
 

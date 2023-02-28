@@ -46,6 +46,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RHITestApp", "msvs\RHITestA
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sandbox", "msvs\Sandbox\Sandbox.vcxproj", "{C98B6A19-E975-44C5-B0C6-0A7D9DE4D52E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9242953C-DD21-439D-B184-CDE6859DA4C3} = {9242953C-DD21-439D-B184-CDE6859DA4C3}
+		{6DCB3A59-0FCE-4822-BCFC-B9E738ABBCE5} = {6DCB3A59-0FCE-4822-BCFC-B9E738ABBCE5}
+		{0BD1E9B2-BF5B-4637-949F-3FF801966B7C} = {0BD1E9B2-BF5B-4637-949F-3FF801966B7C}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
