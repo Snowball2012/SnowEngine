@@ -515,6 +515,8 @@ class RHIBuffer : public RHIObject
 {
 public:
 	virtual ~RHIBuffer() override {}
+
+	virtual size_t GetSize() const { return 0; }
 };
 using RHIBufferPtr = RHIObjectPtr<RHIBuffer>;
 

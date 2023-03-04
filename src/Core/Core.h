@@ -16,6 +16,7 @@
 
 #include <boost/container/small_vector.hpp>
 #include <boost/intrusive_ptr.hpp>
+#include <boost/scope_exit.hpp>
 
 namespace bc = boost::container;
 

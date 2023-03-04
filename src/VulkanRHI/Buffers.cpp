@@ -6,7 +6,7 @@
 
 IMPLEMENT_RHI_OBJECT(VulkanBuffer)
 
-VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags)
+VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags )
 	: m_rhi(rhi)
 {
     VkBufferCreateInfo vk_create_info = {};
@@ -18,10 +18,11 @@ VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemor
     VmaAllocationCreateInfo vma_alloc_info = {};
     vma_alloc_info.usage = usage;
     vma_alloc_info.flags = alloc_create_flags;
+    vma_alloc_info.requiredFlags = alloc_required_flags;
     VK_VERIFY(vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr));
 }
 
-void VulkanBuffer::GetAllocationInfo(VmaAllocationInfo& info)
+void VulkanBuffer::GetAllocationInfo(VmaAllocationInfo& info) const
 {
     vmaGetAllocationInfo(m_rhi->GetVMA(), m_allocation, &info);
 }
@@ -31,6 +32,14 @@ VulkanBuffer::~VulkanBuffer()
     vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
 }
 
+size_t VulkanBuffer::GetSize() const
+{
+    VmaAllocationInfo info = {};
+    GetAllocationInfo( info );
+
+    return size_t( info.size );
+}
+
 IMPLEMENT_RHI_OBJECT(VulkanUploadBuffer)
 
 VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info)
@@ -38,7 +47,8 @@ VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& in
 {
     m_buffer = new VulkanBuffer(
         rhi, info, VMA_MEMORY_USAGE_AUTO,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ); // we want to avoid having to vkFlushMappedMemoryRanges every time we write to a buffer
 }
 
 VulkanUploadBuffer::~VulkanUploadBuffer()

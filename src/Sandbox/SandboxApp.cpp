@@ -579,6 +579,7 @@ void SandboxApp::RecordCommandBuffer( RHICommandList & list, RHISwapChain & swap
 void SandboxApp::DrawFrame()
 {
     m_rhi->WaitForFenceCompletion( m_inflight_fences[m_current_frame] );
+    m_imgui->MarkFrameAsCompleted( m_imgui_frames[m_current_frame] );
 
     if ( m_fb_resized )
     {
@@ -594,14 +595,23 @@ void SandboxApp::DrawFrame()
 
     RecordCommandBuffer( *cmd_list, *m_swapchain );
 
-    RHICommandList* imgui_cl = m_imgui->RenderFrame();
+    size_t cl_num = 1;
 
-    if ( imgui_cl != nullptr )
-        NOTIMPL;
+    RHICommandList* cmd_lists[2] = { cmd_list, nullptr };
+
+    DrawGUI();
+
+    ImguiRenderResult imgui_res = m_imgui->RenderFrame();
+    m_imgui_frames[m_current_frame] = imgui_res.frame_idx;
+
+    if ( imgui_res.cl )
+    {
+        cmd_lists[cl_num++] = imgui_res.cl;
+    }
 
     RHI::SubmitInfo submit_info = {};
-    submit_info.cmd_list_count = 1;
-    submit_info.cmd_lists = &cmd_list;
+    submit_info.cmd_list_count = cl_num;
+    submit_info.cmd_lists = cmd_lists;
     RHISemaphore* wait_semaphores[] = { m_image_available_semaphores[m_current_frame].get() };
     submit_info.semaphores_to_wait = wait_semaphores;
     submit_info.wait_semaphore_count = 1;
@@ -636,6 +646,7 @@ void SandboxApp::CreateSyncObjects()
     m_image_available_semaphores.resize( m_max_frames_in_flight, VK_NULL_HANDLE );
     m_render_finished_semaphores.resize( m_max_frames_in_flight, VK_NULL_HANDLE );
     m_inflight_fences.resize( m_max_frames_in_flight, {} );
+    m_imgui_frames.resize( m_max_frames_in_flight, {} );
 
     for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
     {

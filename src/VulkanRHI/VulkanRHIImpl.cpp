@@ -1092,7 +1092,7 @@ RHIUploadBuffer* VulkanRHI::CreateUploadBuffer(const RHI::BufferInfo& buf_info)
 
 RHIBuffer* VulkanRHI::CreateDeviceBuffer(const BufferInfo& buf_info)
 {
-    return new VulkanBuffer(this, buf_info, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0);
+    return new VulkanBuffer(this, buf_info, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0, 0);
 }
 
 RHITexture* VulkanRHI::CreateTexture(const TextureInfo& tex_info)

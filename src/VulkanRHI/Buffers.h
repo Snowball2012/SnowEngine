@@ -12,11 +12,13 @@ class VulkanBuffer : public RHIBuffer
 	VmaAllocation m_allocation = VK_NULL_HANDLE;
 
 public:
-	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags);
+	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags );
 
 	virtual ~VulkanBuffer() override;
 
-	void GetAllocationInfo(VmaAllocationInfo& info);
+	virtual size_t GetSize() const override;
+
+	void GetAllocationInfo(VmaAllocationInfo& info) const;
 
 	VkBuffer GetVkBuffer() const { return m_vk_buffer; }
 };

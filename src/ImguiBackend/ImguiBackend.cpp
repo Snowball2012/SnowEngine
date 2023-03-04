@@ -26,9 +26,6 @@ ImguiBackend::ImguiBackend( SDL_Window* window, RHI* rhi )
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer( window, nullptr );
 
-    // Setup RHI backend
-    InitRHI();
-
     // has to be set up somewhere before NewFrame, or ImGui will crash
     SetupFonts();
 
@@ -57,20 +54,76 @@ void ImguiBackend::NewFrame()
 {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
+    m_cur_frame++;
 }
 
-RHICommandList* ImguiBackend::RenderFrame()
+ImguiRenderResult ImguiBackend::RenderFrame()
 {
+    ImguiRenderResult res = {};
+
+    res.frame_idx = m_cur_frame;
+
     ImGui::Render();
 
-    NewFrame();
+    BOOST_SCOPE_EXIT( this_ )
+    {
+        this_->NewFrame();
+    } BOOST_SCOPE_EXIT_END
 
-    return nullptr;
+    ImDrawData* draw_data = ImGui::GetDrawData();
+
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    const int fb_width = ( int )( draw_data->DisplaySize.x * draw_data->FramebufferScale.x );
+    const int fb_height = ( int )( draw_data->DisplaySize.y * draw_data->FramebufferScale.y );
+    if ( fb_width <= 0 || fb_height <= 0 )
+        return res;
+
+    if ( draw_data->CmdListsCount <= 0 )
+        return res;
+
+    RHIUploadBuffer* vtx_buf = nullptr;
+    RHIUploadBuffer* idx_buf = nullptr;
+    if ( draw_data->TotalVtxCount > 0 )
+    {
+        const size_t vertex_size = draw_data->TotalVtxCount * sizeof( ImDrawVert );
+        const size_t index_size = draw_data->TotalIdxCount * sizeof( ImDrawIdx );
+
+        FrameData* cache = FindFittingCache( vertex_size, index_size );
+
+        if ( !cache )
+            return res; // should never happen
+
+        vtx_buf = cache->vertices.get();
+        idx_buf = cache->indices.get();
+
+        cache->submitted_frame_idx = m_cur_frame;
+
+        size_t cur_offset_vtx = 0;
+        size_t cur_offset_idx = 0;
+        for ( int n = 0; n < draw_data->CmdListsCount; n++ )
+        {
+            const ImDrawList* cmd_list = draw_data->CmdLists[n];
+            vtx_buf->WriteBytes( cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof( ImDrawVert ), cur_offset_vtx );
+            idx_buf->WriteBytes( cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof( ImDrawIdx ), cur_offset_idx );
+            cur_offset_vtx += cmd_list->VtxBuffer.Size;
+            cur_offset_idx += cmd_list->IdxBuffer.Size;
+        }
+    }
+
+    res.cl = m_rhi->GetCommandList( RHI::QueueType::Graphics );
+    if ( !res.cl )
+        return res;
+
+    res.cl->Begin();
+
+    res.cl->End();
+
+    return res;
 }
 
-void ImguiBackend::InitRHI()
+void ImguiBackend::MarkFrameAsCompleted( uint64_t frame_idx )
 {
-    //NOTIMPL;
+    m_submitted_frame = std::max( m_submitted_frame, frame_idx );
 }
 
 void ImguiBackend::SetupFonts()
@@ -148,4 +201,62 @@ void ImguiBackend::SetupFonts()
     RHIFence completion_fence = m_rhi->SubmitCommandLists( submit_info );
 
     m_rhi->WaitForFenceCompletion( completion_fence );
+}
+
+ImguiBackend::FrameData* ImguiBackend::FindFittingCache( size_t vertex_buf_size, size_t index_buf_size )
+{
+    // Sanity check. Large cache size most likely means MarkFrameAsCompleted is not called correctly, causing memory leak
+    SE_ENSURE( m_cache.size() < 16 );
+
+    auto found_cache = std::ranges::find_if( m_cache, [&]( const FrameData& v )
+        {
+            if ( v.submitted_frame_idx > m_submitted_frame )
+                return false;
+
+            if ( v.vertices->GetBuffer()->GetSize() < vertex_buf_size )
+                return false;
+
+            if ( v.indices->GetBuffer()->GetSize() < index_buf_size )
+                return false;
+
+            return true;
+        } );
+
+    if ( found_cache == m_cache.end() )
+    {
+        found_cache = std::ranges::find_if( m_cache, [&]( const FrameData& v )
+            {
+                if ( v.submitted_frame_idx > m_submitted_frame )
+                    return false;
+
+                return true;
+            } );
+
+        if ( found_cache == m_cache.end() )
+        {
+            m_cache.emplace_back();
+
+            found_cache = std::prev( m_cache.end() );
+        }
+    }
+
+    if ( !SE_ENSURE( found_cache != m_cache.end() ) )
+        return nullptr;
+
+    auto createOrResizeBufferToFit = [&]( RHIUploadBufferPtr& buf, size_t size, RHIBufferUsageFlags usage )
+    {
+        if ( !buf || buf->GetBuffer()->GetSize() < size )
+        {
+            RHI::BufferInfo buf_info = {};
+            buf_info.size = size;
+            buf_info.usage = usage;
+
+            buf = m_rhi->CreateUploadBuffer( buf_info );
+        }
+    };
+
+    createOrResizeBufferToFit( found_cache->vertices, vertex_buf_size, RHIBufferUsageFlags::VertexBuffer );
+    createOrResizeBufferToFit( found_cache->indices, index_buf_size, RHIBufferUsageFlags::IndexBuffer );
+
+    return &(*found_cache);
 }
