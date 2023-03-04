@@ -75,7 +75,7 @@ void VulkanGraphicsPSO::InitRasterizer(const RHIGraphicsPipelineInfo& info)
 	m_rasterizer_info.depthClampEnable = VK_FALSE;
 	m_rasterizer_info.rasterizerDiscardEnable = VK_FALSE;
 	m_rasterizer_info.polygonMode = VK_POLYGON_MODE_FILL;
-	m_rasterizer_info.cullMode = VK_CULL_MODE_BACK_BIT;
+	m_rasterizer_info.cullMode = VulkanRHI::GetCullModeFlags( info.rasterizer.cull_mode );
 	m_rasterizer_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 	m_rasterizer_info.depthBiasEnable = VK_FALSE;
 	m_rasterizer_info.lineWidth = 1.0f;

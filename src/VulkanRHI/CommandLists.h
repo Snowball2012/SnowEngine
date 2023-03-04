@@ -58,6 +58,9 @@ private:
 
 	class VulkanGraphicsPSO* m_currently_bound_pso = nullptr;
 
+	std::vector<uint8_t> m_push_constants;
+	bool m_need_push_constants = false;
+
 public:
 	VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id);
 	virtual ~VulkanCommandList();
@@ -95,11 +98,16 @@ public:
 	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) override;
 	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) override;
 
+	virtual void PushConstants( size_t offset, const void* data, size_t size ) override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }
 
 	void Reset();
+
+private:
+	void PushConstantsIfNeeded();
 };
 
 IMPLEMENT_RHI_INTERFACE(RHICommandList, VulkanCommandList)

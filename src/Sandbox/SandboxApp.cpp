@@ -601,7 +601,7 @@ void SandboxApp::DrawFrame()
 
     DrawGUI();
 
-    ImguiRenderResult imgui_res = m_imgui->RenderFrame();
+    ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;
 
     if ( imgui_res.cl )

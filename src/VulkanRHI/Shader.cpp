@@ -279,6 +279,8 @@ VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::
 
         pipeline_layout_info.pushConstantRangeCount = 1;
         pipeline_layout_info.pPushConstantRanges = &vk_push_constants;
+
+        m_num_push_constants = vk_push_constants.size / 4;
     }
 
     VK_VERIFY(vkCreatePipelineLayout(m_rhi->GetDevice(), &pipeline_layout_info, nullptr, &m_vk_pipeline_layout));

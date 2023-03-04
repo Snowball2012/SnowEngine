@@ -49,6 +49,8 @@ public:
 	VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
 	VkPipelineLayout GetVkPipelineLayout() const { return m_shader_bindings->GetVkPipelineLayout(); }
 
+	size_t GetPushConstantsCount() const { return m_shader_bindings->GetPushConstantsCount(); }
+
 	bool Recompile();
 
 private:

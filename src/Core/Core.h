@@ -133,3 +133,6 @@ inline uint64_t CalcAlignedSize( uint64_t size, uint64_t alignment )
 		return ( size + ( alignment - 1 ) ) & ~( alignment - 1 );
 	return size;
 }
+
+static constexpr const size_t SizeKB = 1024;
+static constexpr const size_t SizeMB = 1024 * SizeKB;

@@ -46,7 +46,7 @@ public:
 
 	ImguiProcessEventResult ProcessEvent( union SDL_Event* event );
 
-	ImguiRenderResult RenderFrame();
+	ImguiRenderResult RenderFrame( class RHIRTV& rtv );
 
 	// We try to reuse buffer allocations, so we have to know when a frame is done rendering.
 	void MarkFrameAsCompleted( uint64_t frame_idx );
@@ -56,6 +56,12 @@ private:
 	void SetupFonts();
 
 	void SetupPSO( RHIFormat target_format );
+
+	void RecordCommandList(
+		struct ImDrawData* draw_data, 
+		uint32_t fb_width, uint32_t fb_height,
+		RHIBuffer* vtx_buf, RHIBuffer* idx_buf,
+		RHICommandList& cl, RHIRTV& rtv ) const;
 
 	// Can allocate new cache entry
 	FrameData* FindFittingCache( size_t vertex_buf_size, size_t index_buf_size );

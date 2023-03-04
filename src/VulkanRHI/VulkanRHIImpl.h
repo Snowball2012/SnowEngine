@@ -178,6 +178,8 @@ public:
 	static VkAttachmentLoadOp GetVkLoadOp(RHILoadOp op);
 	static VkAttachmentStoreOp GetVkStoreOp(RHIStoreOp op);
 
+	static VkCullModeFlags GetCullModeFlags( RHICullModeFlags rhi_flags );
+
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
 	void RegisterLoadedShader( Shader& shader );

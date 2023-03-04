@@ -91,6 +91,19 @@ enum class RHITextureLayout : uint8_t
 	Present
 };
 
+enum class RHICullModeFlags
+{
+	None = 0,
+
+	Front = 0x1,
+	Back = 0x2,
+
+	All = 0x3,
+
+	NumFlags = 2
+};
+IMPLEMENT_SCOPED_ENUM_FLAGS( RHICullModeFlags )
+
 class RHI
 {
 public:
@@ -427,6 +440,8 @@ public:
 
 	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) { NOTIMPL; }
 	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) { NOTIMPL; }
+
+	virtual void PushConstants( size_t offset, const void* data, size_t size ) { NOTIMPL; }
 };
 
 class RHIShader : public RHIObject
@@ -496,6 +511,11 @@ struct RHIInputAssemblerInfo
 	size_t buffers_count = 0;
 };
 
+struct RHIRasterizerInfo
+{
+	RHICullModeFlags cull_mode = RHICullModeFlags::None;
+};
+
 struct RHIPipelineRTInfo
 {
 	RHIFormat format = RHIFormat::Undefined;
@@ -504,6 +524,8 @@ struct RHIPipelineRTInfo
 struct RHIGraphicsPipelineInfo
 {
 	const RHIInputAssemblerInfo* input_assembler = nullptr;
+
+	RHIRasterizerInfo rasterizer = {};
 
 	RHIShader* vs = nullptr;
 	RHIShader* ps = nullptr;

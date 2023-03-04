@@ -284,6 +284,23 @@ VkImageUsageFlags VulkanRHI::GetVkImageUsageFlags(RHITextureUsageFlags usage)
     return retval;
 }
 
+VkCullModeFlags VulkanRHI::GetCullModeFlags( RHICullModeFlags cull_mode )
+{
+    VkCullModeFlags retval = 0;
+
+    auto add_flag = [&]( auto rhiflag, auto vkflag )
+    {
+        retval |= ( ( cull_mode & rhiflag ) != RHICullModeFlags::None ) ? vkflag : 0;
+    };
+
+    static_assert( int( RHICullModeFlags::NumFlags ) == 2 );
+
+    add_flag( RHICullModeFlags::Front, VK_CULL_MODE_FRONT_BIT );
+    add_flag( RHICullModeFlags::Back, VK_CULL_MODE_BACK_BIT );
+
+    return retval;
+}
+
 VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequency)
 {
     VkVertexInputRate vk_inputrate = VK_VERTEX_INPUT_RATE_MAX_ENUM;

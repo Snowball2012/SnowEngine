@@ -82,6 +82,8 @@ void VulkanCommandList::CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region
 
 void VulkanCommandList::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
 {
+    PushConstantsIfNeeded();
+
     vkCmdDrawIndexed(m_vk_cmd_buffer, index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
@@ -297,9 +299,50 @@ void VulkanCommandList::SetScissors(size_t first_scissor, const RHIRect2D* sciss
     vkCmdSetScissor(m_vk_cmd_buffer, uint32_t(first_scissor), uint32_t(vk_scissors.size()), vk_scissors.data());
 }
 
+void VulkanCommandList::PushConstants( size_t offset, const void* data, size_t size )
+{
+    m_need_push_constants = true;
+
+    if ( m_push_constants.size() < offset + size )
+    {
+        m_push_constants.resize( offset + size, 0 );
+    }
+
+    memcpy( m_push_constants.data() + offset, data, size );
+}
+
 void VulkanCommandList::Reset()
 {
     VK_VERIFY(vkResetCommandBuffer(m_vk_cmd_buffer, 0));
+}
+
+void VulkanCommandList::PushConstantsIfNeeded()
+{
+    if ( !m_need_push_constants )
+        return;
+
+    if ( !SE_ENSURE( m_currently_bound_pso ) )
+        return;
+
+    // As of now we only support 1 push constants range, so bind everything in one go.
+    size_t num_push_constants = m_currently_bound_pso->GetPushConstantsCount();
+
+    // Sanity check
+    SE_ENSURE( m_push_constants.size() < 16 * SizeKB );
+
+    size_t size_push_constants = num_push_constants * 4;
+
+    if ( m_push_constants.size() != size_push_constants )
+    {
+        m_push_constants.resize( size_push_constants, 0 );
+    }
+
+    vkCmdPushConstants(
+        m_vk_cmd_buffer, m_currently_bound_pso->GetVkPipelineLayout(),
+        VK_SHADER_STAGE_ALL,
+        0, uint32_t( size_push_constants ), m_push_constants.data() );
+
+    m_need_push_constants = false;
 }
 
 VulkanCommandListManager::VulkanCommandListManager(VulkanRHI* rhi)

@@ -98,11 +98,14 @@ class VulkanShaderBindingLayout : public RHIShaderBindingLayout
 
     std::vector<RHIObjectPtr<VulkanShaderBindingTableLayout>> m_layout_infos;
     VkPipelineLayout m_vk_pipeline_layout = VK_NULL_HANDLE;
+    size_t m_num_push_constants = 0;
 
 public:
     virtual ~VulkanShaderBindingLayout() override;
 
     VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::ShaderBindingLayoutInfo& info);
+
+    size_t GetPushConstantsCount() const { return m_num_push_constants; }
 
     VkPipelineLayout GetVkPipelineLayout() const { return m_vk_pipeline_layout; }
 };

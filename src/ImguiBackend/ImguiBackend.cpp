@@ -59,7 +59,7 @@ void ImguiBackend::NewFrame()
     m_cur_frame++;
 }
 
-ImguiRenderResult ImguiBackend::RenderFrame()
+ImguiRenderResult ImguiBackend::RenderFrame( RHIRTV& rtv )
 {
     ImguiRenderResult res = {};
 
@@ -116,9 +116,11 @@ ImguiRenderResult ImguiBackend::RenderFrame()
     if ( !res.cl )
         return res;
 
-    res.cl->Begin();
-
-    res.cl->End();
+    RecordCommandList(
+        draw_data, fb_width, fb_height,
+        vtx_buf ? vtx_buf->GetBuffer() : nullptr,
+        idx_buf ? idx_buf->GetBuffer() : nullptr,
+        *res.cl, rtv );
 
     return res;
 }
@@ -213,6 +215,8 @@ void ImguiBackend::SetupFonts()
     m_sbt->BindSRV( 0, 0, *m_fonts_atlas_srv );
     m_sbt->BindSampler( 1, 0, *m_fonts_sampler );
     m_sbt->FlushBinds();
+
+    io.Fonts->SetTexID( ( ImTextureID )m_fonts_atlas_srv.get() );
 }
 
 struct ImguiPushConstants
@@ -290,9 +294,118 @@ void ImguiBackend::SetupPSO( RHIFormat target_format )
 
     pso_info.binding_layout = sbl.get();
 
+    pso_info.rasterizer.cull_mode = RHICullModeFlags::None;
+
     m_pso = m_rhi->CreatePSO( pso_info );
 
     VERIFY_NOT_EQUAL( m_pso, nullptr );
+}
+
+void ImguiBackend::RecordCommandList(
+    ImDrawData* draw_data,
+    uint32_t fb_width, uint32_t fb_height,
+    RHIBuffer* vtx_buf, RHIBuffer* idx_buf,
+    RHICommandList& cl, RHIRTV& rtv ) const
+{
+    cl.Begin();
+
+    RHIPassRTVInfo rt = {};
+    rt.load_op = RHILoadOp::PreserveContents;
+    rt.store_op = RHIStoreOp::Store;
+    rt.rtv = &rtv;
+    rt.clear_value.float32[3] = 1.0f;
+
+    RHIPassInfo pass_info = {};
+    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = glm::uvec2( fb_width, fb_height ) };
+    pass_info.render_targets = &rt;
+    pass_info.render_targets_count = 1;
+    cl.BeginPass( pass_info );
+
+    cl.SetPSO( *m_pso );
+
+    if ( vtx_buf )
+        cl.SetVertexBuffers( 0, vtx_buf, 1, nullptr );
+
+    if ( idx_buf )
+        cl.SetIndexBuffer(
+            *idx_buf,
+            sizeof( ImDrawIdx ) == 2 ? RHIIndexBufferType::UInt16 : RHIIndexBufferType::UInt32,
+            0 );
+
+    cl.BindTable( 0, *m_sbt );
+
+    RHIViewport viewports[] =
+    {
+        {.width = float( fb_width ), .height = float( fb_height ), .max_depth = 1.0f },
+    };
+
+    cl.SetViewports( 0, viewports, _countof( viewports ) );
+
+    ImguiPushConstants pc = {};
+    pc.scale = glm::vec2(
+        2.0f / draw_data->DisplaySize.x,
+        2.0f / draw_data->DisplaySize.y );
+    pc.translate = glm::vec2(
+        -1.0f - draw_data->DisplayPos.x * pc.scale.x,
+        -1.0f - draw_data->DisplayPos.y * pc.scale.y );
+
+    cl.PushConstants( 0, &pc, sizeof( pc ) );
+
+
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+    // Render command lists
+    // (Because we merged all buffers into a single one, we maintain our own offset into them)
+    int global_vtx_offset = 0;
+    int global_idx_offset = 0;
+    for ( int n = 0; n < draw_data->CmdListsCount; n++ )
+    {
+        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        for ( int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++ )
+        {
+            const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+            if ( pcmd->UserCallback != nullptr )
+                NOTIMPL;
+
+            // Project scissor/clipping rectangles into framebuffer space
+            ImVec2 clip_min( ( pcmd->ClipRect.x - clip_off.x ) * clip_scale.x, ( pcmd->ClipRect.y - clip_off.y ) * clip_scale.y );
+            ImVec2 clip_max( ( pcmd->ClipRect.z - clip_off.x ) * clip_scale.x, ( pcmd->ClipRect.w - clip_off.y ) * clip_scale.y );
+
+            // Clamp to viewport as vkCmdSetScissor() won't accept values that are off bounds
+            if ( clip_min.x < 0.0f ) { clip_min.x = 0.0f; }
+            if ( clip_min.y < 0.0f ) { clip_min.y = 0.0f; }
+            if ( clip_max.x > fb_width ) { clip_max.x = ( float )fb_width; }
+            if ( clip_max.y > fb_height ) { clip_max.y = ( float )fb_height; }
+            if ( clip_max.x <= clip_min.x || clip_max.y <= clip_min.y )
+                continue;
+
+            // Apply scissor/clipping rectangle
+            RHIRect2D scissor;
+            scissor.offset.x = ( int32_t )( clip_min.x );
+            scissor.offset.y = ( int32_t )( clip_min.y );
+            scissor.extent.x = ( uint32_t )( clip_max.x - clip_min.x );
+            scissor.extent.y = ( uint32_t )( clip_max.y - clip_min.y );
+            cl.SetScissors( 0, &scissor, 1 );
+
+            // Bind DescriptorSet with font or user texture
+            RHITextureSRV* texture_srv = ( RHITextureSRV* )pcmd->TextureId;
+
+            if ( texture_srv && texture_srv != m_fonts_atlas_srv )
+                NOTIMPL; // don't support user textures for now
+
+            // Draw
+            cl.DrawIndexed( pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0 );
+        }
+
+        global_idx_offset += cmd_list->IdxBuffer.Size;
+        global_vtx_offset += cmd_list->VtxBuffer.Size;
+    }
+
+    cl.EndPass();
+
+    cl.End();
 }
 
 ImguiBackend::FrameData* ImguiBackend::FindFittingCache( size_t vertex_buf_size, size_t index_buf_size )
