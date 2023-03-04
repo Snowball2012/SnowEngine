@@ -10,7 +10,7 @@
 #include <SDL2/SDL_events.h>
 
 
-ImguiBackend::ImguiBackend( SDL_Window* window, RHI* rhi )
+ImguiBackend::ImguiBackend( SDL_Window* window, RHI* rhi, RHIFormat target_format )
     : m_rhi( rhi )
 {
     IMGUI_CHECKVERSION();
@@ -25,6 +25,8 @@ ImguiBackend::ImguiBackend( SDL_Window* window, RHI* rhi )
 
     // Setup Platform/Renderer backends
     ImGui_ImplSDL2_InitForSDLRenderer( window, nullptr );
+
+    SetupPSO( target_format );
 
     // has to be set up somewhere before NewFrame, or ImGui will crash
     SetupFonts();
@@ -201,6 +203,96 @@ void ImguiBackend::SetupFonts()
     RHIFence completion_fence = m_rhi->SubmitCommandLists( submit_info );
 
     m_rhi->WaitForFenceCompletion( completion_fence );
+    
+    RHI::SamplerInfo sampler_info = {};
+    m_fonts_sampler = m_rhi->CreateSampler( sampler_info );
+
+    // SetupPSO has to be called before this
+    VERIFY_NOT_EQUAL( m_sbt, nullptr );
+    
+    m_sbt->BindSRV( 0, 0, *m_fonts_atlas_srv );
+    m_sbt->BindSampler( 1, 0, *m_fonts_sampler );
+    m_sbt->FlushBinds();
+}
+
+struct ImguiPushConstants
+{
+    glm::vec2 scale;
+    glm::vec2 translate;
+};
+
+void ImguiBackend::SetupPSO( RHIFormat target_format )
+{
+    RHIGraphicsPipelineInfo pso_info = {};
+
+    pso_info.rts_count = 1;
+    RHIPipelineRTInfo rt_info = {};
+    rt_info.format = target_format;
+    pso_info.rt_info = &rt_info;
+
+    RHI::ShaderCreateInfo vs_info = {};
+    vs_info.filename = L"shaders/imgui.hlsl";
+    vs_info.frequency = RHI::ShaderFrequency::Vertex;
+    vs_info.entry_point = "MainVS";
+    RHIShader* vs = m_rhi->CreateShader( vs_info );
+
+    RHI::ShaderCreateInfo ps_info = {};
+    ps_info.filename = L"shaders/imgui.hlsl";
+    ps_info.frequency = RHI::ShaderFrequency::Pixel;
+    ps_info.entry_point = "MainPS";
+    RHIShader* ps = m_rhi->CreateShader( ps_info );
+
+    pso_info.vs = vs;
+    pso_info.ps = ps;
+
+    RHIPrimitiveAttributeInfo attributes[] =
+    {
+        { "POSITION", RHIFormat::R32G32_SFLOAT, offsetof( ImDrawVert, pos ) },
+        { "TEXCOORD0", RHIFormat::R32G32_SFLOAT, offsetof( ImDrawVert, uv ) },
+        { "TEXCOORD1", RHIFormat::R8G8B8A8_UNORM, offsetof( ImDrawVert, col ) }
+    };
+
+    RHIPrimitiveBufferLayout pb_layout = { attributes, _countof( attributes ), sizeof( ImDrawVert ) };
+
+    const RHIPrimitiveBufferLayout* layouts = { &pb_layout };
+
+    RHIInputAssemblerInfo ia_info = {};
+    ia_info.buffers_count = 1;
+    ia_info.primitive_buffers = &layouts;
+    RHIPrimitiveFrequency frequencies[] = {RHIPrimitiveFrequency::PerVertex};
+    ia_info.frequencies = frequencies;
+
+    pso_info.input_assembler = &ia_info;
+
+    RHI::ShaderViewRange view_ranges[] =
+    {
+        { RHIShaderBindingType::TextureSRV, 1, RHIShaderStageFlags::PixelShader },
+        { RHIShaderBindingType::Sampler, 1, RHIShaderStageFlags::PixelShader },
+    };
+
+    RHI::ShaderBindingTableLayoutInfo sbtl_info = {};
+    sbtl_info.ranges = view_ranges;
+    sbtl_info.range_count = _countof( view_ranges );
+
+    RHIShaderBindingTableLayoutPtr sbtl = m_rhi->CreateShaderBindingTableLayout( sbtl_info );
+
+    // This is supposed to be the call that creates m_sbt for the first time. Otherwise we may need to rebind fonts
+    SE_ENSURE( m_sbt == nullptr );
+    m_sbt = m_rhi->CreateShaderBindingTable( *sbtl );
+
+    RHIShaderBindingTableLayout* pipeline_sbtls[] = { sbtl.get() };
+    
+    RHI::ShaderBindingLayoutInfo sbl_info = {};
+    sbl_info.push_constants_size = sizeof( ImguiPushConstants );
+    sbl_info.tables = pipeline_sbtls;
+    sbl_info.table_count = _countof( pipeline_sbtls );
+    RHIShaderBindingLayoutPtr sbl = m_rhi->CreateShaderBindingLayout( sbl_info );
+
+    pso_info.binding_layout = sbl.get();
+
+    m_pso = m_rhi->CreatePSO( pso_info );
+
+    VERIFY_NOT_EQUAL( m_pso, nullptr );
 }
 
 ImguiBackend::FrameData* ImguiBackend::FindFittingCache( size_t vertex_buf_size, size_t index_buf_size )

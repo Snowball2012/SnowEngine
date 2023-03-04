@@ -435,7 +435,7 @@ void SandboxApp::CreateTextureSampler()
 
 void SandboxApp::InitImGUI()
 {
-    m_imgui = std::make_unique<ImguiBackend>( m_main_wnd, m_rhi.get() );
+    m_imgui = std::make_unique<ImguiBackend>( m_main_wnd, m_rhi.get(), m_swapchain->GetFormat() );
 }
 
 void SandboxApp::CreateVertexBuffer()

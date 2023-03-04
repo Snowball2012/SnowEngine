@@ -131,7 +131,9 @@
       <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy $(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Bin\SDL2.dll $(TargetDir) /y
+      <Command>echo "Running pre-build event"
+
+xcopy $(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Bin\SDL2.dll $(TargetDir) /y
 xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxcompiler.dll $(TargetDir) /y
 xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y
 xcopy /s /y $(ProjectDir)..\..\src\$(ProjectName)\shaders\* $(TargetDir)shaders\
@@ -159,7 +161,9 @@ xcopy /s /y $(ProjectDir)..\..\src\$(ProjectName)\textures\* $(TargetDir)texture
       <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy $(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Bin\SDL2.dll $(TargetDir) /y
+      <Command>echo "Running pre-build event"
+
+xcopy $(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Bin\SDL2.dll $(TargetDir) /y
 xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxcompiler.dll $(TargetDir) /y
 xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y
 xcopy /s /y $(ProjectDir)..\..\src\$(ProjectName)\shaders\* $(TargetDir)shaders\
@@ -183,6 +187,11 @@ xcopy /s /y $(ProjectDir)..\..\src\$(ProjectName)\textures\* $(TargetDir)texture
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />
     <ClInclude Include="..\..\src\Sandbox\stb_image.h" />
     <ClInclude Include="..\..\src\Sandbox\StdAfx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="..\..\src\Sandbox\shaders\imgui.hlsl">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

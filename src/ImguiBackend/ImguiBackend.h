@@ -8,11 +8,6 @@ struct ImguiProcessEventResult
 	bool wantsCaptureMouse = false;
 };
 
-struct ImguiFrameData
-{
-	RHIUploadBufferPtr vertex_buf = nullptr;
-};
-
 struct ImguiRenderResult
 {
 	class RHICommandList* cl = nullptr;
@@ -26,6 +21,9 @@ private:
 
 	RHITexturePtr m_fonts_atlas = nullptr;
 	RHITextureSRVPtr m_fonts_atlas_srv = nullptr;
+	RHISamplerPtr m_fonts_sampler = nullptr;
+
+	RHIGraphicsPipelinePtr m_pso = nullptr;
 
 	uint64_t m_cur_frame = 1;
 
@@ -38,10 +36,12 @@ private:
 		uint64_t submitted_frame_idx = ~0x0;
 	};
 
+	RHIShaderBindingTablePtr m_sbt = nullptr;
+
 	std::vector<FrameData> m_cache;
 
 public:
-	ImguiBackend( struct SDL_Window* window, RHI* rhi );
+	ImguiBackend( struct SDL_Window* window, RHI* rhi, RHIFormat target_format );
 	~ImguiBackend();
 
 	ImguiProcessEventResult ProcessEvent( union SDL_Event* event );
@@ -54,6 +54,8 @@ public:
 private:
 	void NewFrame();
 	void SetupFonts();
+
+	void SetupPSO( RHIFormat target_format );
 
 	// Can allocate new cache entry
 	FrameData* FindFittingCache( size_t vertex_buf_size, size_t index_buf_size );

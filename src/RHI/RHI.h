@@ -179,6 +179,9 @@ public:
 	{
 		RHIShaderBindingTableLayout* const* tables = nullptr;
 		size_t table_count = 0;
+
+		// Simplify push constants usage. We only have one contiguous push constant buffer internaly
+		size_t push_constants_size = 0;
 	};
 
 	virtual class RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& layout_info) { NOTIMPL; return nullptr; }

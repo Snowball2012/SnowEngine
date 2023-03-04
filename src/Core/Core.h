@@ -126,3 +126,10 @@ public:
 		m_spinlock.Unlock();
 	}
 };
+
+inline uint64_t CalcAlignedSize( uint64_t size, uint64_t alignment )
+{
+	if ( alignment > 1 )
+		return ( size + ( alignment - 1 ) ) & ~( alignment - 1 );
+	return size;
+}

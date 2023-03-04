@@ -269,7 +269,17 @@ VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::
     pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipeline_layout_info.setLayoutCount = uint32_t(vk_desc_layouts.size());
     pipeline_layout_info.pSetLayouts = vk_desc_layouts.data();
-    pipeline_layout_info.pushConstantRangeCount = 0;
+
+    VkPushConstantRange vk_push_constants = {};
+    if ( info.push_constants_size > 0 )
+    {
+        vk_push_constants.offset = 0;
+        vk_push_constants.size = uint32_t( CalcAlignedSize( info.push_constants_size, 4 ) );
+        vk_push_constants.stageFlags = VK_SHADER_STAGE_ALL;
+
+        pipeline_layout_info.pushConstantRangeCount = 1;
+        pipeline_layout_info.pPushConstantRanges = &vk_push_constants;
+    }
 
     VK_VERIFY(vkCreatePipelineLayout(m_rhi->GetDevice(), &pipeline_layout_info, nullptr, &m_vk_pipeline_layout));
 }
