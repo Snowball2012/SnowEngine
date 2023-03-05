@@ -169,9 +169,33 @@ void VulkanGraphicsPSO::InitMultisampling(const RHIGraphicsPipelineInfo& info)
 
 void VulkanGraphicsPSO::InitColorBlending(const RHIGraphicsPipelineInfo& info)
 {
-	auto& attachment = m_color_blend_attachments.emplace_back();
-	attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-	attachment.blendEnable = VK_FALSE;
+	m_color_blend_attachments.resize( info.rts_count );
+	for ( int i = 0; i < info.rts_count; ++i )
+	{
+		const auto& rt_info = info.rt_info[i];
+
+		auto& attachment = m_color_blend_attachments[i];
+
+		attachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		attachment.blendEnable = rt_info.enable_blend ? VK_TRUE : VK_FALSE;
+
+		if ( attachment.blendEnable )
+		{
+			attachment.blendEnable = VK_TRUE;
+
+			attachment.colorBlendOp = VK_BLEND_OP_ADD;
+			attachment.srcColorBlendFactor = VulkanRHI::GetVkBlendFactor( rt_info.src_color_blend );
+			attachment.dstColorBlendFactor = VulkanRHI::GetVkBlendFactor( rt_info.dst_color_blend );
+
+			attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+			attachment.srcAlphaBlendFactor = VulkanRHI::GetVkBlendFactor( rt_info.src_alpha_blend );
+			attachment.dstAlphaBlendFactor = VulkanRHI::GetVkBlendFactor( rt_info.dst_alpha_blend );
+		}
+		else
+		{
+			attachment.blendEnable = VK_FALSE;
+		}
+	}
 
 	m_color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	m_color_blending.logicOpEnable = VK_FALSE;

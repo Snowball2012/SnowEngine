@@ -301,6 +301,25 @@ VkCullModeFlags VulkanRHI::GetCullModeFlags( RHICullModeFlags cull_mode )
     return retval;
 }
 
+VkBlendFactor VulkanRHI::GetVkBlendFactor( RHIBlendFactor rhi_blend_factor )
+{
+    uint32_t size = 0;
+
+    switch ( rhi_blend_factor )
+    {
+    case RHIBlendFactor::Zero:
+        return VK_BLEND_FACTOR_ZERO;
+    case RHIBlendFactor::One:
+        return VK_BLEND_FACTOR_ONE;
+    case RHIBlendFactor::SrcAlpha:
+        return VK_BLEND_FACTOR_SRC_ALPHA;
+    case RHIBlendFactor::OneMinusSrcAlpha:
+        return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    }
+
+    NOTIMPL;
+}
+
 VkVertexInputRate VulkanRHI::GetVkVertexInputRate(RHIPrimitiveFrequency frequency)
 {
     VkVertexInputRate vk_inputrate = VK_VERTEX_INPUT_RATE_MAX_ENUM;

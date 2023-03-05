@@ -180,6 +180,8 @@ public:
 
 	static VkCullModeFlags GetCullModeFlags( RHICullModeFlags rhi_flags );
 
+	static VkBlendFactor GetVkBlendFactor( RHIBlendFactor rhi_blend_factor );
+
 	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
 
 	void RegisterLoadedShader( Shader& shader );

@@ -42,4 +42,5 @@ void MainVS( in VertexIn vin, out Interpolants vout )
 void MainPS( in Interpolants pin, out PixelOut pout )
 {
 	pout.rt0 = pin.color * TextureObject.Sample( TextureObject_Sampler, pin.uv );
+	pout.rt0.rgb *= pout.rt0.a;
 }

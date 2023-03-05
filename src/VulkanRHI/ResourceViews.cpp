@@ -83,3 +83,12 @@ VulkanRTV::VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info)
 
     m_texture = &RHIImpl(*info.texture);
 }
+
+glm::uvec3 VulkanRTV::GetSize() const
+{
+    const auto& tex_info = m_texture->GetInfo();
+    return glm::uvec3(
+        tex_info.width,
+        tex_info.height,
+        std::max<uint32_t>( tex_info.depth, 1 ) );
+}

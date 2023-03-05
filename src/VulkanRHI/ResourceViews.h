@@ -53,6 +53,8 @@ public:
 
 	VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info);
 
+	virtual glm::uvec3 GetSize() const override;
+
 	VkImageView GetVkImageView() const { return m_vk_image_view; }
 };
 IMPLEMENT_RHI_INTERFACE(RHIRTV, VulkanRTV)

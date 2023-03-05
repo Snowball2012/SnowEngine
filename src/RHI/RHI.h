@@ -516,9 +516,25 @@ struct RHIRasterizerInfo
 	RHICullModeFlags cull_mode = RHICullModeFlags::None;
 };
 
+enum class RHIBlendFactor
+{
+	Zero = 0,
+	One,
+	SrcAlpha,
+	OneMinusSrcAlpha
+};
+
 struct RHIPipelineRTInfo
 {
 	RHIFormat format = RHIFormat::Undefined;
+
+	bool enable_blend = false;
+
+	RHIBlendFactor src_color_blend = RHIBlendFactor::One;
+	RHIBlendFactor dst_color_blend = RHIBlendFactor::OneMinusSrcAlpha;
+
+	RHIBlendFactor src_alpha_blend = RHIBlendFactor::One;
+	RHIBlendFactor dst_alpha_blend = RHIBlendFactor::OneMinusSrcAlpha;
 };
 
 struct RHIGraphicsPipelineInfo
@@ -584,6 +600,8 @@ class RHIRTV : public RHIObject
 {
 public:
 	virtual ~RHIRTV() override {}
+
+	virtual glm::uvec3 GetSize() const { return glm::uvec3( 0, 0, 0 ); }
 };
 using RHIRTVPtr = RHIObjectPtr<RHIRTV>;
 

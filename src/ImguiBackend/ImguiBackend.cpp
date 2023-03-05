@@ -75,8 +75,14 @@ ImguiRenderResult ImguiBackend::RenderFrame( RHIRTV& rtv )
     ImDrawData* draw_data = ImGui::GetDrawData();
 
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    const int fb_width = ( int )( draw_data->DisplaySize.x * draw_data->FramebufferScale.x );
-    const int fb_height = ( int )( draw_data->DisplaySize.y * draw_data->FramebufferScale.y );
+    int fb_width = ( int )( draw_data->DisplaySize.x * draw_data->FramebufferScale.x );
+    int fb_height = ( int )( draw_data->DisplaySize.y * draw_data->FramebufferScale.y );
+
+    // Sometimes when we are resizing a swapchain imgui can have previous display size. Restrict rendering to the true window size in that case
+    glm::uvec3 rt_size = rtv.GetSize();
+    fb_width = std::min<int>( fb_width, rt_size.x );
+    fb_height = std::min<int>( fb_height, rt_size.y );
+
     if ( fb_width <= 0 || fb_height <= 0 )
         return res;
 
@@ -232,6 +238,11 @@ void ImguiBackend::SetupPSO( RHIFormat target_format )
     pso_info.rts_count = 1;
     RHIPipelineRTInfo rt_info = {};
     rt_info.format = target_format;
+    rt_info.enable_blend = true;
+    rt_info.src_alpha_blend = RHIBlendFactor::One;
+    rt_info.dst_alpha_blend = RHIBlendFactor::OneMinusSrcAlpha;
+    rt_info.src_color_blend = RHIBlendFactor::One;
+    rt_info.dst_color_blend = RHIBlendFactor::OneMinusSrcAlpha;
     pso_info.rt_info = &rt_info;
 
     RHI::ShaderCreateInfo vs_info = {};

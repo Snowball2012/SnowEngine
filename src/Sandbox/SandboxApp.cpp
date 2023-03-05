@@ -12,6 +12,7 @@
 SandboxApp::SandboxApp()
     : m_rhi( nullptr, []( auto* ) {} )
 {
+    memset( m_guicolortest, 0, sizeof( m_guicolortest ) );
 }
 
 SandboxApp::~SandboxApp() = default;
