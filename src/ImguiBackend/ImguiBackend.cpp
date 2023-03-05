@@ -113,8 +113,8 @@ ImguiRenderResult ImguiBackend::RenderFrame( RHIRTV& rtv )
             const ImDrawList* cmd_list = draw_data->CmdLists[n];
             vtx_buf->WriteBytes( cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof( ImDrawVert ), cur_offset_vtx );
             idx_buf->WriteBytes( cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof( ImDrawIdx ), cur_offset_idx );
-            cur_offset_vtx += cmd_list->VtxBuffer.Size;
-            cur_offset_idx += cmd_list->IdxBuffer.Size;
+            cur_offset_vtx += cmd_list->VtxBuffer.Size * sizeof( ImDrawVert );
+            cur_offset_idx += cmd_list->IdxBuffer.Size * sizeof( ImDrawIdx );
         }
     }
 
