@@ -34,5 +34,5 @@ SamplerState TextureObject_Sampler;
 
 	float4 TexSample = TextureObject.Sample(TextureObject_Sampler, texcoord);
 
-	return float4(TexSample.rgb * color, 1.0f);
+	return float4(TexSample.rgb * color * float3( 1, 1, 1 ), 1.0f );
 }

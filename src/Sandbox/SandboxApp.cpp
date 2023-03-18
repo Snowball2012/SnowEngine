@@ -8,16 +8,18 @@
 #include <ImguiBackend/ImguiBackend.h>
 
 #include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
+
+CorePaths g_core_paths;
 
 SandboxApp::SandboxApp()
     : m_rhi( nullptr, []( auto* ) {} )
 {
-    memset( m_guicolortest, 0, sizeof( m_guicolortest ) );
 }
 
 SandboxApp::~SandboxApp() = default;
 
-void SandboxApp::Run()
+void SandboxApp::Run( int argc, char** argv )
 {
     // Several systems have to start here
 
@@ -26,6 +28,10 @@ void SandboxApp::Run()
     // RHI
     // Input
     // ImGui
+
+    ParseCommandLine( argc, argv );
+
+    InitCoreGlobals();
 
     SDL_Init( SDL_INIT_EVERYTHING );
     const char* window_name = "SnowEngine sandbox";
@@ -40,6 +46,30 @@ void SandboxApp::Run()
     m_main_wnd = nullptr;
 
     SDL_Quit();
+}
+
+void SandboxApp::ParseCommandLine( int argc, char** argv )
+{
+    for ( int i = 1; i < argc; ++i )
+    {
+        std::string arg = argv[i];
+        if ( !_strcmpi( argv[i], "-EnginePath" ) )
+        {
+            if ( argc > ( i + 1 ) )
+            {
+                // read next arg
+                m_cmd_line_args.engine_content_path = argv[i + 1];
+                m_cmd_line_args.engine_content_path += "/EngineContent/";
+                i += 1;
+
+                std::cout << "[App]: Set engine content path from command line: " << m_cmd_line_args.engine_content_path << std::endl;
+            }
+            else
+            {
+                std::cerr << "[App]: Can't set engine content path from command line because -EnginePath is the last token" << std::endl;
+            }
+        }
+    }
 }
 
 struct SDLVulkanWindowInterface : public IVulkanWindowInterface
@@ -140,6 +170,7 @@ void SandboxApp::MainLoop()
                 // forward mouse event
             }
         }
+        Update();
         DrawFrame();
     }
     m_rhi->WaitIdle();
@@ -304,6 +335,11 @@ void SandboxApp::CopyBufferToImage( RHIBuffer & src, RHITexture & texture, uint3
     EndSingleTimeCommands( *list );
 }
 
+void SandboxApp::Update()
+{
+    UpdateGui();
+}
+
 void SandboxApp::CreateDescriptorSets()
 {
     m_binding_tables.resize( m_max_frames_in_flight );
@@ -322,7 +358,7 @@ void SandboxApp::CreateTextureImage()
 {
     // upload to staging
     int width, height, channels;
-    stbi_uc* pixels = stbi_load( "textures/texture.jpg", &width, &height, &channels, STBI_rgb_alpha );
+    stbi_uc* pixels = stbi_load( ToOSPath( "#Engine/Textures/DemoStatue.jpg" ).c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
     VERIFY_NOT_EQUAL( pixels, nullptr );
 
@@ -484,7 +520,8 @@ std::vector<const char*> SandboxApp::GetSDLExtensions() const
 void SandboxApp::CreatePipeline()
 {
     RHI::ShaderCreateInfo create_info = {};
-    create_info.filename = L"shaders/helloworld.hlsl";
+    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/RHIDemo.hlsl" ).c_str() );
+    create_info.filename = shader_path.c_str();
 
     create_info.frequency = RHI::ShaderFrequency::Vertex;
     create_info.entry_point = "TriangleVS";
@@ -600,8 +637,6 @@ void SandboxApp::DrawFrame()
 
     RHICommandList* cmd_lists[2] = { cmd_list, nullptr };
 
-    DrawGUI();
-
     ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;
 
@@ -632,14 +667,53 @@ void SandboxApp::DrawFrame()
     m_current_frame = ( m_current_frame + 1 ) % m_max_frames_in_flight;
 }
 
-void SandboxApp::DrawGUI()
+void SandboxApp::UpdateGui()
 {
-    bool window_open = true;
-    ImGui::Begin( "Hello Imgui", nullptr, ImGuiWindowFlags_None );
+    if ( ImGui::BeginMainMenuBar() )
     {
-        ImGui::ColorEdit4( "Color", m_guicolortest );
+        if ( ImGui::MenuItem( "WorldOutliner" ) )
+            m_show_world_outliner = true;
+
+        if ( ImGui::MenuItem( "ImGUIDemo" ) )
+            m_show_imgui_demo = true;
+
+        if ( ImGui::MenuItem( "ReloadShaders" ) )
+            m_rhi->ReloadAllShaders();
+
+        ImGui::EndMainMenuBar();
     }
-    ImGui::End();
+
+    if ( m_show_imgui_demo )
+        ImGui::ShowDemoWindow( &m_show_imgui_demo );
+
+    if ( m_show_world_outliner )
+    {
+        ImGui::Begin( "World", &m_show_world_outliner, ImGuiWindowFlags_None );
+        {
+            ImGui::Text( "Total: %llu entities", m_world.GetEntityCount() );
+            bool create_entity = ImGui::Button( "Add enitity" );
+            ImGui::SameLine();
+            ImGui::InputText( "Name", &m_new_entity_name );
+
+            if ( create_entity )
+            {
+                auto new_entity = m_world.CreateEntity();
+                auto& name_component = m_world.AddComponent<NameComponent>( new_entity );
+                name_component.name = std::move( m_new_entity_name );
+            }
+
+            for ( auto&& [id, name_comp] : m_world.CreateView<NameComponent>() )
+            {
+                ImGui::Text( name_comp.name.c_str() );
+            }
+        }
+        ImGui::End();
+    }
+}
+
+void SandboxApp::InitCoreGlobals()
+{
+    g_core_paths.engine_content = m_cmd_line_args.engine_content_path;
 }
 
 void SandboxApp::CreateSyncObjects()

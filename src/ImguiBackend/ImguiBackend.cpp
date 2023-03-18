@@ -246,13 +246,16 @@ void ImguiBackend::SetupPSO( RHIFormat target_format )
     pso_info.rt_info = &rt_info;
 
     RHI::ShaderCreateInfo vs_info = {};
-    vs_info.filename = L"shaders/imgui.hlsl";
+
+    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/imgui.hlsl" ).c_str() );
+
+    vs_info.filename = shader_path.c_str();
     vs_info.frequency = RHI::ShaderFrequency::Vertex;
     vs_info.entry_point = "MainVS";
     RHIShader* vs = m_rhi->CreateShader( vs_info );
 
     RHI::ShaderCreateInfo ps_info = {};
-    ps_info.filename = L"shaders/imgui.hlsl";
+    ps_info.filename = shader_path.c_str();
     ps_info.frequency = RHI::ShaderFrequency::Pixel;
     ps_info.entry_point = "MainPS";
     RHIShader* ps = m_rhi->CreateShader( ps_info );

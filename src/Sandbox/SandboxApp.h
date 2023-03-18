@@ -4,6 +4,8 @@
 
 #include <RHI/RHI.h>
 
+#include <ecs/EntityContainer.h>
+
 #include "RenderResources.h"
 
 struct SwapChainSupportDetails
@@ -11,6 +13,20 @@ struct SwapChainSupportDetails
 	VkSurfaceCapabilitiesKHR capabilities = {};
 	std::vector<VkSurfaceFormatKHR> formats;
 	std::vector<VkPresentModeKHR> present_modes;
+};
+
+struct NameComponent
+{
+	std::string name;
+};
+
+using World = EntityContainer<
+	NameComponent
+>;
+
+struct CommandLineArguments
+{
+	std::string engine_content_path;
 };
 
 class SandboxApp
@@ -52,21 +68,32 @@ private:
 	// descriptors
 	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
 
+	World m_world;
+
+	CommandLineArguments m_cmd_line_args;
+
+	// GUI state
+	std::string m_new_entity_name;
+	bool m_show_imgui_demo = false;
+	bool m_show_world_outliner = false;
+
 	bool m_fb_resized = false;
 
 	RHIPtr m_rhi;
 
 	std::unique_ptr<class ImguiBackend> m_imgui;
 
-	float m_guicolortest[4];
-
 public:
 	SandboxApp();
 	~SandboxApp();
 
-	void Run();
+	void Run( int argc, char** argv );
 
 private:
+	void ParseCommandLine( int argc, char** argv );
+
+	void InitCoreGlobals();
+
 	void InitRHI();
 	void MainLoop();
 	void Cleanup();
@@ -77,9 +104,11 @@ private:
 
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
 
-	void DrawFrame();
+	void Update();
 
-	void DrawGUI();
+	void UpdateGui();
+
+	void DrawFrame();
 
 	void CreateSyncObjects();
 
@@ -117,5 +146,4 @@ private:
 	void CreateTextureSampler();
 
 	void InitImGUI();
-
 };

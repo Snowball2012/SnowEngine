@@ -203,11 +203,11 @@ void OldRenderer::Draw(float time)
     lists_to_execute.emplace_back( m_gpu_device->GetGraphicsQueue()->CreateCommandList() );
     lists_to_execute.back().Reset();
     cmd_list = lists_to_execute.back().GetInterface();
-    ImGui_ImplDX12_NewFrame( cmd_list );
+    ImGui_ImplDX12_NewFrame( /*cmd_list*/);
     heaps[0] = m_srv_ui_heap->GetInterface();
     cmd_list->OMSetRenderTargets( 1, &CurrentBackBufferView(), true, nullptr );
     cmd_list->SetDescriptorHeaps( 1, heaps );
-    ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData() );
+    ImGui_ImplDX12_RenderDrawData( ImGui::GetDrawData(), cmd_list );
 
     barriers[0] = CD3DX12_RESOURCE_BARRIER::Transition( CurrentBackBuffer(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT );
     
@@ -435,7 +435,7 @@ void OldRenderer::InitImgui()
     ImGui_ImplWin32_Init( m_main_hwnd );
     BuildUIDescriptorHeap();
     m_ui_font_desc = std::make_unique<Descriptor>( std::move( m_srv_ui_heap->AllocateDescriptor() ) );
-    ImGui_ImplDX12_Init( m_gpu_device->GetNativeDevice(), FrameResourceCount, m_back_buffer_format, m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
+    ImGui_ImplDX12_Init( m_gpu_device->GetNativeDevice(), FrameResourceCount, m_back_buffer_format, m_srv_ui_heap->GetInterface(), m_ui_font_desc->HandleCPU(), m_ui_font_desc->HandleGPU() );
     ImGui::StyleColorsDark();
 }
 
