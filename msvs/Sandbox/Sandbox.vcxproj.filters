@@ -27,6 +27,7 @@
     <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h">
       <Filter>ImguiBackend</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\Sandbox\Assets.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

@@ -8,6 +8,7 @@
 #include <array>
 #include <algorithm>
 #include <iostream>
+#include <mutex>
 #include <vector>
 #include <optional>
 #include <span>
