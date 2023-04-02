@@ -2,18 +2,11 @@
 
 #include "StdAfx.h"
 
-#include <RHI/RHI.h>
-
 #include <ecs/EntityContainer.h>
 
-#include "RenderResources.h"
+#include <Engine/EngineApp.h>
 
-struct SwapChainSupportDetails
-{
-	VkSurfaceCapabilitiesKHR capabilities = {};
-	std::vector<VkSurfaceFormatKHR> formats;
-	std::vector<VkPresentModeKHR> present_modes;
-};
+#include "RenderResources.h"
 
 struct NameComponent
 {
@@ -24,36 +17,13 @@ using World = EntityContainer<
 	NameComponent
 >;
 
-struct CommandLineArguments
-{
-	std::string engine_content_path;
-};
-
-class SandboxApp
+class SandboxApp : public EngineApp
 {
 private:
-	static const size_t m_max_frames_in_flight = 2;
-
-	glm::ivec2 m_window_size = glm::ivec2( 800, 600 );
-
-	struct SDL_Window* m_main_wnd = nullptr;
-
-	std::unique_ptr<struct SDLVulkanWindowInterface> m_window_iface = nullptr;
-
-	// surface
-	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
-
 	// pipeline
 	RHIShaderBindingTableLayoutPtr m_binding_table_layout = nullptr;
 	RHIShaderBindingLayoutPtr m_shader_bindings_layout = nullptr;
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
-
-	// synchronization
-	std::vector<RHIObjectPtr<RHISemaphore>> m_image_available_semaphores;
-	std::vector<RHIObjectPtr<RHISemaphore>> m_render_finished_semaphores;
-	std::vector<RHIFence> m_inflight_fences;
-	std::vector<uint64_t> m_imgui_frames;
-	uint32_t m_current_frame = 0;
 
 	// resources
 	RHIBufferPtr m_vertex_buffer = nullptr;
@@ -70,47 +40,30 @@ private:
 
 	World m_world;
 
-	CommandLineArguments m_cmd_line_args;
-
 	// GUI state
 	std::string m_new_entity_name;
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 
-	bool m_fb_resized = false;
-
-	RHIPtr m_rhi;
-
-	std::unique_ptr<class ImguiBackend> m_imgui;
-
 public:
 	SandboxApp();
 	~SandboxApp();
 
-	void Run( int argc, char** argv );
-
 private:
-	void ParseCommandLine( int argc, char** argv );
 
-	void InitCoreGlobals();
+	virtual void InitDerived() override;
 
-	void InitRHI();
-	void MainLoop();
-	void Cleanup();
+	virtual void CleanupDerived() override;
 
-	std::vector<const char*> GetSDLExtensions() const;
+	virtual void DrawFrameDerived( std::vector<RHICommandList*>& lists_to_submit ) override;
+
+	virtual void UpdateDerived() override;
 
 	void CreatePipeline();
 
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
 
-	void Update();
-
 	void UpdateGui();
-
-	void DrawFrame();
-
-	void CreateSyncObjects();
 
 	void CleanupPipeline();
 
@@ -144,6 +97,4 @@ private:
 	void CreateTextureImageView();
 
 	void CreateTextureSampler();
-
-	void InitImGUI();
 };
