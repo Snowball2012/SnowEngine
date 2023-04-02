@@ -45,10 +45,13 @@ public:
 protected:
 	virtual void ParseCommandLineDerived( int argc, char** argv ) {}
 
-	virtual void InitDerived() {}
-	virtual void CleanupDerived() {}
-	virtual void UpdateDerived() {}
-	virtual void DrawFrameDerived( std::vector<RHICommandList*>& lists_to_submit ) {}
+	virtual const char* GetMainWindowName() const { return "SnowEngine"; }
+	virtual const char* GetAppName() const { return "SnowEngine"; }
+
+	virtual void OnInit() {}
+	virtual void OnCleanup() {}
+	virtual void OnUpdate() {}
+	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit ) {}
 
 	// returns frame index % m_max_frames_in_flight
 	uint32_t GetCurrentFrameIdx() const { return m_current_frame; }

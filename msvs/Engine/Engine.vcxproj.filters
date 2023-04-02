@@ -3,9 +3,31 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\Engine\StdAfx.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
+    <ClCompile Include="..\..\src\ImguiBackend\imgui_impl_sdl2.cpp">
+      <Filter>ImguiBackend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ImguiBackend\ImguiBackend.cpp">
+      <Filter>ImguiBackend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\ImguiBackend\ImguiLink.cpp">
+      <Filter>ImguiBackend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\Engine\Assets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
+    <ClInclude Include="..\..\src\ImguiBackend\imgui_impl_sdl2.h">
+      <Filter>ImguiBackend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h">
+      <Filter>ImguiBackend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\Engine\Assets.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="ImguiBackend">
+      <UniqueIdentifier>{a742af38-90d2-4eb2-8da5-eba649d66965}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

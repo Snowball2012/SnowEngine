@@ -6,33 +6,11 @@
     <ClCompile Include="..\..\src\Sandbox\StdAfx.cpp" />
     <ClCompile Include="..\..\src\Sandbox\stb_image.cpp" />
     <ClCompile Include="..\..\src\Sandbox\RenderResources.cpp" />
-    <ClCompile Include="..\..\src\ImguiBackend\imgui_impl_sdl2.cpp">
-      <Filter>ImguiBackend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\ImguiBackend\ImguiBackend.cpp">
-      <Filter>ImguiBackend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\ImguiBackend\ImguiLink.cpp">
-      <Filter>ImguiBackend</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\Sandbox\Assets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />
     <ClInclude Include="..\..\src\Sandbox\StdAfx.h" />
     <ClInclude Include="..\..\src\Sandbox\stb_image.h" />
     <ClInclude Include="..\..\src\Sandbox\RenderResources.h" />
-    <ClInclude Include="..\..\src\ImguiBackend\imgui_impl_sdl2.h">
-      <Filter>ImguiBackend</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h">
-      <Filter>ImguiBackend</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\Sandbox\Assets.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <Filter Include="ImguiBackend">
-      <UniqueIdentifier>{c1f3dea8-ede3-4c5f-a397-a59b74948549}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
 </Project>

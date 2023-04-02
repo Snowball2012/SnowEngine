@@ -50,14 +50,16 @@ public:
 	~SandboxApp();
 
 private:
+	virtual void OnInit() override;
 
-	virtual void InitDerived() override;
+	virtual void OnCleanup() override;
 
-	virtual void CleanupDerived() override;
+	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit ) override;
 
-	virtual void DrawFrameDerived( std::vector<RHICommandList*>& lists_to_submit ) override;
+	virtual void OnUpdate() override;
 
-	virtual void UpdateDerived() override;
+	virtual const char* GetMainWindowName() const override { return "SnowEngine Sandbox"; }
+	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }
 
 	void CreatePipeline();
 

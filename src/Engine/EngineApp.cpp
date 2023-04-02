@@ -7,9 +7,6 @@
 
 #include <ImguiBackend/ImguiBackend.h>
 
-#include <imgui/imgui.h>
-#include <imgui/misc/cpp/imgui_stdlib.h>
-
 #include <vulkan/vulkan.h>
 
 struct SwapChainSupportDetails
@@ -41,17 +38,16 @@ void EngineApp::Run( int argc, char** argv )
     InitCoreGlobals();
 
     SDL_Init( SDL_INIT_EVERYTHING );
-    const char* window_name = "SnowEngine sandbox";
-    m_main_wnd = SDL_CreateWindow( window_name, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_window_size.x, m_window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE );
+    m_main_wnd = SDL_CreateWindow( GetMainWindowName(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_window_size.x, m_window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     InitRHI();
     InitImGUI();
 
-    InitDerived();
+    OnInit();
 
     MainLoop();
 
-    CleanupDerived();
+    OnCleanup();
 
     Cleanup();
 
@@ -127,7 +123,7 @@ void EngineApp::InitRHI()
         create_info.window_iface = m_window_iface.get();
         create_info.main_window_handle = m_main_wnd;
 
-        create_info.app_name = "SnowEngineRHITest";
+        create_info.app_name = GetAppName();
 
         m_rhi = CreateVulkanRHI_RAII( create_info );
     }
@@ -201,7 +197,7 @@ void EngineApp::Cleanup()
 
 void EngineApp::Update()
 {
-    UpdateDerived();
+    OnUpdate();
     DrawFrame();
 }
 
@@ -238,7 +234,7 @@ void EngineApp::DrawFrame()
 
     std::vector<RHICommandList*> cmd_lists;
 
-    DrawFrameDerived( cmd_lists );
+    OnDrawFrame( cmd_lists );
 
     ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;

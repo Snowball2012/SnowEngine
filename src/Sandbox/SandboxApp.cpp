@@ -2,11 +2,6 @@
 
 #include "SandboxApp.h"
 
-#include <VulkanRHI/VulkanRHI.h>
-#include <D3D12RHI/D3D12RHI.h>
-
-#include <ImguiBackend/ImguiBackend.h>
-
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
@@ -19,7 +14,7 @@ SandboxApp::SandboxApp()
 
 SandboxApp::~SandboxApp() = default;
 
-void SandboxApp::InitDerived()
+void SandboxApp::OnInit()
 {
     std::cout << "Sandbox initialization started\n";
 
@@ -36,7 +31,7 @@ void SandboxApp::InitDerived()
     std::cout << "Sandbox initialization complete\n";
 }
 
-void SandboxApp::CleanupDerived()
+void SandboxApp::OnCleanup()
 {
     std::cout << "Sandbox shutdown started\n";
 
@@ -445,7 +440,7 @@ void SandboxApp::RecordCommandBuffer( RHICommandList & list, RHISwapChain & swap
     list.End();
 }
 
-void SandboxApp::DrawFrameDerived( std::vector<RHICommandList*>& lists_to_submit )
+void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit )
 {
     RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
 
@@ -456,7 +451,7 @@ void SandboxApp::DrawFrameDerived( std::vector<RHICommandList*>& lists_to_submit
     lists_to_submit.emplace_back( cmd_list );
 }
 
-void SandboxApp::UpdateDerived()
+void SandboxApp::OnUpdate()
 {
     UpdateGui();
 }
