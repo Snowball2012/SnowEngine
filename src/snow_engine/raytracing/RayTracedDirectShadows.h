@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include <engine/FramegraphResource.h>
+#include <snow_engine/FramegraphResource.h>
 
 class GPUDevice;
 

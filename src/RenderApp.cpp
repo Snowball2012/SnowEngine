@@ -1,15 +1,15 @@
 // This is an independent project of an individual developer. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++ and C#: http://www.viva64.com
-#include <engine/stdafx.h>
+#include <snow_engine/stdafx.h>
 
 #include "RenderApp.h"
 
-#include <engine/GeomGeneration.h>
+#include <snow_engine/GeomGeneration.h>
 
-#include <engine/ForwardLightingPass.h>
-#include <engine/DepthOnlyPass.h>
+#include <snow_engine/ForwardLightingPass.h>
+#include <snow_engine/DepthOnlyPass.h>
 
-#include <engine/SceneItems.h>
+#include <snow_engine/SceneItems.h>
 
 #include <dxtk12/DDSTextureLoader.h>
 #include <dxtk12/DirectXHelpers.h>

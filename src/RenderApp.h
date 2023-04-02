@@ -10,10 +10,10 @@
 #include <DirectXMath.h>
 
 #include "D3DApp.h"
-#include <engine/DescriptorHeap.h>
+#include <snow_engine/DescriptorHeap.h>
 #include "SceneImporter.h"
 
-#include <engine/OldRenderer.h>
+#include <snow_engine/OldRenderer.h>
 
 class RenderApp: public D3DApp
 {

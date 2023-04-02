@@ -1,9 +1,9 @@
 #pragma once
 
 #include <DirectXMath.h>
-#include <engine/RenderData.h>
+#include <snow_engine/RenderData.h>
 
-#include <engine/Components.h>
+#include <snow_engine/Components.h>
 
 struct ImportedScene
 {

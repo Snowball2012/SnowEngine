@@ -3,7 +3,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <engine/stdafx.h>
+#include <snow_engine/stdafx.h>
 #include <framegraph/Framegraph.h>
 
 // Specify resource handlers for framegraph to use

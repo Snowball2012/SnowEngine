@@ -5,7 +5,7 @@
 //***************************************************************************************
 
 // Todo: make your own app class ( qt maybe? )
-#include <engine/stdafx.h>
+#include <snow_engine/stdafx.h>
 
 #include "D3DApp.h"
 #include <WindowsX.h>

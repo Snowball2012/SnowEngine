@@ -2,8 +2,8 @@
 
 #include "RayTracedDirectShadows.h"
 
-#include "engine/Shader.h"
-#include "engine/resources/GPUDevice.h"
+#include "snow_engine/Shader.h"
+#include "snow_engine/resources/GPUDevice.h"
 
 GenerateRaytracedShadowmaskPass::GenerateRaytracedShadowmaskPass(GPUDevice& device)
 {

@@ -2,7 +2,7 @@
 
 #include "GPUDevice.h"
 
-#include "engine/GPUTaskQueue.h"
+#include "snow_engine/GPUTaskQueue.h"
 
 GPUResource::GPUResource(ComPtr<ID3D12Resource> native_resource, IGPUResourceDeleter* deleter)
     : m_native_resource(native_resource.Get())

@@ -5,8 +5,8 @@
 #include <Windows.h>
 #include <DirectXMath.h>
 
-#include <engine/stdafx.h>
-#include <engine/ParallelSplitShadowMapping.h>
+#include <snow_engine/stdafx.h>
+#include <snow_engine/ParallelSplitShadowMapping.h>
 
 BOOST_AUTO_TEST_SUITE( pssm )
 
