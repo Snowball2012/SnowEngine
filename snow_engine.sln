@@ -49,10 +49,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Sandbox", "msvs\Sandbox\San
 	ProjectSection(ProjectDependencies) = postProject
 		{9242953C-DD21-439D-B184-CDE6859DA4C3} = {9242953C-DD21-439D-B184-CDE6859DA4C3}
 		{6DCB3A59-0FCE-4822-BCFC-B9E738ABBCE5} = {6DCB3A59-0FCE-4822-BCFC-B9E738ABBCE5}
+		{488C41AC-3709-4EE5-838D-B12872D4DDAB} = {488C41AC-3709-4EE5-838D-B12872D4DDAB}
 		{0BD1E9B2-BF5B-4637-949F-3FF801966B7C} = {0BD1E9B2-BF5B-4637-949F-3FF801966B7C}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Shaders", "msvs\Shaders\Shaders.vcxproj", "{41F74014-2DBA-4069-8113-C415FD891284}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "msvs\Core\Core.vcxproj", "{488C41AC-3709-4EE5-838D-B12872D4DDAB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -104,6 +107,10 @@ Global
 		{41F74014-2DBA-4069-8113-C415FD891284}.Debug|x64.Build.0 = Debug|x64
 		{41F74014-2DBA-4069-8113-C415FD891284}.Release|x64.ActiveCfg = Release|x64
 		{41F74014-2DBA-4069-8113-C415FD891284}.Release|x64.Build.0 = Release|x64
+		{488C41AC-3709-4EE5-838D-B12872D4DDAB}.Debug|x64.ActiveCfg = Debug|x64
+		{488C41AC-3709-4EE5-838D-B12872D4DDAB}.Debug|x64.Build.0 = Debug|x64
+		{488C41AC-3709-4EE5-838D-B12872D4DDAB}.Release|x64.ActiveCfg = Release|x64
+		{488C41AC-3709-4EE5-838D-B12872D4DDAB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

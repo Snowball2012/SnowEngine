@@ -15,6 +15,7 @@
     <ClCompile Include="..\..\src\ImguiBackend\ImguiLink.cpp">
       <Filter>ImguiBackend</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\Sandbox\Assets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -66,8 +66,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)\$(Configuration);$(SolutionDir)3rdparty\dxc\lib\x64;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration);$(SolutionDir)3rdparty\dxc\lib\x64;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;Core.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>echo "Running pre-build event"
@@ -94,8 +94,8 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Platform)\$(Configuration);$(SolutionDir)3rdparty\dxc\lib\x64;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(Configuration);$(SolutionDir)3rdparty\dxc\lib\x64;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>D3D12RHI.lib;VulkanRHI.lib;dxcompiler.lib;vulkan-1.lib;SDL2main.lib;SDL2.lib;Core.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>echo "Running pre-build event"
@@ -109,6 +109,7 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
     <ClCompile Include="..\..\src\ImguiBackend\ImguiBackend.cpp" />
     <ClCompile Include="..\..\src\ImguiBackend\ImguiLink.cpp" />
     <ClCompile Include="..\..\src\ImguiBackend\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="..\..\src\Sandbox\Assets.cpp" />
     <ClCompile Include="..\..\src\Sandbox\Main.cpp" />
     <ClCompile Include="..\..\src\Sandbox\RenderResources.cpp" />
     <ClCompile Include="..\..\src\Sandbox\SandboxApp.cpp" />

@@ -1,0 +1,10 @@
+{
+  "FileVersion": 2,
+  "Id": "c98b6a19-e975-44c5-b0c6-0a7d9de4d52e",
+  "Items": [
+    {
+      "Id": "9ec65de2-56c2-4b48-967c-c7a9b5b43990",
+      "Command": "-EnginePath D:/snow_engine"
+    }
+  ]
+}
