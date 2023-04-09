@@ -7,6 +7,7 @@
 #include <atomic>
 #include <array>
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <mutex>
 #include <vector>

@@ -38,6 +38,8 @@ private:
 	// descriptors
 	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
 
+	std::unique_ptr<class AssetManager> m_asset_mgr = nullptr;
+
 	World m_world;
 
 	// GUI state

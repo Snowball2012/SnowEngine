@@ -2,6 +2,8 @@
 
 #include "SandboxApp.h"
 
+#include <Engine/Assets.h>
+
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
@@ -18,6 +20,8 @@ void SandboxApp::OnInit()
 {
     std::cout << "Sandbox initialization started\n";
 
+    m_asset_mgr = std::make_unique<AssetManager>();
+
     CreateDescriptorSetLayout();
     CreatePipeline();
     CreateTextureImage();
@@ -27,6 +31,8 @@ void SandboxApp::OnInit()
     CreateIndexBuffer();
     CreateUniformBuffers();
     CreateDescriptorSets();
+
+    AssetPtr cube_asset = m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) );
 
     std::cout << "Sandbox initialization complete\n";
 }

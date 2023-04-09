@@ -89,7 +89,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include\SDL2;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include\SDL2;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\rapidjson\include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalWarningLevel>Level2</ExternalWarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -111,7 +111,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>StdAfx.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include\SDL2;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include\SDL2;$(SolutionDir)3rdparty\VulkanSDK\1.3.216.0\Include;$(SolutionDir)3rdparty;$(SolutionDir)3rdparty\rapidjson\include;$(SolutionDir)3rdparty\boost_1_67_0;$(SolutionDir)src\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatAngleIncludeAsExternal>true</TreatAngleIncludeAsExternal>
       <ExternalWarningLevel>Level2</ExternalWarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
