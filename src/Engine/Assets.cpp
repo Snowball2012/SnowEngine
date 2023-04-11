@@ -21,16 +21,14 @@ AssetManager::~AssetManager()
 
 	if ( !m_assets.empty() )
 	{
-		std::cerr << "[Engine][Error]: Found assets still in use when destroying AssetManager:\n";
+		SE_LOG_ERROR( Engine, "Found assets still in use when destroying AssetManager :" );
 	}
 
 	for ( auto& asset : m_assets )
 	{
-		std::cerr << "\t" << asset.first.GetPath() << "\n";
+		SE_LOG_ERROR( Engine, "\t%s", asset.first.GetPath() );
 		delete asset.second.asset;
 	}
-
-	std::flush( std::cerr );
 }
 
 AssetPtr AssetManager::Load( const AssetId& id )
@@ -72,7 +70,7 @@ AssetPtr AssetManager::Load( const AssetId& id )
 	std::ifstream file( ospath );
 	if ( !file.good() )
 	{
-		std::cerr << "[Engine][Warning] Can't open file " << id.GetPath() << " (OS path: " << ospath << ")" << std::endl;
+		SE_LOG_ERROR( Engine, "Can't open file %s (OS path: %s)", id.GetPath(), ospath );
 		return nullptr;
 	}
 
@@ -80,7 +78,7 @@ AssetPtr AssetManager::Load( const AssetId& id )
 	rapidjson::IStreamWrapper isw( file );
 	if ( d.ParseStream( isw ).HasParseError() )
 	{
-		std::cerr << "[Engine][Warning] File " << id.GetPath() << " (OS path: " << ospath << ")" << " is not a valid asset file: json parse error" << std::endl;
+		SE_LOG_ERROR( Engine, "File %s (OS path: %s) is not a valid asset file : json parse error", id.GetPath(), ospath );
 		return nullptr;
 	}
 
@@ -88,14 +86,14 @@ AssetPtr AssetManager::Load( const AssetId& id )
 
 	if ( generator == d.MemberEnd() || !generator->value.IsString() )
 	{
-		std::cerr << "[Engine][Warning] File " << id.GetPath() << " (OS path: " << ospath << ")" << " is not a valid asset file: _generator value is invalid" << std::endl;
+		SE_LOG_ERROR( Engine, "File %s (OS path : %s) is not a valid asset file : _generator value is invalid", id.GetPath(), ospath );
 		return nullptr;
 	}
 
 	auto factory = m_factories.find( generator->value.GetString() );
 	if ( factory == m_factories.end() )
 	{
-		std::cerr << "[Engine][Warning] File " << id.GetPath() << " (OS path: " << ospath << ")" << " is not a valid asset file: _generator " << generator->value.GetString() << " is not found" << std::endl;
+		SE_LOG_ERROR( Engine, "File %s (OS path : %s) is not a valid asset file : _generator %s is not found", id.GetPath(), ospath, generator->value.GetString() );
 		return nullptr;
 	}
 
@@ -124,7 +122,7 @@ void AssetManager::UnloadAllOrphans()
 		delete orphan.second.asset;
 	}
 
-	std::cout << "[Engine]: Unloaded " << m_orphans.size() << " orphans" << std::endl;
+	SE_LOG_INFO( Engine, "Unloaded %u orphans", m_orphans.size() );
 	
 	m_orphans.clear();
 }
@@ -139,7 +137,7 @@ void AssetManager::Orphan( const AssetId& asset_id )
 		m_orphans[asset_id] = entry->second;
 		m_assets.erase( entry );
 
-		std::cout << "[Temp]: orphan " << asset_id.GetPath() << std::endl;
+		SE_LOG_INFO( Temp, "Orphan %s", asset_id.GetPath() );
 	}
 }
 

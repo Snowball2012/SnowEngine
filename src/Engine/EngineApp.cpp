@@ -9,6 +9,8 @@
 
 #include <vulkan/vulkan.h>
 
+SE_LOG_CATEGORY( App );
+
 struct SwapChainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities = {};
@@ -61,7 +63,6 @@ void EngineApp::ParseCommandLine( int argc, char** argv )
 {
     for ( int i = 1; i < argc; ++i )
     {
-        std::string arg = argv[i];
         if ( !_strcmpi( argv[i], "-EnginePath" ) )
         {
             if ( argc > ( i + 1 ) )
@@ -75,7 +76,22 @@ void EngineApp::ParseCommandLine( int argc, char** argv )
             }
             else
             {
-                std::cerr << "[App]: Can't set engine content path from command line because -EnginePath is the last token" << std::endl;
+                std::cerr << "[Error][App]: Can't set engine content path from command line because -EnginePath is the last token" << std::endl;
+            }
+        }
+        else if ( !_strcmpi( argv[i], "-LogPath" ) )
+        {
+            if ( argc > ( i + 1 ) )
+            {
+                // read next arg
+                m_cmd_line_args.log_path = argv[i + 1];
+                i += 1;
+
+                std::cout << "[App]: Set log path from command line: " << m_cmd_line_args.log_path << std::endl;
+            }
+            else
+            {
+                std::cerr << "[Error][App]: Can't set log path from command line because -LogPath is the last token" << std::endl;
             }
         }
     }
@@ -104,7 +120,7 @@ struct SDLVulkanWindowInterface : public IVulkanWindowInterface
 
 void EngineApp::InitRHI()
 {
-    std::cout << "RHI initialization started\n";
+    SE_LOG_INFO( Engine, "RHI initialization started" );
 
     const bool use_vulkan = true;
     if ( use_vulkan )
@@ -137,8 +153,7 @@ void EngineApp::InitRHI()
 
     CreateSyncObjects();
 
-
-    std::cout << "RHI initialization complete\n";
+    SE_LOG_INFO( Engine, "RHI initialization complete" );
 }
 
 void EngineApp::MainLoop()
@@ -180,7 +195,7 @@ void EngineApp::MainLoop()
 
 void EngineApp::Cleanup()
 {
-    std::cout << "RHI shutdown started\n";
+    SE_LOG_INFO( Engine, "RHI shutdown started" );
 
     m_imgui = nullptr;
 
@@ -192,7 +207,7 @@ void EngineApp::Cleanup()
 
     m_rhi.reset();
 
-    std::cout << "RHI shutdown complete\n";
+    SE_LOG_INFO( Engine, "RHI shutdown complete" );
 }
 
 void EngineApp::Update()
@@ -269,6 +284,11 @@ void EngineApp::DrawFrame()
 void EngineApp::InitCoreGlobals()
 {
     g_core_paths.engine_content = m_cmd_line_args.engine_content_path;
+
+    Logger::CreateInfo create_info = {};
+    create_info.mirror_to_stdout = true;
+    create_info.path = m_cmd_line_args.log_path.c_str();
+    g_log = std::make_unique<Logger>( create_info );
 }
 
 void EngineApp::CreateSyncObjects()

@@ -13,3 +13,5 @@ using Json = rapidjson::Document;
 using JsonValue = rapidjson::Value;
 
 #define SDL_VERIFY(x) VERIFY_EQUALS(x, SDL_TRUE)
+
+SE_LOG_CATEGORY( Engine );

@@ -7,6 +7,7 @@
 struct CommandLineArguments
 {
 	std::string engine_content_path;
+	std::string log_path;
 };
 
 class EngineApp
