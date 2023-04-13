@@ -8,7 +8,7 @@
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
 CorePaths g_core_paths;
-std::unique_ptr<Logger> g_log;
+Logger* g_log;
 
 SandboxApp::SandboxApp()
     : EngineApp()

@@ -503,10 +503,9 @@ VulkanQueue* VulkanRHI::GetQueue(QueueType type)
 
 void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
 {
-    std::cout << "vkInstance creation started\n";
-
     LogSupportedVkInstanceExtensions();
-    std::cout << std::endl;
+
+    SE_LOG_NEWLINE();
 
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -532,28 +531,24 @@ void VulkanRHI::CreateVkInstance(const VulkanRHICreateInfo& info)
     if (info.enable_validation)
         wanted_layers.push_back("VK_LAYER_KHRONOS_validation");
 
-    std::cout << "Wanted validation layers:\n";
+    SE_LOG_INFO( VulkanRHI, "Wanted validation layers:" );
     for (const char* layer : wanted_layers)
     {
-        std::cout << "\t" << layer << "\n";
+        SE_LOG_INFO( VulkanRHI, "\t%s", layer );
     }
-    std::cout << std::endl;
+    SE_LOG_NEWLINE();
 
     std::vector<const char*> filtered_layers = GetSupportedLayers(wanted_layers);
 
-    std::cout << std::endl;
-
     if (filtered_layers.size() < wanted_layers.size())
     {
-        std::cerr << "Error: Some wanted vk instance layers are not available\n";
+        SE_LOG_ERROR( VulkanRHI, "Error: Some wanted vk instance layers are not available" );
     }
 
     create_info.enabledLayerCount = uint32_t(filtered_layers.size());
     create_info.ppEnabledLayerNames = filtered_layers.data();
 
     VK_VERIFY(vkCreateInstance(&create_info, nullptr, &m_vk_instance));
-
-    std::cout << "vkInstance creation complete\n";
 }
 
 void VulkanRHI::LogSupportedVkInstanceExtensions() const
@@ -564,11 +559,11 @@ void VulkanRHI::LogSupportedVkInstanceExtensions() const
     std::vector<VkExtensionProperties> extensions(extension_count);
     VK_VERIFY(vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensions.data()));
 
-    std::cout << "Available instance extensions:\n";
+    SE_LOG_INFO( VulkanRHI, "Available instance extensions:" );
 
     for (const auto& extension : extensions)
     {
-        std::cout << '\t' << extension.extensionName << "\tversion = " << extension.specVersion << '\n';
+        SE_LOG_INFO( VulkanRHI, "\t%s\tversion = %u", extension.extensionName, extension.specVersion );
     }
 }
 
@@ -591,10 +586,10 @@ std::vector<const char*> VulkanRHI::GetSupportedLayers(const std::vector<const c
     VK_VERIFY(vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data()));
 
     // log available layers
-    std::cout << "Available Vulkan Instance Layers:\n";
+    SE_LOG_INFO( VulkanRHI, "Available Vulkan Instance Layers:" );
     for (const auto& layer : available_layers)
     {
-        std::cout << '\t' << layer.layerName << "\tspec version = " << layer.specVersion << "\timplementation version = " << layer.implementationVersion << '\n';
+        SE_LOG_INFO( VulkanRHI, "\t%s\tspec version = %u\timplementation version = %u", layer.layerName, layer.specVersion, layer.implementationVersion );
     }
 
     std::vector<const char*> wanted_available_layers;
@@ -619,7 +614,7 @@ namespace
         vkGetPhysicalDeviceProperties(device, &props);
         vkGetPhysicalDeviceFeatures(device, &features);
 
-        std::cout << props.deviceName << "; Driver: " << props.driverVersion;
+        SE_LOG_INFO( VulkanRHI, "\t%s; Driver: %u", props.deviceName, props.driverVersion );
     }
 }
 
@@ -651,9 +646,9 @@ void VulkanRHI::PickPhysicalDevice(VkSurfaceKHR surface)
 
     vkGetPhysicalDeviceProperties(m_vk_phys_device, &m_vk_phys_device_props);
 
-    std::cout << "Picked physical device:\n\t";
+    SE_LOG_INFO( VulkanRHI, "Picked physical device:" );
     LogDevice(m_vk_phys_device);
-    std::cout << std::endl;
+    SE_LOG_NEWLINE();
 }
 
 bool VulkanRHI::IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const
@@ -743,7 +738,7 @@ void VulkanRHI::CreateLogicalDevice()
 
     VK_VERIFY(vkCreateDevice(m_vk_phys_device, &device_create_info, nullptr, &m_vk_device));
 
-    std::cout << "vkDevice created successfully" << std::endl;
+    SE_LOG_INFO( VulkanRHI, "vkDevice created successfully" );
 
     vkGetDeviceQueue(m_vk_device, m_queue_family_indices.graphics.value(), 0, &m_graphics_queue.vk_handle);
     vkGetDeviceQueue(m_vk_device, m_queue_family_indices.present.value(), 0, &m_present_queue.vk_handle);
@@ -751,7 +746,7 @@ void VulkanRHI::CreateLogicalDevice()
     if (!m_graphics_queue.vk_handle || !m_present_queue.vk_handle)
         throw std::runtime_error("Error: failed to get queues from logical device, but the device was created with it");
 
-    std::cout << "Queues created successfully" << std::endl;
+    SE_LOG_INFO( VulkanRHI, "Queues created successfully" );
 }
 
 VkImageView VulkanRHI::CreateImageView(VkImage image, VkFormat format)
@@ -1060,7 +1055,7 @@ void VulkanRHI::UnregisterLoadedPSO( VulkanGraphicsPSO& pso )
 
 bool VulkanRHI::ReloadAllPipelines()
 {
-    std::cout << "Reload PSOs: start" << std::endl;
+    SE_LOG_INFO( VulkanRHI, "Reload PSOs: start" );
 
     WaitIdle();
 
@@ -1072,14 +1067,21 @@ bool VulkanRHI::ReloadAllPipelines()
         succeeded &= pso->Recompile();
     }
 
-    std::cout << "Reload PSOs: " << ( succeeded ? "succeeded" : "failed" ) << std::endl;
+    if ( succeeded )
+    {
+        SE_LOG_INFO( VulkanRHI, "Reload PSOs: success" );
+    }
+    else
+    {
+        SE_LOG_ERROR( VulkanRHI, "Reload PSOs: failed" );
+    }
 
     return succeeded;
 }
 
 bool VulkanRHI::ReloadAllShaders()
 {
-    std::cout << "Reload shaders: start" << std::endl;
+    SE_LOG_INFO( VulkanRHI, "Reload shaders: start" );
 
     WaitIdle();
 
@@ -1093,7 +1095,14 @@ bool VulkanRHI::ReloadAllShaders()
 
     succeeded &= ReloadAllPipelines();
 
-    std::cout << "Reload shaders: " << ( succeeded ? "succeeded" : "failed" ) << std::endl;
+    if ( succeeded )
+    {
+        SE_LOG_INFO( VulkanRHI, "Reload shaders: success" );
+    }
+    else
+    {
+        SE_LOG_ERROR( VulkanRHI, "Reload shaders: failed" );
+    }
 
     return succeeded;
 }

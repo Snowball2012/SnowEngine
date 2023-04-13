@@ -141,6 +141,9 @@ void EngineApp::InitRHI()
 
         create_info.app_name = GetAppName();
 
+        create_info.logger = g_log;
+        create_info.core_paths = &g_core_paths;
+
         m_rhi = CreateVulkanRHI_RAII( create_info );
     }
     else
@@ -206,6 +209,9 @@ void EngineApp::Cleanup()
     m_inflight_fences.clear();
 
     m_rhi.reset();
+
+    if ( g_log )
+        delete g_log;
 
     SE_LOG_INFO( Engine, "RHI shutdown complete" );
 }
@@ -288,7 +294,7 @@ void EngineApp::InitCoreGlobals()
     Logger::CreateInfo create_info = {};
     create_info.mirror_to_stdout = true;
     create_info.path = m_cmd_line_args.log_path.c_str();
-    g_log = std::make_unique<Logger>( create_info );
+    g_log = new Logger( create_info );
 }
 
 void EngineApp::CreateSyncObjects()

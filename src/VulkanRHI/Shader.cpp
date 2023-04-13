@@ -224,7 +224,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
 
     if (status != S_OK)
     {
-        std::cerr << diagnostics;
+        SE_LOG_ERROR( VulkanRHI, "Shader compilation failed. Diagnostics:\n%s", diagnostics.c_str() );
         return nullptr;
     }
 

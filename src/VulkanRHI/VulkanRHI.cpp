@@ -2,9 +2,21 @@
 
 #include "VulkanRHIImpl.h"
 
+CorePaths g_core_paths;
+Logger* g_log;
 
 VULKANRHI_API RHI* CreateVulkanRHI(const VulkanRHICreateInfo& info)
 {
+	if ( !SE_ENSURE( info.logger ) )
+		return nullptr;
+
+	g_log = info.logger;
+
+	if ( !SE_ENSURE( info.core_paths ) )
+		return nullptr;
+
+	g_core_paths = *info.core_paths;
+
 	return new VulkanRHI(info);
 }
 

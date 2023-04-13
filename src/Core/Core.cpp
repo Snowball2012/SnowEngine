@@ -105,6 +105,18 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	}
 }
 
+void Logger::Newline()
+{
+	if ( m_file && m_file->good() )
+	{
+		( *m_file ) << '\n';
+	}
+	if ( m_write_to_std )
+	{
+		std::cout << '\n';
+	}
+}
+
 const char* Logger::TypeToString( LogMessageType type )
 {
 	switch ( type )

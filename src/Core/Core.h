@@ -187,19 +187,21 @@ public:
 	Logger( const CreateInfo& info );
 	~Logger();
 	void Log( const LogCategory& category, LogMessageType msg_type, const char* fmt, ... );
+	void Newline();
 	void Flush();
 
 private:
 	static const char* TypeToString( LogMessageType type );
 };
 
-extern std::unique_ptr<Logger> g_log;
+extern Logger* g_log;
 
 #define SE_LOG( category, type, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::type, fmt, __VA_ARGS__ )
 
 #define SE_LOG_ERROR( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Error, fmt, __VA_ARGS__ )
 #define SE_LOG_WARNING( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Warning, fmt, __VA_ARGS__ )
 #define SE_LOG_INFO( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Info, fmt, __VA_ARGS__ )
+#define SE_LOG_NEWLINE() g_log->Newline()
 
 #define SE_LOG_CATEGORY( category ) inline LogCategory g_logcategory_ ## category { .name = S_(category) }
 

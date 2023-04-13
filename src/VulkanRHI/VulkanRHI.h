@@ -25,6 +25,9 @@ struct VulkanRHICreateInfo
 	void* main_window_handle = nullptr;
 	const char* app_name = nullptr;
 	bool enable_validation = false;
+
+	class Logger* logger = nullptr;
+	struct CorePaths* core_paths = nullptr;
 };
 
 VULKANRHI_API class RHI* CreateVulkanRHI(const VulkanRHICreateInfo& info);
