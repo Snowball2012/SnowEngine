@@ -28,7 +28,7 @@ private:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 
 	// pipeline
-	RHIShaderBindingTableLayoutPtr m_binding_table_layout = nullptr;
+	RHIDescriptorSetLayoutPtr m_binding_table_layout = nullptr;
 	RHIShaderBindingLayoutPtr m_shader_bindings_layout = nullptr;
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
 
@@ -49,7 +49,7 @@ private:
 	RHISamplerPtr m_texture_sampler = nullptr;
 
 	// descriptors
-	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
+	std::vector<RHIDescriptorSetPtr> m_binding_tables;
 
 	bool m_fb_resized = false;
 

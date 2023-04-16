@@ -197,7 +197,7 @@ void RHITestApp::CreateIndexBuffer()
 
 void RHITestApp::CreateDescriptorSetLayout()
 {
-    RHI::ShaderViewRange ranges[3] = {};
+    RHI::DescriptorViewRange ranges[3] = {};
     ranges[0].type = RHIShaderBindingType::ConstantBuffer;
     ranges[0].count = 1;
     ranges[0].stages = RHIShaderStageFlags::VertexShader;
@@ -210,16 +210,16 @@ void RHITestApp::CreateDescriptorSetLayout()
     ranges[2].count = 1;
     ranges[2].stages = RHIShaderStageFlags::PixelShader;
 
-    RHI::ShaderBindingTableLayoutInfo binding_table = {};
+    RHI::DescriptorSetLayoutInfo binding_table = {};
     binding_table.ranges = ranges;
     binding_table.range_count = std::size(ranges);
 
-    m_binding_table_layout = m_rhi->CreateShaderBindingTableLayout(binding_table);
+    m_binding_table_layout = m_rhi->CreateDescriptorSetLayout(binding_table);
 
     RHI::ShaderBindingLayoutInfo layout_info = {};
-    RHIShaderBindingTableLayout* tables[1] = { m_binding_table_layout.get() };
-    layout_info.tables = tables;
-    layout_info.table_count = std::size(tables);
+    RHIDescriptorSetLayout* dsls[1] = { m_binding_table_layout.get() };
+    layout_info.tables = dsls;
+    layout_info.table_count = std::size(dsls);
 
     m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout(layout_info);
 }
@@ -283,11 +283,11 @@ void RHITestApp::CreateDescriptorSets()
 
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
-        m_binding_tables[i] = m_rhi->CreateShaderBindingTable(*m_binding_table_layout);
+        m_binding_tables[i] = m_rhi->CreateDescriptorSet(*m_binding_table_layout);
         m_binding_tables[i]->BindCBV(0, 0, *m_uniform_buffer_views[i]);
         m_binding_tables[i]->BindSRV(1, 0, *m_texture_srv);
         m_binding_tables[i]->BindSampler(2, 0, *m_texture_sampler);
-        m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindTable
+        m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
     }
 }
 
@@ -531,7 +531,7 @@ void RHITestApp::RecordCommandBuffer(RHICommandList& list, RHISwapChain& swapcha
 
     list.SetPSO(*m_rhi_graphics_pipeline);
 
-    list.BindTable(0, *m_binding_tables[m_current_frame]);
+    list.BindDescriptorSet(0, *m_binding_tables[m_current_frame]);
     
     list.SetVertexBuffers(0, m_vertex_buffer.get(), 1, nullptr);
     list.SetIndexBuffer(*m_index_buffer, RHIIndexBufferType::UInt16, 0);

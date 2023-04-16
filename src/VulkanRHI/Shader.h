@@ -77,7 +77,7 @@ private:
     ShaderCompiler();
 };
 
-class VulkanShaderBindingTableLayout : public RHIShaderBindingTableLayout
+class VulkanShaderBindingTableLayout : public RHIDescriptorSetLayout
 {
     GENERATE_RHI_OBJECT_BODY()
 
@@ -86,11 +86,11 @@ class VulkanShaderBindingTableLayout : public RHIShaderBindingTableLayout
 public:
     virtual ~VulkanShaderBindingTableLayout() override;
 
-    VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::ShaderBindingTableLayoutInfo& info);
+    VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info);
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout() const { return m_vk_desc_set_layout; }
 };
-IMPLEMENT_RHI_INTERFACE(RHIShaderBindingTableLayout, VulkanShaderBindingTableLayout);
+IMPLEMENT_RHI_INTERFACE(RHIDescriptorSetLayout, VulkanShaderBindingTableLayout);
 
 class VulkanShaderBindingLayout : public RHIShaderBindingLayout
 {
@@ -111,7 +111,7 @@ public:
 };
 IMPLEMENT_RHI_INTERFACE(RHIShaderBindingLayout, VulkanShaderBindingLayout)
 
-class VulkanShaderBindingTable : public RHIShaderBindingTable
+class VulkanDescriptorSet : public RHIDescriptorSet
 {
     GENERATE_RHI_OBJECT_BODY()
 
@@ -124,9 +124,9 @@ class VulkanShaderBindingTable : public RHIShaderBindingTable
     boost::container::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_views;
 
 public:
-    virtual ~VulkanShaderBindingTable() override;
+    virtual ~VulkanDescriptorSet() override;
 
-    VulkanShaderBindingTable(VulkanRHI* rhi, RHIShaderBindingTableLayout& layout);
+    VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout);
 
     virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) override;
     virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) override;
@@ -139,4 +139,4 @@ public:
 private:
     void InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const;
 };
-IMPLEMENT_RHI_INTERFACE(RHIShaderBindingTable, VulkanShaderBindingTable)
+IMPLEMENT_RHI_INTERFACE(RHIDescriptorSet, VulkanDescriptorSet)

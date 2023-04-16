@@ -102,9 +102,9 @@ RHISemaphore* VulkanRHI::CreateGPUSemaphore()
     return new_semaphore;
 }
 
-RHIShaderBindingTable* VulkanRHI::CreateShaderBindingTable(RHIShaderBindingTableLayout& layout)
+RHIDescriptorSet* VulkanRHI::CreateDescriptorSet(RHIDescriptorSetLayout& layout)
 {
-    return new VulkanShaderBindingTable(this, layout);
+    return new VulkanDescriptorSet(this, layout);
 }
 
 RHICBV* VulkanRHI::CreateCBV(const CBVInfo& info)
@@ -435,7 +435,7 @@ RHIGraphicsPipeline* VulkanRHI::CreatePSO(const RHIGraphicsPipelineInfo& pso_inf
     return new VulkanGraphicsPSO(this, pso_info);
 }
 
-RHIShaderBindingTableLayout* VulkanRHI::CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info)
+RHIDescriptorSetLayout* VulkanRHI::CreateDescriptorSetLayout(const DescriptorSetLayoutInfo& info)
 {
     return new VulkanShaderBindingTableLayout(this, info);
 }

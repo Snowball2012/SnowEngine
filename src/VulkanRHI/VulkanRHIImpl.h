@@ -108,7 +108,7 @@ public:
 
 	virtual RHIShader* CreateShader(const ShaderCreateInfo& create_info) override;
 
-	virtual RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) override;
+	virtual RHIDescriptorSetLayout* CreateDescriptorSetLayout(const DescriptorSetLayoutInfo& info) override;
 	virtual RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& info) override;
 
 	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
@@ -120,7 +120,7 @@ public:
 
 	virtual RHISampler* CreateSampler(const SamplerInfo& info) override;
 
-	virtual RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) override;
+	virtual RHIDescriptorSet* CreateDescriptorSet(RHIDescriptorSetLayout& layout) override;
 
 	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
 	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;

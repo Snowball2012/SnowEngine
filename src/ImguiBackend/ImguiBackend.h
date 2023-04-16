@@ -36,7 +36,7 @@ private:
 		uint64_t submitted_frame_idx = ~0x0;
 	};
 
-	RHIShaderBindingTablePtr m_sbt = nullptr;
+	RHIDescriptorSetPtr m_desc_set = nullptr;
 
 	std::vector<FrameData> m_cache;
 

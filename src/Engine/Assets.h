@@ -2,6 +2,8 @@
 
 #include "AssetManager.h"
 
+#include <RHI/RHI.h>
+
 // Test asset
 class CubeAsset : public Asset
 {

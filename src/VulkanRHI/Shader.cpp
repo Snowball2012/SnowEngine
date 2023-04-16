@@ -295,7 +295,7 @@ VulkanShaderBindingTableLayout::~VulkanShaderBindingTableLayout()
         vkDestroyDescriptorSetLayout(m_rhi->GetDevice(), m_vk_desc_set_layout, nullptr);
 }
 
-VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::ShaderBindingTableLayoutInfo& info)
+VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info)
     : m_rhi(rhi)
 {
     boost::container::small_vector<VkDescriptorSetLayoutBinding, 16> vk_bindings;
@@ -327,15 +327,15 @@ VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, c
 }
 
 
-IMPLEMENT_RHI_OBJECT(VulkanShaderBindingTable)
+IMPLEMENT_RHI_OBJECT(VulkanDescriptorSet)
 
-VulkanShaderBindingTable::~VulkanShaderBindingTable()
+VulkanDescriptorSet::~VulkanDescriptorSet()
 {
     if (m_vk_desc_set)
         vkFreeDescriptorSets(m_rhi->GetDevice(), m_rhi->GetVkDescriptorPool(), 1, &m_vk_desc_set);
 }
 
-VulkanShaderBindingTable::VulkanShaderBindingTable(VulkanRHI* rhi, RHIShaderBindingTableLayout& layout)
+VulkanDescriptorSet::VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout)
     : m_rhi(rhi)
 {
     m_sbt_layout = &RHIImpl(layout);
@@ -351,7 +351,7 @@ VulkanShaderBindingTable::VulkanShaderBindingTable(VulkanRHI* rhi, RHIShaderBind
     VK_VERIFY(vkAllocateDescriptorSets(m_rhi->GetDevice(), &alloc_info, &m_vk_desc_set));
 }
 
-void VulkanShaderBindingTable::BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv)
+void VulkanDescriptorSet::BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv)
 {
     auto& vk_cbv = RHIImpl(cbv);
 
@@ -365,7 +365,7 @@ void VulkanShaderBindingTable::BindCBV(size_t range_idx, size_t idx_in_range, RH
     m_referenced_views.emplace_back(&vk_cbv);
 }
 
-void VulkanShaderBindingTable::BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv)
+void VulkanDescriptorSet::BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv)
 {
     auto& vk_srv = RHIImpl(srv);
 
@@ -379,7 +379,7 @@ void VulkanShaderBindingTable::BindSRV(size_t range_idx, size_t idx_in_range, RH
     m_referenced_views.emplace_back(&vk_srv);
 }
 
-void VulkanShaderBindingTable::BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler)
+void VulkanDescriptorSet::BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler)
 {
     auto& vk_sampler = RHIImpl(sampler);
 
@@ -393,7 +393,7 @@ void VulkanShaderBindingTable::BindSampler(size_t range_idx, size_t idx_in_range
     m_referenced_views.emplace_back(&vk_sampler);
 }
 
-void VulkanShaderBindingTable::FlushBinds()
+void VulkanDescriptorSet::FlushBinds()
 {
     if (m_pending_writes.empty())
         return;
@@ -407,7 +407,7 @@ void VulkanShaderBindingTable::FlushBinds()
     m_referenced_views.clear();
 }
 
-void VulkanShaderBindingTable::InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const
+void VulkanDescriptorSet::InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const
 {
     write_struct.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 

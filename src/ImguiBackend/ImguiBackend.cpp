@@ -216,11 +216,11 @@ void ImguiBackend::SetupFonts()
     m_fonts_sampler = m_rhi->CreateSampler( sampler_info );
 
     // SetupPSO has to be called before this
-    VERIFY_NOT_EQUAL( m_sbt, nullptr );
+    VERIFY_NOT_EQUAL( m_desc_set, nullptr );
     
-    m_sbt->BindSRV( 0, 0, *m_fonts_atlas_srv );
-    m_sbt->BindSampler( 1, 0, *m_fonts_sampler );
-    m_sbt->FlushBinds();
+    m_desc_set->BindSRV( 0, 0, *m_fonts_atlas_srv );
+    m_desc_set->BindSampler( 1, 0, *m_fonts_sampler );
+    m_desc_set->FlushBinds();
 
     io.Fonts->SetTexID( ( ImTextureID )m_fonts_atlas_srv.get() );
 }
@@ -282,28 +282,28 @@ void ImguiBackend::SetupPSO( RHIFormat target_format )
 
     pso_info.input_assembler = &ia_info;
 
-    RHI::ShaderViewRange view_ranges[] =
+    RHI::DescriptorViewRange view_ranges[] =
     {
         { RHIShaderBindingType::TextureSRV, 1, RHIShaderStageFlags::PixelShader },
         { RHIShaderBindingType::Sampler, 1, RHIShaderStageFlags::PixelShader },
     };
 
-    RHI::ShaderBindingTableLayoutInfo sbtl_info = {};
-    sbtl_info.ranges = view_ranges;
-    sbtl_info.range_count = _countof( view_ranges );
+    RHI::DescriptorSetLayoutInfo dsl_info = {};
+    dsl_info.ranges = view_ranges;
+    dsl_info.range_count = _countof( view_ranges );
 
-    RHIShaderBindingTableLayoutPtr sbtl = m_rhi->CreateShaderBindingTableLayout( sbtl_info );
+    RHIDescriptorSetLayoutPtr sbtl = m_rhi->CreateDescriptorSetLayout( dsl_info );
 
-    // This is supposed to be the call that creates m_sbt for the first time. Otherwise we may need to rebind fonts
-    SE_ENSURE( m_sbt == nullptr );
-    m_sbt = m_rhi->CreateShaderBindingTable( *sbtl );
+    // This is supposed to be the call that creates m_desc_set for the first time. Otherwise we may need to rebind fonts
+    SE_ENSURE( m_desc_set == nullptr );
+    m_desc_set = m_rhi->CreateDescriptorSet( *sbtl );
 
-    RHIShaderBindingTableLayout* pipeline_sbtls[] = { sbtl.get() };
+    RHIDescriptorSetLayout* pipeline_dsls[] = { sbtl.get() };
     
     RHI::ShaderBindingLayoutInfo sbl_info = {};
     sbl_info.push_constants_size = sizeof( ImguiPushConstants );
-    sbl_info.tables = pipeline_sbtls;
-    sbl_info.table_count = _countof( pipeline_sbtls );
+    sbl_info.tables = pipeline_dsls;
+    sbl_info.table_count = _countof( pipeline_dsls );
     RHIShaderBindingLayoutPtr sbl = m_rhi->CreateShaderBindingLayout( sbl_info );
 
     pso_info.binding_layout = sbl.get();
@@ -346,7 +346,7 @@ void ImguiBackend::RecordCommandList(
             sizeof( ImDrawIdx ) == 2 ? RHIIndexBufferType::UInt16 : RHIIndexBufferType::UInt32,
             0 );
 
-    cl.BindTable( 0, *m_sbt );
+    cl.BindDescriptorSet( 0, *m_desc_set );
 
     RHIViewport viewports[] =
     {

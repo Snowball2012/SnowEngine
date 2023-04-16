@@ -172,25 +172,25 @@ public:
 	virtual class RHIShader* CreateShader(const ShaderCreateInfo& shader_info) { NOTIMPL; return nullptr; }
 
 
-	struct ShaderViewRange
+	struct DescriptorViewRange
 	{
 		RHIShaderBindingType type = RHIShaderBindingType::ConstantBuffer;
 		int32_t count = 1; // negative means unbound bindless
 		RHIShaderStageFlags stages = RHIShaderStageFlags::AllBits; // used only in CreateShaderBindingLayout
 	};
 
-	struct ShaderBindingTableLayoutInfo
+	struct DescriptorSetLayoutInfo
 	{
-		const ShaderViewRange* ranges = nullptr;
+		const DescriptorViewRange* ranges = nullptr;
 		size_t range_count = 0;
 	};
-	virtual class RHIShaderBindingTableLayout* CreateShaderBindingTableLayout(const ShaderBindingTableLayoutInfo& info) { NOTIMPL; return nullptr; }
+	virtual class RHIDescriptorSetLayout* CreateDescriptorSetLayout(const DescriptorSetLayoutInfo& info) { NOTIMPL; return nullptr; }
 
-	virtual class RHIShaderBindingTable* CreateShaderBindingTable(RHIShaderBindingTableLayout& layout) { NOTIMPL; return nullptr; }
+	virtual class RHIDescriptorSet* CreateDescriptorSet(RHIDescriptorSetLayout& layout) { NOTIMPL; return nullptr; }
 
 	struct ShaderBindingLayoutInfo
 	{
-		RHIShaderBindingTableLayout* const* tables = nullptr;
+		RHIDescriptorSetLayout* const* tables = nullptr;
 		size_t table_count = 0;
 
 		// Simplify push constants usage. We only have one contiguous push constant buffer internaly
@@ -424,7 +424,7 @@ public:
 
 	virtual void SetPSO(RHIGraphicsPipeline& pso) { NOTIMPL; }
 
-	virtual void BindTable(size_t slot_idx, RHIShaderBindingTable& table) { NOTIMPL; }
+	virtual void BindDescriptorSet(size_t slot_idx, RHIDescriptorSet& set) { NOTIMPL; }
 
 	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) { NOTIMPL; }
 	virtual void SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset) { NOTIMPL; }
@@ -464,7 +464,7 @@ public:
 };
 using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 
-class RHIShaderBindingTable : public RHIObject
+class RHIDescriptorSet : public RHIObject
 {
 public:
 	virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) { NOTIMPL; }
@@ -473,16 +473,16 @@ public:
 
 	virtual void FlushBinds() { NOTIMPL; }
 
-	virtual ~RHIShaderBindingTable() {}
+	virtual ~RHIDescriptorSet() {}
 };
-using RHIShaderBindingTablePtr = RHIObjectPtr<RHIShaderBindingTable>;
+using RHIDescriptorSetPtr = RHIObjectPtr<RHIDescriptorSet>;
 
-class RHIShaderBindingTableLayout : public RHIObject
+class RHIDescriptorSetLayout : public RHIObject
 {
 public:
-	virtual ~RHIShaderBindingTableLayout() {}
+	virtual ~RHIDescriptorSetLayout() {}
 };
-using RHIShaderBindingTableLayoutPtr = RHIObjectPtr<RHIShaderBindingTableLayout>;
+using RHIDescriptorSetLayoutPtr = RHIObjectPtr<RHIDescriptorSetLayout>;
 
 enum class RHIPrimitiveFrequency : uint8_t
 {

@@ -135,17 +135,17 @@ void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType 
     vkCmdBindIndexBuffer(m_vk_cmd_buffer, RHIImpl(index_buf).GetVkBuffer(), offset, vk_type);
 }
 
-void VulkanCommandList::BindTable(size_t slot_idx, RHIShaderBindingTable& table)
+void VulkanCommandList::BindDescriptorSet(size_t slot_idx, RHIDescriptorSet& set)
 {
     VERIFY_NOT_EQUAL(m_currently_bound_pso, nullptr);
 
-    VulkanShaderBindingTable& sbt = RHIImpl(table);
+    VulkanDescriptorSet& set_impl = RHIImpl(set);
 
     VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
     VERIFY_EQUALS(m_type, RHI::QueueType::Graphics);
 
-    sbt.FlushBinds();
-    VkDescriptorSet sets[] = { sbt.GetVkDescriptorSet() };
+    set_impl.FlushBinds();
+    VkDescriptorSet sets[] = { set_impl.GetVkDescriptorSet() };
 
     vkCmdBindDescriptorSets(
         m_vk_cmd_buffer, bind_point,
