@@ -3,12 +3,14 @@
 #include "SandboxApp.h"
 
 #include <Engine/Assets.h>
+#include <Engine/RHIUtils.h>
 
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
 CorePaths g_core_paths;
 Logger* g_log;
+EngineGlobals g_engine;
 
 SandboxApp::SandboxApp()
     : EngineApp()
@@ -21,8 +23,12 @@ void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
+    m_cube = boost::dynamic_pointer_cast< CubeAsset >( m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) ) );
+    SE_ENSURE( m_cube && m_cube->GetStatus() == AssetStatus::Ready );
+
     CreateDescriptorSetLayout();
     CreatePipeline();
+    CreateCubePipeline();
     CreateTextureImage();
     CreateTextureImageView();
     CreateTextureSampler();
@@ -30,8 +36,6 @@ void SandboxApp::OnInit()
     CreateIndexBuffer();
     CreateUniformBuffers();
     CreateDescriptorSets();
-
-    AssetPtr cube_asset = m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) );
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -57,6 +61,8 @@ void SandboxApp::OnCleanup()
     m_uniform_buffers.clear();
     m_texture = nullptr;
 
+    m_cube = nullptr;
+
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
 
@@ -65,19 +71,7 @@ void SandboxApp::CleanupPipeline()
     m_rhi_graphics_pipeline = nullptr;
     m_binding_table_layout = nullptr;
     m_shader_bindings_layout = nullptr;
-}
-
-void SandboxApp::CopyBuffer( RHIBuffer & src, RHIBuffer & dst, size_t size )
-{
-    RHICommandList* list = BeginSingleTimeCommands();
-
-    RHICommandList::CopyRegion copy_region = {};
-    copy_region.src_offset = 0;
-    copy_region.dst_offset = 0;
-    copy_region.size = size;
-    list->CopyBuffer( src, dst, 1, &copy_region );
-
-    EndSingleTimeCommands( *list );
+    m_cube_graphics_pipeline = nullptr;
 }
 
 void SandboxApp::CreateIndexBuffer()
@@ -87,22 +81,10 @@ void SandboxApp::CreateIndexBuffer()
         0, 1, 2, 2, 3, 0
     };
 
-    RHI::BufferInfo staging_info = {};
-
-    staging_info.size = sizeof( indices[0] ) * indices.size();
-    staging_info.usage = RHIBufferUsageFlags::TransferSrc;
-
-    RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer( staging_info );
-    VERIFY_NOT_EQUAL( staging_buf, nullptr );
-
-    staging_buf->WriteBytes( indices.data(), staging_info.size, 0 );
-
     RHI::BufferInfo buf_info = {};
-    buf_info.size = staging_info.size;
-    buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::TransferDst;
-    m_index_buffer = m_rhi->CreateDeviceBuffer( buf_info );
-
-    CopyBuffer( *staging_buf->GetBuffer(), *m_index_buffer, buf_info.size );
+    buf_info.size = sizeof( indices[0] ) * indices.size();;
+    buf_info.usage = RHIBufferUsageFlags::IndexBuffer;
+    m_index_buffer = RHIUtils::CreateInitializedGPUBuffer( buf_info, indices.data(), buf_info.size );
 }
 
 void SandboxApp::CreateDescriptorSetLayout()
@@ -160,12 +142,13 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
     Matrices matrices = {};
-    matrices.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ), glm::vec3( 0, 0, 1 ) );
+    matrices.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
 
-    matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 0, 1 ) );
+    matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
     glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
     matrices.proj = glm::perspective( glm::radians( 45.0f ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
+    //matrices.proj[0][0] *= -1; // ogl -> vulkan y axis
     matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
 
     m_uniform_buffers[current_image]->WriteBytes( &matrices, sizeof( matrices ) );
@@ -173,7 +156,7 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
 
 void SandboxApp::CopyBufferToImage( RHIBuffer & src, RHITexture & texture, uint32_t width, uint32_t height )
 {
-    RHICommandList* list = BeginSingleTimeCommands();
+    RHICommandList* list = RHIUtils::BeginSingleTimeCommands( RHI::QueueType::Graphics );
 
     RHIBufferTextureCopyRegion region = {};
     region.texture_subresource.mip_count = 1;
@@ -184,7 +167,7 @@ void SandboxApp::CopyBufferToImage( RHIBuffer & src, RHITexture & texture, uint3
 
     list->CopyBufferToTexture( src, texture, &region, 1 );
 
-    EndSingleTimeCommands( *list );
+    RHIUtils::EndSingleTimeCommands( *list );
 }
 
 void SandboxApp::CreateDescriptorSets()
@@ -258,37 +241,13 @@ void SandboxApp::CreateImage(
     image = m_rhi->CreateTexture( tex_info );
 }
 
-RHICommandList* SandboxApp::BeginSingleTimeCommands()
-{
-    RHICommandList* list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
-
-    list->Begin();
-
-    return list;
-}
-
-void SandboxApp::EndSingleTimeCommands( RHICommandList & list )
-{
-    list.End();
-
-    RHI::SubmitInfo submit_info = {};
-    submit_info.wait_semaphore_count = 0;
-    submit_info.cmd_list_count = 1;
-    RHICommandList* lists[] = { &list };
-    submit_info.cmd_lists = lists;
-
-    RHIFence completion_fence = m_rhi->SubmitCommandLists( submit_info );
-
-    m_rhi->WaitForFenceCompletion( completion_fence );
-}
-
 void SandboxApp::TransitionImageLayoutAndFlush( RHITexture & texture, RHITextureLayout old_layout, RHITextureLayout new_layout )
 {
-    RHICommandList* cmd_list = BeginSingleTimeCommands();
+    RHICommandList* cmd_list = RHIUtils::BeginSingleTimeCommands( RHI::QueueType::Graphics );
 
     TransitionImageLayout( *cmd_list, texture, old_layout, new_layout );
 
-    EndSingleTimeCommands( *cmd_list );
+    RHIUtils::EndSingleTimeCommands( *cmd_list );
 }
 
 void SandboxApp::TransitionImageLayout( RHICommandList & cmd_list, RHITexture & texture, RHITextureLayout old_layout, RHITextureLayout new_layout )
@@ -317,6 +276,55 @@ void SandboxApp::CreateTextureSampler()
     m_texture_sampler = m_rhi->CreateSampler( info );
 }
 
+void SandboxApp::CreateCubePipeline()
+{
+    RHI::ShaderCreateInfo create_info = {};
+    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/DemoCube.hlsl" ).c_str() );
+    create_info.filename = shader_path.c_str();
+
+    create_info.frequency = RHI::ShaderFrequency::Vertex;
+    create_info.entry_point = "TriangleVS";
+    RHIObjectPtr<RHIShader> triangle_shader_vs = m_rhi->CreateShader( create_info );
+
+    create_info.frequency = RHI::ShaderFrequency::Pixel;
+    create_info.entry_point = "TrianglePS";
+    RHIObjectPtr<RHIShader> triangle_shader_ps = m_rhi->CreateShader( create_info );
+
+    auto vb_attribute = m_cube->GetPositionBufferInfo();
+
+    RHIPrimitiveBufferLayout vb_layout = {};
+    vb_layout.attributes = &vb_attribute;
+    vb_layout.attributes_count = 1;
+    vb_layout.stride = m_cube->GetPositionBufferStride();
+
+    const RHIPrimitiveBufferLayout* buffers[] = { &vb_layout };
+
+    RHIPrimitiveFrequency frequencies[] = { RHIPrimitiveFrequency::PerVertex };
+
+    static_assert( _countof( buffers ) == _countof( frequencies ) );
+
+    RHIInputAssemblerInfo ia_info = {};
+    ia_info.buffers_count = _countof( buffers );
+    ia_info.primitive_buffers = buffers;
+    ia_info.frequencies = frequencies;
+
+    RHIGraphicsPipelineInfo rhi_pipeline_info = {};
+
+    rhi_pipeline_info.input_assembler = &ia_info;
+    rhi_pipeline_info.vs = triangle_shader_vs.get();
+    rhi_pipeline_info.ps = triangle_shader_ps.get();
+
+    RHIPipelineRTInfo rt_info = {};
+    rt_info.format = m_swapchain->GetFormat();
+    rhi_pipeline_info.rts_count = 1;
+    rhi_pipeline_info.rt_info = &rt_info;
+    rhi_pipeline_info.binding_layout = m_shader_bindings_layout.get();
+
+    rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::Back;
+
+    m_cube_graphics_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
+}
+
 void SandboxApp::CreateVertexBuffer()
 {
     std::vector<Vertex> vertices =
@@ -329,23 +337,11 @@ void SandboxApp::CreateVertexBuffer()
 
     size_t buffer_size = sizeof( vertices[0] ) * vertices.size();
 
-    RHI::BufferInfo staging_info = {};
-    staging_info.size = buffer_size;
-    staging_info.usage = RHIBufferUsageFlags::TransferSrc;
-
-    RHIUploadBufferPtr staging_buf = m_rhi->CreateUploadBuffer( staging_info );
-
-    VERIFY_NOT_EQUAL( staging_buf, nullptr );
-
-    staging_buf->WriteBytes( vertices.data(), staging_info.size, 0 );
-
     RHI::BufferInfo buf_info = {};
     buf_info.size = buffer_size;
-    buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::TransferDst;
+    buf_info.usage = RHIBufferUsageFlags::VertexBuffer;
 
-    m_vertex_buffer = m_rhi->CreateDeviceBuffer( buf_info );
-
-    CopyBuffer( *staging_buf->GetBuffer(), *m_vertex_buffer, buffer_size );
+    m_vertex_buffer = RHIUtils::CreateInitializedGPUBuffer( buf_info, vertices.data(), buffer_size );
 }
 
 void SandboxApp::CreatePipeline()
@@ -392,6 +388,8 @@ void SandboxApp::CreatePipeline()
     rhi_pipeline_info.rt_info = &rt_info;
     rhi_pipeline_info.binding_layout = m_shader_bindings_layout.get();
 
+    rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::Back;
+
     m_rhi_graphics_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
 }
 
@@ -429,14 +427,27 @@ void SandboxApp::RecordCommandBuffer( RHICommandList & list, RHISwapChain & swap
     list.SetViewports( 0, &viewport, 1 );
     list.SetScissors( 0, &scissor, 1 );
 
-    list.SetPSO( *m_rhi_graphics_pipeline );
+    if ( m_show_cube )
+        list.SetPSO( *m_cube_graphics_pipeline );
+    else
+        list.SetPSO( *m_rhi_graphics_pipeline );
 
     list.BindDescriptorSet( 0, *m_binding_tables[GetCurrentFrameIdx()]);
 
-    list.SetVertexBuffers( 0, m_vertex_buffer.get(), 1, nullptr );
-    list.SetIndexBuffer( *m_index_buffer, RHIIndexBufferType::UInt16, 0 );
+    if ( m_show_cube )
+    {
+        list.SetVertexBuffers( 0, m_cube->GetVertexBuffer().get(), 1, nullptr );
+        list.SetIndexBuffer( *m_cube->GetIndexBuffer(), m_cube->GetIndexBufferType(), 0 );
 
-    list.DrawIndexed( 6, 1, 0, 0, 0 );
+        list.DrawIndexed( m_cube->GetNumIndices(), 1, 0, 0, 0 );
+    }
+    else
+    {
+        list.SetVertexBuffers( 0, m_vertex_buffer.get(), 1, nullptr );
+        list.SetIndexBuffer( *m_index_buffer, RHIIndexBufferType::UInt16, 0 );
+
+        list.DrawIndexed( 6, 1, 0, 0, 0 );
+    }
 
     list.EndPass();
 
@@ -503,4 +514,10 @@ void SandboxApp::UpdateGui()
         }
         ImGui::End();
     }
+
+    ImGui::Begin( "Demo" );
+    {
+        ImGui::Checkbox( "Show cube", &m_show_cube );
+    }
+    ImGui::End();
 }

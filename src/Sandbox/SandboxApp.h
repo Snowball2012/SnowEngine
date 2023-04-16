@@ -8,6 +8,8 @@
 
 #include "RenderResources.h"
 
+#include <Engine/Assets.h>
+
 SE_LOG_CATEGORY( Sandbox );
 
 struct NameComponent
@@ -26,6 +28,7 @@ private:
 	RHIDescriptorSetLayoutPtr m_binding_table_layout = nullptr;
 	RHIShaderBindingLayoutPtr m_shader_bindings_layout = nullptr;
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
+	RHIGraphicsPipelinePtr m_cube_graphics_pipeline = nullptr;
 
 	// resources
 	RHIBufferPtr m_vertex_buffer = nullptr;
@@ -36,6 +39,8 @@ private:
 	RHITexturePtr m_texture = nullptr;
 	RHITextureSRVPtr m_texture_srv = nullptr;
 	RHISamplerPtr m_texture_sampler = nullptr;
+	// assets
+	CubeAssetPtr m_cube = nullptr;
 
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_binding_tables;
@@ -46,6 +51,7 @@ private:
 	std::string m_new_entity_name;
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
+	bool m_show_cube = false;
 
 public:
 	SandboxApp();
@@ -75,7 +81,6 @@ private:
 
 	void CreateIndexBuffer();
 
-	void CopyBuffer( RHIBuffer& src, RHIBuffer& dst, size_t size );
 	void CopyBufferToImage( RHIBuffer& src, RHITexture& image, uint32_t width, uint32_t height );
 
 	void CreateDescriptorSetLayout();
@@ -92,13 +97,12 @@ private:
 		uint32_t width, uint32_t height, RHIFormat format, RHITextureUsageFlags usage, RHITextureLayout layout,
 		RHITexturePtr& image );
 
-	RHICommandList* BeginSingleTimeCommands();
-	void EndSingleTimeCommands( RHICommandList& buf );
-
 	void TransitionImageLayoutAndFlush( RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout );
 	void TransitionImageLayout( RHICommandList& cmd_list, RHITexture& texture, RHITextureLayout old_layout, RHITextureLayout new_layout );
 
 	void CreateTextureImageView();
 
 	void CreateTextureSampler();
+
+	void CreateCubePipeline();
 };

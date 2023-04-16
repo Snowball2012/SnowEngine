@@ -46,6 +46,8 @@ void EngineApp::Run( int argc, char** argv )
 
     m_asset_mgr = std::make_unique<AssetManager>();
 
+    InitEngineGlobals();
+
     OnInit();
 
     MainLoop();
@@ -209,14 +211,19 @@ void EngineApp::Cleanup()
     m_render_finished_semaphores.clear();
     m_inflight_fences.clear();
 
-    m_rhi.reset();
-
+    g_engine.asset_mgr = nullptr;
     m_asset_mgr.reset();
+
+    g_engine.rhi = nullptr;
+    m_rhi.reset();
 
     SE_LOG_INFO( Engine, "RHI shutdown complete" );
 
     if ( g_log )
+    {
         delete g_log;
+        g_log = nullptr;
+    }
 }
 
 void EngineApp::Update()
@@ -298,6 +305,14 @@ void EngineApp::InitCoreGlobals()
     create_info.mirror_to_stdout = true;
     create_info.path = m_cmd_line_args.log_path.c_str();
     g_log = new Logger( create_info );
+}
+
+void EngineApp::InitEngineGlobals()
+{
+    SE_ENSURE( m_rhi && m_asset_mgr );
+
+    g_engine.rhi = m_rhi.get();
+    g_engine.asset_mgr = m_asset_mgr.get();
 }
 
 void EngineApp::CreateSyncObjects()

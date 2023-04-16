@@ -121,7 +121,7 @@ void VulkanCommandList::SetVertexBuffers(uint32_t first_binding, const RHIBuffer
         offsets);
 }
 
-void VulkanCommandList::SetIndexBuffer(RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
+void VulkanCommandList::SetIndexBuffer(const RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset)
 {
     VkIndexType vk_type = VK_INDEX_TYPE_MAX_ENUM;
     switch (type)

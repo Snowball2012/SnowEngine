@@ -62,6 +62,7 @@ protected:
 
 private:
 	void InitCoreGlobals();
+	void InitEngineGlobals();
 	void ParseCommandLine( int argc, char** argv );
 
 	void InitRHI();

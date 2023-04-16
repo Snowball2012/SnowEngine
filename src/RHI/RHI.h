@@ -429,7 +429,7 @@ public:
     virtual void BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& set ) { NOTIMPL; }
 
     virtual void SetVertexBuffers( uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets ) { NOTIMPL; }
-    virtual void SetIndexBuffer( RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset ) { NOTIMPL; }
+    virtual void SetIndexBuffer( const  RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset ) { NOTIMPL; }
 
     virtual void TextureBarriers( const RHITextureBarrier* barriers, size_t barrier_count ) { NOTIMPL; }
 

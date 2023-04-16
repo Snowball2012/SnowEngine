@@ -13,5 +13,8 @@
     <FxCompile Include="..\..\EngineContent\Shaders\RHIDemo.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\EngineContent\Shaders\DemoCube.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

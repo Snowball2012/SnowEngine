@@ -24,7 +24,7 @@ SamplerState TextureObject_Sampler;
 [[vk::location(0)]] float4 TriangleVS(in VertexIn vertex_data, [[vk::location(1)]] out float3 color : COLOR, [[vk::location(2)]] out float2 texcoord : TEXCOORD1) : SV_POSITION
 {
 	color = vertex_data.color;
-	float4 pos_cs = mul(obj_data.proj, mul(obj_data.view, mul(obj_data.model, float4(vertex_data.position, 0.0f, 1.0f))));
+	float4 pos_cs = mul(obj_data.proj, mul(obj_data.view, mul(obj_data.model, float4(vertex_data.position.x, 0.0f, vertex_data.position.y, 1.0f))));
 	texcoord = vertex_data.texcoord;
 	return pos_cs;
 }
