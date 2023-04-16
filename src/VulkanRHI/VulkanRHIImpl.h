@@ -15,7 +15,7 @@ private:
 	VkSemaphore m_vk_semaphore = VK_NULL_HANDLE;
 
 public:
-	VulkanSemaphore(class VulkanRHI* rhi);
+	VulkanSemaphore( class VulkanRHI* rhi );
 
 	virtual ~VulkanSemaphore() override;
 
@@ -37,7 +37,7 @@ struct VulkanQueue
 	uint64_t completed_counter = 0;
 };
 
-QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface);
+QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice device, VkSurfaceKHR surface );
 
 using VulkanSwapChainPtr = boost::intrusive_ptr<VulkanSwapChain>;
 
@@ -89,42 +89,42 @@ private:
 	std::set<class VulkanGraphicsPSO*> m_loaded_psos;
 
 public:
-	VulkanRHI(const VulkanRHICreateInfo& info);
+	VulkanRHI( const VulkanRHICreateInfo& info );
 	virtual ~VulkanRHI() override;
 
 	virtual RHISwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
 
 	virtual RHISemaphore* CreateGPUSemaphore() override;
 
-	virtual void Present(RHISwapChain& swap_chain, const PresentInfo& info) override;
+	virtual void Present( RHISwapChain& swap_chain, const PresentInfo& info ) override;
 
 	virtual void WaitIdle() override;
 
-	virtual RHICommandList* GetCommandList(QueueType type) override;
+	virtual RHICommandList* GetCommandList( QueueType type ) override;
 
-	virtual RHIFence SubmitCommandLists(const SubmitInfo& info) override;
+	virtual RHIFence SubmitCommandLists( const SubmitInfo& info ) override;
 
-	virtual void WaitForFenceCompletion(const RHIFence& fence) override;
+	virtual void WaitForFenceCompletion( const RHIFence& fence ) override;
 
-	virtual RHIShader* CreateShader(const ShaderCreateInfo& create_info) override;
+	virtual RHIShader* CreateShader( const ShaderCreateInfo& create_info ) override;
 
-	virtual RHIDescriptorSetLayout* CreateDescriptorSetLayout(const DescriptorSetLayoutInfo& info) override;
-	virtual RHIShaderBindingLayout* CreateShaderBindingLayout(const ShaderBindingLayoutInfo& info) override;
+	virtual RHIDescriptorSetLayout* CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info ) override;
+	virtual RHIShaderBindingLayout* CreateShaderBindingLayout( const ShaderBindingLayoutInfo& info ) override;
 
-	virtual RHIGraphicsPipeline* CreatePSO(const RHIGraphicsPipelineInfo& pso_info) override;
+	virtual RHIGraphicsPipeline* CreatePSO( const RHIGraphicsPipelineInfo& pso_info ) override;
 
-	virtual RHIBuffer* CreateDeviceBuffer(const BufferInfo& buf_info) override;
-	virtual RHIUploadBuffer* CreateUploadBuffer(const BufferInfo& buf_info) override;
+	virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& buf_info ) override;
+	virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& buf_info ) override;
 
-	virtual RHITexture* CreateTexture(const TextureInfo& tex_info) override;
+	virtual RHITexture* CreateTexture( const TextureInfo& tex_info ) override;
 
-	virtual RHISampler* CreateSampler(const SamplerInfo& info) override;
+	virtual RHISampler* CreateSampler( const SamplerInfo& info ) override;
 
-	virtual RHIDescriptorSet* CreateDescriptorSet(RHIDescriptorSetLayout& layout) override;
+	virtual RHIDescriptorSet* CreateDescriptorSet( RHIDescriptorSetLayout& layout ) override;
 
-	virtual RHICBV* CreateCBV(const CBVInfo& info) override;
-	virtual RHITextureSRV* CreateSRV(const TextureSRVInfo& info) override;
-	virtual RHIRTV* CreateRTV(const RTVInfo& info) override;
+	virtual RHICBV* CreateCBV( const CBVInfo& info ) override;
+	virtual RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) override;
+	virtual RHIRTV* CreateRTV( const RTVInfo& info ) override;
 
 	virtual bool ReloadAllShaders() override;
 
@@ -133,10 +133,10 @@ public:
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_queue_family_indices; }
 	IVulkanWindowInterface* GetWindowIface() const { return m_window_iface; }
 
-	VkImageView CreateImageView(VkImage image, VkFormat format);
-	void TransitionImageLayoutAndFlush(VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+	VkImageView CreateImageView( VkImage image, VkFormat format );
+	void TransitionImageLayoutAndFlush( VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 
-	VulkanQueue* GetQueue(QueueType type);
+	VulkanQueue* GetQueue( QueueType type );
 
 	VmaAllocator GetVMA() const { return m_vma; }
 
@@ -147,42 +147,42 @@ public:
 	// Should probably be thread-safe
 	// This method places an image layout transition call before any command list is executed on the next submit
 	// Should probably be used only to transition textures to their initial layout on creation
-	void DeferImageLayoutTransition(VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout);
+	void DeferImageLayoutTransition( VkImage image, RHI::QueueType queue_type, VkImageLayout old_layout, VkImageLayout new_layout );
 
 	// Has to be thread-safe
-	void DeferredDestroyRHIObject(RHIObject* obj);
+	void DeferredDestroyRHIObject( RHIObject* obj );
 
-	static VkPipelineStageFlagBits GetVkPipelineStageFlags(RHIPipelineStageFlags rhi_flags);
-	static VkShaderStageFlagBits GetVkShaderStageFlags(RHIShaderStageFlags rhi_flags);
+	static VkPipelineStageFlagBits GetVkPipelineStageFlags( RHIPipelineStageFlags rhi_flags );
+	static VkShaderStageFlagBits GetVkShaderStageFlags( RHIShaderStageFlags rhi_flags );
 
-	static VkFormat GetVkFormat(RHIFormat format);
-	static RHIFormat GetRHIFormat(VkFormat format);
-	static uint32_t GetVkFormatSize(RHIFormat format);
+	static VkFormat GetVkFormat( RHIFormat format );
+	static RHIFormat GetRHIFormat( VkFormat format );
+	static uint32_t GetVkFormatSize( RHIFormat format );
 
-	static VkVertexInputRate GetVkVertexInputRate(RHIPrimitiveFrequency frequency);
+	static VkVertexInputRate GetVkVertexInputRate( RHIPrimitiveFrequency frequency );
 
-	static VkBufferUsageFlags GetVkBufferUsageFlags(RHIBufferUsageFlags usage);
-	static VkImageUsageFlags GetVkImageUsageFlags(RHITextureUsageFlags usage);
+	static VkBufferUsageFlags GetVkBufferUsageFlags( RHIBufferUsageFlags usage );
+	static VkImageUsageFlags GetVkImageUsageFlags( RHITextureUsageFlags usage );
 
-	static VkImageType GetVkImageType(RHITextureDimensions dimensions);
+	static VkImageType GetVkImageType( RHITextureDimensions dimensions );
 
-	static VkDescriptorType GetVkDescriptorType(RHIShaderBindingType type);
+	static VkDescriptorType GetVkDescriptorType( RHIShaderBindingType type );
 
-	static VkImageLayout GetVkImageLayout(RHITextureLayout layout);
+	static VkImageLayout GetVkImageLayout( RHITextureLayout layout );
 
 	static void GetStagesAndAccessMasksForLayoutBarrier(
 		VkImageLayout src_layout, VkImageLayout dst_layout,
 		VkPipelineStageFlags& src_stage, VkPipelineStageFlags& dst_stage,
-		VkImageMemoryBarrier& barrier);
+		VkImageMemoryBarrier& barrier );
 
-	static VkAttachmentLoadOp GetVkLoadOp(RHILoadOp op);
-	static VkAttachmentStoreOp GetVkStoreOp(RHIStoreOp op);
+	static VkAttachmentLoadOp GetVkLoadOp( RHILoadOp op );
+	static VkAttachmentStoreOp GetVkStoreOp( RHIStoreOp op );
 
 	static VkCullModeFlags GetCullModeFlags( RHICullModeFlags rhi_flags );
 
 	static VkBlendFactor GetVkBlendFactor( RHIBlendFactor rhi_blend_factor );
 
-	void TransitionImageLayout(VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout);
+	void TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 
 	void RegisterLoadedShader( Shader& shader );
 	void UnregisterLoadedShader( Shader& shader );
@@ -193,28 +193,28 @@ public:
 	bool ReloadAllPipelines();
 
 private:
-	void CreateVkInstance(const VulkanRHICreateInfo& info);
+	void CreateVkInstance( const VulkanRHICreateInfo& info );
 
 	void LogSupportedVkInstanceExtensions() const;
 
-	std::vector<const char*> GetRequiredExtensions(bool enable_validation_layers) const;
-	std::vector<const char*> GetSupportedLayers(const std::vector<const char*> wanted_layers) const;
+	std::vector<const char*> GetRequiredExtensions( bool enable_validation_layers ) const;
+	std::vector<const char*> GetSupportedLayers( const std::vector<const char*> wanted_layers ) const;
 
-	void PickPhysicalDevice(VkSurfaceKHR surface);
-	bool IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const;
+	void PickPhysicalDevice( VkSurfaceKHR surface );
+	bool IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface ) const;
 
-	bool CheckDeviceExtensionSupport(VkPhysicalDevice device) const;
+	bool CheckDeviceExtensionSupport( VkPhysicalDevice device ) const;
 
 	void CreateLogicalDevice();
 
 	void CreateVMA();
 
-	VulkanSwapChain* CreateSwapChainInternal(const VulkanSwapChainCreateInfo& create_info);
+	VulkanSwapChain* CreateSwapChainInternal( const VulkanSwapChainCreateInfo& create_info );
 
 	void CreateCommandPool();
 
 	void CreateDescriptorPool();
 
 	VkCommandBuffer BeginSingleTimeCommands();
-	void EndSingleTimeCommands(VkCommandBuffer buf);	
+	void EndSingleTimeCommands( VkCommandBuffer buf );
 };
