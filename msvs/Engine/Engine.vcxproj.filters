@@ -13,6 +13,7 @@
       <Filter>ImguiBackend</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\Engine\Assets.cpp" />
+    <ClCompile Include="..\..\src\Engine\AssetManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -24,6 +25,7 @@
       <Filter>ImguiBackend</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\Engine\Assets.h" />
+    <ClInclude Include="..\..\src\Engine\AssetManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

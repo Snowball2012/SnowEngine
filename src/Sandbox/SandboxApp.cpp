@@ -19,9 +19,7 @@ SandboxApp::~SandboxApp() = default;
 
 void SandboxApp::OnInit()
 {
-    std::cout << "Sandbox initialization started\n";
-
-    m_asset_mgr = std::make_unique<AssetManager>();
+    SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
     CreateDescriptorSetLayout();
     CreatePipeline();
@@ -35,12 +33,12 @@ void SandboxApp::OnInit()
 
     AssetPtr cube_asset = m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) );
 
-    std::cout << "Sandbox initialization complete\n";
+    SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
 
 void SandboxApp::OnCleanup()
 {
-    std::cout << "Sandbox shutdown started\n";
+    SE_LOG_INFO( Sandbox, "Sandbox shutdown started" );
 
     m_binding_tables.clear();
     m_uniform_buffer_views.clear();
@@ -59,7 +57,7 @@ void SandboxApp::OnCleanup()
     m_uniform_buffers.clear();
     m_texture = nullptr;
 
-    std::cout << "Sandbox shutdown complete\n";
+    SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
 
 void SandboxApp::CleanupPipeline()

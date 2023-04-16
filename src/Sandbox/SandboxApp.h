@@ -8,6 +8,8 @@
 
 #include "RenderResources.h"
 
+SE_LOG_CATEGORY( Sandbox );
+
 struct NameComponent
 {
 	std::string name;
@@ -37,8 +39,6 @@ private:
 
 	// descriptors
 	std::vector<RHIShaderBindingTablePtr> m_binding_tables;
-
-	std::unique_ptr<class AssetManager> m_asset_mgr = nullptr;
 
 	World m_world;
 

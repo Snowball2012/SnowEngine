@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\Engine\AssetManager.cpp" />
     <ClCompile Include="..\..\src\Engine\Assets.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
     <ClCompile Include="..\..\src\Engine\StdAfx.cpp">
@@ -31,6 +32,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\Engine\AssetManager.h" />
     <ClInclude Include="..\..\src\Engine\Assets.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />

@@ -1,6 +1,7 @@
 #include "StdAfx.h"
 
 #include "EngineApp.h"
+#include "AssetManager.h"
 
 #include <VulkanRHI/VulkanRHI.h>
 #include <D3D12RHI/D3D12RHI.h>
@@ -8,8 +9,6 @@
 #include <ImguiBackend/ImguiBackend.h>
 
 #include <vulkan/vulkan.h>
-
-SE_LOG_CATEGORY( App );
 
 struct SwapChainSupportDetails
 {
@@ -44,6 +43,8 @@ void EngineApp::Run( int argc, char** argv )
 
     InitRHI();
     InitImGUI();
+
+    m_asset_mgr = std::make_unique<AssetManager>();
 
     OnInit();
 
@@ -210,10 +211,12 @@ void EngineApp::Cleanup()
 
     m_rhi.reset();
 
-    if ( g_log )
-        delete g_log;
+    m_asset_mgr.reset();
 
     SE_LOG_INFO( Engine, "RHI shutdown complete" );
+
+    if ( g_log )
+        delete g_log;
 }
 
 void EngineApp::Update()

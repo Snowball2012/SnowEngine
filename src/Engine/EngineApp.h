@@ -31,11 +31,14 @@ private:
 
 	std::unique_ptr<class ImguiBackend> m_imgui;
 
+
 protected:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 	static const size_t m_max_frames_in_flight = 2;
 	RHIPtr m_rhi;
 	CommandLineArguments m_cmd_line_args;
+
+	std::unique_ptr<class AssetManager> m_asset_mgr = nullptr;
 
 public:
 	EngineApp();

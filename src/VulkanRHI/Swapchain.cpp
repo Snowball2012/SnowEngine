@@ -26,9 +26,9 @@ void VulkanSwapChain::Init()
     if (swap_chain_support.capabilities.maxImageCount > 0 && image_count > swap_chain_support.capabilities.maxImageCount)
         image_count = swap_chain_support.capabilities.maxImageCount;
 
-    std::cout << "Swap chain creation:\n";
-    std::cout << "\twidth = " << m_swapchain_size_pixels.width << "\theight = " << m_swapchain_size_pixels.height << '\n';
-    std::cout << "\tNum images = " << image_count << '\n';
+    SE_LOG_INFO( VulkanRHI, "Swap chain creation:" );
+    SE_LOG_INFO( VulkanRHI, "\twidth = %u\theight = %u", m_swapchain_size_pixels.width, m_swapchain_size_pixels.height );
+    SE_LOG_INFO( VulkanRHI, "\tNum images = %u", image_count );
 
     VkSwapchainCreateInfoKHR create_info_khr = {};
     create_info_khr.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -97,7 +97,6 @@ void VulkanSwapChain::Init()
 
         m_swapchain_image_views[i] = RHIImpl(m_rhi->CreateRTV(rtv_info));
         m_rhi->DeferImageLayoutTransition(m_swapchain_images[i]->GetVkImage(), RHI::QueueType::Graphics, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        //m_rhi->TransitionImageLayoutAndFlush(m_swapchain_images[i].GetVkImage(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
 }
 
