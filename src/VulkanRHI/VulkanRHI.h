@@ -25,6 +25,7 @@ struct VulkanRHICreateInfo
 	void* main_window_handle = nullptr;
 	const char* app_name = nullptr;
 	bool enable_validation = false;
+	bool enable_raytracing = false;
 
 	class Logger* logger = nullptr;
 	struct CorePaths* core_paths = nullptr;

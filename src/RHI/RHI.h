@@ -109,6 +109,8 @@ class RHI
 public:
     virtual ~RHI() {};
 
+    virtual bool SupportsRaytracing() const { return false; }
+
     // window_handle must outlive the swap chain
     virtual class RHISwapChain* CreateSwapChain( const struct SwapChainCreateInfo& create_info ) { NOTIMPL; return nullptr; }
     virtual RHISwapChain* GetMainSwapChain() { NOTIMPL; return nullptr; }

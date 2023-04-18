@@ -137,6 +137,9 @@ void EngineApp::InitRHI()
 #else
         create_info.enable_validation = true;
 #endif
+
+        create_info.enable_raytracing = true;
+
         m_window_iface = std::make_unique<SDLVulkanWindowInterface>();
 
         create_info.window_iface = m_window_iface.get();

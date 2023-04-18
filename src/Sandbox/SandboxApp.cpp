@@ -148,7 +148,6 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
 
     glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
     matrices.proj = glm::perspective( glm::radians( 45.0f ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
-    //matrices.proj[0][0] *= -1; // ogl -> vulkan y axis
     matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
 
     m_uniform_buffers[current_image]->WriteBytes( &matrices, sizeof( matrices ) );

@@ -88,9 +88,13 @@ private:
 	SpinLock m_loaded_psos_lock;
 	std::set<class VulkanGraphicsPSO*> m_loaded_psos;
 
+	bool m_raytracing_supported = false;
+
 public:
 	VulkanRHI( const VulkanRHICreateInfo& info );
 	virtual ~VulkanRHI() override;
+
+	virtual bool SupportsRaytracing() const override { return m_raytracing_supported; }
 
 	virtual RHISwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
 
@@ -200,10 +204,15 @@ private:
 	std::vector<const char*> GetRequiredExtensions( bool enable_validation_layers ) const;
 	std::vector<const char*> GetSupportedLayers( const std::vector<const char*> wanted_layers ) const;
 
-	void PickPhysicalDevice( VkSurfaceKHR surface );
-	bool IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface ) const;
+	void PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing );
+	bool IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing ) const;
 
-	bool CheckDeviceExtensionSupport( VkPhysicalDevice device ) const;
+	struct ExtensionCheckResult
+	{
+		bool all_required_extensions_found = false;
+		bool raytracing_extensions_found = false;
+	};
+	ExtensionCheckResult CheckDeviceExtensionSupport( VkPhysicalDevice device ) const;
 
 	void CreateLogicalDevice();
 

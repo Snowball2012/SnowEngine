@@ -30,7 +30,7 @@ VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
 
     m_main_surface = m_window_iface->CreateSurface( info.main_window_handle, m_vk_instance );
 
-    PickPhysicalDevice( m_main_surface );
+    PickPhysicalDevice( m_main_surface, info.enable_raytracing );
 
     CreateLogicalDevice();
 
@@ -618,7 +618,7 @@ namespace
     }
 }
 
-void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface )
+void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing )
 {
     uint32_t device_count = 0;
     VK_VERIFY( vkEnumeratePhysicalDevices( m_vk_instance, &device_count, nullptr ) );
@@ -631,13 +631,34 @@ void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface )
     std::vector<VkPhysicalDevice> devices( device_count );
     VK_VERIFY( vkEnumeratePhysicalDevices( m_vk_instance, &device_count, devices.data() ) );
 
+    // todo: collect all devices and sort them by features
+
     for ( const auto& device : devices )
     {
-        if ( IsDeviceSuitable( device, surface ) )
+        if ( IsDeviceSuitable( device, surface, need_raytracing ) )
         {
             m_vk_phys_device = device;
             m_queue_family_indices = FindQueueFamilies( device, surface );
             break;
+        }
+    }
+
+    if ( m_vk_phys_device && need_raytracing )
+    {
+        m_raytracing_supported = true;
+    }
+    else if ( !m_vk_phys_device && need_raytracing )
+    {
+        SE_LOG_WARNING( VulkanRHI, "Need raytracing but no supporting devices found! Trying to find a suitable device without raytracing" );
+        // maybe there is a device without raytracing support, use it instead of crashing
+        for ( const auto& device : devices )
+        {
+            if ( IsDeviceSuitable( device, surface, false ) )
+            {
+                m_vk_phys_device = device;
+                m_queue_family_indices = FindQueueFamilies( device, surface );
+                break;
+            }
         }
     }
 
@@ -648,28 +669,57 @@ void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface )
 
     SE_LOG_INFO( VulkanRHI, "Picked physical device:" );
     LogDevice( m_vk_phys_device );
+    if ( m_raytracing_supported )
+    {
+        SE_LOG_INFO( VulkanRHI, "Raytracing: supported" );
+    }
+    else
+    {
+        SE_LOG_INFO( VulkanRHI, "Raytracing: not supported" );
+    }
     SE_LOG_NEWLINE();
 }
 
-bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface ) const
+bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing ) const
 {
-    VkPhysicalDeviceProperties props;
-    VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    VkPhysicalDeviceFeatures2 features2 = {};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &vk13_features;
-
-    vkGetPhysicalDeviceProperties( device, &props );
-    vkGetPhysicalDeviceFeatures2( device, &features2 );
-
     auto queue_families = FindQueueFamilies( device, surface );
 
     if ( !queue_families.IsComplete() )
         return false;
 
-    if ( !CheckDeviceExtensionSupport( device ) )
+    ExtensionCheckResult extension_check = CheckDeviceExtensionSupport( device );
+    if ( !extension_check.all_required_extensions_found )
         return false;
+
+    if ( need_raytracing && !extension_check.raytracing_extensions_found )
+        return false;
+
+    VkPhysicalDeviceProperties props;
+    VkPhysicalDeviceVulkan13Features vk13_features = {};
+    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+    void* current_features_head = &vk13_features;
+    
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
+    as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtpipe_features = {};
+    rtpipe_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+
+    if ( need_raytracing )
+    {
+        as_features.pNext = current_features_head;
+        rtpipe_features.pNext = &as_features;
+
+        current_features_head = &rtpipe_features;
+    }
+
+    VkPhysicalDeviceFeatures2 features2 = {};
+    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    features2.pNext = current_features_head;
+
+    vkGetPhysicalDeviceProperties( device, &props );
+    vkGetPhysicalDeviceFeatures2( device, &features2 );
 
     auto swap_chain_support = VulkanSwapChain::QuerySwapChainSupport( device, surface );
 
@@ -682,10 +732,19 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface 
     if ( !vk13_features.dynamicRendering )
         return false;
 
+    if ( need_raytracing )
+    {
+        if ( !as_features.accelerationStructure )
+            return false;
+
+        if ( !rtpipe_features.rayTracingPipeline )
+            return false;
+    }
+
     return true;
 }
 
-bool VulkanRHI::CheckDeviceExtensionSupport( VkPhysicalDevice device ) const
+VulkanRHI::ExtensionCheckResult VulkanRHI::CheckDeviceExtensionSupport( VkPhysicalDevice device ) const
 {
     uint32_t extension_count = 0;
     VK_VERIFY( vkEnumerateDeviceExtensionProperties( device, nullptr, &extension_count, nullptr ) );
@@ -695,19 +754,29 @@ bool VulkanRHI::CheckDeviceExtensionSupport( VkPhysicalDevice device ) const
 
     std::set<std::string> extensions_to_check( m_required_device_extensions.begin(), m_required_device_extensions.end() );
 
+    std::set<std::string> raytracing_extensions = {
+        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+    };
+
     for ( const auto& extension : available_extensions )
     {
         extensions_to_check.erase( extension.extensionName );
+        raytracing_extensions.erase( extension.extensionName );
     }
 
-    return extensions_to_check.empty();
+    ExtensionCheckResult result;
+    result.all_required_extensions_found = extensions_to_check.empty();
+    result.raytracing_extensions_found = raytracing_extensions.empty();
+
+    return result;
 }
 
 void VulkanRHI::CreateLogicalDevice()
 {
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
     std::set<uint32_t> unique_queue_families = { m_queue_family_indices.graphics.value(), m_queue_family_indices.present.value() };
-
 
     float priority = 1.0f;
     for ( uint32_t family : unique_queue_families )
@@ -722,9 +791,29 @@ void VulkanRHI::CreateLogicalDevice()
     VkPhysicalDeviceVulkan13Features vk13_features = {};
     vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
     vk13_features.dynamicRendering = VK_TRUE;
+
+    void* current_features_head = &vk13_features;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
+    as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtpipe_features = {};
+    rtpipe_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+
+    if ( m_raytracing_supported )
+    {
+        as_features.accelerationStructure = true;
+        as_features.pNext = current_features_head;
+
+        rtpipe_features.rayTracingPipeline = true;
+        rtpipe_features.pNext = &as_features;
+
+        current_features_head = &rtpipe_features;
+    }
+
     VkPhysicalDeviceFeatures2 features2{};
     features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = &vk13_features;
+    features2.pNext = current_features_head;
     features2.features.samplerAnisotropy = VK_TRUE;
 
     VkDeviceCreateInfo device_create_info = {};
