@@ -15,6 +15,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\Buffers.h" />
     <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Extensions.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Features.h" />
     <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
     <ClInclude Include="..\..\src\VulkanRHI\ResourceViews.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
@@ -30,6 +31,7 @@
     <ClCompile Include="..\..\src\VulkanRHI\Buffers.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Extensions.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Features.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\ResourceViews.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />

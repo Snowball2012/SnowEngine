@@ -14,6 +14,7 @@
     <ClInclude Include="..\..\src\VulkanRHI\ResourceViews.h" />
     <ClInclude Include="..\..\src\VulkanRHI\AccelerationStructures.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Extensions.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Features.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
@@ -30,5 +31,6 @@
     <ClCompile Include="..\..\src\VulkanRHI\ResourceViews.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\AccelerationStructures.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Extensions.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Features.cpp" />
   </ItemGroup>
 </Project>

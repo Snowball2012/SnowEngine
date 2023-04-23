@@ -8,6 +8,8 @@
 
 #include "Swapchain.h"
 
+#include "Features.h"
+
 class VulkanSemaphore : public RHISemaphore
 {
 	GENERATE_RHI_OBJECT_BODY()
@@ -55,6 +57,8 @@ private:
 	VkSurfaceKHR m_main_surface = VK_NULL_HANDLE;
 
 	VkPhysicalDevice m_vk_phys_device = VK_NULL_HANDLE;
+
+	VulkanFeatures m_vk_features = {};
 
 	VkPhysicalDeviceProperties m_vk_phys_device_props = {};
 
@@ -209,7 +213,7 @@ private:
 	std::vector<const char*> GetSupportedLayers( const std::vector<const char*> wanted_layers ) const;
 
 	void PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing );
-	bool IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing ) const;
+	bool IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing, const VulkanFeatures& features ) const;
 
 	struct ExtensionCheckResult
 	{

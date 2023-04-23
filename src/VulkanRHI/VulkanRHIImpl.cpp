@@ -18,6 +18,8 @@
 
 #include "Extensions.h"
 
+#include "Features.h"
+
 VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
 {
     CreateVkInstance( info );
@@ -661,10 +663,13 @@ void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing )
 
     for ( const auto& device : devices )
     {
-        if ( IsDeviceSuitable( device, surface, need_raytracing ) )
+        VulkanFeatures device_features;
+        device_features.InitFromDevice( device, need_raytracing );
+        if ( IsDeviceSuitable( device, surface, need_raytracing, device_features ) )
         {
             m_vk_phys_device = device;
             m_queue_family_indices = FindQueueFamilies( device, surface );
+            m_vk_features = device_features;
             break;
         }
     }
@@ -679,10 +684,14 @@ void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing )
         // maybe there is a device without raytracing support, use it instead of crashing
         for ( const auto& device : devices )
         {
-            if ( IsDeviceSuitable( device, surface, false ) )
+            VulkanFeatures device_features;
+            device_features.InitFromDevice( device, false );
+
+            if ( IsDeviceSuitable( device, surface, false, device_features ) )
             {
                 m_vk_phys_device = device;
                 m_queue_family_indices = FindQueueFamilies( device, surface );
+                m_vk_features = device_features;
                 break;
             }
         }
@@ -706,7 +715,7 @@ void VulkanRHI::PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing )
     SE_LOG_NEWLINE();
 }
 
-bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing ) const
+bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface, bool need_raytracing, const VulkanFeatures& features ) const
 {
     auto queue_families = FindQueueFamilies( device, surface );
 
@@ -721,58 +730,29 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
         return false;
 
     VkPhysicalDeviceProperties props;
-    VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-
-    void* current_features_head = &vk13_features;
-
-    VkPhysicalDeviceVulkan12Features vk12_features = {};
-    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-
-    vk12_features.pNext = current_features_head;
-    current_features_head = &vk12_features;
-
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
-    as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtpipe_features = {};
-    rtpipe_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-
-    if ( need_raytracing )
-    {
-        as_features.pNext = current_features_head;
-        rtpipe_features.pNext = &as_features;
-
-        current_features_head = &rtpipe_features;
-    }
-
-    VkPhysicalDeviceFeatures2 features2 = {};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = current_features_head;
 
     vkGetPhysicalDeviceProperties( device, &props );
-    vkGetPhysicalDeviceFeatures2( device, &features2 );
 
     auto swap_chain_support = VulkanSwapChain::QuerySwapChainSupport( device, surface );
 
     if ( swap_chain_support.formats.empty() || swap_chain_support.present_modes.empty() )
         return false;
 
-    if ( !features2.features.samplerAnisotropy )
+    if ( !features.features2_head.features.samplerAnisotropy )
         return false;
 
-    if ( !vk13_features.dynamicRendering )
+    if ( !features.vk13.dynamicRendering )
         return false;
 
-    if ( !vk12_features.bufferDeviceAddress )
+    if ( !features.vk12.bufferDeviceAddress )
         return false;
 
     if ( need_raytracing )
     {
-        if ( !as_features.accelerationStructure )
+        if ( !features.as.accelerationStructure )
             return false;
 
-        if ( !rtpipe_features.rayTracingPipeline )
+        if ( !features.rtpipe.rayTracingPipeline )
             return false;
     }
 
@@ -823,41 +803,6 @@ void VulkanRHI::CreateLogicalDevice()
         queue_create_info.pQueuePriorities = &priority;
     }
 
-    VkPhysicalDeviceVulkan13Features vk13_features = {};
-    vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    vk13_features.dynamicRendering = VK_TRUE;
-
-    void* current_features_head = &vk13_features;
-
-    VkPhysicalDeviceVulkan12Features vk12_features = {};
-    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    vk12_features.bufferDeviceAddress = VK_TRUE;
-
-    vk12_features.pNext = current_features_head;
-    current_features_head = &vk12_features;
-
-    VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
-    as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-
-    VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtpipe_features = {};
-    rtpipe_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-
-    if ( m_raytracing_supported )
-    {
-        as_features.accelerationStructure = true;
-        as_features.pNext = current_features_head;
-
-        rtpipe_features.rayTracingPipeline = true;
-        rtpipe_features.pNext = &as_features;
-
-        current_features_head = &rtpipe_features;
-    }
-
-    VkPhysicalDeviceFeatures2 features2{};
-    features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    features2.pNext = current_features_head;
-    features2.features.samplerAnisotropy = VK_TRUE;
-
     VkDeviceCreateInfo device_create_info = {};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pQueueCreateInfos = queue_create_infos.data();
@@ -865,7 +810,7 @@ void VulkanRHI::CreateLogicalDevice()
     device_create_info.pEnabledFeatures = nullptr;
     device_create_info.enabledExtensionCount = uint32_t( m_required_device_extensions.size() );
     device_create_info.ppEnabledExtensionNames = m_required_device_extensions.data();
-    device_create_info.pNext = &features2;
+    device_create_info.pNext = &m_vk_features.features2_head;
 
     VK_VERIFY( vkCreateDevice( m_vk_phys_device, &device_create_info, nullptr, &m_vk_device ) );
 
