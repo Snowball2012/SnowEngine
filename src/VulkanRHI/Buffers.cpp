@@ -4,22 +4,22 @@
 
 #include "VulkanRHIImpl.h"
 
-IMPLEMENT_RHI_OBJECT(VulkanBuffer)
+IMPLEMENT_RHI_OBJECT( VulkanBuffer )
 
-VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags )
-	: m_rhi(rhi)
+VulkanBuffer::VulkanBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags )
+    : m_rhi( rhi )
 {
     VkBufferCreateInfo vk_create_info = {};
     vk_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    vk_create_info.size = uint32_t(info.size);
-    vk_create_info.usage = VulkanRHI::GetVkBufferUsageFlags(info.usage) | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT; // adding device address here makes everything easier. Not sure if it has any performance implications
+    vk_create_info.size = uint32_t( info.size );
+    vk_create_info.usage = VulkanRHI::GetVkBufferUsageFlags( info.usage ) | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT; // adding device address here makes everything easier. Not sure if it has any performance implications
     vk_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo vma_alloc_info = {};
     vma_alloc_info.usage = usage;
     vma_alloc_info.flags = alloc_create_flags;
     vma_alloc_info.requiredFlags = alloc_required_flags;
-    VK_VERIFY(vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr));
+    VK_VERIFY( vmaCreateBuffer( m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr ) );
 
     VkBufferDeviceAddressInfo da_info = {};
     da_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
@@ -27,14 +27,14 @@ VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemor
     m_device_address = vkGetBufferDeviceAddress( m_rhi->GetDevice(), &da_info );
 }
 
-void VulkanBuffer::GetAllocationInfo(VmaAllocationInfo& info) const
+void VulkanBuffer::GetAllocationInfo( VmaAllocationInfo& info ) const
 {
-    vmaGetAllocationInfo(m_rhi->GetVMA(), m_allocation, &info);
+    vmaGetAllocationInfo( m_rhi->GetVMA(), m_allocation, &info );
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
-    vmaDestroyBuffer(m_rhi->GetVMA(), m_vk_buffer, m_allocation);
+    vmaDestroyBuffer( m_rhi->GetVMA(), m_vk_buffer, m_allocation );
 }
 
 size_t VulkanBuffer::GetSize() const
@@ -45,10 +45,10 @@ size_t VulkanBuffer::GetSize() const
     return size_t( info.size );
 }
 
-IMPLEMENT_RHI_OBJECT(VulkanUploadBuffer)
+IMPLEMENT_RHI_OBJECT( VulkanUploadBuffer )
 
-VulkanUploadBuffer::VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info)
-    : m_rhi(rhi)
+VulkanUploadBuffer::VulkanUploadBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info )
+    : m_rhi( rhi )
 {
     m_buffer = new VulkanBuffer(
         rhi, info, VMA_MEMORY_USAGE_AUTO,
@@ -60,10 +60,10 @@ VulkanUploadBuffer::~VulkanUploadBuffer()
 {
 }
 
-void VulkanUploadBuffer::WriteBytes(const void* src, size_t size, size_t offset)
+void VulkanUploadBuffer::WriteBytes( const void* src, size_t size, size_t offset )
 {
     VmaAllocationInfo info;
-    m_buffer->GetAllocationInfo(info);
-    VERIFY_NOT_EQUAL(info.pMappedData, nullptr);
-    memcpy((uint8_t*)info.pMappedData + offset, src, size);
+    m_buffer->GetAllocationInfo( info );
+    VERIFY_NOT_EQUAL( info.pMappedData, nullptr );
+    memcpy( ( uint8_t* )info.pMappedData + offset, src, size );
 }

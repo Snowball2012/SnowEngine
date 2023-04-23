@@ -731,7 +731,7 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
 
     vk12_features.pNext = current_features_head;
     current_features_head = &vk12_features;
-    
+
     VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
     as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
