@@ -11,8 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\src\VulkanRHI\AccelerationStructures.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Buffers.h" />
     <ClInclude Include="..\..\src\VulkanRHI\CommandLists.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Extensions.h" />
     <ClInclude Include="..\..\src\VulkanRHI\PSO.h" />
     <ClInclude Include="..\..\src\VulkanRHI\ResourceViews.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Shader.h" />
@@ -24,8 +26,10 @@
     <ClInclude Include="..\..\src\VulkanRHI\VulkanRHIImpl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\VulkanRHI\AccelerationStructures.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Buffers.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\CommandLists.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Extensions.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\PSO.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\ResourceViews.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Shader.cpp" />

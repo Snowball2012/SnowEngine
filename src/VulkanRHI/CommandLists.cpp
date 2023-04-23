@@ -3,8 +3,9 @@
 #include "CommandLists.h"
 
 #include "VulkanRHIImpl.h"
-#include <VulkanRHI/Buffers.h>
-#include <VulkanRHI/PSO.h>
+#include "Buffers.h"
+#include "PSO.h"
+#include "AccelerationStructures.h"
 
 VulkanCommandList::VulkanCommandList(VulkanRHI* rhi, RHI::QueueType type, CmdListId list_id)
     : m_rhi(rhi), m_type(type), m_list_id(list_id)
@@ -309,6 +310,37 @@ void VulkanCommandList::PushConstants( size_t offset, const void* data, size_t s
     }
 
     memcpy( m_push_constants.data() + offset, data, size );
+}
+
+void VulkanCommandList::BuildAS( const RHIASBuildInfo& info )
+{
+    constexpr size_t sv_size = 4;
+    VkAccelerationStructureBuildGeometryInfoKHR vk_geom_build_info;
+    bc::small_vector<VkAccelerationStructureBuildRangeInfoKHR, sv_size> vk_build_range_info;
+    bc::small_vector<VkAccelerationStructureGeometryKHR, sv_size> vk_geometries;
+    const uint32_t geoms_count = uint32_t( info.geoms_count );
+    vk_build_range_info.resize( geoms_count );
+    vk_geometries.resize( geoms_count );
+
+    for ( uint32_t i = 0; i < geoms_count; ++i )
+    {
+        vk_build_range_info[i].firstVertex = 0;
+        vk_build_range_info[i].primitiveOffset = 0;
+        vk_build_range_info[i].transformOffset = 0;
+        vk_build_range_info[i].primitiveCount = 0/*calc primitve count form geo*/;
+    }
+
+    vk_geom_build_info = {};
+    vk_geom_build_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    vk_geom_build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+    vk_geom_build_info.dstAccelerationStructure = RHIImpl( info.dst )->GetVkAS();
+    vk_geom_build_info.scratchData.deviceAddress = RHIImpl( info.scratch )->GetDeviceAddress();
+    vk_geom_build_info.geometryCount = geoms_count;
+    vk_geom_build_info.pGeometries = vk_geometries.data();
+    vk_geom_build_info.type = RHIImpl( info.dst )->GetVkType();
+
+    const VkAccelerationStructureBuildRangeInfoKHR* range_infos = vk_build_range_info.data();
+    vkCmdBuildAccelerationStructuresKHR( m_vk_cmd_buffer, 1, &vk_geom_build_info, &range_infos );
 }
 
 void VulkanCommandList::Reset()

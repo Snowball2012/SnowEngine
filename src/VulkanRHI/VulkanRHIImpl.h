@@ -94,6 +94,8 @@ public:
 	VulkanRHI( const VulkanRHICreateInfo& info );
 	virtual ~VulkanRHI() override;
 
+	virtual void LoadExtensions();
+
 	virtual bool SupportsRaytracing() const override { return m_raytracing_supported; }
 
 	virtual RHISwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
@@ -185,6 +187,8 @@ public:
 	static VkCullModeFlags GetCullModeFlags( RHICullModeFlags rhi_flags );
 
 	static VkBlendFactor GetVkBlendFactor( RHIBlendFactor rhi_blend_factor );
+
+	static VkAccelerationStructureTypeKHR GetVkASType( RHIAccelerationStructureType type );
 
 	void TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 

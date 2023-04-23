@@ -12,7 +12,7 @@ VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemor
     VkBufferCreateInfo vk_create_info = {};
     vk_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     vk_create_info.size = uint32_t(info.size);
-    vk_create_info.usage = VulkanRHI::GetVkBufferUsageFlags(info.usage);
+    vk_create_info.usage = VulkanRHI::GetVkBufferUsageFlags(info.usage) | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT; // adding device address here makes everything easier. Not sure if it has any performance implications
     vk_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     VmaAllocationCreateInfo vma_alloc_info = {};
@@ -20,6 +20,11 @@ VulkanBuffer::VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemor
     vma_alloc_info.flags = alloc_create_flags;
     vma_alloc_info.requiredFlags = alloc_required_flags;
     VK_VERIFY(vmaCreateBuffer(m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr));
+
+    VkBufferDeviceAddressInfo da_info = {};
+    da_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    da_info.buffer = m_vk_buffer;
+    m_device_address = vkGetBufferDeviceAddress( m_rhi->GetDevice(), &da_info );
 }
 
 void VulkanBuffer::GetAllocationInfo(VmaAllocationInfo& info) const

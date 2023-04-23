@@ -100,6 +100,8 @@ public:
 
 	virtual void PushConstants( size_t offset, const void* data, size_t size ) override;
 
+	virtual void BuildAS( const RHIASBuildInfo& info ) override;
+
 	CmdListId GetListId() const { return m_list_id; }
 
 	VkCommandBuffer GetVkCmdList() const { return m_vk_cmd_buffer; }

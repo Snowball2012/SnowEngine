@@ -12,7 +12,7 @@ private:
 	ComPtr<IDXGISwapChain> m_swapchain = nullptr;
 
 public:
-	D3DSwapchain(class D3D12RHI* rhi, const SwapChainCreateInfo& create_info);
+	D3DSwapchain(class D3D12RHI* rhi, const RHISwapChainCreateInfo& create_info);
 
 	virtual ~D3DSwapchain() override {}
 

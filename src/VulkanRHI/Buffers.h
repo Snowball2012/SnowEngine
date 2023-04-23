@@ -10,6 +10,7 @@ class VulkanBuffer : public RHIBuffer
 
 	VkBuffer m_vk_buffer = VK_NULL_HANDLE;
 	VmaAllocation m_allocation = VK_NULL_HANDLE;
+	VkDeviceAddress m_device_address = -1;
 
 public:
 	VulkanBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags );
@@ -21,14 +22,17 @@ public:
 	void GetAllocationInfo(VmaAllocationInfo& info) const;
 
 	VkBuffer GetVkBuffer() const { return m_vk_buffer; }
+
+	VkDeviceAddress GetDeviceAddress() const { return m_device_address; }
 };
 IMPLEMENT_RHI_INTERFACE(RHIBuffer, VulkanBuffer)
+using VulkanBufferPtr = RHIObjectPtr<VulkanBuffer>;
 
 class VulkanUploadBuffer : public RHIUploadBuffer
 {
 	GENERATE_RHI_OBJECT_BODY()
 
-	RHIObjectPtr<VulkanBuffer> m_buffer = nullptr;
+	VulkanBufferPtr m_buffer = nullptr;
 
 public:
 	VulkanUploadBuffer(VulkanRHI* rhi, const RHI::BufferInfo& info);

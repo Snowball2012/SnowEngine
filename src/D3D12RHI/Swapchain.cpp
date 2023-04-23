@@ -6,7 +6,7 @@
 
 IMPLEMENT_RHI_OBJECT(D3DSwapchain)
 
-D3DSwapchain::D3DSwapchain(class D3D12RHI* rhi, const SwapChainCreateInfo& create_info)
+D3DSwapchain::D3DSwapchain(class D3D12RHI* rhi, const RHISwapChainCreateInfo& create_info)
 	: m_rhi(rhi)
 {
     /*

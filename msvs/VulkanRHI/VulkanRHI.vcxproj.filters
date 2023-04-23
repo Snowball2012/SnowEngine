@@ -12,6 +12,8 @@
     <ClInclude Include="..\..\src\VulkanRHI\Buffers.h" />
     <ClInclude Include="..\..\src\VulkanRHI\Textures.h" />
     <ClInclude Include="..\..\src\VulkanRHI\ResourceViews.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\AccelerationStructures.h" />
+    <ClInclude Include="..\..\src\VulkanRHI\Extensions.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\VulkanRHI\VulkanRHI.cpp" />
@@ -26,5 +28,7 @@
     <ClCompile Include="..\..\src\VulkanRHI\Buffers.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\Textures.cpp" />
     <ClCompile Include="..\..\src\VulkanRHI\ResourceViews.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\AccelerationStructures.cpp" />
+    <ClCompile Include="..\..\src\VulkanRHI\Extensions.cpp" />
   </ItemGroup>
 </Project>

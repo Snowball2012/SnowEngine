@@ -16,6 +16,8 @@
 
 #include "ResourceViews.h"
 
+#include "Extensions.h"
+
 VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
 {
     CreateVkInstance( info );
@@ -33,6 +35,8 @@ VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
     PickPhysicalDevice( m_main_surface, info.enable_raytracing );
 
     CreateLogicalDevice();
+
+    LoadExtensions();
 
     CreateVMA();
 
@@ -93,6 +97,7 @@ void VulkanRHI::CreateVMA()
     create_info.device = m_vk_device;
     create_info.instance = m_vk_instance;
     create_info.vulkanApiVersion = VulkanVersion;
+    create_info.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     VK_VERIFY( vmaCreateAllocator( &create_info, &m_vma ) );
 }
 
@@ -254,13 +259,15 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHIBufferUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 5 );
+    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 7 );
 
     add_flag( RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT );
     add_flag( RHIBufferUsageFlags::VertexBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT );
     add_flag( RHIBufferUsageFlags::IndexBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT );
     add_flag( RHIBufferUsageFlags::UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT );
+    add_flag( RHIBufferUsageFlags::AccelerationStructure, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR );
+    add_flag( RHIBufferUsageFlags::AccelerationStructureInput, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR );
 
     return retval;
 }
@@ -377,6 +384,19 @@ VkImageLayout VulkanRHI::GetVkImageLayout( RHITextureLayout layout )
     NOTIMPL;
 }
 
+VkAccelerationStructureTypeKHR VulkanRHI::GetVkASType( RHIAccelerationStructureType type )
+{
+    switch ( type )
+    {
+    case RHIAccelerationStructureType::BLAS:
+        return VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    case RHIAccelerationStructureType::TLAS:
+        return VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    }
+
+    NOTIMPL;
+}
+
 void VulkanRHI::Present( RHISwapChain& swap_chain, const PresentInfo& info )
 {
     boost::container::small_vector<VkSemaphore, 4> semaphores;
@@ -413,6 +433,12 @@ RHICommandList* VulkanRHI::GetCommandList( QueueType type )
     cmd_list->Reset();
 
     return cmd_list;
+}
+
+void VulkanRHI::LoadExtensions()
+{
+    if ( m_raytracing_supported )
+        Extensions::LoadRT( m_vk_device );
 }
 
 RHIShader* VulkanRHI::CreateShader( const ShaderCreateInfo& create_info )
@@ -699,6 +725,12 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
     vk13_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
 
     void* current_features_head = &vk13_features;
+
+    VkPhysicalDeviceVulkan12Features vk12_features = {};
+    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+
+    vk12_features.pNext = current_features_head;
+    current_features_head = &vk12_features;
     
     VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
     as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
@@ -730,6 +762,9 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
         return false;
 
     if ( !vk13_features.dynamicRendering )
+        return false;
+
+    if ( !vk12_features.bufferDeviceAddress )
         return false;
 
     if ( need_raytracing )
@@ -793,6 +828,13 @@ void VulkanRHI::CreateLogicalDevice()
     vk13_features.dynamicRendering = VK_TRUE;
 
     void* current_features_head = &vk13_features;
+
+    VkPhysicalDeviceVulkan12Features vk12_features = {};
+    vk12_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    vk12_features.bufferDeviceAddress = VK_TRUE;
+
+    vk12_features.pNext = current_features_head;
+    current_features_head = &vk12_features;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {};
     as_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;

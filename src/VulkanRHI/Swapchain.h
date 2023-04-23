@@ -14,7 +14,7 @@ struct SwapChainSupportDetails
 	std::vector<VkPresentModeKHR> present_modes;
 };
 
-struct VulkanSwapChainCreateInfo : SwapChainCreateInfo
+struct VulkanSwapChainCreateInfo : RHISwapChainCreateInfo
 {
 	VkSurfaceKHR surface = VK_NULL_HANDLE;
 };

@@ -2,6 +2,24 @@
 
 #include <Core/Core.h>
 
+class RHISwapChain;
+class RHISemaphore;
+class RHICommandList;
+struct RHISwapChainCreateInfo;
+class RHIShader;
+class RHIBuffer;
+class RHITexture;
+class RHIUploadBuffer;
+class RHIAccelerationStructure;
+class RHIDescriptorSetLayout;
+class RHIDescriptorSet;
+class RHIShaderBindingLayout;
+class RHIGraphicsPipeline;
+class RHICBV;
+class RHITextureSRV;
+class RHIRTV;
+class RHISampler;
+
 struct RHIFence
 {
     uint64_t _1;
@@ -17,8 +35,10 @@ enum class RHIBufferUsageFlags : uint32_t
     VertexBuffer = 0x4,
     IndexBuffer = 0x8,
     UniformBuffer = 0x10,
+    AccelerationStructure = 0x20,
+    AccelerationStructureInput = 0x40,
 
-    NumFlags = 5
+    NumFlags = 7
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
@@ -104,6 +124,12 @@ enum class RHICullModeFlags
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHICullModeFlags )
 
+enum class RHIAccelerationStructureType : uint8_t
+{
+    BLAS = 0,
+    TLAS
+};
+
 class RHI
 {
 public:
@@ -112,10 +138,10 @@ public:
     virtual bool SupportsRaytracing() const { return false; }
 
     // window_handle must outlive the swap chain
-    virtual class RHISwapChain* CreateSwapChain( const struct SwapChainCreateInfo& create_info ) { NOTIMPL; return nullptr; }
+    virtual RHISwapChain* CreateSwapChain( const RHISwapChainCreateInfo& create_info ) { NOTIMPL; return nullptr; }
     virtual RHISwapChain* GetMainSwapChain() { NOTIMPL; return nullptr; }
 
-    virtual class RHISemaphore* CreateGPUSemaphore() { NOTIMPL; return nullptr; }
+    virtual RHISemaphore* CreateGPUSemaphore() { NOTIMPL; return nullptr; }
 
     struct PresentInfo
     {
@@ -132,7 +158,7 @@ public:
         Count
     };
 
-    virtual class RHICommandList* GetCommandList( QueueType type ) { NOTIMPL; return nullptr; }
+    virtual RHICommandList* GetCommandList( QueueType type ) { NOTIMPL; return nullptr; }
 
     // command lists here must belong to the same QueueType
     struct SubmitInfo
@@ -170,8 +196,7 @@ public:
         const ShaderDefine* defines = nullptr;
         size_t define_count = 0;
     };
-    // Shader stuff
-    virtual class RHIShader* CreateShader( const ShaderCreateInfo& shader_info ) { NOTIMPL; return nullptr; }
+    virtual RHIShader* CreateShader( const ShaderCreateInfo& shader_info ) { NOTIMPL; return nullptr; }
 
 
     struct DescriptorViewRange
@@ -186,9 +211,9 @@ public:
         const DescriptorViewRange* ranges = nullptr;
         size_t range_count = 0;
     };
-    virtual class RHIDescriptorSetLayout* CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIDescriptorSetLayout* CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info ) { NOTIMPL; return nullptr; }
 
-    virtual class RHIDescriptorSet* CreateDescriptorSet( RHIDescriptorSetLayout& layout ) { NOTIMPL; return nullptr; }
+    virtual RHIDescriptorSet* CreateDescriptorSet( RHIDescriptorSetLayout& layout ) { NOTIMPL; return nullptr; }
 
     struct ShaderBindingLayoutInfo
     {
@@ -199,17 +224,17 @@ public:
         size_t push_constants_size = 0;
     };
 
-    virtual class RHIShaderBindingLayout* CreateShaderBindingLayout( const ShaderBindingLayoutInfo& layout_info ) { NOTIMPL; return nullptr; }
+    virtual RHIShaderBindingLayout* CreateShaderBindingLayout( const ShaderBindingLayoutInfo& layout_info ) { NOTIMPL; return nullptr; }
 
-    virtual class RHIGraphicsPipeline* CreatePSO( const struct RHIGraphicsPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
+    virtual RHIGraphicsPipeline* CreatePSO( const struct RHIGraphicsPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
 
     struct BufferInfo
     {
         uint64_t size = 0;
         RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
     };
-    virtual class RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
-    virtual class RHIBuffer* CreateDeviceBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
 
     struct TextureInfo
     {
@@ -229,33 +254,40 @@ public:
 
         RHI::QueueType initial_queue = RHI::QueueType::Graphics;
     };
-    virtual class RHITexture* CreateTexture( const TextureInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHITexture* CreateTexture( const TextureInfo& info ) { NOTIMPL; return nullptr; }
 
     struct CBVInfo
     {
         RHIBuffer* buffer = nullptr;
     };
-    virtual class RHICBV* CreateCBV( const CBVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHICBV* CreateCBV( const CBVInfo& info ) { NOTIMPL; return nullptr; }
 
     struct TextureSRVInfo
     {
         RHITexture* texture = nullptr;
     };
-    virtual class RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) { NOTIMPL; return nullptr; }
 
     struct RTVInfo
     {
         RHITexture* texture = nullptr;
         RHIFormat format = RHIFormat::Undefined;
     };
-    virtual class RHIRTV* CreateRTV( const RTVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIRTV* CreateRTV( const RTVInfo& info ) { NOTIMPL; return nullptr; }
 
     struct SamplerInfo
     {
         float mip_bias = 0.0f;
         bool enable_anisotropy = false;
     };
-    virtual class RHISampler* CreateSampler( const SamplerInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHISampler* CreateSampler( const SamplerInfo& info ) { NOTIMPL; return nullptr; }
+
+    struct ASInfo
+    {
+        RHIAccelerationStructureType type = RHIAccelerationStructureType::BLAS;
+        size_t size = 0;
+    };
+    virtual RHIAccelerationStructure* CreateAS( const ASInfo& info ) { NOTIMPL; return nullptr; }
 
     // Causes a full pipeline flush
     virtual bool ReloadAllShaders() { NOTIMPL; return false; }
@@ -285,7 +317,7 @@ inline void intrusive_ptr_release( RHIObject* p )
         p->Release();
 }
 
-struct SwapChainCreateInfo
+struct RHISwapChainCreateInfo
 {
     void* window_handle = nullptr;
     uint32_t surface_num = 0;
@@ -298,7 +330,7 @@ public:
 
     virtual glm::uvec2 GetExtent() const { NOTIMPL; }
 
-    virtual void AcquireNextImage( class RHISemaphore* semaphore_to_signal, bool& out_recreated ) { NOTIMPL; }
+    virtual void AcquireNextImage( RHISemaphore* semaphore_to_signal, bool& out_recreated ) { NOTIMPL; }
 
     virtual void Recreate() { NOTIMPL; }
 
@@ -385,7 +417,7 @@ union RHIClearColorValue
 
 struct RHIPassRTVInfo
 {
-    class RHIRTV* rtv = nullptr;
+    RHIRTV* rtv = nullptr;
     RHILoadOp load_op = RHILoadOp::DontCare;
     RHIStoreOp store_op = RHIStoreOp::DontCare;
     RHIClearColorValue clear_value = { {0,0,0,0} };
@@ -397,6 +429,19 @@ struct RHIPassInfo
     size_t render_targets_count = 0;
 
     RHIRect2D render_area = {};
+};
+
+struct RHIASGeometryInfo
+{
+
+};
+
+struct RHIASBuildInfo
+{
+    RHIBuffer* scratch = nullptr;
+    RHIAccelerationStructure* dst = nullptr;
+    RHIASGeometryInfo** geoms = nullptr;
+    size_t geoms_count = 0;
 };
 
 class RHICommandList
@@ -448,6 +493,8 @@ public:
     virtual void SetScissors( size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count ) { NOTIMPL; }
 
     virtual void PushConstants( size_t offset, const void* data, size_t size ) { NOTIMPL; }
+
+    virtual void BuildAS( const RHIASBuildInfo& info ) { NOTIMPL; }
 };
 
 class RHIShader : public RHIObject
@@ -617,6 +664,13 @@ public:
     virtual ~RHISampler() override {}
 };
 using RHISamplerPtr = RHIObjectPtr<RHISampler>;
+
+class RHIAccelerationStructure : public RHIObject
+{
+public:
+    virtual ~RHIAccelerationStructure() override {}
+};
+using RHIAccelerationStructurePtr = RHIObjectPtr<RHIAccelerationStructure>;
 
 template<typename T>
 using UniquePtrWithDeleter = std::unique_ptr<T, void( * )( T* )>;

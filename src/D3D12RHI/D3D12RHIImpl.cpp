@@ -16,7 +16,7 @@ D3D12RHI::D3D12RHI(const D3D12RHICreateInfo& info)
     m_cmd_list_mgr = std::make_unique<D3D12CommandListManager>(this);
 
 
-    SwapChainCreateInfo swapchain_create_info = {};
+    RHISwapChainCreateInfo swapchain_create_info = {};
     swapchain_create_info.surface_num = 2;
     swapchain_create_info.window_handle = info.main_window_handle;
 
@@ -86,7 +86,7 @@ void D3D12RHI::DeferredDestroyRHIObject(RHIObject* obj)
     NOTIMPL;
 }
 
-D3DSwapchain* D3D12RHI::CreateSwapChainInternal(const SwapChainCreateInfo& create_info)
+D3DSwapchain* D3D12RHI::CreateSwapChainInternal(const RHISwapChainCreateInfo& create_info)
 {
     return new D3DSwapchain(this, create_info);
 }

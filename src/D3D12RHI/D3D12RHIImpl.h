@@ -72,7 +72,7 @@ public:
 
 private:
 
-	class D3DSwapchain* CreateSwapChainInternal(const SwapChainCreateInfo& create_info);
+	class D3DSwapchain* CreateSwapChainInternal(const RHISwapChainCreateInfo& create_info);
 
 	void CreateDevice(const D3D12RHICreateInfo& info);
 
