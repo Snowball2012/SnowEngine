@@ -124,14 +124,7 @@ void VulkanCommandList::SetVertexBuffers( uint32_t first_binding, const RHIBuffe
 
 void VulkanCommandList::SetIndexBuffer( const RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset )
 {
-    VkIndexType vk_type = VK_INDEX_TYPE_MAX_ENUM;
-    switch ( type )
-    {
-    case RHIIndexBufferType::UInt16: vk_type = VK_INDEX_TYPE_UINT16; break;
-    case RHIIndexBufferType::UInt32: vk_type = VK_INDEX_TYPE_UINT32; break;
-    default:
-        NOTIMPL;
-    }
+    VkIndexType vk_type = VulkanRHI::GetVkIndexType( type );
 
     vkCmdBindIndexBuffer( m_vk_cmd_buffer, RHIImpl( index_buf ).GetVkBuffer(), offset, vk_type );
 }
@@ -327,7 +320,8 @@ void VulkanCommandList::BuildAS( const RHIASBuildInfo& info )
         vk_build_range_info[i].firstVertex = 0;
         vk_build_range_info[i].primitiveOffset = 0;
         vk_build_range_info[i].transformOffset = 0;
-        vk_build_range_info[i].primitiveCount = 0/*calc primitve count form geo*/;
+
+        VulkanRHI::GetVkASGeometry( *info.geoms[i], vk_geometries[i], vk_build_range_info[i].primitiveCount );
     }
 
     vk_geom_build_info = {};

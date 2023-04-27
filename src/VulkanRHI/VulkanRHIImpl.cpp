@@ -529,6 +529,54 @@ VulkanQueue* VulkanRHI::GetQueue( QueueType type )
     return nullptr;
 }
 
+bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, size_t& primitive_count )
+{
+    switch ( geom_info.type )
+    {
+        case RHIASGeometryType::Triangles:
+        {
+            const RHIASTrianglesInfo& triangles = geom_info.triangles;
+            vk_geom_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            vk_geom_info.flags = 0;
+
+            VkAccelerationStructureGeometryTrianglesDataKHR& vk_triangles = vk_geom_info.geometry.triangles;
+            vk_triangles = {};
+            if ( triangles.idx_buf )
+            {
+                vk_triangles.indexData.deviceAddress = RHIImpl( triangles.idx_buf )->GetDeviceAddress();
+                vk_triangles.indexType = VulkanRHI::GetVkIndexType( triangles.idx_type );
+                primitive_count = triangles.idx_buf->GetSize() / VulkanRHI::GetVkIndexTypeByteSize( triangles.idx_type );
+            }
+            if ( SE_ENSURE( triangles.vtx_buf ) )
+            {
+                vk_triangles.vertexData.deviceAddress = RHIImpl( triangles.vtx_buf )->GetDeviceAddress();
+                vk_triangles.vertexFormat = VulkanRHI::GetVkFormat( triangles.vtx_format );
+                vk_triangles.vertexStride = triangles.vtx_stride;
+                vk_triangles.maxVertex = triangles.vtx_buf->GetSize() / triangles.vtx_stride; // reconsider if we want to keep all geo in one big buffer
+
+                if ( !triangles.idx_buf )
+                {
+                    primitive_count = vk_triangles.maxVertex + 1;
+                }
+            }
+        }
+        break;
+        case RHIASGeometryType::Instances:
+        {
+            NOTIMPL;
+            return false;
+        }
+        break;
+        default:
+        {
+            NOTIMPL;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
 {
     LogSupportedVkInstanceExtensions();
@@ -1155,6 +1203,32 @@ bool VulkanRHI::ReloadAllPipelines()
     return succeeded;
 }
 
+VkIndexType VulkanRHI::GetVkIndexType( RHIIndexBufferType type )
+{
+    VkIndexType vk_type = VK_INDEX_TYPE_MAX_ENUM;
+    switch ( type )
+    {
+    case RHIIndexBufferType::UInt16: vk_type = VK_INDEX_TYPE_UINT16; break;
+    case RHIIndexBufferType::UInt32: vk_type = VK_INDEX_TYPE_UINT32; break;
+    default:
+        NOTIMPL;
+    }
+
+    return vk_type;
+}
+
+uint8_t VulkanRHI::GetVkIndexTypeByteSize( RHIIndexBufferType type )
+{
+    switch ( type )
+    {
+    case RHIIndexBufferType::UInt16: return 2; break;
+    case RHIIndexBufferType::UInt32: return 4; break;
+    default:
+        NOTIMPL;
+    }
+    return 0;
+}
+
 bool VulkanRHI::ReloadAllShaders()
 {
     SE_LOG_INFO( VulkanRHI, "Reload shaders: start" );
@@ -1224,6 +1298,28 @@ RHITexture* VulkanRHI::CreateTexture( const TextureInfo& tex_info )
 RHISampler* VulkanRHI::CreateSampler( const SamplerInfo& info )
 {
     return new VulkanSampler( this, info );
+}
+
+bool VulkanRHI::GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes )
+{
+    constexpr size_t sv_size = 4;
+    VkAccelerationStructureBuildGeometryInfoKHR vk_buildgeominfo;
+    bc::small_vector<uint32_t, sv_size> vk_geom_primitive_counts;
+    bc::small_vector<VkAccelerationStructureGeometryKHR, sv_size> vk_geometries;
+
+    VkAccelerationStructureBuildSizesInfoKHR vk_sizes = {};
+    vk_sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
+
+    // fill geoms
+    NOTIMPL;
+    
+    vkGetAccelerationStructureBuildSizesKHR(
+        m_vk_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vk_buildgeominfo, vk_geom_primitive_counts.data(), &vk_sizes );
+
+    out_sizes.as_size = vk_sizes.accelerationStructureSize;
+    out_sizes.scratch_size = vk_sizes.buildScratchSize;
+
+    return true;
 }
 
 QueueFamilyIndices FindQueueFamilies( VkPhysicalDevice device, VkSurfaceKHR surface )

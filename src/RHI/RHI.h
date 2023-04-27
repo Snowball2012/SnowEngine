@@ -19,6 +19,7 @@ class RHICBV;
 class RHITextureSRV;
 class RHIRTV;
 class RHISampler;
+struct RHIASGeometryInfo;
 
 struct RHIFence
 {
@@ -128,6 +129,12 @@ enum class RHIAccelerationStructureType : uint8_t
 {
     BLAS = 0,
     TLAS
+};
+
+struct RHIASBuildSizes
+{
+    size_t as_size = 0;
+    size_t scratch_size = 0;
 };
 
 class RHI
@@ -289,6 +296,8 @@ public:
     };
     virtual RHIAccelerationStructure* CreateAS( const ASInfo& info ) { NOTIMPL; return nullptr; }
 
+    virtual bool GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) { NOTIMPL; return false; }
+
     // Causes a full pipeline flush
     virtual bool ReloadAllShaders() { NOTIMPL; return false; }
 };
@@ -431,9 +440,34 @@ struct RHIPassInfo
     RHIRect2D render_area = {};
 };
 
-struct RHIASGeometryInfo
+enum class RHIASGeometryType : uint8_t
+{
+    Triangles,
+    Instances
+};
+
+struct RHIASTrianglesInfo
+{
+    RHIFormat vtx_format = RHIFormat::Undefined;
+    RHIBuffer* vtx_buf = nullptr;
+    size_t vtx_stride = 0;
+    RHIIndexBufferType idx_type = RHIIndexBufferType::UInt16;
+    RHIBuffer* idx_buf = nullptr;
+};
+
+struct RHIASInstancesInfo
 {
 
+};
+
+struct RHIASGeometryInfo
+{
+    RHIASGeometryType type = RHIASGeometryType::Triangles;
+    union
+    {
+        RHIASTrianglesInfo triangles;
+        RHIASInstancesInfo instances;
+    };
 };
 
 struct RHIASBuildInfo

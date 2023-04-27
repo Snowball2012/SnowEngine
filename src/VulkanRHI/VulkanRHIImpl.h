@@ -138,6 +138,8 @@ public:
 
 	virtual bool ReloadAllShaders() override;
 
+	virtual bool GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) override;
+
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_queue_family_indices; }
@@ -193,6 +195,11 @@ public:
 	static VkBlendFactor GetVkBlendFactor( RHIBlendFactor rhi_blend_factor );
 
 	static VkAccelerationStructureTypeKHR GetVkASType( RHIAccelerationStructureType type );
+
+	static VkIndexType GetVkIndexType( RHIIndexBufferType type );
+	static uint8_t GetVkIndexTypeByteSize( RHIIndexBufferType type );
+
+	static bool GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, size_t& primitive_count );
 
 	void TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 
