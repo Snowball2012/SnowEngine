@@ -8,7 +8,12 @@ struct RHIUtils
     // No const ref because the function appends TransferDst usage flag to buffer_info
     static RHIBufferPtr CreateInitializedGPUBuffer( RHI::BufferInfo& buffer_info, const void* src_data, size_t src_size );
 
+    // Super slow because of the flushes and lots of allocations
+    static RHIAccelerationStructurePtr CreateBLAS( const RHIASGeometryInfo& geom );
+
     // Allows "immediate mode" controls. EndSingleTimeCommands flushes entire RHI, so use with caution
     static RHICommandList* BeginSingleTimeCommands( RHI::QueueType queue_type );
     static void EndSingleTimeCommands( RHICommandList& list );
+
+    static uint8_t GetRHIFormatSize( RHIFormat format );
 };

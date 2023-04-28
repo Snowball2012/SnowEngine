@@ -67,6 +67,13 @@ private:
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 
+	std::vector<const char*> m_raytracing_extensions =
+	{
+		VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+		VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
+	};
+
 	VkDevice m_vk_device = VK_NULL_HANDLE;
 
 	VmaAllocator m_vma = VK_NULL_HANDLE;
@@ -132,13 +139,15 @@ public:
 
 	virtual RHIDescriptorSet* CreateDescriptorSet( RHIDescriptorSetLayout& layout ) override;
 
+	virtual RHIAccelerationStructure* CreateAS( const RHI::ASInfo& info ) override;
+
 	virtual RHICBV* CreateCBV( const CBVInfo& info ) override;
 	virtual RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) override;
 	virtual RHIRTV* CreateRTV( const RTVInfo& info ) override;
 
 	virtual bool ReloadAllShaders() override;
 
-	virtual bool GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) override;
+	virtual bool GetASBuildSize( RHIAccelerationStructureType type, const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) override;
 
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
@@ -199,7 +208,7 @@ public:
 	static VkIndexType GetVkIndexType( RHIIndexBufferType type );
 	static uint8_t GetVkIndexTypeByteSize( RHIIndexBufferType type );
 
-	static bool GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, size_t& primitive_count );
+	static bool GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count );
 
 	void TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 

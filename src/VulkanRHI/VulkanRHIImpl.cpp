@@ -14,6 +14,8 @@
 
 #include "Textures.h"
 
+#include "AccelerationStructures.h"
+
 #include "ResourceViews.h"
 
 #include "Extensions.h"
@@ -261,7 +263,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHIBufferUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 7 );
+    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 8 );
 
     add_flag( RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT );
@@ -270,6 +272,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
     add_flag( RHIBufferUsageFlags::UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT );
     add_flag( RHIBufferUsageFlags::AccelerationStructure, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR );
     add_flag( RHIBufferUsageFlags::AccelerationStructureInput, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR );
+    add_flag( RHIBufferUsageFlags::AccelerationStructureScratch, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
 
     return retval;
 }
@@ -529,30 +532,34 @@ VulkanQueue* VulkanRHI::GetQueue( QueueType type )
     return nullptr;
 }
 
-bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, size_t& primitive_count )
+bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count )
 {
+    vk_geom_info = {};
+    vk_geom_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
     switch ( geom_info.type )
     {
         case RHIASGeometryType::Triangles:
         {
             const RHIASTrianglesInfo& triangles = geom_info.triangles;
-            vk_geom_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-            vk_geom_info.flags = 0;
-
             VkAccelerationStructureGeometryTrianglesDataKHR& vk_triangles = vk_geom_info.geometry.triangles;
             vk_triangles = {};
+
+            vk_geom_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            vk_geom_info.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            vk_geom_info.flags = 0;
+
             if ( triangles.idx_buf )
             {
                 vk_triangles.indexData.deviceAddress = RHIImpl( triangles.idx_buf )->GetDeviceAddress();
                 vk_triangles.indexType = VulkanRHI::GetVkIndexType( triangles.idx_type );
-                primitive_count = triangles.idx_buf->GetSize() / VulkanRHI::GetVkIndexTypeByteSize( triangles.idx_type );
+                primitive_count = uint32_t( triangles.idx_buf->GetSize() / VulkanRHI::GetVkIndexTypeByteSize( triangles.idx_type ) );
             }
             if ( SE_ENSURE( triangles.vtx_buf ) )
             {
                 vk_triangles.vertexData.deviceAddress = RHIImpl( triangles.vtx_buf )->GetDeviceAddress();
                 vk_triangles.vertexFormat = VulkanRHI::GetVkFormat( triangles.vtx_format );
                 vk_triangles.vertexStride = triangles.vtx_stride;
-                vk_triangles.maxVertex = triangles.vtx_buf->GetSize() / triangles.vtx_stride; // reconsider if we want to keep all geo in one big buffer
+                vk_triangles.maxVertex = uint32_t( triangles.vtx_buf->GetSize() / triangles.vtx_stride ); // reconsider if we want to keep all geo in one big buffer
 
                 if ( !triangles.idx_buf )
                 {
@@ -575,6 +582,11 @@ bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerat
     }
 
     return true;
+}
+
+RHIAccelerationStructure* VulkanRHI::CreateAS( const RHI::ASInfo& info )
+{
+    return new VulkanAccelerationStructure( this, info );
 }
 
 void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
@@ -817,21 +829,17 @@ VulkanRHI::ExtensionCheckResult VulkanRHI::CheckDeviceExtensionSupport( VkPhysic
 
     std::set<std::string> extensions_to_check( m_required_device_extensions.begin(), m_required_device_extensions.end() );
 
-    std::set<std::string> raytracing_extensions = {
-        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
-    };
+    std::set<std::string> raytracing_extensions_to_check( m_raytracing_extensions.begin(), m_raytracing_extensions.end() );
 
     for ( const auto& extension : available_extensions )
     {
         extensions_to_check.erase( extension.extensionName );
-        raytracing_extensions.erase( extension.extensionName );
+        raytracing_extensions_to_check.erase( extension.extensionName );
     }
 
     ExtensionCheckResult result;
     result.all_required_extensions_found = extensions_to_check.empty();
-    result.raytracing_extensions_found = raytracing_extensions.empty();
+    result.raytracing_extensions_found = raytracing_extensions_to_check.empty();
 
     return result;
 }
@@ -851,13 +859,18 @@ void VulkanRHI::CreateLogicalDevice()
         queue_create_info.pQueuePriorities = &priority;
     }
 
+    std::vector<const char*> enabled_extensions = m_required_device_extensions;
+    if ( m_raytracing_supported )
+    {
+        enabled_extensions.insert( enabled_extensions.end(), m_raytracing_extensions.begin(), m_raytracing_extensions.end() );
+    }
     VkDeviceCreateInfo device_create_info = {};
     device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     device_create_info.pQueueCreateInfos = queue_create_infos.data();
     device_create_info.queueCreateInfoCount = uint32_t( queue_create_infos.size() );
     device_create_info.pEnabledFeatures = nullptr;
-    device_create_info.enabledExtensionCount = uint32_t( m_required_device_extensions.size() );
-    device_create_info.ppEnabledExtensionNames = m_required_device_extensions.data();
+    device_create_info.enabledExtensionCount = uint32_t( enabled_extensions.size() );
+    device_create_info.ppEnabledExtensionNames = enabled_extensions.data();
     device_create_info.pNext = &m_vk_features.features2_head;
 
     VK_VERIFY( vkCreateDevice( m_vk_phys_device, &device_create_info, nullptr, &m_vk_device ) );
@@ -1300,18 +1313,27 @@ RHISampler* VulkanRHI::CreateSampler( const SamplerInfo& info )
     return new VulkanSampler( this, info );
 }
 
-bool VulkanRHI::GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes )
+bool VulkanRHI::GetASBuildSize( RHIAccelerationStructureType type, const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes )
 {
     constexpr size_t sv_size = 4;
-    VkAccelerationStructureBuildGeometryInfoKHR vk_buildgeominfo;
+    VkAccelerationStructureBuildGeometryInfoKHR vk_buildgeominfo = {};
     bc::small_vector<uint32_t, sv_size> vk_geom_primitive_counts;
     bc::small_vector<VkAccelerationStructureGeometryKHR, sv_size> vk_geometries;
 
     VkAccelerationStructureBuildSizesInfoKHR vk_sizes = {};
     vk_sizes.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-    // fill geoms
-    NOTIMPL;
+    vk_geometries.resize( num_geoms );
+    vk_geom_primitive_counts.resize( num_geoms );
+    for ( size_t i = 0; i < num_geoms; ++i )
+    {
+        VulkanRHI::GetVkASGeometry( geom_infos[i], vk_geometries[i], vk_geom_primitive_counts[i] );
+    }
+
+    vk_buildgeominfo.pGeometries = vk_geometries.data();
+    vk_buildgeominfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    vk_buildgeominfo.geometryCount = uint32_t( num_geoms );
+    vk_buildgeominfo.type = VulkanRHI::GetVkASType( type );
     
     vkGetAccelerationStructureBuildSizesKHR(
         m_vk_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vk_buildgeominfo, vk_geom_primitive_counts.data(), &vk_sizes );

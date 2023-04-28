@@ -11,6 +11,7 @@ class CubeAsset : public Asset
 
 	RHIBufferPtr m_vertex_buffer = nullptr;
 	RHIBufferPtr m_index_buffer = nullptr;
+	RHIAccelerationStructurePtr m_blas = nullptr;
 
 	static constexpr uint32_t m_indices_count = 36;
 
@@ -23,8 +24,9 @@ public:
 	RHIPrimitiveAttributeInfo GetPositionBufferInfo() const;
 	size_t GetPositionBufferStride() const;
 
-	const RHIBufferPtr GetVertexBuffer() const { return m_vertex_buffer; }
-	const RHIBufferPtr GetIndexBuffer() const { return m_index_buffer; }
+	const RHIBuffer* GetVertexBuffer() const { return m_vertex_buffer.get(); }
+	const RHIBuffer* GetIndexBuffer() const { return m_index_buffer.get(); }
+	const RHIAccelerationStructure* GetAccelerationStructure() const { return m_blas.get(); }
 
 	const RHIIndexBufferType GetIndexBufferType() const;
 	uint32_t GetNumIndices() const { return m_indices_count; }

@@ -435,7 +435,7 @@ void SandboxApp::RecordCommandBuffer( RHICommandList & list, RHISwapChain & swap
 
     if ( m_show_cube )
     {
-        list.SetVertexBuffers( 0, m_cube->GetVertexBuffer().get(), 1, nullptr );
+        list.SetVertexBuffers( 0, m_cube->GetVertexBuffer(), 1, nullptr );
         list.SetIndexBuffer( *m_cube->GetIndexBuffer(), m_cube->GetIndexBufferType(), 0 );
 
         list.DrawIndexed( m_cube->GetNumIndices(), 1, 0, 0, 0 );

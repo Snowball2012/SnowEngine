@@ -38,8 +38,9 @@ enum class RHIBufferUsageFlags : uint32_t
     UniformBuffer = 0x10,
     AccelerationStructure = 0x20,
     AccelerationStructureInput = 0x40,
+    AccelerationStructureScratch = 0x80,
 
-    NumFlags = 7
+    NumFlags = 8
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
@@ -296,7 +297,7 @@ public:
     };
     virtual RHIAccelerationStructure* CreateAS( const ASInfo& info ) { NOTIMPL; return nullptr; }
 
-    virtual bool GetASBuildSize( const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) { NOTIMPL; return false; }
+    virtual bool GetASBuildSize( RHIAccelerationStructureType type, const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) { NOTIMPL; return false; }
 
     // Causes a full pipeline flush
     virtual bool ReloadAllShaders() { NOTIMPL; return false; }
@@ -472,9 +473,9 @@ struct RHIASGeometryInfo
 
 struct RHIASBuildInfo
 {
-    RHIBuffer* scratch = nullptr;
-    RHIAccelerationStructure* dst = nullptr;
-    RHIASGeometryInfo** geoms = nullptr;
+    const RHIBuffer* scratch = nullptr;
+    const RHIAccelerationStructure* dst = nullptr;
+    const RHIASGeometryInfo** geoms = nullptr;
     size_t geoms_count = 0;
 };
 

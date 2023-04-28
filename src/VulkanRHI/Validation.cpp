@@ -36,14 +36,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(
 {
     if (severity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        std::cerr
-            << "[vkValidationLayer]"
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT) ? "[General]" : "")
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) ? "[Validation]" : "")
-            << ((type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) ? "[Performance]" : "")
-            << "[" << VkSeverityToString(severity) << "]"
-            << ": "
-            << callback_data->pMessage << std::endl;
+        SE_LOG_ERROR( VulkanRHI, "%s", callback_data->pMessage );
 
 #ifndef NDEBUG
         DebugBreak();

@@ -27,7 +27,7 @@ bool CubeAsset::Load( const JsonValue& data )
     };
     RHI::BufferInfo vertex_buf_info = {};
     vertex_buf_info.size = sizeof( CubeVertex ) * vertices.size();
-    vertex_buf_info.usage = RHIBufferUsageFlags::VertexBuffer;
+    vertex_buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::AccelerationStructureInput;
     m_vertex_buffer = RHIUtils::CreateInitializedGPUBuffer( vertex_buf_info, vertices.data(), vertex_buf_info.size );
 
     static std::array<uint16_t, m_indices_count> indices =
@@ -52,8 +52,17 @@ bool CubeAsset::Load( const JsonValue& data )
     };
     RHI::BufferInfo index_buf_info = {};
     index_buf_info.size = sizeof( indices[0] ) * indices.size();
-    index_buf_info.usage = RHIBufferUsageFlags::IndexBuffer;
+    index_buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::AccelerationStructureInput;
     m_index_buffer = RHIUtils::CreateInitializedGPUBuffer( index_buf_info, indices.data(), index_buf_info.size );
+
+    RHIASGeometryInfo blas_geom = {};
+    blas_geom.type = RHIASGeometryType::Triangles;
+    blas_geom.triangles.idx_buf = m_index_buffer.get();
+    blas_geom.triangles.idx_type = GetIndexBufferType();
+    blas_geom.triangles.vtx_buf = m_vertex_buffer.get();
+    blas_geom.triangles.vtx_format = GetPositionBufferInfo().format;
+    blas_geom.triangles.vtx_stride = RHIUtils::GetRHIFormatSize( blas_geom.triangles.vtx_format );
+    m_blas = RHIUtils::CreateBLAS( blas_geom );
 
     return true;
 }
