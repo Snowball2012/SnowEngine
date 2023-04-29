@@ -133,6 +133,8 @@ public:
 	virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& buf_info ) override;
 	virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& buf_info ) override;
 
+	virtual RHIASInstanceBuffer* CreateASInstanceBuffer( const ASInstanceBufferInfo& info ) override;
+
 	virtual RHITexture* CreateTexture( const TextureInfo& tex_info ) override;
 
 	virtual RHISampler* CreateSampler( const SamplerInfo& info ) override;
@@ -208,7 +210,9 @@ public:
 	static VkIndexType GetVkIndexType( RHIIndexBufferType type );
 	static uint8_t GetVkIndexTypeByteSize( RHIIndexBufferType type );
 
-	static bool GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count );
+	// if instance_data is not null, convert geom_info transform array to vk transform array
+	static bool GetVkASGeometry(
+		const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count );
 
 	void TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkImageLayout old_layout, VkImageLayout new_layout );
 

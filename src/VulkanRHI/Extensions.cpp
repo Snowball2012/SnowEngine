@@ -48,6 +48,11 @@ DEFINE_VK_FUNCTION5( void, vkGetAccelerationStructureBuildSizesKHR,
     const uint32_t*, pMaxPrimitiveCounts,
     VkAccelerationStructureBuildSizesInfoKHR*, pSizeInfo );
 
+DEFINE_VK_FUNCTION2( VkDeviceAddress, vkGetAccelerationStructureDeviceAddressKHR,
+    VkDevice, device,
+    const VkAccelerationStructureDeviceAddressInfoKHR*, pInfo );
+
+
 void Extensions::LoadRT( VkDevice device )
 {
 #ifdef DEVICE_LEVEL_VULKAN_FUNCTION
@@ -62,6 +67,7 @@ VERIFY_NOT_EQUAL( name, nullptr );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkDestroyAccelerationStructureKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCmdBuildAccelerationStructuresKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkGetAccelerationStructureBuildSizesKHR );
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkGetAccelerationStructureDeviceAddressKHR );
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION
 }

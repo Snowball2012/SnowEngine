@@ -264,8 +264,6 @@ void EngineApp::DrawFrame()
     bool swapchain_recreated = false;
     m_swapchain->AcquireNextImage( m_image_available_semaphores[m_current_frame].get(), swapchain_recreated );
 
-    RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
-
     std::vector<RHICommandList*> cmd_lists;
 
     OnDrawFrame( cmd_lists );

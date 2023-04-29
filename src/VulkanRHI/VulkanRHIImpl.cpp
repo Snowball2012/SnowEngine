@@ -532,7 +532,8 @@ VulkanQueue* VulkanRHI::GetQueue( QueueType type )
     return nullptr;
 }
 
-bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count )
+bool VulkanRHI::GetVkASGeometry(
+    const RHIASGeometryInfo& geom_info, VkAccelerationStructureGeometryKHR& vk_geom_info, uint32_t& primitive_count )
 {
     vk_geom_info = {};
     vk_geom_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -546,7 +547,7 @@ bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerat
 
             vk_geom_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
             vk_geom_info.geometry.triangles.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-            vk_geom_info.flags = 0;
+            vk_geom_info.flags = MASK_BITS_NONE;
 
             if ( triangles.idx_buf )
             {
@@ -570,8 +571,18 @@ bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerat
         break;
         case RHIASGeometryType::Instances:
         {
-            NOTIMPL;
-            return false;
+            const RHIASInstancesInfo& instances = geom_info.instances;
+            VkAccelerationStructureGeometryInstancesDataKHR& vk_instances = vk_geom_info.geometry.instances;
+            vk_instances = {};
+
+            vk_geom_info.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+            vk_instances.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+            vk_geom_info.flags = MASK_BITS_NONE;
+
+            vk_instances.arrayOfPointers = VK_FALSE;
+            primitive_count = uint32_t( instances.num_instances );
+
+            vk_instances.data.deviceAddress = RHIImpl( instances.instance_buf )->GetVkDeviceAddress();
         }
         break;
         default:
@@ -583,6 +594,16 @@ bool VulkanRHI::GetVkASGeometry( const RHIASGeometryInfo& geom_info, VkAccelerat
 
     return true;
 }
+
+RHIASInstanceBuffer* VulkanRHI::CreateASInstanceBuffer( const ASInstanceBufferInfo& info )
+{
+    VulkanASInstanceBuffer* instance_buffer = new VulkanASInstanceBuffer( this, info.num_instances + info.num_instances / 5 );
+
+    instance_buffer->UpdateBuffer( info.data, info.num_instances );
+    
+    return instance_buffer;
+}
+
 
 RHIAccelerationStructure* VulkanRHI::CreateAS( const RHI::ASInfo& info )
 {

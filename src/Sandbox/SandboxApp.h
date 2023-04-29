@@ -5,10 +5,10 @@
 #include <ecs/EntityContainer.h>
 
 #include <Engine/EngineApp.h>
+#include <Engine/Assets.h>
+#include <Engine/RHIUtils.h>
 
 #include "RenderResources.h"
-
-#include <Engine/Assets.h>
 
 SE_LOG_CATEGORY( Sandbox );
 
@@ -42,10 +42,13 @@ private:
 	// assets
 	CubeAssetPtr m_cube = nullptr;
 
+
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_binding_tables;
 
 	World m_world;
+	TLAS m_tlas;
+	TLAS::InstanceID m_cube_instance_tlas_id = TLAS::InstanceID::nullid;
 
 	// GUI state
 	std::string m_new_entity_name;

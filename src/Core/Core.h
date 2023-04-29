@@ -155,6 +155,18 @@ inline uint64_t CalcAlignedSize( uint64_t size, uint64_t alignment )
 static constexpr const size_t SizeKB = 1024;
 static constexpr const size_t SizeMB = 1024 * SizeKB;
 
+// -1 converts any unsigned type to max value (all bits raised)
+#define MASK_BITS_ALL -1
+#define MASK_BITS_NONE 0
+
+// Allows to easily memcpy unrelated types
+template< typename T1, typename T2 >
+void MemcpyUnrelatedSafe( T1& dst, T2& src )
+{
+	static_assert( sizeof( dst ) == sizeof( src ), "can't memcpy structs with different sizes" );
+	memcpy( reinterpret_cast<void*>( &dst ), reinterpret_cast<const void*>( &src ), sizeof( dst ) );
+}
+
 inline std::wstring ToWString( const char* str )
 {
 	std::wstring res =

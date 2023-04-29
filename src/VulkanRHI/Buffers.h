@@ -45,3 +45,4 @@ public:
     virtual const RHIBuffer* GetBuffer() const override { return m_buffer.get(); }
 };
 IMPLEMENT_RHI_INTERFACE( RHIUploadBuffer, VulkanUploadBuffer )
+using VulkanUploadBufferPtr = RHIObjectPtr<VulkanUploadBuffer>;

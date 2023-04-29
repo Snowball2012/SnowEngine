@@ -72,8 +72,8 @@ public:
     void reserve( uint32_t nelems ) noexcept;
     void shrink_to_fit() noexcept;
 
-    using iterator = typename std::vector<T>::iterator;
-    using const_iterator = typename std::vector<T>::const_iterator;
+    using iterator = typename base_container<T>::iterator;
+    using const_iterator = typename base_container<T>::const_iterator;
 
     // these traversal iterators may be invalidated after a call to any non-const method except get(), try_get() and operator[]
     iterator begin() noexcept;
@@ -87,6 +87,9 @@ public:
 
     span<T> get_elems() noexcept;
     span<const T> get_elems() const noexcept;
+
+    T* data() noexcept;
+    const T* data() const noexcept;
 
 private:
     struct freelist_elem

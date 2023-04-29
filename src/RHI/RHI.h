@@ -10,6 +10,7 @@ class RHIShader;
 class RHIBuffer;
 class RHITexture;
 class RHIUploadBuffer;
+class RHIASInstanceBuffer;
 class RHIAccelerationStructure;
 class RHIDescriptorSetLayout;
 class RHIDescriptorSet;
@@ -20,6 +21,7 @@ class RHITextureSRV;
 class RHIRTV;
 class RHISampler;
 struct RHIASGeometryInfo;
+struct RHIASInstanceData;
 
 struct RHIFence
 {
@@ -243,6 +245,13 @@ public:
     };
     virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
     virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
+    
+    struct ASInstanceBufferInfo
+    {
+        const RHIASInstanceData* data = nullptr;
+        size_t num_instances = 0;
+    };
+    virtual RHIASInstanceBuffer* CreateASInstanceBuffer( const ASInstanceBufferInfo& info ) { NOTIMPL; return nullptr; }
 
     struct TextureInfo
     {
@@ -450,15 +459,22 @@ enum class RHIASGeometryType : uint8_t
 struct RHIASTrianglesInfo
 {
     RHIFormat vtx_format = RHIFormat::Undefined;
-    RHIBuffer* vtx_buf = nullptr;
+    const RHIBuffer* vtx_buf = nullptr;
     size_t vtx_stride = 0;
     RHIIndexBufferType idx_type = RHIIndexBufferType::UInt16;
-    RHIBuffer* idx_buf = nullptr;
+    const RHIBuffer* idx_buf = nullptr;
+};
+
+struct RHIASInstanceData
+{
+    const RHIAccelerationStructure* blas = nullptr;
+    glm::mat3x4 transform = {};
 };
 
 struct RHIASInstancesInfo
 {
-
+    const RHIASInstanceBuffer* instance_buf = nullptr;
+    size_t num_instances = 0;
 };
 
 struct RHIASGeometryInfo
@@ -662,6 +678,15 @@ public:
 };
 using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
 
+class RHIASInstanceBuffer : public RHIObject
+{
+public:
+    virtual ~RHIASInstanceBuffer() override {}
+
+    virtual void UpdateBuffer( const RHIASInstanceData* data, size_t num_instances ) { NOTIMPL; }
+};
+using RHIASInstanceBufferPtr = RHIObjectPtr<RHIASInstanceBuffer>;
+
 class RHITexture : public RHIObject
 {
 public:
@@ -703,6 +728,7 @@ using RHISamplerPtr = RHIObjectPtr<RHISampler>;
 class RHIAccelerationStructure : public RHIObject
 {
 public:
+    virtual size_t GetSize() const { NOTIMPL; return 0; }
     virtual ~RHIAccelerationStructure() override {}
 };
 using RHIAccelerationStructurePtr = RHIObjectPtr<RHIAccelerationStructure>;

@@ -27,15 +27,30 @@ RHIBufferPtr RHIUtils::CreateInitializedGPUBuffer( RHI::BufferInfo& buffer_info,
     return gpu_buffer;
 }
 
-RHIAccelerationStructurePtr RHIUtils::CreateBLAS( const RHIASGeometryInfo& geom )
+RHIAccelerationStructurePtr RHIUtils::CreateAS( const RHIASGeometryInfo& geom )
 {
+    RHIAccelerationStructureType type = RHIAccelerationStructureType::BLAS;
+    
+    switch ( geom.type )
+    {
+    case RHIASGeometryType::Instances:
+        type = RHIAccelerationStructureType::TLAS;
+        break;
+    case RHIASGeometryType::Triangles:
+        type = RHIAccelerationStructureType::BLAS;
+        break;
+    default:
+        NOTIMPL;
+        return nullptr;
+    }
+
     RHIASBuildSizes build_sizes = {};
-    if ( !GetRHI().GetASBuildSize( RHIAccelerationStructureType::BLAS, &geom, 1, build_sizes ) )
+    if ( !GetRHI().GetASBuildSize( type, &geom, 1, build_sizes ) )
         return nullptr;
 
     RHI::ASInfo as_create_info = {};
     as_create_info.size = build_sizes.as_size;
-    as_create_info.type = RHIAccelerationStructureType::BLAS;
+    as_create_info.type = type;
 
     RHIAccelerationStructurePtr as = GetRHI().CreateAS( as_create_info );
     if ( !as )
@@ -119,4 +134,80 @@ uint8_t RHIUtils::GetRHIFormatSize( RHIFormat format )
         break;
     }
     return 0;
+}
+
+bool TLAS::Build( RHICommandList& cmd_list )
+{
+    RHIASInstanceBufferPtr& gpu_instance_buf = m_gpu_instances[m_cur_buf_idx++];
+    m_cur_buf_idx = m_cur_buf_idx % m_max_num_bufs;
+
+    RHIASBuildSizes build_sizes = {};
+
+    RHIASGeometryInfo geom_info = {};
+    geom_info.type = RHIASGeometryType::Instances;
+
+    if ( !gpu_instance_buf )
+    {
+        RHI::ASInstanceBufferInfo instance_buffer_ci = {};
+        instance_buffer_ci.data = m_instances.data();
+        instance_buffer_ci.num_instances = m_instances.size();
+        gpu_instance_buf = GetRHI().CreateASInstanceBuffer( instance_buffer_ci );
+    }
+    
+    if ( !SE_ENSURE( m_gpu_instances != nullptr ) )
+        return false;
+
+    gpu_instance_buf->UpdateBuffer( m_instances.data(), m_instances.size() );
+
+    geom_info.instances.instance_buf = gpu_instance_buf.get();
+    geom_info.instances.num_instances = m_instances.size();
+
+    GetRHI().GetASBuildSize( RHIAccelerationStructureType::TLAS, &geom_info, 1, build_sizes );
+
+    bool need_full_build = 
+        !m_as || !m_scratch
+        || ( m_scratch->GetSize() < build_sizes.scratch_size )
+        || ( m_as->GetSize() < build_sizes.as_size );
+
+    if ( need_full_build )
+    {
+        RHI::ASInfo as_create_info = {};
+        as_create_info.size = build_sizes.as_size;
+        as_create_info.size += as_create_info.size / 4; // make some room for subsequent rebuilds
+        as_create_info.type = RHIAccelerationStructureType::TLAS;
+
+        m_as = GetRHI().CreateAS( as_create_info );
+        if ( !m_as )
+            return false;
+
+        RHI::BufferInfo scratch_ci = {};
+        scratch_ci.size = build_sizes.scratch_size;
+        scratch_ci.size += scratch_ci.size / 4; // make some room for subsequent rebuilds
+        scratch_ci.usage = RHIBufferUsageFlags::AccelerationStructureScratch;
+        m_scratch = GetRHI().CreateDeviceBuffer( scratch_ci );
+        if ( !m_scratch )
+            return false;
+    }
+
+    if ( !SE_ENSURE( m_as != nullptr && m_scratch != nullptr && m_gpu_instances != nullptr ) )
+        return false;
+
+    const RHIASGeometryInfo* geom_info_ptr = &geom_info;
+    RHIASBuildInfo build_info = {};
+    build_info.geoms = &geom_info_ptr;
+    build_info.geoms_count = 1;
+    build_info.dst = m_as.get();
+    build_info.scratch = m_scratch.get();
+
+    cmd_list.BuildAS( build_info );
+
+    return true;
+}
+
+void TLAS::Reset()
+{
+    m_as = nullptr;
+    m_scratch = nullptr;
+    for ( auto& instance_buf : m_gpu_instances )
+        instance_buf = nullptr;
 }

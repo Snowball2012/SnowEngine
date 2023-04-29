@@ -255,3 +255,16 @@ span<const T> packed_freelist<T, base_container>::get_elems() const noexcept
 {
     return make_span( m_packed_data );
 }
+
+template<typename T, template <typename...> typename base_container>
+T* packed_freelist<T, base_container>::data() noexcept
+{
+    return m_packed_data.data();
+}
+
+
+template<typename T, template <typename...> typename base_container>
+const T* packed_freelist<T, base_container>::data() const noexcept
+{
+    return m_packed_data.data();
+}

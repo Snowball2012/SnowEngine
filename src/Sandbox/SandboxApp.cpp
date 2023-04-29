@@ -37,6 +37,9 @@ void SandboxApp::OnInit()
     CreateUniformBuffers();
     CreateDescriptorSets();
 
+    m_cube_instance_tlas_id = m_tlas.Instances().emplace();
+    m_tlas.Instances()[m_cube_instance_tlas_id].blas = m_cube->GetAccelerationStructure();
+
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
 
@@ -60,6 +63,8 @@ void SandboxApp::OnCleanup()
     m_index_buffer = nullptr;
     m_uniform_buffers.clear();
     m_texture = nullptr;
+
+    m_tlas.Reset();
 
     m_cube = nullptr;
 
@@ -143,6 +148,8 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
 
     Matrices matrices = {};
     matrices.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
+
+    m_tlas.Instances()[m_cube_instance_tlas_id].transform = glm::mat3x4( matrices.model[0], matrices.model[1], matrices.model[2] );
 
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
@@ -392,9 +399,14 @@ void SandboxApp::CreatePipeline()
     m_rhi_graphics_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
 }
 
-void SandboxApp::RecordCommandBuffer( RHICommandList & list, RHISwapChain & swapchain )
+void SandboxApp::RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain )
 {
     list.Begin();
+
+    if ( !m_tlas.Build( list ) )
+    {
+        SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
+    }
 
     TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget );
 

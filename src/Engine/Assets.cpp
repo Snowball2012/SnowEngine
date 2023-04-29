@@ -62,7 +62,7 @@ bool CubeAsset::Load( const JsonValue& data )
     blas_geom.triangles.vtx_buf = m_vertex_buffer.get();
     blas_geom.triangles.vtx_format = GetPositionBufferInfo().format;
     blas_geom.triangles.vtx_stride = RHIUtils::GetRHIFormatSize( blas_geom.triangles.vtx_format );
-    m_blas = RHIUtils::CreateBLAS( blas_geom );
+    m_blas = RHIUtils::CreateAS( blas_geom );
 
     return true;
 }
