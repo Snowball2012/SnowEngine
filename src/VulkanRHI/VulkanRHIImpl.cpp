@@ -466,6 +466,11 @@ RHIGraphicsPipeline* VulkanRHI::CreatePSO( const RHIGraphicsPipelineInfo& pso_in
     return new VulkanGraphicsPSO( this, pso_info );
 }
 
+RHIRaytracingPipeline* VulkanRHI::CreatePSO( const RHIRaytracingPipelineInfo& pso_info )
+{
+    NOTIMPL;
+}
+
 RHIDescriptorSetLayout* VulkanRHI::CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info )
 {
     return new VulkanShaderBindingTableLayout( this, info );

@@ -16,12 +16,15 @@ class RHIDescriptorSetLayout;
 class RHIDescriptorSet;
 class RHIShaderBindingLayout;
 class RHIGraphicsPipeline;
+class RHIRaytracingPipeline;
 class RHICBV;
 class RHITextureSRV;
 class RHIRTV;
 class RHISampler;
 struct RHIASGeometryInfo;
 struct RHIASInstanceData;
+struct RHIGraphicsPipelineInfo;
+struct RHIRaytracingPipelineInfo;
 
 struct RHIFence
 {
@@ -236,7 +239,9 @@ public:
 
     virtual RHIShaderBindingLayout* CreateShaderBindingLayout( const ShaderBindingLayoutInfo& layout_info ) { NOTIMPL; return nullptr; }
 
-    virtual RHIGraphicsPipeline* CreatePSO( const struct RHIGraphicsPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
+    virtual RHIGraphicsPipeline* CreatePSO( const RHIGraphicsPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
+
+    virtual RHIRaytracingPipeline* CreatePSO( const RHIRaytracingPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
 
     struct BufferInfo
     {
@@ -561,6 +566,12 @@ public:
 };
 using RHIGraphicsPipelinePtr = RHIObjectPtr<RHIGraphicsPipeline>;
 
+class RHIRaytracingPipeline : public RHIObject
+{
+public:
+    virtual ~RHIRaytracingPipeline() {}
+};
+
 class RHIShaderBindingLayout : public RHIObject
 {
 public:
@@ -654,6 +665,11 @@ struct RHIGraphicsPipelineInfo
 
     const RHIPipelineRTInfo* rt_info = nullptr;
     size_t rts_count = 0;
+};
+
+struct RHIRaytracingPipelineInfo
+{
+    RHIShader* raygen_shader = nullptr;
 };
 
 class RHIBuffer : public RHIObject

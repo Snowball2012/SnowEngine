@@ -129,6 +129,7 @@ public:
 	virtual RHIShaderBindingLayout* CreateShaderBindingLayout( const ShaderBindingLayoutInfo& info ) override;
 
 	virtual RHIGraphicsPipeline* CreatePSO( const RHIGraphicsPipelineInfo& pso_info ) override;
+	virtual RHIRaytracingPipeline* CreatePSO( const RHIRaytracingPipelineInfo& pso_info ) override;
 
 	virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& buf_info ) override;
 	virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& buf_info ) override;
