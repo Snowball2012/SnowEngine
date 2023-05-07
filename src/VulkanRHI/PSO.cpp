@@ -366,12 +366,12 @@ void VulkanRaytracingPSO::InitSBT()
     // rgs entry
     {
         m_rgs_region.deviceAddress = base_dev_addr + dev_address_offset;
-        dev_address_offset += CalcAlignedSize( m_rgs_region.size, rt_props.shaderGroupBaseAlignment );
         if ( m_rgs )
         {
             m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
             cur_handle_idx++;
         }
+        dev_address_offset += CalcAlignedSize( m_rgs_region.size, rt_props.shaderGroupBaseAlignment );
     }
 
     // miss entry

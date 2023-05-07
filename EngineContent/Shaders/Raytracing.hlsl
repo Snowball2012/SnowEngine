@@ -19,6 +19,7 @@ struct Payload
 void VisibilityRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
+
     float4x4 view_proj_inverse;
     float3 ray_origin = PixelPositionToWorld( pixel_id, 0, uint2( 0, 0 ), view_proj_inverse );
 
@@ -33,9 +34,10 @@ void VisibilityRGS()
 
     Payload payload = { 0 };
 
-    TraceRay( scene_tlas,
-        ( RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH ),
-        0xFF, 0, 1, 0, ray, payload );
+   // TraceRay( scene_tlas,
+   //     ( RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH ),
+   //     0xFF, 0, 1, 0, ray, payload );
 
-    output[pixel_id] = payload.hit_distance;
+    //output[pixel_id] = payload.hit_distance;
+    output[pixel_id] = float4( 0, 1, 0, 1 );
 }
