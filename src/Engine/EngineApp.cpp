@@ -260,6 +260,7 @@ void EngineApp::DrawFrame()
     {
         m_swapchain->Recreate();
         m_fb_resized = false;
+        OnSwapChainRecreated();
     }
     bool swapchain_recreated = false;
     m_swapchain->AcquireNextImage( m_image_available_semaphores[m_current_frame].get(), swapchain_recreated );

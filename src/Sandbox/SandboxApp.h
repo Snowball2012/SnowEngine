@@ -45,6 +45,7 @@ private:
 	RHISamplerPtr m_texture_sampler = nullptr;
 
 	RHITexturePtr m_rt_frame = nullptr;
+	RHITextureRWViewPtr m_frame_rwview = nullptr;
 	//RHI
 	// assets
 	CubeAssetPtr m_cube = nullptr;
@@ -52,6 +53,7 @@ private:
 
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_binding_tables;
+	std::vector<RHIDescriptorSetPtr> m_rt_descsets;
 
 	World m_world;
 	TLAS m_tlas;
@@ -62,6 +64,7 @@ private:
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 	bool m_show_cube = false;
+	bool m_rt_path = false;
 
 public:
 	SandboxApp();
@@ -76,12 +79,15 @@ private:
 
 	virtual void OnUpdate() override;
 
+	virtual void OnSwapChainRecreated() override;
+
 	virtual const char* GetMainWindowName() const override { return "SnowEngine Sandbox"; }
 	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }
 
 	void CreatePipeline();
 
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
+	void RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain );
 
 	void UpdateGui();
 
@@ -117,4 +123,6 @@ private:
 	void CreateCubePipeline();
 
 	void CreateRTPipeline();
+
+	void CreateIntermediateBuffers();
 };

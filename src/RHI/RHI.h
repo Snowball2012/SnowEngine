@@ -90,8 +90,9 @@ enum class RHITextureUsageFlags : uint32_t
     TransferDst = 0x2,
     TextureROView = 0x4,
     RenderTargetView = 0x8,
+    TextureRWView = 0x10,
 
-    NumFlags = 4
+    NumFlags = 5
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHITextureUsageFlags )
 
@@ -102,7 +103,8 @@ enum class RHIFormat : uint8_t
     R32G32B32_SFLOAT,
     B8G8R8A8_SRGB,
     R8G8B8A8_SRGB,
-    R8G8B8A8_UNORM
+    R8G8B8A8_UNORM,
+    RGB9E5,
 };
 
 enum class RHIShaderBindingType : uint8_t
@@ -118,7 +120,9 @@ enum class RHITextureLayout : uint8_t
 {
     Undefined = 0,
     ShaderReadOnly,
+    ShaderReadWrite,
     RenderTarget,
+    TransferSrc,
     TransferDst,
     Present
 };
@@ -267,6 +271,7 @@ public:
     {
         RHITextureDimensions dimensions = RHITextureDimensions::T2D;
         RHIFormat format = RHIFormat::Undefined;
+        bool allow_multiformat_views = false;
 
         uint32_t width = 0;
         uint32_t height = 0;
@@ -298,8 +303,9 @@ public:
     struct TextureRWViewInfo
     {
         RHITexture* texture = nullptr;
+        RHIFormat format = RHIFormat::Undefined;
     };
-    virtual RHITextureRWView* CreateTextureRWView( const TextureROViewInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHITextureRWView* CreateTextureRWView( const TextureRWViewInfo& info ) { NOTIMPL; return nullptr; }
 
     struct RenderTargetViewInfo
     {
@@ -412,6 +418,11 @@ struct RHIBufferTextureCopyRegion
     size_t texture_offset[3] = { 0,0,0 };
     size_t texture_extent[3] = { 0,0,0 };
     RHITextureSubresourceRange texture_subresource = {};
+};
+
+struct RHITextureTextureCopyRegion
+{
+
 };
 
 struct RHIViewport
@@ -538,7 +549,10 @@ public:
         NOTIMPL;
     }
 
+    virtual void TraceRays( glm::uvec3 threads_count ) { NOTIMPL; }
+
     virtual void SetPSO( RHIGraphicsPipeline& pso ) { NOTIMPL; }
+    virtual void SetPSO( RHIRaytracingPipeline& pso ) { NOTIMPL; }
 
     virtual void BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& set ) { NOTIMPL; }
 
@@ -553,6 +567,12 @@ public:
     virtual void CopyBufferToTexture(
         const RHIBuffer& buf, RHITexture& texture,
         const RHIBufferTextureCopyRegion* regions, size_t region_count ) {
+        NOTIMPL;
+    }
+
+    virtual void CopyTextureToTexture(
+        const RHITexture& src, const RHITexture& dst,
+        const RHITextureTextureCopyRegion* regions, size_t region_count ) {
         NOTIMPL;
     }
 
@@ -597,6 +617,7 @@ class RHIDescriptorSet : public RHIObject
 public:
     virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv ) { NOTIMPL; }
     virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& srv ) { NOTIMPL; }
+    virtual void BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& srv ) { NOTIMPL; }
     virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) { NOTIMPL; }
     virtual void BindSampler( size_t range_idx, size_t idx_in_range, RHISampler& sampler ) { NOTIMPL; }
 

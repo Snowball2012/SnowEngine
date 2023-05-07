@@ -56,7 +56,8 @@ private:
 	CmdListId m_list_id = CmdListId::nullid;
 	class VulkanRHI* m_rhi = nullptr;
 
-	class VulkanGraphicsPSO* m_currently_bound_pso = nullptr;
+	class VulkanGraphicsPSO* m_currently_bound_graphics_pso = nullptr;
+	class VulkanRaytracingPSO* m_currently_bound_rt_pso = nullptr;
 
 	std::vector<uint8_t> m_push_constants;
 	bool m_need_push_constants = false;
@@ -79,7 +80,10 @@ public:
 		int32_t vertex_offset,
 		uint32_t first_instance) override;
 
+	virtual void TraceRays(	glm::uvec3 threads_count ) override;
+
 	virtual void SetPSO(RHIGraphicsPipeline& pso) override;
+	virtual void SetPSO( RHIRaytracingPipeline& pso ) override;
 
 	virtual void SetVertexBuffers(uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets) override;
 	virtual void SetIndexBuffer( const RHIBuffer& index_buf, RHIIndexBufferType type, size_t offset ) override;

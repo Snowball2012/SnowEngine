@@ -34,6 +34,10 @@ VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
 
 	image_info.samples = VK_SAMPLE_COUNT_1_BIT;
 	image_info.flags = 0;
+	if ( info.allow_multiformat_views )
+	{
+		image_info.flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+	}
 
 	VmaAllocationCreateInfo vma_alloc_info = {};
 	vma_alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;

@@ -383,6 +383,20 @@ void VulkanDescriptorSet::BindTextureROView(size_t range_idx, size_t idx_in_rang
     m_referenced_views.emplace_back(&vk_srv);
 }
 
+void VulkanDescriptorSet::BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& view )
+{
+    auto& vk_view = RHIImpl( view );
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct( write_struct, range_idx, idx_in_range );
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write_struct.pImageInfo = vk_view.GetVkImageInfo();
+
+    m_referenced_views.emplace_back( &vk_view );
+}
+
 void VulkanDescriptorSet::BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as )
 {
     auto& vk_as = RHIImpl( as );

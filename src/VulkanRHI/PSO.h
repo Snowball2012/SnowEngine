@@ -80,6 +80,10 @@ class VulkanRaytracingPSO : public RHIRaytracingPipeline
     // Embed SBT into a pipeline. Use generic shader bindings mechanism to pass data in a "bindless" way.
     RHIObjectPtr<VulkanUploadBuffer> m_sbt = nullptr;
     VkStridedDeviceAddressRegionKHR m_rgs_region = {};
+    VkStridedDeviceAddressRegionKHR m_miss_region = {};
+    VkStridedDeviceAddressRegionKHR m_hit_region = {};
+    VkStridedDeviceAddressRegionKHR m_callable_region = {};
+
 
     RHIObjectPtr<VulkanShaderBindingLayout> m_shader_bindings = nullptr;
 
@@ -93,7 +97,12 @@ public:
 
     bool Recompile();
 
-    VkStridedDeviceAddressRegionKHR GetVkRaygenSBT() const;
+    VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
+    VkPipelineLayout GetVkPipelineLayout() const { return m_shader_bindings->GetVkPipelineLayout(); }
+    const VkStridedDeviceAddressRegionKHR* GetVkRaygenSBT() const { return &m_rgs_region; }
+    const VkStridedDeviceAddressRegionKHR* GetVkMissSBT() const { return &m_miss_region; }
+    const VkStridedDeviceAddressRegionKHR* GetVkHitSBT() const { return &m_hit_region; }
+    const VkStridedDeviceAddressRegionKHR* GetVkCallableSBT() const { return &m_callable_region; }
 
 private:
     void InitShaderStages();

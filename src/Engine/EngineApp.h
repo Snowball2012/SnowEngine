@@ -56,6 +56,7 @@ protected:
 	virtual void OnCleanup() {}
 	virtual void OnUpdate() {}
 	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit ) {}
+	virtual void OnSwapChainRecreated() {}
 
 	// returns frame index % m_max_frames_in_flight
 	uint32_t GetCurrentFrameIdx() const { return m_current_frame; }

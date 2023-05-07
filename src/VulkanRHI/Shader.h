@@ -132,8 +132,9 @@ public:
 
     VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout);
 
-    virtual void BindUniformBufferView(size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv) override;
-    virtual void BindTextureROView(size_t range_idx, size_t idx_in_range, RHITextureROView& srv) override;
+    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& view ) override;
+    virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& view ) override;
+    virtual void BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& view ) override;
     virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) override;
     virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& srv) override;
 

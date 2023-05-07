@@ -36,6 +36,9 @@ void VulkanFeatures::LinkPointers( bool need_rt )
         if ( need_rt ) {
             rt_pipe_props.pNext = current_props_head;
             current_props_head = &rt_pipe_props;
+
+            as_props.pNext = current_props_head;
+            current_props_head = &as_props;
         }
 
         props2_head.pNext = current_props_head;

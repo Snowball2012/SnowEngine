@@ -126,6 +126,11 @@ RHITextureROView* VulkanRHI::CreateTextureROView( const TextureROViewInfo& info 
     return new VulkanTextureSRV( this, info );
 }
 
+RHITextureRWView* VulkanRHI::CreateTextureRWView( const TextureRWViewInfo& info )
+{
+    return new VulkanTextureRWView( this, info );
+}
+
 RHIRenderTargetView* VulkanRHI::CreateRTV( const RenderTargetViewInfo& info )
 {
     return new VulkanRTV( this, info );
@@ -154,6 +159,9 @@ VkFormat VulkanRHI::GetVkFormat( RHIFormat format )
         break;
     case RHIFormat::R8G8B8A8_UNORM:
         vk_format = VK_FORMAT_R8G8B8A8_UNORM;
+        break;
+    case RHIFormat::RGB9E5:
+        vk_format = VK_FORMAT_E5B9G9R9_UFLOAT_PACK32;
         break;
     default:
         NOTIMPL;
@@ -185,6 +193,9 @@ RHIFormat VulkanRHI::GetRHIFormat( VkFormat format )
         break;
     case VK_FORMAT_R8G8B8A8_UNORM:
         rhi_format = RHIFormat::R8G8B8A8_UNORM;
+        break;
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+        rhi_format = RHIFormat::RGB9E5;
         break;
     default:
         NOTIMPL;
@@ -296,11 +307,12 @@ VkImageUsageFlags VulkanRHI::GetVkImageUsageFlags( RHITextureUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHITextureUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHITextureUsageFlags::NumFlags ) == 4 );
+    static_assert( int( RHITextureUsageFlags::NumFlags ) == 5 );
 
     add_flag( RHITextureUsageFlags::TransferSrc, VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHITextureUsageFlags::TransferDst, VK_IMAGE_USAGE_TRANSFER_DST_BIT );
     add_flag( RHITextureUsageFlags::TextureROView, VK_IMAGE_USAGE_SAMPLED_BIT );
+    add_flag( RHITextureUsageFlags::TextureRWView, VK_IMAGE_USAGE_STORAGE_BIT );
     add_flag( RHITextureUsageFlags::RenderTargetView, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT );
 
     return retval;
@@ -394,6 +406,12 @@ VkImageLayout VulkanRHI::GetVkImageLayout( RHITextureLayout layout )
 
     case RHITextureLayout::TransferDst:
         return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+    case RHITextureLayout::TransferSrc:
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+
+    case RHITextureLayout::ShaderReadWrite:
+        return VK_IMAGE_LAYOUT_GENERAL;
     }
 
     NOTIMPL;
@@ -1062,7 +1080,6 @@ void VulkanRHI::TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkIma
         src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     }
-
     else if ( old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR )
     {
         barrier.srcAccessMask = 0;
@@ -1070,6 +1087,14 @@ void VulkanRHI::TransitionImageLayout( VkCommandBuffer buf, VkImage image, VkIma
 
         src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if ( old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL )
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else
     {
@@ -1138,6 +1163,30 @@ void VulkanRHI::GetStagesAndAccessMasksForLayoutBarrier( VkImageLayout old_layou
 
         src_stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         dst_stage |= VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
+    else if ( old_layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL )
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if ( old_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_GENERAL )
+    {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+        dst_stage |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+    }
+    else if ( old_layout == VK_IMAGE_LAYOUT_GENERAL && new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL )
+    {
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        src_stage |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
+        dst_stage |= VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
     else
     {
@@ -1398,7 +1447,7 @@ bool VulkanRHI::GetASBuildSize( RHIAccelerationStructureType type, const RHIASGe
         m_vk_device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &vk_buildgeominfo, vk_geom_primitive_counts.data(), &vk_sizes );
 
     out_sizes.as_size = vk_sizes.accelerationStructureSize;
-    out_sizes.scratch_size = vk_sizes.buildScratchSize;
+    out_sizes.scratch_size = vk_sizes.buildScratchSize + GetFeatures().as_props.minAccelerationStructureScratchOffsetAlignment;
 
     return true;
 }

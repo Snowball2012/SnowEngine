@@ -320,11 +320,19 @@ void VulkanRaytracingPSO::InitShaderStages()
         InitShaderGroup( new_group );
         new_group.generalShader = stage_idx;
         new_group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-
-        m_rgs_region.stride = sbt_handle_size_aligned;
-        m_rgs_region.size = m_rgs_region.stride;
-        sbt_size += sbt_handle_size_aligned;
     }
+
+    auto init_region = [&]( auto& region )
+    {
+        region.stride = sbt_handle_size_aligned;
+        region.size = region.stride;
+        sbt_size += CalcAlignedSize( sbt_handle_size_aligned, rt_props.shaderGroupBaseAlignment );
+    };
+
+    init_region( m_rgs_region );
+    init_region( m_miss_region );
+    init_region( m_hit_region );
+    init_region( m_callable_region );
 
     RHI::BufferInfo sbt_ci = {};
     sbt_ci.size = sbt_size;
@@ -343,7 +351,7 @@ void VulkanRaytracingPSO::InitSBT()
     if ( !SE_ENSURE( m_sbt != nullptr ) )
         return;
 
-    VkDeviceAddress base_dev_addr = RHIImpl( m_sbt->GetBuffer() )->GetDeviceAddress();
+    const VkDeviceAddress base_dev_addr = RHIImpl( m_sbt->GetBuffer() )->GetDeviceAddress();
 
     const auto& rt_props = m_rhi->GetFeatures().rt_pipe_props;
     const uint32_t sbt_handle_size = rt_props.shaderGroupHandleSize;
@@ -355,19 +363,34 @@ void VulkanRaytracingPSO::InitSBT()
     size_t cur_handle_idx = 0;
     size_t dev_address_offset = 0;
 
-    if ( m_rgs )
+    // rgs entry
     {
-        m_rgs_region.deviceAddress = base_dev_addr;
-
-        m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
-
-        base_dev_addr += m_rgs_region.size;
-        cur_handle_idx++;
-        dev_address_offset += m_rgs_region.size;
+        m_rgs_region.deviceAddress = base_dev_addr + dev_address_offset;
+        dev_address_offset += CalcAlignedSize( m_rgs_region.size, rt_props.shaderGroupBaseAlignment );
+        if ( m_rgs )
+        {
+            m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
+            cur_handle_idx++;
+        }
     }
-}
 
-VkStridedDeviceAddressRegionKHR VulkanRaytracingPSO::GetVkRaygenSBT() const
-{
-    return m_rgs_region;
+    // miss entry
+    {
+        m_miss_region.deviceAddress = base_dev_addr + dev_address_offset;
+        dev_address_offset += CalcAlignedSize( m_miss_region.size, rt_props.shaderGroupBaseAlignment );
+        // if (miss_shader)
+    }
+
+    // hit entry
+    {
+        m_hit_region.deviceAddress = base_dev_addr + dev_address_offset;
+        dev_address_offset += CalcAlignedSize( m_hit_region.size, rt_props.shaderGroupBaseAlignment );
+    }
+
+    // callable entry
+    {
+        m_callable_region.deviceAddress = base_dev_addr + dev_address_offset;
+        dev_address_offset += CalcAlignedSize( m_callable_region.size, rt_props.shaderGroupBaseAlignment );
+    }   
+
 }

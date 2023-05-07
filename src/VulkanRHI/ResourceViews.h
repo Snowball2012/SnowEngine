@@ -41,6 +41,24 @@ public:
 };
 IMPLEMENT_RHI_INTERFACE(RHITextureROView, VulkanTextureSRV)
 
+class VulkanTextureRWView : public RHITextureRWView
+{
+	GENERATE_RHI_OBJECT_BODY()
+
+	RHIObjectPtr<VulkanTextureBase> m_texture = nullptr;
+
+	VkImageView m_vk_image_view = VK_NULL_HANDLE;
+
+	VkDescriptorImageInfo m_view_info = {};
+public:
+	virtual ~VulkanTextureRWView() override;
+
+	VulkanTextureRWView( VulkanRHI* rhi, const RHI::TextureRWViewInfo& info );
+
+	const VkDescriptorImageInfo* GetVkImageInfo() const { return &m_view_info; }
+};
+IMPLEMENT_RHI_INTERFACE( RHITextureRWView, VulkanTextureRWView )
+
 class VulkanRTV : public RHIRenderTargetView
 {
 	GENERATE_RHI_OBJECT_BODY()

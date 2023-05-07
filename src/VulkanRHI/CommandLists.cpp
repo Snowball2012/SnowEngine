@@ -60,7 +60,8 @@ void VulkanCommandList::Begin()
 void VulkanCommandList::End()
 {
     VK_VERIFY( vkEndCommandBuffer( m_vk_cmd_buffer ) );
-    m_currently_bound_pso = nullptr;
+    m_currently_bound_graphics_pso = nullptr;
+    m_currently_bound_rt_pso = nullptr;
 }
 
 void VulkanCommandList::CopyBuffer( RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions )
@@ -88,10 +89,31 @@ void VulkanCommandList::DrawIndexed( uint32_t index_count, uint32_t instance_cou
     vkCmdDrawIndexed( m_vk_cmd_buffer, index_count, instance_count, first_index, vertex_offset, first_instance );
 }
 
+void VulkanCommandList::TraceRays( glm::uvec3 threads_count )
+{
+    PushConstantsIfNeeded();
+
+    vkCmdTraceRaysKHR(
+        m_vk_cmd_buffer,
+        m_currently_bound_rt_pso->GetVkRaygenSBT(),
+        m_currently_bound_rt_pso->GetVkMissSBT(),
+        m_currently_bound_rt_pso->GetVkHitSBT(),
+        m_currently_bound_rt_pso->GetVkCallableSBT(),
+        threads_count.x, threads_count.y, threads_count.z );
+}
+
 void VulkanCommandList::SetPSO( RHIGraphicsPipeline& pso )
 {
     vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, RHIImpl( pso ).GetVkPipeline() );
-    m_currently_bound_pso = &RHIImpl( pso );
+    m_currently_bound_graphics_pso = &RHIImpl( pso );
+    m_currently_bound_rt_pso = nullptr;
+}
+
+void VulkanCommandList::SetPSO( RHIRaytracingPipeline& pso )
+{
+    vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RHIImpl( pso ).GetVkPipeline() );
+    m_currently_bound_rt_pso = &RHIImpl( pso );
+    m_currently_bound_graphics_pso = nullptr;
 }
 
 void VulkanCommandList::SetVertexBuffers( uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets )
@@ -131,11 +153,24 @@ void VulkanCommandList::SetIndexBuffer( const RHIBuffer& index_buf, RHIIndexBuff
 
 void VulkanCommandList::BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& set )
 {
-    VERIFY_NOT_EQUAL( m_currently_bound_pso, nullptr );
+    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    VkPipelineLayout layout = VK_NULL_HANDLE;
+
+    if ( m_currently_bound_graphics_pso )
+    {
+        layout = m_currently_bound_graphics_pso->GetVkPipelineLayout();
+    }
+    else if ( m_currently_bound_rt_pso )
+    {
+        layout = m_currently_bound_rt_pso->GetVkPipelineLayout();
+        bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+    }
+
+    VERIFY_NOT_EQUAL( layout, VK_NULL_HANDLE );
 
     VulkanDescriptorSet& set_impl = RHIImpl( set );
 
-    VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    // no multiple queues for now
     VERIFY_EQUALS( m_type, RHI::QueueType::Graphics );
 
     set_impl.FlushBinds();
@@ -143,7 +178,7 @@ void VulkanCommandList::BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& se
 
     vkCmdBindDescriptorSets(
         m_vk_cmd_buffer, bind_point,
-        m_currently_bound_pso->GetVkPipelineLayout(), uint32_t( slot_idx ),
+        layout, uint32_t( slot_idx ),
         uint32_t( std::size( sets ) ), sets, 0, nullptr );
 }
 
@@ -329,6 +364,10 @@ void VulkanCommandList::BuildAS( const RHIASBuildInfo& info )
     vk_geom_build_info.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     vk_geom_build_info.dstAccelerationStructure = RHIImpl( info.dst )->GetVkAS();
     vk_geom_build_info.scratchData.deviceAddress = RHIImpl( info.scratch )->GetDeviceAddress();
+
+    const size_t required_alignment = m_rhi->GetFeatures().as_props.minAccelerationStructureScratchOffsetAlignment;
+    vk_geom_build_info.scratchData.deviceAddress = CalcAlignedSize( vk_geom_build_info.scratchData.deviceAddress, required_alignment );
+
     vk_geom_build_info.geometryCount = geoms_count;
     vk_geom_build_info.pGeometries = vk_geometries.data();
     vk_geom_build_info.type = RHIImpl( info.dst )->GetVkType();
@@ -347,11 +386,11 @@ void VulkanCommandList::PushConstantsIfNeeded()
     if ( !m_need_push_constants )
         return;
 
-    if ( !SE_ENSURE( m_currently_bound_pso ) )
+    if ( !SE_ENSURE( m_currently_bound_graphics_pso ) )
         return;
 
     // As of now we only support 1 push constants range, so bind everything in one go.
-    size_t num_push_constants = m_currently_bound_pso->GetPushConstantsCount();
+    size_t num_push_constants = m_currently_bound_graphics_pso->GetPushConstantsCount();
 
     // Sanity check
     SE_ENSURE( m_push_constants.size() < 16 * SizeKB );
@@ -364,7 +403,7 @@ void VulkanCommandList::PushConstantsIfNeeded()
     }
 
     vkCmdPushConstants(
-        m_vk_cmd_buffer, m_currently_bound_pso->GetVkPipelineLayout(),
+        m_vk_cmd_buffer, m_currently_bound_graphics_pso->GetVkPipelineLayout(),
         VK_SHADER_STAGE_ALL,
         0, uint32_t( size_push_constants ), m_push_constants.data() );
 

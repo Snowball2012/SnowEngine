@@ -30,6 +30,10 @@
     PFN_##name pfn_##name = nullptr; \
     rettype name ( t0 p0, t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6 ) { return pfn_##name( p0, p1, p2, p3, p4, p5, p6 ); }
 
+#define DEFINE_VK_FUNCTION8( rettype, name, t0, p0, t1, p1, t2, p2, t3, p3, t4, p4, t5, p5, t6, p6, t7, p7 ) \
+    PFN_##name pfn_##name = nullptr; \
+    rettype name ( t0 p0, t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6, t7 p7 ) { return pfn_##name( p0, p1, p2, p3, p4, p5, p6, p7 ); }
+
 // raytracing
 
 DEFINE_VK_FUNCTION4( VkResult, vkCreateAccelerationStructureKHR,
@@ -77,6 +81,16 @@ DEFINE_VK_FUNCTION7( VkResult, vkCreateRayTracingPipelinesKHR,
     const VkAllocationCallbacks*, pAllocator,
     VkPipeline*, pPipelines );
 
+DEFINE_VK_FUNCTION8( void, vkCmdTraceRaysKHR,
+    VkCommandBuffer,                             commandBuffer,
+    const VkStridedDeviceAddressRegionKHR*, pRaygenShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR*, pMissShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR*, pHitShaderBindingTable,
+    const VkStridedDeviceAddressRegionKHR*, pCallableShaderBindingTable,
+    uint32_t,                                    width,
+    uint32_t,                                    height,
+    uint32_t,                                    depth );
+
 
 void Extensions::LoadRT( VkDevice device )
 {
@@ -95,6 +109,7 @@ VERIFY_NOT_EQUAL( name, nullptr );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkGetAccelerationStructureDeviceAddressKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkGetRayTracingShaderGroupHandlesKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCreateRayTracingPipelinesKHR );
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkCmdTraceRaysKHR );
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION
 }

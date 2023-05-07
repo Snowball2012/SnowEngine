@@ -38,7 +38,7 @@ void VulkanSwapChain::Init()
     create_info_khr.imageColorSpace = m_swapchain_format.colorSpace;
     create_info_khr.imageExtent = m_swapchain_size_pixels;
     create_info_khr.imageArrayLayers = 1;
-    create_info_khr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    create_info_khr.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     const QueueFamilyIndices& indices = m_rhi->GetQueueFamilyIndices();
     uint32_t queue_family_indices[] = { indices.graphics.value(), indices.present.value() };
@@ -81,7 +81,7 @@ void VulkanSwapChain::Init()
     tex_info.mips = 1;
     tex_info.format = VulkanRHI::GetRHIFormat(m_swapchain_format.format);
     tex_info.array_layers = 0;
-    tex_info.usage = RHITextureUsageFlags::RenderTargetView;
+    tex_info.usage = RHITextureUsageFlags::RenderTargetView | RHITextureUsageFlags::TransferDst;
 
     for (size_t i = 0; i < image_count; ++i)
     {

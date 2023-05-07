@@ -26,6 +26,8 @@ void SandboxApp::OnInit()
     m_cube = boost::dynamic_pointer_cast< CubeAsset >( m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) ) );
     SE_ENSURE( m_cube && m_cube->GetStatus() == AssetStatus::Ready );
 
+    CreateIntermediateBuffers();
+    
     CreateDescriptorSetLayout();
     CreatePipeline();
     CreateCubePipeline();
@@ -52,6 +54,7 @@ void SandboxApp::OnCleanup()
     SE_LOG_INFO( Sandbox, "Sandbox shutdown started" );
 
     m_binding_tables.clear();
+    m_rt_descsets.clear();
     m_uniform_buffer_views.clear();
     m_uniform_buffers.clear();
     m_index_buffer = nullptr;
@@ -61,12 +64,14 @@ void SandboxApp::OnCleanup()
     m_texture_srv = nullptr;
     m_texture = nullptr;
 
+    m_frame_rwview = nullptr;
+    m_rt_frame = nullptr;
+
     CleanupPipeline();
 
     m_vertex_buffer = nullptr;
     m_index_buffer = nullptr;
     m_uniform_buffers.clear();
-    m_texture = nullptr;
 
     m_tlas.Reset();
 
@@ -220,6 +225,13 @@ void SandboxApp::CreateDescriptorSets()
         m_binding_tables[i]->BindTextureROView( 1, 0, *m_texture_srv );
         m_binding_tables[i]->BindSampler( 2, 0, *m_texture_sampler );
         m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
+    }
+
+    m_rt_descsets.resize( m_max_frames_in_flight );
+    for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
+    {
+        m_rt_descsets[i] = m_rhi->CreateDescriptorSet( *m_rt_dsl );
+        m_rt_descsets[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
     }
 }
 
@@ -381,6 +393,15 @@ void SandboxApp::CreateRTPipeline()
     m_rt_pipeline = m_rhi->CreatePSO( rt_pipeline_info );
 }
 
+void SandboxApp::CreateIntermediateBuffers()
+{
+    CreateImage( m_swapchain->GetExtent().x, m_swapchain->GetExtent().y, RHIFormat::R8G8B8A8_UNORM, RHITextureUsageFlags::TransferSrc | RHITextureUsageFlags::TextureRWView, RHITextureLayout::TransferSrc, m_rt_frame );
+    
+    RHI::TextureRWViewInfo uav_info = {};
+    uav_info.texture = m_rt_frame.get();
+    m_frame_rwview = m_rhi->CreateTextureRWView( uav_info );
+}
+
 void SandboxApp::CreateVertexBuffer()
 {
     std::vector<Vertex> vertices =
@@ -453,11 +474,6 @@ void SandboxApp::RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapch
 {
     list.Begin();
 
-    if ( !m_tlas.Build( list ) )
-    {
-        SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
-    }
-
     TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget );
 
     RHIPassRTVInfo rt = {};
@@ -517,13 +533,50 @@ void SandboxApp::RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapch
     list.End();
 }
 
+void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain )
+{
+    list.Begin();
+
+    if ( !m_tlas.Build( list ) )
+    {
+        SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
+    }
+
+    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::TransferDst );
+
+    m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_tlas.GetRHIAS() );
+    m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
+
+    list.SetPSO( *m_rt_pipeline );
+
+    list.BindDescriptorSet( 0, *m_rt_descsets[GetCurrentFrameIdx()] );
+
+    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::TransferSrc, RHITextureLayout::ShaderReadWrite );
+    list.TraceRays( glm::uvec3( m_swapchain->GetExtent(), 1 ) );
+
+    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadWrite, RHITextureLayout::TransferSrc );
+    RHITextureTextureCopyRegion copy_region = {};
+    list.CopyTextureToTexture( *m_rt_frame, *swapchain.GetTexture(), &copy_region, 1 );
+
+    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::TransferDst, RHITextureLayout::Present );
+
+    list.End();
+}
+
 void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit )
 {
     RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
 
     UpdateUniformBuffer( GetCurrentFrameIdx() );
 
-    RecordCommandBuffer( *cmd_list, *m_swapchain );
+    if ( m_rt_path )
+    {
+        RecordCommandBufferRT( *cmd_list, *m_swapchain );
+    }
+    else
+    {
+        RecordCommandBuffer( *cmd_list, *m_swapchain );
+    }
 
     lists_to_submit.emplace_back( cmd_list );
 }
@@ -531,6 +584,11 @@ void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit )
 void SandboxApp::OnUpdate()
 {
     UpdateGui();
+}
+
+void SandboxApp::OnSwapChainRecreated()
+{
+    CreateIntermediateBuffers();
 }
 
 void SandboxApp::UpdateGui()
@@ -579,6 +637,7 @@ void SandboxApp::UpdateGui()
     ImGui::Begin( "Demo" );
     {
         ImGui::Checkbox( "Show cube", &m_show_cube );
+        ImGui::Checkbox( "RT path", &m_rt_path );
     }
     ImGui::End();
 }

@@ -19,6 +19,8 @@ public:
 
     void Reset(); // clears memory, releases rhi objects
 
+    RHIAccelerationStructure& GetRHIAS() const { return *m_as; }
+
     auto& Instances() { return m_instances; };
     const auto& Instances() const { return m_instances; }
 };

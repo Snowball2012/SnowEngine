@@ -147,6 +147,7 @@ public:
 
 	virtual RHIUniformBufferView* CreateUniformBufferView( const UniformBufferViewInfo& info ) override;
 	virtual RHITextureROView* CreateTextureROView( const TextureROViewInfo& info ) override;
+	virtual RHITextureRWView* CreateTextureRWView( const TextureRWViewInfo& info ) override;
 	virtual RHIRenderTargetView* CreateRTV( const RenderTargetViewInfo& info ) override;
 
 	virtual bool ReloadAllShaders() override;
