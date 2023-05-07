@@ -81,7 +81,7 @@ void VulkanSwapChain::Init()
     tex_info.mips = 1;
     tex_info.format = VulkanRHI::GetRHIFormat(m_swapchain_format.format);
     tex_info.array_layers = 0;
-    tex_info.usage = RHITextureUsageFlags::RTV;
+    tex_info.usage = RHITextureUsageFlags::RenderTargetView;
 
     for (size_t i = 0; i < image_count; ++i)
     {
@@ -91,7 +91,7 @@ void VulkanSwapChain::Init()
     m_swapchain_image_views.resize(image_count);
     for (uint32_t i = 0; i < image_count; ++i)
     {
-        RHI::RTVInfo rtv_info = {};
+        RHI::RenderTargetViewInfo rtv_info = {};
         rtv_info.texture = m_swapchain_images[i].get();
         rtv_info.format = tex_info.format;
 

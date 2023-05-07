@@ -22,5 +22,5 @@ public:
 	virtual RHIFormat GetFormat() const override { NOTIMPL; }
 	virtual RHITexture* GetTexture() override { NOTIMPL; }
 
-	virtual RHIRTV* GetRTV() override { NOTIMPL; }
+	virtual RHIRenderTargetView* GetRTV() override { NOTIMPL; }
 };

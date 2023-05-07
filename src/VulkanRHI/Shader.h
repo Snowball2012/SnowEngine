@@ -44,6 +44,7 @@ private:
 
     void CleanupShaderStage();
 };
+IMPLEMENT_RHI_INTERFACE( RHIShader, Shader )
 
 class ShaderSourceFile
 {
@@ -77,26 +78,26 @@ private:
     ShaderCompiler();
 };
 
-class VulkanShaderBindingTableLayout : public RHIDescriptorSetLayout
+class VulkanDescriptorSetLayout : public RHIDescriptorSetLayout
 {
     GENERATE_RHI_OBJECT_BODY()
 
     VkDescriptorSetLayout m_vk_desc_set_layout = VK_NULL_HANDLE;
 
 public:
-    virtual ~VulkanShaderBindingTableLayout() override;
+    virtual ~VulkanDescriptorSetLayout() override;
 
-    VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info);
+    VulkanDescriptorSetLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info);
 
     VkDescriptorSetLayout GetVkDescriptorSetLayout() const { return m_vk_desc_set_layout; }
 };
-IMPLEMENT_RHI_INTERFACE(RHIDescriptorSetLayout, VulkanShaderBindingTableLayout);
+IMPLEMENT_RHI_INTERFACE(RHIDescriptorSetLayout, VulkanDescriptorSetLayout);
 
 class VulkanShaderBindingLayout : public RHIShaderBindingLayout
 {
     GENERATE_RHI_OBJECT_BODY()
 
-    std::vector<RHIObjectPtr<VulkanShaderBindingTableLayout>> m_layout_infos;
+    std::vector<RHIObjectPtr<VulkanDescriptorSetLayout>> m_layout_infos;
     VkPipelineLayout m_vk_pipeline_layout = VK_NULL_HANDLE;
     size_t m_num_push_constants = 0;
 
@@ -116,20 +117,24 @@ class VulkanDescriptorSet : public RHIDescriptorSet
     GENERATE_RHI_OBJECT_BODY()
 
     VkDescriptorSet m_vk_desc_set = VK_NULL_HANDLE;
-    RHIObjectPtr<VulkanShaderBindingTableLayout> m_sbt_layout = nullptr;
+    RHIObjectPtr<VulkanDescriptorSetLayout> m_dsl = nullptr;
 
-    boost::container::small_vector<VkWriteDescriptorSet, 4> m_pending_writes;
+    bc::small_vector<VkWriteDescriptorSet, 4> m_pending_writes;
 
     // we need this to make sure pBufferInfo and such are valid at the time of FlushBinds
-    boost::container::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_views;
+    bc::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_views;
+
+    // must be static to avoid reallocations (VkWriteDescriptorSet uses raw pointers to these structures)
+    bc::static_vector<VkWriteDescriptorSetAccelerationStructureKHR, 4> m_as_infos;
 
 public:
     virtual ~VulkanDescriptorSet() override;
 
     VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout);
 
-    virtual void BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv) override;
-    virtual void BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv) override;
+    virtual void BindUniformBufferView(size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv) override;
+    virtual void BindTextureROView(size_t range_idx, size_t idx_in_range, RHITextureROView& srv) override;
+    virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) override;
     virtual void BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& srv) override;
 
     virtual void FlushBinds() override;

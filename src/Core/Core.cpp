@@ -103,6 +103,10 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 			std::cout << message.str();
 		}
 	}
+	if ( m_write_debugstr )
+	{
+		OutputDebugStringA( message.str().c_str() );
+	}
 }
 
 void Logger::Newline()

@@ -116,17 +116,17 @@ RHIDescriptorSet* VulkanRHI::CreateDescriptorSet( RHIDescriptorSetLayout& layout
     return new VulkanDescriptorSet( this, layout );
 }
 
-RHICBV* VulkanRHI::CreateCBV( const CBVInfo& info )
+RHIUniformBufferView* VulkanRHI::CreateUniformBufferView( const UniformBufferViewInfo& info )
 {
     return new VulkanCBV( this, info );
 }
 
-RHITextureSRV* VulkanRHI::CreateSRV( const TextureSRVInfo& info )
+RHITextureROView* VulkanRHI::CreateTextureROView( const TextureROViewInfo& info )
 {
     return new VulkanTextureSRV( this, info );
 }
 
-RHIRTV* VulkanRHI::CreateRTV( const RTVInfo& info )
+RHIRenderTargetView* VulkanRHI::CreateRTV( const RenderTargetViewInfo& info )
 {
     return new VulkanRTV( this, info );
 }
@@ -231,17 +231,26 @@ VkDescriptorType VulkanRHI::GetVkDescriptorType( RHIShaderBindingType type )
 
     switch ( type )
     {
-    case RHIShaderBindingType::ConstantBuffer:
+    case RHIShaderBindingType::UniformBuffer:
         vk_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         break;
 
-    case RHIShaderBindingType::TextureSRV:
+    case RHIShaderBindingType::TextureRO:
         vk_type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         break;
 
     case RHIShaderBindingType::Sampler:
         vk_type = VK_DESCRIPTOR_TYPE_SAMPLER;
         break;
+
+    case RHIShaderBindingType::AccelerationStructure:
+        vk_type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        break;
+
+    case RHIShaderBindingType::TextureRW:
+        vk_type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        break;
+
     default:
         NOTIMPL;
     }
@@ -263,7 +272,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHIBufferUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 8 );
+    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 9 );
 
     add_flag( RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT );
@@ -273,6 +282,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
     add_flag( RHIBufferUsageFlags::AccelerationStructure, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR );
     add_flag( RHIBufferUsageFlags::AccelerationStructureInput, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR );
     add_flag( RHIBufferUsageFlags::AccelerationStructureScratch, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
+    add_flag( RHIBufferUsageFlags::ShaderBindingTable, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR );
 
     return retval;
 }
@@ -290,8 +300,8 @@ VkImageUsageFlags VulkanRHI::GetVkImageUsageFlags( RHITextureUsageFlags usage )
 
     add_flag( RHITextureUsageFlags::TransferSrc, VK_IMAGE_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHITextureUsageFlags::TransferDst, VK_IMAGE_USAGE_TRANSFER_DST_BIT );
-    add_flag( RHITextureUsageFlags::SRV, VK_IMAGE_USAGE_SAMPLED_BIT );
-    add_flag( RHITextureUsageFlags::RTV, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT );
+    add_flag( RHITextureUsageFlags::TextureROView, VK_IMAGE_USAGE_SAMPLED_BIT );
+    add_flag( RHITextureUsageFlags::RenderTargetView, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT );
 
     return retval;
 }
@@ -468,12 +478,12 @@ RHIGraphicsPipeline* VulkanRHI::CreatePSO( const RHIGraphicsPipelineInfo& pso_in
 
 RHIRaytracingPipeline* VulkanRHI::CreatePSO( const RHIRaytracingPipelineInfo& pso_info )
 {
-    NOTIMPL;
+    return new VulkanRaytracingPSO( this, pso_info );
 }
 
 RHIDescriptorSetLayout* VulkanRHI::CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info )
 {
-    return new VulkanShaderBindingTableLayout( this, info );
+    return new VulkanDescriptorSetLayout( this, info );
 }
 
 RHIShaderBindingLayout* VulkanRHI::CreateShaderBindingLayout( const ShaderBindingLayoutInfo& info )
@@ -516,6 +526,7 @@ VkShaderStageFlagBits VulkanRHI::GetVkShaderStageFlags( RHIShaderStageFlags rhi_
 
     add_flag( RHIShaderStageFlags::VertexShader, VK_SHADER_STAGE_VERTEX_BIT );
     add_flag( RHIShaderStageFlags::PixelShader, VK_SHADER_STAGE_FRAGMENT_BIT );
+    add_flag( RHIShaderStageFlags::RaygenShader, VK_SHADER_STAGE_RAYGEN_BIT_KHR );
 
 #ifndef NDEBUG
     VERIFY_EQUALS( checked_flags & uint64_t( rhi_flags ), uint64_t( RHIPipelineStageFlags::AllBits ) & uint64_t( rhi_flags ) ); // some flags were not handled if this fires
@@ -1168,15 +1179,18 @@ void VulkanRHI::CreateDescriptorPool()
     constexpr uint32_t descriptor_count_ub = 1024;
     constexpr uint32_t descriptor_count_image = 1024;
     constexpr uint32_t descriptor_count_sampler = 128;
+    constexpr uint32_t descriptor_count_as = 128;
     constexpr uint32_t descriptor_set_count = 1024;
 
-    std::array<VkDescriptorPoolSize, 3> pool_sizes = {};
+    std::array<VkDescriptorPoolSize, 4> pool_sizes = {};
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     pool_sizes[0].descriptorCount = descriptor_count_ub;
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     pool_sizes[1].descriptorCount = descriptor_count_image;
     pool_sizes[2].type = VK_DESCRIPTOR_TYPE_SAMPLER;
     pool_sizes[2].descriptorCount = descriptor_count_sampler;
+    pool_sizes[3].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    pool_sizes[3].descriptorCount = descriptor_count_as;
 
     VkDescriptorPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -1216,6 +1230,20 @@ void VulkanRHI::UnregisterLoadedPSO( VulkanGraphicsPSO& pso )
     m_loaded_psos.erase( &pso );
 }
 
+void VulkanRHI::RegisterLoadedPSO( VulkanRaytracingPSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_rt_psos.insert( &pso );
+}
+
+void VulkanRHI::UnregisterLoadedPSO( VulkanRaytracingPSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_rt_psos.erase( &pso );
+}
+
 bool VulkanRHI::ReloadAllPipelines()
 {
     SE_LOG_INFO( VulkanRHI, "Reload PSOs: start" );
@@ -1226,6 +1254,11 @@ bool VulkanRHI::ReloadAllPipelines()
 
     bool succeeded = true;
     for ( VulkanGraphicsPSO* pso : m_loaded_psos )
+    {
+        succeeded &= pso->Recompile();
+    }
+
+    for ( VulkanRaytracingPSO* pso : m_loaded_rt_psos )
     {
         succeeded &= pso->Recompile();
     }

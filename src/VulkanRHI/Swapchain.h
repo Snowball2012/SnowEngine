@@ -48,7 +48,7 @@ public:
 	virtual RHIFormat GetFormat() const override;
 	virtual RHITexture* GetTexture() override { return m_swapchain_images[m_cur_image_index].get(); }
 
-	virtual RHIRTV* GetRTV() override { return m_swapchain_image_views[m_cur_image_index].get(); }
+	virtual RHIRenderTargetView* GetRTV() override { return m_swapchain_image_views[m_cur_image_index].get(); }
 
 	VkSwapchainKHR GetVkSwapchain() const { return m_swapchain; }
 	uint32_t GetCurrentImageIndex() const { return m_cur_image_index; }

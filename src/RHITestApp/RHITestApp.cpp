@@ -202,7 +202,7 @@ void RHITestApp::CreateDescriptorSetLayout()
     ranges[0].count = 1;
     ranges[0].stages = RHIShaderStageFlags::VertexShader;
 
-    ranges[1].type = RHIShaderBindingType::TextureSRV;
+    ranges[1].type = RHIShaderBindingType::TextureRO;
     ranges[1].count = 1;
     ranges[1].stages = RHIShaderStageFlags::PixelShader;
 
@@ -236,9 +236,9 @@ void RHITestApp::CreateUniformBuffers()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         m_uniform_buffers[i] = m_rhi->CreateUploadBuffer(uniform_info);
-        RHI::CBVInfo view_info = {};
+        RHI::UniformBufferViewInfo view_info = {};
         view_info.buffer = m_uniform_buffers[i]->GetBuffer();
-        m_uniform_buffer_views[i] = m_rhi->CreateCBV(view_info);
+        m_uniform_buffer_views[i] = m_rhi->CreateUniformBufferView(view_info);
     }
 }
 
@@ -284,8 +284,8 @@ void RHITestApp::CreateDescriptorSets()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         m_binding_tables[i] = m_rhi->CreateDescriptorSet(*m_binding_table_layout);
-        m_binding_tables[i]->BindCBV(0, 0, *m_uniform_buffer_views[i]);
-        m_binding_tables[i]->BindSRV(1, 0, *m_texture_srv);
+        m_binding_tables[i]->BindUniformBufferView(0, 0, *m_uniform_buffer_views[i]);
+        m_binding_tables[i]->BindTextureROView(1, 0, *m_texture_srv);
         m_binding_tables[i]->BindSampler(2, 0, *m_texture_sampler);
         m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
     }
@@ -318,7 +318,7 @@ void RHITestApp::CreateTextureImage()
     CreateImage(
         uint32_t(width), uint32_t(height),
         RHIFormat::R8G8B8A8_SRGB,
-        RHITextureUsageFlags::SRV | RHITextureUsageFlags::TransferDst,
+        RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TransferDst,
         RHITextureLayout::TransferDst,
         m_texture);
 
@@ -395,9 +395,9 @@ void RHITestApp::TransitionImageLayout(RHICommandList& cmd_list, RHITexture& tex
 
 void RHITestApp::CreateTextureImageView()
 {
-    RHI::TextureSRVInfo srv_info = {};
+    RHI::TextureROViewInfo srv_info = {};
     srv_info.texture = m_texture.get();
-    m_texture_srv = m_rhi->CreateSRV(srv_info);
+    m_texture_srv = m_rhi->CreateTextureROView(srv_info);
 }
 
 void RHITestApp::CreateTextureSampler()

@@ -98,6 +98,7 @@ private:
 
 	SpinLock m_loaded_psos_lock;
 	std::set<class VulkanGraphicsPSO*> m_loaded_psos;
+	std::set<class VulkanRaytracingPSO*> m_loaded_rt_psos;
 
 	bool m_raytracing_supported = false;
 
@@ -144,9 +145,9 @@ public:
 
 	virtual RHIAccelerationStructure* CreateAS( const RHI::ASInfo& info ) override;
 
-	virtual RHICBV* CreateCBV( const CBVInfo& info ) override;
-	virtual RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) override;
-	virtual RHIRTV* CreateRTV( const RTVInfo& info ) override;
+	virtual RHIUniformBufferView* CreateUniformBufferView( const UniformBufferViewInfo& info ) override;
+	virtual RHITextureROView* CreateTextureROView( const TextureROViewInfo& info ) override;
+	virtual RHIRenderTargetView* CreateRTV( const RenderTargetViewInfo& info ) override;
 
 	virtual bool ReloadAllShaders() override;
 
@@ -223,7 +224,12 @@ public:
 	void RegisterLoadedPSO( VulkanGraphicsPSO& pso );
 	void UnregisterLoadedPSO( VulkanGraphicsPSO& pso );
 
+	void RegisterLoadedPSO( VulkanRaytracingPSO& pso );
+	void UnregisterLoadedPSO( VulkanRaytracingPSO& pso );
+
 	bool ReloadAllPipelines();
+
+	const VulkanFeatures& GetFeatures() const { return m_vk_features; }
 
 private:
 	void CreateVkInstance( const VulkanRHICreateInfo& info );

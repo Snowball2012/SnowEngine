@@ -30,15 +30,22 @@ private:
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
 	RHIGraphicsPipelinePtr m_cube_graphics_pipeline = nullptr;
 
+	RHIDescriptorSetLayoutPtr m_rt_dsl = nullptr;
+	RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
+	RHIRaytracingPipelinePtr m_rt_pipeline = nullptr;
+
 	// resources
 	RHIBufferPtr m_vertex_buffer = nullptr;
 	RHIBufferPtr m_index_buffer = nullptr;
 	std::vector<RHIUploadBufferPtr> m_uniform_buffers;
-	std::vector<RHICBVPtr> m_uniform_buffer_views;
+	std::vector<RHIUniformBufferViewPtr> m_uniform_buffer_views;
 	// images
 	RHITexturePtr m_texture = nullptr;
-	RHITextureSRVPtr m_texture_srv = nullptr;
+	RHITextureROViewPtr m_texture_srv = nullptr;
 	RHISamplerPtr m_texture_sampler = nullptr;
+
+	RHITexturePtr m_rt_frame = nullptr;
+	//RHI
 	// assets
 	CubeAssetPtr m_cube = nullptr;
 
@@ -108,4 +115,6 @@ private:
 	void CreateTextureSampler();
 
 	void CreateCubePipeline();
+
+	void CreateRTPipeline();
 };

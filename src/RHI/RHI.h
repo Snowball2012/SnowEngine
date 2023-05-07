@@ -17,9 +17,10 @@ class RHIDescriptorSet;
 class RHIShaderBindingLayout;
 class RHIGraphicsPipeline;
 class RHIRaytracingPipeline;
-class RHICBV;
-class RHITextureSRV;
-class RHIRTV;
+class RHIUniformBufferView;
+class RHITextureROView;
+class RHITextureRWView;
+class RHIRenderTargetView;
 class RHISampler;
 struct RHIASGeometryInfo;
 struct RHIASInstanceData;
@@ -44,8 +45,9 @@ enum class RHIBufferUsageFlags : uint32_t
     AccelerationStructure = 0x20,
     AccelerationStructureInput = 0x40,
     AccelerationStructureScratch = 0x80,
+    ShaderBindingTable = 0x100,
 
-    NumFlags = 8
+    NumFlags = 9
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
@@ -65,10 +67,11 @@ enum class RHIShaderStageFlags : uint32_t
 {
     VertexShader = 0x00000001,
     PixelShader = 0x00000002,
+    RaygenShader = 0x00000004,
 
-    AllBits = 0x00000003,
+    AllBits = 0x00000007,
 
-    NumFlags = 2,
+    NumFlags = 3,
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIShaderStageFlags )
 
@@ -85,8 +88,8 @@ enum class RHITextureUsageFlags : uint32_t
 
     TransferSrc = 0x1,
     TransferDst = 0x2,
-    SRV = 0x4,
-    RTV = 0x8,
+    TextureROView = 0x4,
+    RenderTargetView = 0x8,
 
     NumFlags = 4
 };
@@ -104,8 +107,10 @@ enum class RHIFormat : uint8_t
 
 enum class RHIShaderBindingType : uint8_t
 {
-    ConstantBuffer = 0,
-    TextureSRV,
+    UniformBuffer = 0,
+    TextureRO,
+    AccelerationStructure,
+    TextureRW,
     Sampler
 };
 
@@ -192,7 +197,7 @@ public:
         Vertex = 0,
         Pixel,
         Compute,
-        Raytracing,
+        Raygen,
         Count
     };
 
@@ -214,7 +219,7 @@ public:
 
     struct DescriptorViewRange
     {
-        RHIShaderBindingType type = RHIShaderBindingType::ConstantBuffer;
+        RHIShaderBindingType type = RHIShaderBindingType::UniformBuffer;
         int32_t count = 1; // negative means unbound bindless
         RHIShaderStageFlags stages = RHIShaderStageFlags::AllBits; // used only in CreateShaderBindingLayout
     };
@@ -278,24 +283,30 @@ public:
     };
     virtual RHITexture* CreateTexture( const TextureInfo& info ) { NOTIMPL; return nullptr; }
 
-    struct CBVInfo
+    struct UniformBufferViewInfo
     {
         RHIBuffer* buffer = nullptr;
     };
-    virtual RHICBV* CreateCBV( const CBVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIUniformBufferView* CreateUniformBufferView( const UniformBufferViewInfo& info ) { NOTIMPL; return nullptr; }
 
-    struct TextureSRVInfo
+    struct TextureROViewInfo
     {
         RHITexture* texture = nullptr;
     };
-    virtual RHITextureSRV* CreateSRV( const TextureSRVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHITextureROView* CreateTextureROView( const TextureROViewInfo& info ) { NOTIMPL; return nullptr; }
 
-    struct RTVInfo
+    struct TextureRWViewInfo
+    {
+        RHITexture* texture = nullptr;
+    };
+    virtual RHITextureRWView* CreateTextureRWView( const TextureROViewInfo& info ) { NOTIMPL; return nullptr; }
+
+    struct RenderTargetViewInfo
     {
         RHITexture* texture = nullptr;
         RHIFormat format = RHIFormat::Undefined;
     };
-    virtual RHIRTV* CreateRTV( const RTVInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIRenderTargetView* CreateRTV( const RenderTargetViewInfo& info ) { NOTIMPL; return nullptr; }
 
     struct SamplerInfo
     {
@@ -362,7 +373,7 @@ public:
 
     virtual RHITexture* GetTexture() { NOTIMPL; return nullptr; }
 
-    virtual RHIRTV* GetRTV() { NOTIMPL; return nullptr; }
+    virtual RHIRenderTargetView* GetRTV() { NOTIMPL; return nullptr; }
 };
 
 class RHISemaphore : public RHIObject
@@ -441,7 +452,7 @@ union RHIClearColorValue
 
 struct RHIPassRTVInfo
 {
-    RHIRTV* rtv = nullptr;
+    RHIRenderTargetView* rtv = nullptr;
     RHILoadOp load_op = RHILoadOp::DontCare;
     RHIStoreOp store_op = RHIStoreOp::DontCare;
     RHIClearColorValue clear_value = { {0,0,0,0} };
@@ -558,6 +569,7 @@ class RHIShader : public RHIObject
 public:
     virtual ~RHIShader() {}
 };
+using RHIShaderPtr = RHIObjectPtr<RHIShader>;
 
 class RHIGraphicsPipeline : public RHIObject
 {
@@ -571,6 +583,7 @@ class RHIRaytracingPipeline : public RHIObject
 public:
     virtual ~RHIRaytracingPipeline() {}
 };
+using RHIRaytracingPipelinePtr = RHIObjectPtr<RHIRaytracingPipeline>;
 
 class RHIShaderBindingLayout : public RHIObject
 {
@@ -582,8 +595,9 @@ using RHIShaderBindingLayoutPtr = RHIObjectPtr<RHIShaderBindingLayout>;
 class RHIDescriptorSet : public RHIObject
 {
 public:
-    virtual void BindCBV( size_t range_idx, size_t idx_in_range, RHICBV& cbv ) { NOTIMPL; }
-    virtual void BindSRV( size_t range_idx, size_t idx_in_range, RHITextureSRV& srv ) { NOTIMPL; }
+    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv ) { NOTIMPL; }
+    virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& srv ) { NOTIMPL; }
+    virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) { NOTIMPL; }
     virtual void BindSampler( size_t range_idx, size_t idx_in_range, RHISampler& sampler ) { NOTIMPL; }
 
     virtual void FlushBinds() { NOTIMPL; }
@@ -670,6 +684,8 @@ struct RHIGraphicsPipelineInfo
 struct RHIRaytracingPipelineInfo
 {
     RHIShader* raygen_shader = nullptr;
+
+    RHIShaderBindingLayout* binding_layout = nullptr;
 };
 
 class RHIBuffer : public RHIObject
@@ -711,28 +727,35 @@ public:
 using RHITexturePtr = RHIObjectPtr<RHITexture>;
 
 // Views
-class RHICBV : public RHIObject
+class RHIUniformBufferView : public RHIObject
 {
 public:
-    virtual ~RHICBV() override {}
+    virtual ~RHIUniformBufferView() override {}
 };
-using RHICBVPtr = RHIObjectPtr<RHICBV>;
+using RHIUniformBufferViewPtr = RHIObjectPtr<RHIUniformBufferView>;
 
-class RHITextureSRV : public RHIObject
+class RHITextureROView : public RHIObject
 {
 public:
-    virtual ~RHITextureSRV() override {}
+    virtual ~RHITextureROView() override {}
 };
-using RHITextureSRVPtr = RHIObjectPtr<RHITextureSRV>;
+using RHITextureROViewPtr = RHIObjectPtr<RHITextureROView>;
 
-class RHIRTV : public RHIObject
+class RHITextureRWView : public RHIObject
 {
 public:
-    virtual ~RHIRTV() override {}
+    virtual ~RHITextureRWView() override {}
+};
+using RHITextureRWViewPtr = RHIObjectPtr<RHITextureRWView>;
+
+class RHIRenderTargetView : public RHIObject
+{
+public:
+    virtual ~RHIRenderTargetView() override {}
 
     virtual glm::uvec3 GetSize() const { return glm::uvec3( 0, 0, 0 ); }
 };
-using RHIRTVPtr = RHIObjectPtr<RHIRTV>;
+using RHIRenderTargetViewPtr = RHIObjectPtr<RHIRenderTargetView>;
 
 class RHISampler : public RHIObject
 {

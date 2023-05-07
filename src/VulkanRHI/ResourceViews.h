@@ -7,7 +7,7 @@
 #include "Buffers.h"
 #include "Textures.h"
 
-class VulkanCBV : public RHICBV
+class VulkanCBV : public RHIUniformBufferView
 {
 	GENERATE_RHI_OBJECT_BODY()
 
@@ -17,13 +17,13 @@ class VulkanCBV : public RHICBV
 public:
 	virtual ~VulkanCBV() override;
 
-	VulkanCBV(VulkanRHI* rhi, const RHI::CBVInfo& info);
+	VulkanCBV(VulkanRHI* rhi, const RHI::UniformBufferViewInfo& info);
 
 	const VkDescriptorBufferInfo* GetVkBufferInfo() const { return &m_view_info; }
 };
-IMPLEMENT_RHI_INTERFACE(RHICBV, VulkanCBV)
+IMPLEMENT_RHI_INTERFACE(RHIUniformBufferView, VulkanCBV)
 
-class VulkanTextureSRV : public RHITextureSRV
+class VulkanTextureSRV : public RHITextureROView
 {
 	GENERATE_RHI_OBJECT_BODY()
 
@@ -35,13 +35,13 @@ class VulkanTextureSRV : public RHITextureSRV
 public:
 	virtual ~VulkanTextureSRV() override;
 
-	VulkanTextureSRV(VulkanRHI* rhi, const RHI::TextureSRVInfo& info);
+	VulkanTextureSRV(VulkanRHI* rhi, const RHI::TextureROViewInfo& info);
 
 	const VkDescriptorImageInfo* GetVkImageInfo() const { return &m_view_info; }
 };
-IMPLEMENT_RHI_INTERFACE(RHITextureSRV, VulkanTextureSRV)
+IMPLEMENT_RHI_INTERFACE(RHITextureROView, VulkanTextureSRV)
 
-class VulkanRTV : public RHIRTV
+class VulkanRTV : public RHIRenderTargetView
 {
 	GENERATE_RHI_OBJECT_BODY()
 
@@ -51,11 +51,11 @@ class VulkanRTV : public RHIRTV
 public:
 	virtual ~VulkanRTV() override;
 
-	VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info);
+	VulkanRTV(VulkanRHI* rhi, const RHI::RenderTargetViewInfo& info);
 
 	virtual glm::uvec3 GetSize() const override;
 
 	VkImageView GetVkImageView() const { return m_vk_image_view; }
 };
-IMPLEMENT_RHI_INTERFACE(RHIRTV, VulkanRTV)
+IMPLEMENT_RHI_INTERFACE(RHIRenderTargetView, VulkanRTV)
 

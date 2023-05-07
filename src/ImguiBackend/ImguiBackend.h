@@ -20,7 +20,7 @@ private:
 	class RHI* m_rhi = nullptr;
 
 	RHITexturePtr m_fonts_atlas = nullptr;
-	RHITextureSRVPtr m_fonts_atlas_srv = nullptr;
+	RHITextureROViewPtr m_fonts_atlas_srv = nullptr;
 	RHISamplerPtr m_fonts_sampler = nullptr;
 
 	RHIGraphicsPipelinePtr m_pso = nullptr;
@@ -46,7 +46,7 @@ public:
 
 	ImguiProcessEventResult ProcessEvent( union SDL_Event* event );
 
-	ImguiRenderResult RenderFrame( class RHIRTV& rtv );
+	ImguiRenderResult RenderFrame( class RHIRenderTargetView& rtv );
 
 	// We try to reuse buffer allocations, so we have to know when a frame is done rendering.
 	void MarkFrameAsCompleted( uint64_t frame_idx );
@@ -61,7 +61,7 @@ private:
 		struct ImDrawData* draw_data, 
 		uint32_t fb_width, uint32_t fb_height,
 		RHIBuffer* vtx_buf, RHIBuffer* idx_buf,
-		RHICommandList& cl, RHIRTV& rtv ) const;
+		RHICommandList& cl, RHIRenderTargetView& rtv ) const;
 
 	// Can allocate new cache entry
 	FrameData* FindFittingCache( size_t vertex_buf_size, size_t index_buf_size );

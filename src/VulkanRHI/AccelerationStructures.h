@@ -24,6 +24,7 @@ public:
 	virtual ~VulkanAccelerationStructure() override;
 
 	VkAccelerationStructureKHR GetVkAS() const { return m_vk_as; }
+	const VkAccelerationStructureKHR* GetVkASPtr() const { return &m_vk_as; }
 
 	VkDeviceAddress GetVkASDeviceAddress() const { return m_as_device_address; }
 

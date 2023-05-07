@@ -12,7 +12,7 @@ VulkanCBV::~VulkanCBV()
 {
 }
 
-VulkanCBV::VulkanCBV(VulkanRHI* rhi, const RHI::CBVInfo& info)
+VulkanCBV::VulkanCBV(VulkanRHI* rhi, const RHI::UniformBufferViewInfo& info)
 	: m_rhi(rhi)
 {
 	VERIFY_NOT_EQUAL(info.buffer, nullptr);
@@ -33,7 +33,7 @@ VulkanTextureSRV::~VulkanTextureSRV()
         vkDestroyImageView(m_rhi->GetDevice(), m_vk_image_view, nullptr);
 }
 
-VulkanTextureSRV::VulkanTextureSRV(VulkanRHI* rhi, const RHI::TextureSRVInfo& info)
+VulkanTextureSRV::VulkanTextureSRV(VulkanRHI* rhi, const RHI::TextureROViewInfo& info)
 	: m_rhi(rhi)
 {
 	VERIFY_NOT_EQUAL(info.texture, nullptr);
@@ -73,7 +73,7 @@ VulkanRTV::~VulkanRTV()
         vkDestroyImageView(m_rhi->GetDevice(), m_vk_image_view, nullptr);
 }
 
-VulkanRTV::VulkanRTV(VulkanRHI* rhi, const RHI::RTVInfo& info)
+VulkanRTV::VulkanRTV(VulkanRHI* rhi, const RHI::RenderTargetViewInfo& info)
     : m_rhi(rhi)
 {
     m_vk_image_view = m_rhi->CreateImageView(

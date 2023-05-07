@@ -60,6 +60,13 @@ if ((x) == (FailValue)) \
 	throw std::runtime_error("Failed call to " #x " at " __FILE__ ":" S_(__LINE__) ", expected not " #FailValue); \
 }
 
+#define VERIFY( x ) \
+if ((x) == (false)) \
+{ \
+	INSERT_DBGBREAK \
+	throw std::runtime_error( "Failed call to " #x " at " __FILE__ ":" S_(__LINE__) ); \
+}
+
 #define NOTIMPL do { INSERT_DBGBREAK \
 	throw std::runtime_error(__FUNCTION__ " is not implemented!"); } while(0);
 
@@ -200,6 +207,7 @@ class Logger
 private:
 	std::optional<std::ofstream> m_file;
 	bool m_write_to_std = true;
+	bool m_write_debugstr = true;
 
 public:
 	struct CreateInfo

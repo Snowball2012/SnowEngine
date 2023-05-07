@@ -22,6 +22,14 @@
     PFN_##name pfn_##name = nullptr; \
     rettype name ( t0 p0, t1 p1, t2 p2, t3 p3, t4 p4 ) { return pfn_##name( p0, p1, p2, p3, p4 ); }
 
+#define DEFINE_VK_FUNCTION6( rettype, name, t0, p0, t1, p1, t2, p2, t3, p3, t4, p4, t5, p5 ) \
+    PFN_##name pfn_##name = nullptr; \
+    rettype name ( t0 p0, t1 p1, t2 p2, t3 p3, t4 p4, t5 p5 ) { return pfn_##name( p0, p1, p2, p3, p4, p5 ); }
+
+#define DEFINE_VK_FUNCTION7( rettype, name, t0, p0, t1, p1, t2, p2, t3, p3, t4, p4, t5, p5, t6, p6 ) \
+    PFN_##name pfn_##name = nullptr; \
+    rettype name ( t0 p0, t1 p1, t2 p2, t3 p3, t4 p4, t5 p5, t6 p6 ) { return pfn_##name( p0, p1, p2, p3, p4, p5, p6 ); }
+
 // raytracing
 
 DEFINE_VK_FUNCTION4( VkResult, vkCreateAccelerationStructureKHR,
@@ -52,6 +60,23 @@ DEFINE_VK_FUNCTION2( VkDeviceAddress, vkGetAccelerationStructureDeviceAddressKHR
     VkDevice, device,
     const VkAccelerationStructureDeviceAddressInfoKHR*, pInfo );
 
+DEFINE_VK_FUNCTION6( VkResult, vkGetRayTracingShaderGroupHandlesKHR,
+    VkDevice,                                    device,
+    VkPipeline,                                  pipeline,
+    uint32_t,                                    firstGroup,
+    uint32_t,                                    groupCount,
+    size_t,                                      dataSize,
+    void*, pData );
+
+DEFINE_VK_FUNCTION7( VkResult, vkCreateRayTracingPipelinesKHR,
+    VkDevice,                                    device,
+    VkDeferredOperationKHR,                      deferredOperation,
+    VkPipelineCache,                             pipelineCache,
+    uint32_t,                                    createInfoCount,
+    const VkRayTracingPipelineCreateInfoKHR*, pCreateInfos,
+    const VkAllocationCallbacks*, pAllocator,
+    VkPipeline*, pPipelines );
+
 
 void Extensions::LoadRT( VkDevice device )
 {
@@ -68,6 +93,8 @@ VERIFY_NOT_EQUAL( name, nullptr );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCmdBuildAccelerationStructuresKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkGetAccelerationStructureBuildSizesKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkGetAccelerationStructureDeviceAddressKHR );
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkGetRayTracingShaderGroupHandlesKHR );
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkCreateRayTracingPipelinesKHR );
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION
 }

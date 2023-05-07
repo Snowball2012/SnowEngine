@@ -29,6 +29,10 @@ void SandboxApp::OnInit()
     CreateDescriptorSetLayout();
     CreatePipeline();
     CreateCubePipeline();
+    if ( m_rhi->SupportsRaytracing() )
+    {
+        CreateRTPipeline();
+    }
     CreateTextureImage();
     CreateTextureImageView();
     CreateTextureSampler();
@@ -73,6 +77,9 @@ void SandboxApp::OnCleanup()
 
 void SandboxApp::CleanupPipeline()
 {
+    m_rt_pipeline = nullptr;
+    m_rt_layout = nullptr;
+    m_rt_dsl = nullptr;
     m_rhi_graphics_pipeline = nullptr;
     m_binding_table_layout = nullptr;
     m_shader_bindings_layout = nullptr;
@@ -95,11 +102,11 @@ void SandboxApp::CreateIndexBuffer()
 void SandboxApp::CreateDescriptorSetLayout()
 {
     RHI::DescriptorViewRange ranges[3] = {};
-    ranges[0].type = RHIShaderBindingType::ConstantBuffer;
+    ranges[0].type = RHIShaderBindingType::UniformBuffer;
     ranges[0].count = 1;
     ranges[0].stages = RHIShaderStageFlags::VertexShader;
 
-    ranges[1].type = RHIShaderBindingType::TextureSRV;
+    ranges[1].type = RHIShaderBindingType::TextureRO;
     ranges[1].count = 1;
     ranges[1].stages = RHIShaderStageFlags::PixelShader;
 
@@ -119,6 +126,32 @@ void SandboxApp::CreateDescriptorSetLayout()
     layout_info.table_count = std::size( dsls );
 
     m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout( layout_info );
+
+    if ( m_rhi->SupportsRaytracing() )
+    {
+        RHI::DescriptorViewRange ranges[2] = {};
+        ranges[0].type = RHIShaderBindingType::AccelerationStructure;
+        ranges[0].count = 1;
+        ranges[0].stages = RHIShaderStageFlags::RaygenShader;
+
+        ranges[1].type = RHIShaderBindingType::TextureRW;
+        ranges[1].count = 1;
+        ranges[1].stages = RHIShaderStageFlags::RaygenShader;
+
+        RHI::DescriptorSetLayoutInfo binding_table = {};
+        binding_table.ranges = ranges;
+        binding_table.range_count = std::size( ranges );
+
+        m_rt_dsl = m_rhi->CreateDescriptorSetLayout( binding_table );
+
+        RHI::ShaderBindingLayoutInfo rt_layout_info = {};
+
+        RHIDescriptorSetLayout* rt_dsls[1] = { m_rt_dsl.get() };
+        rt_layout_info.tables = rt_dsls;
+        rt_layout_info.table_count = std::size( dsls );
+
+        m_rt_layout = m_rhi->CreateShaderBindingLayout( rt_layout_info );
+    }
 }
 
 void SandboxApp::CreateUniformBuffers()
@@ -133,9 +166,9 @@ void SandboxApp::CreateUniformBuffers()
     for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
     {
         m_uniform_buffers[i] = m_rhi->CreateUploadBuffer( uniform_info );
-        RHI::CBVInfo view_info = {};
+        RHI::UniformBufferViewInfo view_info = {};
         view_info.buffer = m_uniform_buffers[i]->GetBuffer();
-        m_uniform_buffer_views[i] = m_rhi->CreateCBV( view_info );
+        m_uniform_buffer_views[i] = m_rhi->CreateUniformBufferView( view_info );
     }
 }
 
@@ -183,8 +216,8 @@ void SandboxApp::CreateDescriptorSets()
     for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
     {
         m_binding_tables[i] = m_rhi->CreateDescriptorSet( *m_binding_table_layout );
-        m_binding_tables[i]->BindCBV( 0, 0, *m_uniform_buffer_views[i] );
-        m_binding_tables[i]->BindSRV( 1, 0, *m_texture_srv );
+        m_binding_tables[i]->BindUniformBufferView( 0, 0, *m_uniform_buffer_views[i] );
+        m_binding_tables[i]->BindTextureROView( 1, 0, *m_texture_srv );
         m_binding_tables[i]->BindSampler( 2, 0, *m_texture_sampler );
         m_binding_tables[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
     }
@@ -217,7 +250,7 @@ void SandboxApp::CreateTextureImage()
     CreateImage(
         uint32_t( width ), uint32_t( height ),
         RHIFormat::R8G8B8A8_SRGB,
-        RHITextureUsageFlags::SRV | RHITextureUsageFlags::TransferDst,
+        RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TransferDst,
         RHITextureLayout::TransferDst,
         m_texture );
 
@@ -270,9 +303,9 @@ void SandboxApp::TransitionImageLayout( RHICommandList & cmd_list, RHITexture & 
 
 void SandboxApp::CreateTextureImageView()
 {
-    RHI::TextureSRVInfo srv_info = {};
+    RHI::TextureROViewInfo srv_info = {};
     srv_info.texture = m_texture.get();
-    m_texture_srv = m_rhi->CreateSRV( srv_info );
+    m_texture_srv = m_rhi->CreateTextureROView( srv_info );
 }
 
 void SandboxApp::CreateTextureSampler()
@@ -329,6 +362,23 @@ void SandboxApp::CreateCubePipeline()
     rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::Back;
 
     m_cube_graphics_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
+}
+
+void SandboxApp::CreateRTPipeline()
+{
+    RHI::ShaderCreateInfo create_info = {};
+    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/Raytracing.hlsl" ).c_str() );
+    create_info.filename = shader_path.c_str();
+
+    create_info.frequency = RHI::ShaderFrequency::Raygen;
+    create_info.entry_point = "VisibilityRGS";
+    RHIObjectPtr<RHIShader> raygen_shader = m_rhi->CreateShader( create_info );
+
+    RHIRaytracingPipelineInfo rt_pipeline_info = {};
+    rt_pipeline_info.raygen_shader = raygen_shader.get();
+    rt_pipeline_info.binding_layout = m_rt_layout.get();
+
+    m_rt_pipeline = m_rhi->CreatePSO( rt_pipeline_info );
 }
 
 void SandboxApp::CreateVertexBuffer()

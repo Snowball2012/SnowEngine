@@ -59,7 +59,7 @@ void ImguiBackend::NewFrame()
     m_cur_frame++;
 }
 
-ImguiRenderResult ImguiBackend::RenderFrame( RHIRTV& rtv )
+ImguiRenderResult ImguiBackend::RenderFrame( RHIRenderTargetView& rtv )
 {
     ImguiRenderResult res = {};
 
@@ -169,14 +169,14 @@ void ImguiBackend::SetupFonts()
     tex_info.mips = 1;
     tex_info.array_layers = 1;
     tex_info.format = RHIFormat::R8G8B8A8_UNORM;
-    tex_info.usage = RHITextureUsageFlags::SRV | RHITextureUsageFlags::TransferDst;
+    tex_info.usage = RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TransferDst;
     tex_info.initial_layout = RHITextureLayout::TransferDst;
 
     m_fonts_atlas = m_rhi->CreateTexture( tex_info );
 
-    RHI::TextureSRVInfo srv_info = {};
+    RHI::TextureROViewInfo srv_info = {};
     srv_info.texture = m_fonts_atlas.get();
-    m_fonts_atlas_srv = m_rhi->CreateSRV( srv_info );
+    m_fonts_atlas_srv = m_rhi->CreateTextureROView( srv_info );
 
     RHICommandList* upload_cl = m_rhi->GetCommandList( RHI::QueueType::Graphics );
 
@@ -218,7 +218,7 @@ void ImguiBackend::SetupFonts()
     // SetupPSO has to be called before this
     VERIFY_NOT_EQUAL( m_desc_set, nullptr );
     
-    m_desc_set->BindSRV( 0, 0, *m_fonts_atlas_srv );
+    m_desc_set->BindTextureROView( 0, 0, *m_fonts_atlas_srv );
     m_desc_set->BindSampler( 1, 0, *m_fonts_sampler );
     m_desc_set->FlushBinds();
 
@@ -284,7 +284,7 @@ void ImguiBackend::SetupPSO( RHIFormat target_format )
 
     RHI::DescriptorViewRange view_ranges[] =
     {
-        { RHIShaderBindingType::TextureSRV, 1, RHIShaderStageFlags::PixelShader },
+        { RHIShaderBindingType::TextureRO, 1, RHIShaderStageFlags::PixelShader },
         { RHIShaderBindingType::Sampler, 1, RHIShaderStageFlags::PixelShader },
     };
 
@@ -319,7 +319,7 @@ void ImguiBackend::RecordCommandList(
     ImDrawData* draw_data,
     uint32_t fb_width, uint32_t fb_height,
     RHIBuffer* vtx_buf, RHIBuffer* idx_buf,
-    RHICommandList& cl, RHIRTV& rtv ) const
+    RHICommandList& cl, RHIRenderTargetView& rtv ) const
 {
     cl.Begin();
 
@@ -404,7 +404,7 @@ void ImguiBackend::RecordCommandList(
             cl.SetScissors( 0, &scissor, 1 );
 
             // Bind DescriptorSet with font or user texture
-            RHITextureSRV* texture_srv = ( RHITextureSRV* )pcmd->TextureId;
+            RHITextureROView* texture_srv = ( RHITextureROView* )pcmd->TextureId;
 
             if ( texture_srv && texture_srv != m_fonts_atlas_srv )
                 NOTIMPL; // don't support user textures for now

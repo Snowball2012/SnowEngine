@@ -8,6 +8,8 @@
 
 #include "ResourceViews.h"
 
+#include "AccelerationStructures.h"
+
 IMPLEMENT_RHI_OBJECT(Shader)
 
 Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequency, std::string entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
@@ -17,10 +19,9 @@ Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequ
     , m_defines(std::move(defines))
     , m_rhi(rhi)
 {
-    if (!bytecode)
+    if ( !bytecode )
     {
-        if ( !Compile( nullptr ) )
-            throw std::runtime_error( "Shader compilation failed" );
+        VERIFY( Compile( nullptr ) );
     }
 
     CreateVkStage();
@@ -95,6 +96,9 @@ namespace
             break;
         case RHI::ShaderFrequency::Pixel:
             retval = VK_SHADER_STAGE_FRAGMENT_BIT;
+            break;
+        case RHI::ShaderFrequency::Raygen:
+            retval = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
             break;
         default:
             NOTIMPL;
@@ -182,7 +186,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
         L"vs_6_1",
         L"ps_6_1",
         L"cs_6_1",
-        L"lib_6_1"
+        L"lib_6_3"
     };
 
     std::vector<DxcDefine> dxc_defines;
@@ -199,7 +203,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
     }
 
     // generate spirv
-    std::vector<LPCWSTR> args = { L"-spirv" };
+    std::vector<LPCWSTR> args = { L"-spirv", L"-fspv-target-env=vulkan1.2" };
 
     std::wstring entry_point_wstr = WstringFromChar(entry_point.c_str());
 
@@ -287,15 +291,15 @@ VulkanShaderBindingLayout::VulkanShaderBindingLayout(VulkanRHI* rhi, const RHI::
 }
 
 
-IMPLEMENT_RHI_OBJECT(VulkanShaderBindingTableLayout)
+IMPLEMENT_RHI_OBJECT(VulkanDescriptorSetLayout)
 
-VulkanShaderBindingTableLayout::~VulkanShaderBindingTableLayout()
+VulkanDescriptorSetLayout::~VulkanDescriptorSetLayout()
 {
     if (m_vk_desc_set_layout)
         vkDestroyDescriptorSetLayout(m_rhi->GetDevice(), m_vk_desc_set_layout, nullptr);
 }
 
-VulkanShaderBindingTableLayout::VulkanShaderBindingTableLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info)
+VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanRHI* rhi, const RHI::DescriptorSetLayoutInfo& info)
     : m_rhi(rhi)
 {
     boost::container::small_vector<VkDescriptorSetLayoutBinding, 16> vk_bindings;
@@ -338,9 +342,9 @@ VulkanDescriptorSet::~VulkanDescriptorSet()
 VulkanDescriptorSet::VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout)
     : m_rhi(rhi)
 {
-    m_sbt_layout = &RHIImpl(layout);
+    m_dsl = &RHIImpl(layout);
 
-    VkDescriptorSetLayout vk_layout = m_sbt_layout->GetVkDescriptorSetLayout();
+    VkDescriptorSetLayout vk_layout = m_dsl->GetVkDescriptorSetLayout();
 
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -351,7 +355,7 @@ VulkanDescriptorSet::VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout&
     VK_VERIFY(vkAllocateDescriptorSets(m_rhi->GetDevice(), &alloc_info, &m_vk_desc_set));
 }
 
-void VulkanDescriptorSet::BindCBV(size_t range_idx, size_t idx_in_range, RHICBV& cbv)
+void VulkanDescriptorSet::BindUniformBufferView(size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv)
 {
     auto& vk_cbv = RHIImpl(cbv);
 
@@ -365,7 +369,7 @@ void VulkanDescriptorSet::BindCBV(size_t range_idx, size_t idx_in_range, RHICBV&
     m_referenced_views.emplace_back(&vk_cbv);
 }
 
-void VulkanDescriptorSet::BindSRV(size_t range_idx, size_t idx_in_range, RHITextureSRV& srv)
+void VulkanDescriptorSet::BindTextureROView(size_t range_idx, size_t idx_in_range, RHITextureROView& srv)
 {
     auto& vk_srv = RHIImpl(srv);
 
@@ -377,6 +381,26 @@ void VulkanDescriptorSet::BindSRV(size_t range_idx, size_t idx_in_range, RHIText
     write_struct.pImageInfo = vk_srv.GetVkImageInfo();
 
     m_referenced_views.emplace_back(&vk_srv);
+}
+
+void VulkanDescriptorSet::BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as )
+{
+    auto& vk_as = RHIImpl( as );
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct( write_struct, range_idx, idx_in_range );
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+    auto& vk_as_info = m_as_infos.emplace_back();
+    vk_as_info = {};
+    vk_as_info.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+    vk_as_info.accelerationStructureCount = 1;
+    vk_as_info.pAccelerationStructures = vk_as.GetVkASPtr();
+    write_struct.pNext = &vk_as_info;
+
+    m_referenced_views.emplace_back( &vk_as );
 }
 
 void VulkanDescriptorSet::BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler)
@@ -405,6 +429,7 @@ void VulkanDescriptorSet::FlushBinds()
 
     m_pending_writes.clear();
     m_referenced_views.clear();
+    m_as_infos.clear();
 }
 
 void VulkanDescriptorSet::InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const

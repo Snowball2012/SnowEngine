@@ -6,6 +6,8 @@
 
 #include "Shader.h"
 
+class VulkanUploadBuffer;
+
 class VulkanGraphicsPSO : public RHIGraphicsPipeline
 {
     GENERATE_RHI_OBJECT_BODY()
@@ -63,8 +65,39 @@ private:
 };
 IMPLEMENT_RHI_INTERFACE( RHIGraphicsPipeline, VulkanGraphicsPSO )
 
+
 class VulkanRaytracingPSO : public RHIRaytracingPipeline
 {
     GENERATE_RHI_OBJECT_BODY()
+
+    VkPipeline m_vk_pipeline = VK_NULL_HANDLE;
+
+    VkRayTracingPipelineCreateInfoKHR m_vk_pipeline_ci = {};
+
+    bc::static_vector<VkPipelineShaderStageCreateInfo, 5> m_stages = {};
+    bc::small_vector<VkRayTracingShaderGroupCreateInfoKHR, 3> m_groups = {}; // raygen, 1 miss and 1 hit group by default
+
+    // Embed SBT into a pipeline. Use generic shader bindings mechanism to pass data in a "bindless" way.
+    RHIObjectPtr<VulkanUploadBuffer> m_sbt = nullptr;
+    VkStridedDeviceAddressRegionKHR m_rgs_region = {};
+
+    RHIObjectPtr<VulkanShaderBindingLayout> m_shader_bindings = nullptr;
+
+    RHIObjectPtr<Shader> m_rgs = nullptr;
+
+public:
+
+    VulkanRaytracingPSO( VulkanRHI* rhi, const RHIRaytracingPipelineInfo& info );
+
+    virtual ~VulkanRaytracingPSO() override;
+
+    bool Recompile();
+
+    VkStridedDeviceAddressRegionKHR GetVkRaygenSBT() const;
+
+private:
+    void InitShaderStages();
+
+    void InitSBT();
 };
 IMPLEMENT_RHI_INTERFACE( RHIRaytracingPipeline, VulkanRaytracingPSO )

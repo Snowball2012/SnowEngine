@@ -11,8 +11,16 @@ VulkanGraphicsPSO::VulkanGraphicsPSO( VulkanRHI* rhi, const RHIGraphicsPipelineI
 {
     m_pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
-    m_stages[0] = m_vs->GetVkStageInfo();
-    m_stages[1] = m_ps->GetVkStageInfo();
+    int i = 0;
+
+    if ( m_vs )
+        m_stages[i++] = m_vs->GetVkStageInfo();
+
+    if ( m_ps )
+        m_stages[i++] = m_ps->GetVkStageInfo();
+
+    m_pipeline_info.pStages = m_stages;
+    m_pipeline_info.stageCount = i;
 
     m_pipeline_info.stageCount = 2;
     m_pipeline_info.pStages = m_stages;
@@ -61,10 +69,16 @@ bool VulkanGraphicsPSO::Recompile()
         m_stages[i++] = m_ps->GetVkStageInfo();
 
     m_pipeline_info.pStages = m_stages;
+    m_pipeline_info.stageCount = i;
+
+    VkPipeline new_pipeline = VK_NULL_HANDLE;
+    VkResult res = vkCreateGraphicsPipelines( m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &new_pipeline );
+
+    if ( res != VK_SUCCESS )
+        return false;
 
     vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
-
-    VkResult res = vkCreateGraphicsPipelines( m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &m_vk_pipeline );
+    m_vk_pipeline = new_pipeline;
 
     return res == VK_SUCCESS;
 }
@@ -219,4 +233,141 @@ void VulkanGraphicsPSO::InitDynamicRendering( const RHIGraphicsPipelineInfo& inf
     m_pipeline_dynamic_rendering_info.pColorAttachmentFormats = m_color_attachment_formats.data();
 
     m_pipeline_info.pNext = &m_pipeline_dynamic_rendering_info;
+}
+
+
+IMPLEMENT_RHI_OBJECT( VulkanRaytracingPSO )
+
+VulkanRaytracingPSO::VulkanRaytracingPSO( VulkanRHI* rhi, const RHIRaytracingPipelineInfo& info )
+    : m_rhi( rhi ), m_rgs( RHIImpl( info.raygen_shader ) )
+{
+    m_vk_pipeline_ci.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
+
+    InitShaderStages();
+
+    m_vk_pipeline_ci.maxPipelineRayRecursionDepth = 1;
+
+    VERIFY_NOT_EQUAL( info.binding_layout, nullptr );
+    m_shader_bindings = &RHIImpl( *info.binding_layout );
+
+    m_vk_pipeline_ci.layout = m_shader_bindings->GetVkPipelineLayout();
+
+    m_vk_pipeline_ci.basePipelineHandle = VK_NULL_HANDLE;
+    m_vk_pipeline_ci.basePipelineIndex = -1;
+
+    VK_VERIFY( vkCreateRayTracingPipelinesKHR( m_rhi->GetDevice(), {}, {}, 1, &m_vk_pipeline_ci, nullptr, &m_vk_pipeline ) );
+
+    InitSBT();
+
+    m_rhi->RegisterLoadedPSO( *this );
+}
+
+VulkanRaytracingPSO::~VulkanRaytracingPSO()
+{
+    m_rhi->UnregisterLoadedPSO( *this );
+
+    vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
+}
+
+bool VulkanRaytracingPSO::Recompile()
+{
+    InitShaderStages();
+
+    VkPipeline new_pipeline = VK_NULL_HANDLE;
+    VkResult res = vkCreateRayTracingPipelinesKHR( m_rhi->GetDevice(), {}, {}, 1, &m_vk_pipeline_ci, nullptr, &new_pipeline );
+
+    if ( res != VK_SUCCESS )
+        return false;
+
+    vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
+    m_vk_pipeline = new_pipeline;
+
+    InitSBT();
+
+    return true;
+}
+
+namespace
+{
+    void InitShaderGroup( VkRayTracingShaderGroupCreateInfoKHR& vk_sg )
+    {
+        vk_sg = {};
+        vk_sg.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        vk_sg.anyHitShader = VK_SHADER_UNUSED_KHR;
+        vk_sg.closestHitShader = VK_SHADER_UNUSED_KHR;
+        vk_sg.generalShader = VK_SHADER_UNUSED_KHR;
+        vk_sg.intersectionShader = VK_SHADER_UNUSED_KHR;
+        vk_sg.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    }
+}
+
+void VulkanRaytracingPSO::InitShaderStages()
+{
+    m_stages.clear();
+
+    const auto& rt_props = m_rhi->GetFeatures().rt_pipe_props;
+
+    const uint32_t sbt_handle_size = rt_props.shaderGroupHandleSize;
+    const uint32_t sbt_handle_size_aligned = uint32_t( CalcAlignedSize( sbt_handle_size, rt_props.shaderGroupHandleAlignment ) );
+
+    size_t sbt_size = 0;
+
+    if ( m_rgs )
+    {
+        const uint32_t stage_idx = uint32_t( m_stages.size() );
+        m_stages.emplace_back( m_rgs->GetVkStageInfo() );
+        auto& new_group = m_groups.emplace_back();
+        InitShaderGroup( new_group );
+        new_group.generalShader = stage_idx;
+        new_group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+
+        m_rgs_region.stride = sbt_handle_size_aligned;
+        m_rgs_region.size = m_rgs_region.stride;
+        sbt_size += sbt_handle_size_aligned;
+    }
+
+    RHI::BufferInfo sbt_ci = {};
+    sbt_ci.size = sbt_size;
+    sbt_ci.usage = RHIBufferUsageFlags::ShaderBindingTable;
+    m_sbt = RHIImpl( m_rhi->CreateUploadBuffer( sbt_ci ) );
+
+    m_vk_pipeline_ci.pStages = m_stages.data();
+    m_vk_pipeline_ci.stageCount = uint32_t( m_stages.size() );
+
+    m_vk_pipeline_ci.pGroups = m_groups.data();
+    m_vk_pipeline_ci.groupCount = uint32_t( m_groups.size() );
+}
+
+void VulkanRaytracingPSO::InitSBT()
+{
+    if ( !SE_ENSURE( m_sbt != nullptr ) )
+        return;
+
+    VkDeviceAddress base_dev_addr = RHIImpl( m_sbt->GetBuffer() )->GetDeviceAddress();
+
+    const auto& rt_props = m_rhi->GetFeatures().rt_pipe_props;
+    const uint32_t sbt_handle_size = rt_props.shaderGroupHandleSize;
+
+    uint32_t data_size = uint32_t( m_groups.size() ) * sbt_handle_size;
+    bc::small_vector<uint8_t, SizeKB> handles( data_size );
+    VK_VERIFY( vkGetRayTracingShaderGroupHandlesKHR( m_rhi->GetDevice(), m_vk_pipeline, 0, uint32_t( m_groups.size() ), data_size, handles.data() ) );
+
+    size_t cur_handle_idx = 0;
+    size_t dev_address_offset = 0;
+
+    if ( m_rgs )
+    {
+        m_rgs_region.deviceAddress = base_dev_addr;
+
+        m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
+
+        base_dev_addr += m_rgs_region.size;
+        cur_handle_idx++;
+        dev_address_offset += m_rgs_region.size;
+    }
+}
+
+VkStridedDeviceAddressRegionKHR VulkanRaytracingPSO::GetVkRaygenSBT() const
+{
+    return m_rgs_region;
 }
