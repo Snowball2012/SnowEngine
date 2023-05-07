@@ -82,6 +82,13 @@ void VulkanCommandList::CopyBuffer( RHIBuffer& src, RHIBuffer& dst, size_t regio
         uint32_t( copy_regions.size() ), copy_regions.data() );
 }
 
+void VulkanCommandList::Draw( uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance )
+{
+    PushConstantsIfNeeded();
+
+    vkCmdDraw( m_vk_cmd_buffer, vertex_count, instance_count, first_vertex, first_instance );
+}
+
 void VulkanCommandList::DrawIndexed( uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance )
 {
     PushConstantsIfNeeded();

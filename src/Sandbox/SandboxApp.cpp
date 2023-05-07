@@ -31,10 +31,12 @@ void SandboxApp::OnInit()
     CreateDescriptorSetLayout();
     CreatePipeline();
     CreateCubePipeline();
+    CreateFullscreenQuadPipeline();
     if ( m_rhi->SupportsRaytracing() )
     {
         CreateRTPipeline();
     }
+
     CreateTextureImage();
     CreateTextureImageView();
     CreateTextureSampler();
@@ -55,6 +57,7 @@ void SandboxApp::OnCleanup()
 
     m_binding_tables.clear();
     m_rt_descsets.clear();
+    m_fsquad_descsets.clear();
     m_uniform_buffer_views.clear();
     m_uniform_buffers.clear();
     m_index_buffer = nullptr;
@@ -64,7 +67,9 @@ void SandboxApp::OnCleanup()
     m_texture_srv = nullptr;
     m_texture = nullptr;
 
+    m_point_sampler = nullptr;
     m_frame_rwview = nullptr;
+    m_frame_roview = nullptr;
     m_rt_frame = nullptr;
 
     CleanupPipeline();
@@ -89,6 +94,9 @@ void SandboxApp::CleanupPipeline()
     m_binding_table_layout = nullptr;
     m_shader_bindings_layout = nullptr;
     m_cube_graphics_pipeline = nullptr;
+    m_draw_fullscreen_quad_pipeline = nullptr;
+    m_shader_bindings_layout_fsquad = nullptr;
+    m_dsl_fsquad = nullptr;
 }
 
 void SandboxApp::CreateIndexBuffer()
@@ -106,31 +114,33 @@ void SandboxApp::CreateIndexBuffer()
 
 void SandboxApp::CreateDescriptorSetLayout()
 {
-    RHI::DescriptorViewRange ranges[3] = {};
-    ranges[0].type = RHIShaderBindingType::UniformBuffer;
-    ranges[0].count = 1;
-    ranges[0].stages = RHIShaderStageFlags::VertexShader;
+    {
+        RHI::DescriptorViewRange ranges[3] = {};
+        ranges[0].type = RHIShaderBindingType::UniformBuffer;
+        ranges[0].count = 1;
+        ranges[0].stages = RHIShaderStageFlags::VertexShader;
 
-    ranges[1].type = RHIShaderBindingType::TextureRO;
-    ranges[1].count = 1;
-    ranges[1].stages = RHIShaderStageFlags::PixelShader;
+        ranges[1].type = RHIShaderBindingType::TextureRO;
+        ranges[1].count = 1;
+        ranges[1].stages = RHIShaderStageFlags::PixelShader;
 
-    ranges[2].type = RHIShaderBindingType::Sampler;
-    ranges[2].count = 1;
-    ranges[2].stages = RHIShaderStageFlags::PixelShader;
+        ranges[2].type = RHIShaderBindingType::Sampler;
+        ranges[2].count = 1;
+        ranges[2].stages = RHIShaderStageFlags::PixelShader;
 
-    RHI::DescriptorSetLayoutInfo binding_table = {};
-    binding_table.ranges = ranges;
-    binding_table.range_count = std::size( ranges );
+        RHI::DescriptorSetLayoutInfo binding_table = {};
+        binding_table.ranges = ranges;
+        binding_table.range_count = std::size( ranges );
 
-    m_binding_table_layout = m_rhi->CreateDescriptorSetLayout( binding_table );
+        m_binding_table_layout = m_rhi->CreateDescriptorSetLayout( binding_table );
 
-    RHI::ShaderBindingLayoutInfo layout_info = {};
-    RHIDescriptorSetLayout* dsls[1] = { m_binding_table_layout.get() };
-    layout_info.tables = dsls;
-    layout_info.table_count = std::size( dsls );
+        RHI::ShaderBindingLayoutInfo layout_info = {};
+        RHIDescriptorSetLayout* dsls[1] = { m_binding_table_layout.get() };
+        layout_info.tables = dsls;
+        layout_info.table_count = std::size( dsls );
 
-    m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout( layout_info );
+        m_shader_bindings_layout = m_rhi->CreateShaderBindingLayout( layout_info );
+    }
 
     if ( m_rhi->SupportsRaytracing() )
     {
@@ -153,9 +163,34 @@ void SandboxApp::CreateDescriptorSetLayout()
 
         RHIDescriptorSetLayout* rt_dsls[1] = { m_rt_dsl.get() };
         rt_layout_info.tables = rt_dsls;
-        rt_layout_info.table_count = std::size( dsls );
+        rt_layout_info.table_count = std::size( rt_dsls );
 
         m_rt_layout = m_rhi->CreateShaderBindingLayout( rt_layout_info );
+    }
+
+    {
+        RHI::DescriptorViewRange ranges[2] = {};
+
+        ranges[0].type = RHIShaderBindingType::TextureRO;
+        ranges[0].count = 1;
+        ranges[0].stages = RHIShaderStageFlags::PixelShader;
+
+        ranges[1].type = RHIShaderBindingType::Sampler;
+        ranges[1].count = 1;
+        ranges[1].stages = RHIShaderStageFlags::PixelShader;
+
+        RHI::DescriptorSetLayoutInfo binding_table = {};
+        binding_table.ranges = ranges;
+        binding_table.range_count = std::size( ranges );
+
+        m_dsl_fsquad = m_rhi->CreateDescriptorSetLayout( binding_table );
+
+        RHI::ShaderBindingLayoutInfo layout_info = {};
+        RHIDescriptorSetLayout* dsls[1] = { m_dsl_fsquad.get() };
+        layout_info.tables = dsls;
+        layout_info.table_count = std::size( dsls );
+
+        m_shader_bindings_layout_fsquad = m_rhi->CreateShaderBindingLayout( layout_info );
     }
 }
 
@@ -232,6 +267,12 @@ void SandboxApp::CreateDescriptorSets()
     {
         m_rt_descsets[i] = m_rhi->CreateDescriptorSet( *m_rt_dsl );
         m_rt_descsets[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
+    }
+
+    m_fsquad_descsets.resize( m_max_frames_in_flight );
+    for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
+    {
+        m_fsquad_descsets[i] = m_rhi->CreateDescriptorSet(*m_dsl_fsquad);
     }
 }
 
@@ -325,6 +366,10 @@ void SandboxApp::CreateTextureSampler()
     RHI::SamplerInfo info = {};
     info.enable_anisotropy = true;
     m_texture_sampler = m_rhi->CreateSampler( info );
+
+
+    RHI::SamplerInfo info_point = {};
+    m_point_sampler = m_rhi->CreateSampler( info_point );
 }
 
 void SandboxApp::CreateCubePipeline()
@@ -393,13 +438,50 @@ void SandboxApp::CreateRTPipeline()
     m_rt_pipeline = m_rhi->CreatePSO( rt_pipeline_info );
 }
 
+void SandboxApp::CreateFullscreenQuadPipeline()
+{
+    RHI::ShaderCreateInfo create_info = {};
+    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/FullscreenQuad.hlsl" ).c_str() );
+    create_info.filename = shader_path.c_str();
+
+    create_info.frequency = RHI::ShaderFrequency::Vertex;
+    create_info.entry_point = "FullScreenQuadVS";
+    RHIObjectPtr<RHIShader> triangle_shader_vs = m_rhi->CreateShader( create_info );
+
+    create_info.frequency = RHI::ShaderFrequency::Pixel;
+    create_info.entry_point = "FullScreenQuadPS";
+    RHIObjectPtr<RHIShader> triangle_shader_ps = m_rhi->CreateShader( create_info );
+
+    RHIInputAssemblerInfo ia_info = {};
+
+    RHIGraphicsPipelineInfo rhi_pipeline_info = {};
+
+    rhi_pipeline_info.input_assembler = &ia_info;
+    rhi_pipeline_info.vs = triangle_shader_vs.get();
+    rhi_pipeline_info.ps = triangle_shader_ps.get();
+
+    RHIPipelineRTInfo rt_info = {};
+    rt_info.format = m_swapchain->GetFormat();
+    rhi_pipeline_info.rts_count = 1;
+    rhi_pipeline_info.rt_info = &rt_info;
+    rhi_pipeline_info.binding_layout = m_shader_bindings_layout_fsquad.get();
+
+    rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::None;
+
+    m_draw_fullscreen_quad_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
+}
+
 void SandboxApp::CreateIntermediateBuffers()
 {
-    CreateImage( m_swapchain->GetExtent().x, m_swapchain->GetExtent().y, RHIFormat::R8G8B8A8_UNORM, RHITextureUsageFlags::TransferSrc | RHITextureUsageFlags::TextureRWView, RHITextureLayout::TransferSrc, m_rt_frame );
+    CreateImage( m_swapchain->GetExtent().x, m_swapchain->GetExtent().y, RHIFormat::R8G8B8A8_UNORM, RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView, RHITextureLayout::ShaderReadOnly, m_rt_frame );
     
     RHI::TextureRWViewInfo uav_info = {};
     uav_info.texture = m_rt_frame.get();
     m_frame_rwview = m_rhi->CreateTextureRWView( uav_info );
+
+    RHI::TextureROViewInfo srv_info = {};
+    srv_info.texture = m_rt_frame.get();
+    m_frame_roview = m_rhi->CreateTextureROView( srv_info );
 }
 
 void SandboxApp::CreateVertexBuffer()
@@ -542,23 +624,61 @@ void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swap
         SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
     }
 
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::TransferDst );
+    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget );
 
     m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_tlas.GetRHIAS() );
     m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
+
+    m_fsquad_descsets[GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_frame_roview );
+    m_fsquad_descsets[GetCurrentFrameIdx()]->BindSampler( 1, 0, *m_point_sampler );
 
     list.SetPSO( *m_rt_pipeline );
 
     list.BindDescriptorSet( 0, *m_rt_descsets[GetCurrentFrameIdx()] );
 
-    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::TransferSrc, RHITextureLayout::ShaderReadWrite );
+    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadOnly, RHITextureLayout::ShaderReadWrite );
     list.TraceRays( glm::uvec3( m_swapchain->GetExtent(), 1 ) );
 
-    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadWrite, RHITextureLayout::TransferSrc );
-    RHITextureTextureCopyRegion copy_region = {};
-    list.CopyTextureToTexture( *m_rt_frame, *swapchain.GetTexture(), &copy_region, 1 );
+    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadWrite, RHITextureLayout::ShaderReadOnly );
 
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::TransferDst, RHITextureLayout::Present );
+    RHIPassRTVInfo rt = {};
+    rt.load_op = RHILoadOp::Clear;
+    rt.store_op = RHIStoreOp::Store;
+    rt.rtv = m_swapchain->GetRTV();
+    rt.clear_value.float32[3] = 1.0f;
+
+    RHIPassInfo pass_info = {};
+    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = m_swapchain->GetExtent() };
+    pass_info.render_targets = &rt;
+    pass_info.render_targets_count = 1;
+    list.BeginPass( pass_info );
+
+    RHIViewport viewport = {};
+    viewport.x = 0;
+    viewport.y = 0;
+    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
+    viewport.width = float( swapchain_extent.x );
+    viewport.height = float( swapchain_extent.y );
+    viewport.min_depth = 0.0f;
+    viewport.max_depth = 1.0f;
+
+    RHIRect2D scissor = {};
+    scissor.offset = { 0, 0 };
+    scissor.extent = swapchain_extent;
+
+    list.SetViewports( 0, &viewport, 1 );
+    list.SetScissors( 0, &scissor, 1 );
+
+    list.SetPSO( *m_draw_fullscreen_quad_pipeline );
+
+    list.BindDescriptorSet( 0, *m_fsquad_descsets[GetCurrentFrameIdx()] );
+
+    list.Draw( 3, 1, 0, 0 );
+
+    list.EndPass();
+
+    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::RenderTarget, RHITextureLayout::Present );
+
 
     list.End();
 }

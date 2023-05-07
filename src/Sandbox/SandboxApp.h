@@ -30,6 +30,10 @@ private:
 	RHIGraphicsPipelinePtr m_rhi_graphics_pipeline = nullptr;
 	RHIGraphicsPipelinePtr m_cube_graphics_pipeline = nullptr;
 
+	RHIDescriptorSetLayoutPtr m_dsl_fsquad = nullptr;
+	RHIShaderBindingLayoutPtr m_shader_bindings_layout_fsquad = nullptr;
+	RHIGraphicsPipelinePtr m_draw_fullscreen_quad_pipeline = nullptr;
+
 	RHIDescriptorSetLayoutPtr m_rt_dsl = nullptr;
 	RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
 	RHIRaytracingPipelinePtr m_rt_pipeline = nullptr;
@@ -43,9 +47,11 @@ private:
 	RHITexturePtr m_texture = nullptr;
 	RHITextureROViewPtr m_texture_srv = nullptr;
 	RHISamplerPtr m_texture_sampler = nullptr;
+	RHISamplerPtr m_point_sampler = nullptr;
 
 	RHITexturePtr m_rt_frame = nullptr;
 	RHITextureRWViewPtr m_frame_rwview = nullptr;
+	RHITextureROViewPtr m_frame_roview = nullptr;
 	//RHI
 	// assets
 	CubeAssetPtr m_cube = nullptr;
@@ -54,6 +60,7 @@ private:
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_binding_tables;
 	std::vector<RHIDescriptorSetPtr> m_rt_descsets;
+	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;
 
 	World m_world;
 	TLAS m_tlas;
@@ -123,6 +130,8 @@ private:
 	void CreateCubePipeline();
 
 	void CreateRTPipeline();
+
+	void CreateFullscreenQuadPipeline();
 
 	void CreateIntermediateBuffers();
 };

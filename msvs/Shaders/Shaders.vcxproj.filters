@@ -19,5 +19,8 @@
     <FxCompile Include="..\..\EngineContent\Shaders\Raytracing.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\EngineContent\Shaders\FullscreenQuad.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

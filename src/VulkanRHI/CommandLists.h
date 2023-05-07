@@ -73,6 +73,12 @@ public:
 
 	virtual void CopyBuffer(RHIBuffer& src, RHIBuffer& dst, size_t region_count, CopyRegion* regions) override;
 
+	virtual void Draw(
+		uint32_t vertex_count,
+		uint32_t instance_count,
+		uint32_t first_vertex,
+		uint32_t first_instance ) override;
+
 	virtual void DrawIndexed(
 		uint32_t index_count,
 		uint32_t instance_count,
