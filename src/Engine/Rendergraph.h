@@ -55,6 +55,11 @@ class Rendergraph
 public:
     RendergraphPass* AddPass();
 
+    RendergraphResource* RegisterExternalTexture();
+    RendergraphResource* CreateTransientTexture();
+    RendergraphResource* RegisterExternalAS();
+    RendergraphResource* CreateTransientBuffer();
+
     bool Compile();
 
     bool Submit();
