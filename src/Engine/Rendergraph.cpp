@@ -19,8 +19,10 @@ void RendergraphExample()
     RHICommandList* cmd_list = GetRHI().GetCommandList( RHI::QueueType::Graphics );
 
     rt_pass->AddCommandList( *cmd_list );
+    rt_pass->EndPass();
 
     copy_to_swapchain->AddCommandList( *cmd_list );
+    copy_to_swapchain->EndPass();
 
     // 4. Submit.
     rendergraph.Submit();
@@ -73,4 +75,9 @@ void RendergraphPass::AddResource( RendergraphResource& resource )
 void RendergraphPass::AddCommandList( RHICommandList& cmd_list )
 {
     m_cmd_lists.emplace_back( &cmd_list );
+}
+
+void RendergraphPass::EndPass()
+{
+    NOTIMPL;
 }

@@ -25,6 +25,20 @@ public:
     void AddResource( RendergraphResource& resource );
 
     void AddCommandList( RHICommandList& cmd_list );
+
+    // Has to be called, when all command lists are written for that pass
+    void EndPass();
+
+    // If true, you can reuse command list from previous pass. You can only borrow one last command list, and you still have to call EndPass at the end of the pass
+    // This allows to avoid having a separate command list for short consequent passes.
+    // It can be used like this:
+    // prev_pass->AddCommandList( list );
+    // prev_pass->EndPass();
+    // curr_pass->BorrowCommmandList( list );
+    // curr_pass->AddCommandList( some_other_list ); // optional
+    // curr_pass->EndPass();
+    bool CanBorrowCommandListFromPreviousPass() const { NOTIMPL; return false; }
+    void BorrowCommandList( RHICommandList& cmd_list ) { NOTIMPL; }
 };
 
 
