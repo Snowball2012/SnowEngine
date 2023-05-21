@@ -3,6 +3,7 @@
 #include "Shader.h"
 
 #include "utils/Log.h"
+#include <fstream>
 
 Shader::Shader(std::wstring filename, ShaderFrequency frequency, std::wstring entry_point, std::vector<ShaderDefine> defines, ComPtr<IDxcBlob> bytecode)
     : m_filename(std::move(filename)), m_entrypoint(std::move(entry_point))
@@ -112,14 +113,36 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
         dxc_define.Value = define.value.empty() ? nullptr : define.value.c_str();
     }
 
-    ComPtr<IDxcOperationResult> result = nullptr;
+    std::vector<LPCWSTR> args;
+    args.push_back( DXC_ARG_DEBUG ); //-Zi
+    args.push_back( DXC_ARG_OPTIMIZATION_LEVEL3 );
+    args.push_back( DXC_ARG_DEBUG_NAME_FOR_SOURCE );
+
+    ComPtr<IDxcCompilerArgs> args_iface;
+    m_dxc_utils->BuildArguments(
+        source.GetFilename(),
+        entry_point.c_str(),
+        profiles[uint8_t( frequency )],
+        args.data(),
+        UINT( args.size() ),
+        dxc_defines.data(),
+        UINT( dxc_defines.size() ),
+        args_iface.GetAddressOf() );
+
+    ComPtr<IDxcResult> result = nullptr;
+    DxcBuffer source_buf = {};
+    source_buf.Ptr = source.GetNativeBlob()->GetBufferPointer();
+    source_buf.Size = source.GetNativeBlob()->GetBufferSize();
+    source_buf.Encoding = 0;
+
     if (!SE_ENSURE_HRES(m_dxc_compiler->Compile(
-        source.GetNativeBlob(),
-        source.GetFilename(), entry_point.c_str(),
-        profiles[uint8_t(frequency)], nullptr, 0, dxc_defines.data(), dxc_defines.size(),
+        &source_buf,
+        args_iface->GetArguments(),
+        args_iface->GetCount(),
         m_dxc_include_header.Get(),
-        result.GetAddressOf())))
+        IID_PPV_ARGS( result.GetAddressOf()) )))
             return nullptr;
+
 
     ComPtr<IDxcBlob> bytecode = nullptr;
     if (!SE_ENSURE_HRES(result->GetResult(bytecode.GetAddressOf())))
@@ -136,6 +159,17 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
             Chars[error_buffer->GetBufferSize()] = 0;
             SE_LOG("%s", Chars);
             delete[] Chars;
+        }
+    }
+    else
+    {
+        ComPtr<IDxcBlob> pdb = nullptr;
+        ComPtr<IDxcBlobUtf16> pdb_name = nullptr;
+        if ( SE_ENSURE_HRES( result->GetOutput( DXC_OUT_PDB, IID_PPV_ARGS( pdb.GetAddressOf() ), pdb_name.GetAddressOf() ) ) )
+        {
+            std::ofstream out_file( pdb_name->GetStringPointer(), std::ios_base::binary );
+            out_file.write( (const char *)pdb->GetBufferPointer(), pdb->GetBufferSize() );
+            out_file.close();
         }
     }
 

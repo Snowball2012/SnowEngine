@@ -70,7 +70,7 @@ class ShaderCompiler
 private:
     static std::unique_ptr<ShaderCompiler> m_shared_instance;
 
-    ComPtr<struct IDxcCompiler> m_dxc_compiler = nullptr;
+    ComPtr<struct IDxcCompiler3> m_dxc_compiler = nullptr;
     ComPtr<struct IDxcUtils> m_dxc_utils = nullptr;
     ComPtr<struct IDxcIncludeHandler> m_dxc_include_header = nullptr;
     
