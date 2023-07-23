@@ -6,9 +6,11 @@ struct VertexIn
 
 struct Matrices
 {
-	float4x4 model;
-	float4x4 view;
-	float4x4 proj;
+    float4x4 model;
+    float4x4 view;
+    float4x4 proj;
+    float4x4 view_proj_inv;
+    uint2 viewport_size;
 };
 
 [[vk::binding( 0 )]] ConstantBuffer<Matrices> obj_data : register( b0 );

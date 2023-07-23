@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -14,6 +14,7 @@
     <ClCompile Include="..\..\src\Engine\AssetManager.cpp" />
     <ClCompile Include="..\..\src\Engine\Assets.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
+    <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -36,6 +37,7 @@
     <ClInclude Include="..\..\src\Engine\AssetManager.h" />
     <ClInclude Include="..\..\src\Engine\Assets.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
+    <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
     <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h" />

@@ -5,14 +5,31 @@ RaytracingAccelerationStructure scene_tlas;
 [[vk::binding( 1 )]]
 RWTexture2D<float4> output;
 
+struct Matrices
+{
+    float4x4 model;
+    float4x4 view;
+    float4x4 proj;
+    float4x4 view_proj_inv;
+    uint2 viewport_size;
+};
+
+[[vk::binding( 2 )]] ConstantBuffer<Matrices> obj_data : register( b0 );
+
 float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
 {
-    return float3( 0, 0, 0 );
+    float4 ndc = float4( float2( pixel_position ) / float2( viewport_size ) * 2.0f - float2( 1.0f, 1.0f ), ndc_depth, 1.0f );
+
+    float4 world_pos = mul( view_proj_inverse, ndc );
+
+    world_pos /= world_pos.w;
+
+    return world_pos.xyz;
 }
 
 struct Payload
 {
-    float hit_distance;
+    float2 hit_distance;
 };
 
 [shader( "raygeneration" )]
@@ -20,10 +37,9 @@ void VisibilityRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
 
-    float4x4 view_proj_inverse;
-    float3 ray_origin = PixelPositionToWorld( pixel_id, 0, uint2( 0, 0 ), view_proj_inverse );
+    float3 ray_origin = PixelPositionToWorld( pixel_id, 0, obj_data.viewport_size, obj_data.view_proj_inv );
 
-    float3 ray_destination = PixelPositionToWorld( pixel_id, 1, uint2( 0, 0 ), view_proj_inverse );
+    float3 ray_destination = PixelPositionToWorld( pixel_id, 1.0f, obj_data.viewport_size, obj_data.view_proj_inv );
 
     float3 ray_direction = ray_destination - ray_origin;
 
@@ -32,12 +48,23 @@ void VisibilityRGS()
 
     RayDesc ray = { ray_origin, 0, ray_direction, max_t };
 
-    Payload payload = { 0 };
+    Payload payload = { 0, 0 };
 
-   // TraceRay( scene_tlas,
-   //     ( RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH ),
-   //     0xFF, 0, 1, 0, ray, payload );
+    TraceRay( scene_tlas,
+        ( RAY_FLAG_NONE ),
+        0xFF, 0, 1, 0, ray, payload );
+    
+    output[pixel_id] = float4( payload.hit_distance, 0, 1 );
+}
 
-    //output[pixel_id] = payload.hit_distance;
-    output[pixel_id] = float4( 0, 1, 0, 1 );
+[shader( "miss" )]
+void VisibilityRMS( inout Payload payload )
+{
+    payload.hit_distance = float2( 0,0 );
+}
+
+[shader( "closesthit" )]
+void VisibilityRCS( inout Payload payload, in BuiltInTriangleIntersectionAttributes attr )
+{
+    payload.hit_distance = attr.barycentrics.xy;
 }

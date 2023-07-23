@@ -100,6 +100,12 @@ namespace
         case RHI::ShaderFrequency::Raygen:
             retval = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
             break;
+        case RHI::ShaderFrequency::Miss:
+            retval = VK_SHADER_STAGE_MISS_BIT_KHR;
+            break;
+        case RHI::ShaderFrequency::ClosestHit:
+            retval = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
+            break;
         default:
             NOTIMPL;
             break;
@@ -186,6 +192,8 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
         L"vs_6_1",
         L"ps_6_1",
         L"cs_6_1",
+        L"lib_6_3",
+        L"lib_6_3",
         L"lib_6_3"
     };
 

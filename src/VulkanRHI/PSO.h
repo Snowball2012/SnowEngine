@@ -88,6 +88,8 @@ class VulkanRaytracingPSO : public RHIRaytracingPipeline
     RHIObjectPtr<VulkanShaderBindingLayout> m_shader_bindings = nullptr;
 
     RHIObjectPtr<Shader> m_rgs = nullptr;
+    RHIObjectPtr<Shader> m_rms = nullptr;
+    RHIObjectPtr<Shader> m_rcs = nullptr;
 
 public:
 

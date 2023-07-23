@@ -68,10 +68,11 @@ enum class RHIShaderStageFlags : uint32_t
     VertexShader = 0x00000001,
     PixelShader = 0x00000002,
     RaygenShader = 0x00000004,
+    MissShader = 0x00000008,
 
-    AllBits = 0x00000007,
+    AllBits = 0x0000000f,
 
-    NumFlags = 3,
+    NumFlags = 4,
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIShaderStageFlags )
 
@@ -202,6 +203,8 @@ public:
         Pixel,
         Compute,
         Raygen,
+        Miss,
+        ClosestHit,
         Count
     };
 
@@ -715,6 +718,10 @@ struct RHIGraphicsPipelineInfo
 struct RHIRaytracingPipelineInfo
 {
     RHIShader* raygen_shader = nullptr;
+
+    RHIShader* miss_shader = nullptr;
+
+    RHIShader* closest_hit_shader = nullptr;
 
     RHIShaderBindingLayout* binding_layout = nullptr;
 };

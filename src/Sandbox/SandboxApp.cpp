@@ -144,7 +144,7 @@ void SandboxApp::CreateDescriptorSetLayout()
 
     if ( m_rhi->SupportsRaytracing() )
     {
-        RHI::DescriptorViewRange ranges[2] = {};
+        RHI::DescriptorViewRange ranges[3] = {};
         ranges[0].type = RHIShaderBindingType::AccelerationStructure;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::RaygenShader;
@@ -152,6 +152,10 @@ void SandboxApp::CreateDescriptorSetLayout()
         ranges[1].type = RHIShaderBindingType::TextureRW;
         ranges[1].count = 1;
         ranges[1].stages = RHIShaderStageFlags::RaygenShader;
+
+        ranges[2].type = RHIShaderBindingType::UniformBuffer;
+        ranges[2].count = 1;
+        ranges[2].stages = RHIShaderStageFlags::RaygenShader;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -222,12 +226,21 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     Matrices matrices = {};
     matrices.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
 
-    m_tlas.Instances()[m_cube_instance_tlas_id].transform = glm::mat3x4( matrices.model[0], matrices.model[1], matrices.model[2] );
+    glm::mat4x4 row_major_model = glm::transpose( matrices.model );
+
+    m_tlas.Instances()[m_cube_instance_tlas_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
 
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
     glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
     matrices.proj = glm::perspective( glm::radians( 45.0f ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
+
+    matrices.viewport_size = swapchain_extent;
+
+    glm::mat4x4 view_proj = matrices.proj * matrices.view;
+
+    matrices.view_proj_inv = glm::inverse( view_proj );
+
     matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
 
     m_uniform_buffers[current_image]->WriteBytes( &matrices, sizeof( matrices ) );
@@ -266,6 +279,7 @@ void SandboxApp::CreateDescriptorSets()
     for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
     {
         m_rt_descsets[i] = m_rhi->CreateDescriptorSet( *m_rt_dsl );
+        m_rt_descsets[i]->BindUniformBufferView( 2, 0, *m_uniform_buffer_views[i] );
         m_rt_descsets[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
     }
 
@@ -431,8 +445,18 @@ void SandboxApp::CreateRTPipeline()
     create_info.entry_point = "VisibilityRGS";
     RHIObjectPtr<RHIShader> raygen_shader = m_rhi->CreateShader( create_info );
 
+    create_info.entry_point = "VisibilityRMS";
+    create_info.frequency = RHI::ShaderFrequency::Miss;
+    RHIObjectPtr<RHIShader> miss_shader = m_rhi->CreateShader( create_info );
+
+    create_info.entry_point = "VisibilityRCS";
+    create_info.frequency = RHI::ShaderFrequency::ClosestHit;
+    RHIObjectPtr<RHIShader> closest_hit_shader = m_rhi->CreateShader( create_info );
+
     RHIRaytracingPipelineInfo rt_pipeline_info = {};
     rt_pipeline_info.raygen_shader = raygen_shader.get();
+    rt_pipeline_info.miss_shader = miss_shader.get();
+    rt_pipeline_info.closest_hit_shader = closest_hit_shader.get();
     rt_pipeline_info.binding_layout = m_rt_layout.get();
 
     m_rt_pipeline = m_rhi->CreatePSO( rt_pipeline_info );

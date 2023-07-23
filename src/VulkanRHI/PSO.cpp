@@ -239,7 +239,7 @@ void VulkanGraphicsPSO::InitDynamicRendering( const RHIGraphicsPipelineInfo& inf
 IMPLEMENT_RHI_OBJECT( VulkanRaytracingPSO )
 
 VulkanRaytracingPSO::VulkanRaytracingPSO( VulkanRHI* rhi, const RHIRaytracingPipelineInfo& info )
-    : m_rhi( rhi ), m_rgs( RHIImpl( info.raygen_shader ) )
+    : m_rhi( rhi ), m_rgs( RHIImpl( info.raygen_shader ) ), m_rms( RHIImpl( info.miss_shader ) ), m_rcs( RHIImpl( info.closest_hit_shader ) )
 {
     m_vk_pipeline_ci.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
 
@@ -322,6 +322,26 @@ void VulkanRaytracingPSO::InitShaderStages()
         new_group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
     }
 
+    if ( m_rms )
+    {
+        const uint32_t stage_idx = uint32_t( m_stages.size() );
+        m_stages.emplace_back( m_rms->GetVkStageInfo() );
+        auto& new_group = m_groups.emplace_back();
+        InitShaderGroup( new_group );
+        new_group.generalShader = stage_idx;
+        new_group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+    }
+
+    if ( m_rcs )
+    {
+        const uint32_t stage_idx = uint32_t( m_stages.size() );
+        m_stages.emplace_back( m_rcs->GetVkStageInfo() );
+        auto& new_group = m_groups.emplace_back();
+        InitShaderGroup( new_group );
+        new_group.closestHitShader = stage_idx;
+        new_group.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+    }
+
     auto init_region = [&]( auto& region )
     {
         region.stride = sbt_handle_size_aligned;
@@ -377,13 +397,22 @@ void VulkanRaytracingPSO::InitSBT()
     // miss entry
     {
         m_miss_region.deviceAddress = base_dev_addr + dev_address_offset;
+        if ( m_rms )
+        {
+            m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
+            cur_handle_idx++;
+        }
         dev_address_offset += CalcAlignedSize( m_miss_region.size, rt_props.shaderGroupBaseAlignment );
-        // if (miss_shader)
     }
 
     // hit entry
     {
         m_hit_region.deviceAddress = base_dev_addr + dev_address_offset;
+        if ( m_rcs )
+        {
+            m_sbt->WriteBytes( handles.data() + sbt_handle_size * cur_handle_idx, sbt_handle_size, dev_address_offset );
+            cur_handle_idx++;
+        }
         dev_address_offset += CalcAlignedSize( m_hit_region.size, rt_props.shaderGroupBaseAlignment );
     }
 
