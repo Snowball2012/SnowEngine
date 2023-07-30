@@ -72,6 +72,7 @@ private:
 	bool m_show_world_outliner = false;
 	bool m_show_cube = false;
 	bool m_rt_path = false;
+	bool m_use_rendergraph = false;
 
 public:
 	SandboxApp();
@@ -82,7 +83,7 @@ private:
 
 	virtual void OnCleanup() override;
 
-	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit ) override;
+	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit, Rendergraph& framegraph ) override;
 
 	virtual void OnUpdate() override;
 
@@ -95,6 +96,8 @@ private:
 
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
 	void RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain );
+
+	void BuildRendergraphRT( Rendergraph& rendergraph );
 
 	void UpdateGui();
 

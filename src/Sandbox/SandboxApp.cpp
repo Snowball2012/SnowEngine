@@ -4,6 +4,7 @@
 
 #include <Engine/Assets.h>
 #include <Engine/RHIUtils.h>
+#include <Engine/Rendergraph.h>
 
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
@@ -707,7 +708,100 @@ void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swap
     list.End();
 }
 
-void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit )
+void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph )
+{
+    // 1. Setup stage. Setup your resource handles and passes
+    RendergraphResource* swapchain = rendergraph.RegisterExternalTexture();
+    RendergraphResource* final_frame = rendergraph.CreateTransientTexture();
+
+    RendergraphResource* tlas = rendergraph.RegisterExternalAS();
+    RendergraphResource* scratch = rendergraph.CreateTransientBuffer();
+
+    RendergraphPass* update_as_pass = rendergraph.AddPass();
+    update_as_pass->AddResource( *tlas );
+    update_as_pass->AddResource( *scratch );
+
+    RendergraphPass* rt_pass = rendergraph.AddPass();
+    rt_pass->AddResource( *tlas );
+    rt_pass->AddResource( *final_frame );
+
+    RendergraphPass* blit_to_swapchain = rendergraph.AddPass();
+    blit_to_swapchain->AddResource( *swapchain );
+    blit_to_swapchain->AddResource( *final_frame );
+
+    // 2. Compile stage. That will create a timeline for each resource, allowing us to fetch real RHI handles for them inside passes
+    rendergraph.Compile();
+
+    // 3. Record phase. Fill passes with command lists
+    RHICommandList* cmd_list_rt = GetRHI().GetCommandList( RHI::QueueType::Graphics );
+
+    update_as_pass->AddCommandList( *cmd_list_rt );
+    {
+        if ( !m_tlas.Build( *cmd_list_rt ) )
+        {
+            SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
+        }
+    }
+    update_as_pass->EndPass();
+
+    rt_pass->BorrowCommandList( *cmd_list_rt );
+    {
+        m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_tlas.GetRHIAS() );
+        m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
+
+        cmd_list_rt->SetPSO( *m_rt_pipeline );
+
+        cmd_list_rt->BindDescriptorSet( 0, *m_rt_descsets[GetCurrentFrameIdx()] );
+
+        cmd_list_rt->TraceRays( glm::uvec3( m_swapchain->GetExtent(), 1 ) );
+    }
+    rt_pass->EndPass();
+
+    blit_to_swapchain->BorrowCommandList( *cmd_list_rt );
+    {
+        m_fsquad_descsets[GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_frame_roview );
+        m_fsquad_descsets[GetCurrentFrameIdx()]->BindSampler( 1, 0, *m_point_sampler );
+
+        RHIPassRTVInfo rt = {};
+        rt.load_op = RHILoadOp::Clear;
+        rt.store_op = RHIStoreOp::Store;
+        rt.rtv = m_swapchain->GetRTV();
+        rt.clear_value.float32[3] = 1.0f;
+
+        RHIPassInfo pass_info = {};
+        pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = m_swapchain->GetExtent() };
+        pass_info.render_targets = &rt;
+        pass_info.render_targets_count = 1;
+        cmd_list_rt->BeginPass( pass_info );
+
+        RHIViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
+        viewport.width = float( swapchain_extent.x );
+        viewport.height = float( swapchain_extent.y );
+        viewport.min_depth = 0.0f;
+        viewport.max_depth = 1.0f;
+
+        RHIRect2D scissor = {};
+        scissor.offset = { 0, 0 };
+        scissor.extent = swapchain_extent;
+
+        cmd_list_rt->SetViewports( 0, &viewport, 1 );
+        cmd_list_rt->SetScissors( 0, &scissor, 1 );
+
+        cmd_list_rt->SetPSO( *m_draw_fullscreen_quad_pipeline );
+
+        cmd_list_rt->BindDescriptorSet( 0, *m_fsquad_descsets[GetCurrentFrameIdx()] );
+
+        cmd_list_rt->Draw( 3, 1, 0, 0 );
+
+        cmd_list_rt->EndPass();
+    }
+    blit_to_swapchain->EndPass();   
+}
+
+void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit, Rendergraph& framegraph )
 {
     RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
 
@@ -715,7 +809,14 @@ void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit )
 
     if ( m_rt_path )
     {
-        RecordCommandBufferRT( *cmd_list, *m_swapchain );
+        if ( m_use_rendergraph )
+        {
+            BuildRendergraphRT( framegraph );
+        }
+        else
+        {
+            RecordCommandBufferRT( *cmd_list, *m_swapchain );
+        }
     }
     else
     {
@@ -782,6 +883,7 @@ void SandboxApp::UpdateGui()
     {
         ImGui::Checkbox( "Show cube", &m_show_cube );
         ImGui::Checkbox( "RT path", &m_rt_path );
+        ImGui::Checkbox( "Use rendergraph", &m_use_rendergraph );
     }
     ImGui::End();
 }

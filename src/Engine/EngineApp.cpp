@@ -3,6 +3,8 @@
 #include "EngineApp.h"
 #include "AssetManager.h"
 
+#include "Rendergraph.h"
+
 #include <VulkanRHI/VulkanRHI.h>
 #include <D3D12RHI/D3D12RHI.h>
 
@@ -267,7 +269,11 @@ void EngineApp::DrawFrame()
 
     std::vector<RHICommandList*> cmd_lists;
 
-    OnDrawFrame( cmd_lists );
+    Rendergraph framegraph;
+
+    OnDrawFrame( cmd_lists, framegraph );
+
+    framegraph.Submit();
 
     ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;

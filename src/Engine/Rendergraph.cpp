@@ -71,6 +71,12 @@ RendergraphResource* Rendergraph::RegisterExternalAS()
     return nullptr;
 }
 
+RendergraphResource* Rendergraph::CreateTransientBuffer()
+{
+    NOTIMPL;
+    return nullptr;
+}
+
 bool Rendergraph::Compile()
 {
     NOTIMPL;
