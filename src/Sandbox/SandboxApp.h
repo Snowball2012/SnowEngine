@@ -71,8 +71,8 @@ private:
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 	bool m_show_cube = false;
-	bool m_rt_path = false;
-	bool m_use_rendergraph = false;
+	bool m_rt_path = true;
+	bool m_use_rendergraph = true;
 
 public:
 	SandboxApp();

@@ -2,76 +2,53 @@
 
 #include "Rendergraph.h"
 
-void RendergraphExample()
+// RGTexture
+
+RGTexture::RGTexture( uint64_t handle, const char* name )
+    : RGResource( handle, name )
 {
-    Rendergraph rendergraph;
-    // 1. Setup stage. Setup your resource handles and passes
-
-    RendergraphResource* swapchain = rendergraph.RegisterExternalTexture();
-    RendergraphResource* final_frame = rendergraph.CreateTransientTexture();
-
-    RendergraphResource* tlas = rendergraph.RegisterExternalAS();
-    RendergraphResource* scratch = rendergraph.CreateTransientBuffer();
-
-    RendergraphPass* update_as_pass = rendergraph.AddPass();
-    update_as_pass->AddResource( *tlas );
-    update_as_pass->AddResource( *scratch );
-
-    RendergraphPass* rt_pass = rendergraph.AddPass();
-    rt_pass->AddResource( *tlas );
-    rt_pass->AddResource( *final_frame );
-
-    RendergraphPass* copy_to_swapchain = rendergraph.AddPass();
-    copy_to_swapchain->AddResource( *swapchain );
-    copy_to_swapchain->AddResource( *final_frame );
-
-    // 2. Compile stage. That will create a timeline for each resource, allowing us to fetch real RHI handles for them inside passes
-    rendergraph.Compile();
-
-    // 3. Record phase. Fill passes with command lists
-
-    RHICommandList* cmd_list_rt = GetRHI().GetCommandList( RHI::QueueType::Graphics );
-
-    rt_pass->AddCommandList( *cmd_list_rt );
-    rt_pass->EndPass();
-
-    copy_to_swapchain->BorrowCommandList( *cmd_list_rt );
-    copy_to_swapchain->EndPass();
-
-    // Passes can be filled out of order
-    RHICommandList* cmd_list_update_as = GetRHI().GetCommandList( RHI::QueueType::Graphics );
-    update_as_pass->AddCommandList( *cmd_list_update_as );
-    update_as_pass->EndPass();
-
-    // 4. Submit stage.
-    rendergraph.Submit();
 }
 
-RendergraphPass* Rendergraph::AddPass()
+// RGExternalTexture
+
+RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDesc& desc )
+    : RGTexture( handle, desc.name ), m_desc( desc )
+{
+}
+
+// Rendergraph
+
+RGPass* Rendergraph::AddPass( RHI::QueueType queue_type, const char* name )
+{
+    std::unique_ptr<RGPass>& new_pass = m_passes.emplace_back( new RGPass( queue_type, name ) );
+
+    return new_pass.get();
+}
+
+RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTextureDesc& desc )
+{
+    std::unique_ptr<RGExternalTexture> ext_texture = std::make_unique<RGExternalTexture>( GenerateHandle(), desc );
+
+    RGExternalTexture* texture_ptr = ext_texture.get();
+
+    m_external_textures.emplace_back( std::move( ext_texture ) );
+
+    return texture_ptr;
+}
+
+RGResource* Rendergraph::CreateTransientTexture()
 {
     NOTIMPL;
     return nullptr;
 }
 
-RendergraphResource* Rendergraph::RegisterExternalTexture()
+RGResource* Rendergraph::RegisterExternalAS()
 {
     NOTIMPL;
     return nullptr;
 }
 
-RendergraphResource* Rendergraph::CreateTransientTexture()
-{
-    NOTIMPL;
-    return nullptr;
-}
-
-RendergraphResource* Rendergraph::RegisterExternalAS()
-{
-    NOTIMPL;
-    return nullptr;
-}
-
-RendergraphResource* Rendergraph::CreateTransientBuffer()
+RGResource* Rendergraph::CreateTransientBuffer()
 {
     NOTIMPL;
     return nullptr;
@@ -85,6 +62,7 @@ bool Rendergraph::Compile()
 
 bool Rendergraph::Submit()
 {
+    NOTIMPL;
     for ( const auto& submission : m_submissions )
     {
         RHI::SubmitInfo rhi_submission = {};
@@ -110,17 +88,37 @@ bool Rendergraph::Submit()
     return true;
 }
 
-void RendergraphPass::AddResource( RendergraphResource& resource )
+// RGPass
+
+RGPass::RGPass( RHI::QueueType queue_type, const char* name )
+    : m_queue_type( queue_type ), m_name( name )
 {
-    NOTIMPL;
 }
 
-void RendergraphPass::AddCommandList( RHICommandList& cmd_list )
+bool RGPass::UseTexture( RGTexture& texture, RGTextureUsage usage )
+{
+    uint64_t key = texture.GetHandle();
+
+    RGPassTexture& entry = m_used_textures[key];
+
+    if ( !SE_ENSURE( ( entry.texture == nullptr ) || ( usage == entry.usage ) ) )
+    {
+        // we are trying to add a texture multiple times with different usage, that shouldn't happen
+        return false;
+    }
+
+    entry.texture = &texture;
+    entry.usage = usage;
+
+    return true;
+}
+
+void RGPass::AddCommandList( RHICommandList& cmd_list )
 {
     m_cmd_lists.emplace_back( &cmd_list );
 }
 
-void RendergraphPass::EndPass()
+void RGPass::EndPass()
 {
     NOTIMPL;
 }

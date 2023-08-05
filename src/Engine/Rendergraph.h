@@ -1,28 +1,63 @@
 #pragma once
 
-void RendergraphExample();
 
 class RHICommandList;
 
-class RendergraphResource
+
+class RGResource
 {
+private:
+    uint64_t m_handle = -1;
+
+    std::string m_name;
+
+public:
+    RGResource( uint64_t handle, const char* name ) : m_handle( handle ), m_name( name ) {}
+
+    uint64_t GetHandle() const { return m_handle; }
+
+    const std::string& GetName() const { return m_name; }
 };
 
-struct RendergraphResourceUsageEntry
+
+class RGTexture : public RGResource
 {
-    RendergraphResource* resource = nullptr;
-    // some usage info
+public:
+    RGTexture( uint64_t handle, const char* name );
 };
 
-class RendergraphPass
+
+enum class RGTextureUsage
+{
+    ShaderRead = 0,
+    ShaderReadWrite,
+    RenderTarget
+};
+
+
+struct RGPassTexture
+{
+    RGTexture* texture = nullptr;
+    RGTextureUsage usage = RGTextureUsage::ShaderRead;
+};
+
+
+class RGPass
 {
     friend class Rendergraph;
 
-    std::vector<RendergraphResource*> m_used_resources;
+    RHI::QueueType m_queue_type = RHI::QueueType::Count;
+
+    std::unordered_map<uint64_t, RGPassTexture> m_used_textures;
+
     std::vector<RHICommandList*> m_cmd_lists;
 
+    std::string m_name;
+
 public:
-    void AddResource( RendergraphResource& resource );
+    RGPass( RHI::QueueType queue_type, const char* name );
+
+    bool UseTexture( RGTexture& texture, RGTextureUsage usage );
 
     void AddCommandList( RHICommandList& cmd_list );
 
@@ -44,23 +79,53 @@ public:
 
 struct RendergraphSubmission
 {
-    std::vector<RendergraphPass*> passes;
-    RHI::QueueType type;
+    std::vector<RGPass*> passes;
+    RHI::QueueType type = RHI::QueueType::Graphics;
 };
+
+
+struct RGExternalTextureDesc
+{
+    const char* name = nullptr;
+    const RHITexture* rhi_texture = nullptr;
+    RHITextureLayout initial_layout = RHITextureLayout::Undefined;
+    RHITextureLayout final_layout = RHITextureLayout::Undefined;
+};
+
+
+class RGExternalTexture : public RGTexture
+{
+private:
+    RGExternalTextureDesc m_desc = {};
+
+public:
+    RGExternalTexture( uint64_t handle, const RGExternalTextureDesc& desc );
+};
+
 
 class Rendergraph
 {
+private:
+    uint64_t m_handle_generator = 0;
+
+    std::vector<std::unique_ptr<RGPass>> m_passes;
+
     std::vector<RendergraphSubmission> m_submissions;
 
-public:
-    RendergraphPass* AddPass();
+    std::vector<std::unique_ptr<RGExternalTexture>> m_external_textures;
 
-    RendergraphResource* RegisterExternalTexture();
-    RendergraphResource* CreateTransientTexture();
-    RendergraphResource* RegisterExternalAS();
-    RendergraphResource* CreateTransientBuffer();
+public:
+    RGPass* AddPass( RHI::QueueType queue_type, const char* name );
+
+    RGExternalTexture* RegisterExternalTexture( const RGExternalTextureDesc& desc );
+    RGResource* CreateTransientTexture();
+    RGResource* RegisterExternalAS();
+    RGResource* CreateTransientBuffer();
 
     bool Compile();
 
     bool Submit();
+
+private:
+    uint64_t GenerateHandle() { return m_handle_generator++; }
 };

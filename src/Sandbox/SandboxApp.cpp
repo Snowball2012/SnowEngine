@@ -711,23 +711,30 @@ void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swap
 void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph )
 {
     // 1. Setup stage. Setup your resource handles and passes
-    RendergraphResource* swapchain = rendergraph.RegisterExternalTexture();
-    RendergraphResource* final_frame = rendergraph.CreateTransientTexture();
+    RGExternalTextureDesc swapchain_desc = {};
+    swapchain_desc.name = "swapchain";
+    swapchain_desc.rhi_texture = m_swapchain->GetTexture();
+    swapchain_desc.initial_layout = RHITextureLayout::Present;
+    swapchain_desc.final_layout = RHITextureLayout::Present;
 
-    RendergraphResource* tlas = rendergraph.RegisterExternalAS();
-    RendergraphResource* scratch = rendergraph.CreateTransientBuffer();
+    RGExternalTexture* swapchain = rendergraph.RegisterExternalTexture( swapchain_desc );
 
-    RendergraphPass* update_as_pass = rendergraph.AddPass();
-    update_as_pass->AddResource( *tlas );
-    update_as_pass->AddResource( *scratch );
+    RGExternalTextureDesc frame_output_desc = {};
+    frame_output_desc.name = "frame_output";
+    frame_output_desc.rhi_texture = m_rt_frame.get();
+    frame_output_desc.initial_layout = RHITextureLayout::ShaderReadOnly;
+    frame_output_desc.final_layout = RHITextureLayout::ShaderReadOnly;
 
-    RendergraphPass* rt_pass = rendergraph.AddPass();
-    rt_pass->AddResource( *tlas );
-    rt_pass->AddResource( *final_frame );
+    RGExternalTexture* frame_output = rendergraph.RegisterExternalTexture( frame_output_desc );
 
-    RendergraphPass* blit_to_swapchain = rendergraph.AddPass();
-    blit_to_swapchain->AddResource( *swapchain );
-    blit_to_swapchain->AddResource( *final_frame );
+    RGPass* update_as_pass = rendergraph.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
+
+    RGPass* rt_pass = rendergraph.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
+    rt_pass->UseTexture( *frame_output, RGTextureUsage::ShaderReadWrite );
+
+    RGPass* blit_to_swapchain = rendergraph.AddPass( RHI::QueueType::Graphics, "BlitToSwapchain" );
+    blit_to_swapchain->UseTexture( *swapchain, RGTextureUsage::RenderTarget );
+    blit_to_swapchain->UseTexture( *frame_output, RGTextureUsage::ShaderRead );
 
     // 2. Compile stage. That will create a timeline for each resource, allowing us to fetch real RHI handles for them inside passes
     rendergraph.Compile();
