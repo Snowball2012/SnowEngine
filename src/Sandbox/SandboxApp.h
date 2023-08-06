@@ -83,7 +83,7 @@ private:
 
 	virtual void OnCleanup() override;
 
-	virtual void OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit, Rendergraph& framegraph ) override;
+	virtual void OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list ) override;
 
 	virtual void OnUpdate() override;
 
@@ -97,7 +97,7 @@ private:
 	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
 	void RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain );
 
-	void BuildRendergraphRT( Rendergraph& rendergraph );
+	void BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* ui_cmd_list );
 
 	void UpdateGui();
 

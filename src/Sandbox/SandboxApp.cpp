@@ -708,7 +708,7 @@ void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swap
     list.End();
 }
 
-void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph )
+void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* ui_cmd_list )
 {
     // 1. Setup stage. Setup your resource handles and passes
     RGExternalTextureDesc swapchain_desc = {};
@@ -736,11 +736,16 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph )
     blit_to_swapchain->UseTexture( *swapchain, RGTextureUsage::RenderTarget );
     blit_to_swapchain->UseTexture( *frame_output, RGTextureUsage::ShaderRead );
 
+    RGPass* ui_pass = rendergraph.AddPass( RHI::QueueType::Graphics, "DrawUI" );
+    ui_pass->UseTexture( *swapchain, RGTextureUsage::RenderTarget );
+
     // 2. Compile stage. That will create a timeline for each resource, allowing us to fetch real RHI handles for them inside passes
     rendergraph.Compile();
 
     // 3. Record phase. Fill passes with command lists
     RHICommandList* cmd_list_rt = GetRHI().GetCommandList( RHI::QueueType::Graphics );
+
+    cmd_list_rt->Begin();
 
     update_as_pass->AddCommandList( *cmd_list_rt );
     {
@@ -806,31 +811,28 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph )
         cmd_list_rt->EndPass();
     }
     blit_to_swapchain->EndPass();   
+
+    // Dirty hack. ui_pass may want to add extra commands at the start of it's first command list, but ui_cmd_list is already filled. Borrow list from last pass to insert those commands
+    ui_pass->BorrowCommandList( *cmd_list_rt );
+    cmd_list_rt->End();
+
+    if ( ui_cmd_list != nullptr )
+    {
+        ui_pass->AddCommandList( *ui_cmd_list );
+    }
+    ui_pass->EndPass();
 }
 
-void SandboxApp::OnDrawFrame( std::vector<RHICommandList*>& lists_to_submit, Rendergraph& framegraph )
+void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
 {
     RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
 
     UpdateUniformBuffer( GetCurrentFrameIdx() );
 
-    if ( m_rt_path )
-    {
-        if ( m_use_rendergraph )
-        {
-            BuildRendergraphRT( framegraph );
-        }
-        else
-        {
-            RecordCommandBufferRT( *cmd_list, *m_swapchain );
-        }
-    }
-    else
-    {
-        RecordCommandBuffer( *cmd_list, *m_swapchain );
-    }
+    if ( !( m_rt_path && m_use_rendergraph ) )
+        NOTIMPL;
 
-    lists_to_submit.emplace_back( cmd_list );
+    BuildRendergraphRT( framegraph, ui_cmd_list );
 }
 
 void SandboxApp::OnUpdate()

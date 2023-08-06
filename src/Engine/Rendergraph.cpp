@@ -27,7 +27,12 @@ RGPass* Rendergraph::AddPass( RHI::QueueType queue_type, const char* name )
 
 RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTextureDesc& desc )
 {
+    if ( !SE_ENSURE( desc.rhi_texture != nullptr ) )
+        return nullptr;
+
     std::unique_ptr<RGExternalTexture> ext_texture = std::make_unique<RGExternalTexture>( GenerateHandle(), desc );
+
+    ext_texture->SetRHITexture( desc.rhi_texture );
 
     RGExternalTexture* texture_ptr = ext_texture.get();
 
@@ -106,13 +111,13 @@ bool Rendergraph::Compile()
         }
     }
 
-    // there can be textures 
-
     std::vector<RHITextureBarrier> initial_barriers;
     m_final_barriers.clear();
 
     initial_barriers.reserve( m_external_textures.size() );
     m_final_barriers.reserve( m_external_textures.size() );
+
+    std::unordered_map<uint64_t, RHITextureLayout> current_layouts;
 
     for ( const auto& [handle, ext_texture_entry] : m_external_textures )
     {
@@ -149,18 +154,83 @@ bool Rendergraph::Compile()
             barrier.layout_dst = tex_desc.final_layout;
             barrier.texture = tex_desc.rhi_texture;
         }
+
+        current_layouts[handle] = required_first_layout;
     }
 
     // @todo - interface instead of raw friend access?
     m_passes.front()->m_pass_start_texture_barriers = std::move( initial_barriers );
 
-    NOTIMPL;
-    return false;
+    // Build all other layout transitions
+    for ( size_t i = 1; i < m_passes.size(); i++ )
+    {
+        std::vector<RHITextureBarrier> pass_barriers;
+
+        const auto& used_textures = m_passes[i]->m_used_textures;
+
+        for ( const auto& used_texture : used_textures )
+        {
+            auto curr_layout_it = current_layouts.find( used_texture.first );
+
+            RHITextureLayout curr_layout = RHITextureLayout::Undefined;
+            RHITextureLayout new_layout = RGUsageToLayout( used_texture.second.usage );
+            if ( curr_layout_it == current_layouts.end() )
+            {
+                curr_layout = new_layout;
+                current_layouts[used_texture.first] = new_layout;
+            }
+            else
+            {
+                curr_layout = curr_layout_it->second;
+                curr_layout_it->second = new_layout;
+            }
+
+            if ( curr_layout != new_layout )
+            {
+                auto& barrier = pass_barriers.emplace_back();
+                barrier.layout_src = curr_layout;
+                barrier.layout_dst = new_layout;
+                barrier.texture = used_texture.second.texture->GetRHITexture();
+            }
+        }
+
+        m_passes[i]->m_pass_start_texture_barriers = std::move( pass_barriers );
+        pass_barriers.clear();
+    }
+
+    // Make submissions
+    m_submissions.resize( 1 );
+    {
+        auto& submission = m_submissions.front();
+        submission.passes.reserve( m_passes.size() );
+        for ( const auto& pass : m_passes )
+        {
+            submission.passes.emplace_back( pass.get() );
+        }
+        submission.type = RHI::QueueType::Graphics;
+    }
+
+    return true;
 }
 
-bool Rendergraph::Submit()
+RHIFence Rendergraph::Submit( const RGSubmitInfo& info )
 {
-    NOTIMPL;
+    if ( m_submissions.empty() && !m_final_barriers.empty() )
+    {
+        // We still need one submission for barriers
+        m_submissions.emplace_back();
+    }
+
+    m_submissions.back().end_barriers = std::move( m_final_barriers );
+
+    if ( m_submissions.size() > 1 )
+    {
+        // need to synchronize multiple submissions
+        NOTIMPL;
+    }
+
+    RHIFence last_fence = {};
+
     for ( const auto& submission : m_submissions )
     {
         RHI::SubmitInfo rhi_submission = {};
@@ -170,6 +240,11 @@ bool Rendergraph::Submit()
             cmd_lists_num += pass->m_cmd_lists.size();
         }
 
+        if ( !submission.end_barriers.empty() )
+        {
+            cmd_lists_num++;
+        }
+
         std::vector<RHICommandList*> cmd_lists;
         cmd_lists.reserve( cmd_lists_num );
         for ( const auto* pass : submission.passes )
@@ -177,13 +252,26 @@ bool Rendergraph::Submit()
             cmd_lists.insert( cmd_lists.end(), pass->m_cmd_lists.begin(), pass->m_cmd_lists.end() );
         }
 
+        if ( !submission.end_barriers.empty() )
+        {
+            RHICommandList* end_barriers_cmd_list = GetRHI().GetCommandList( submission.type );
+            end_barriers_cmd_list->Begin();
+            end_barriers_cmd_list->TextureBarriers( submission.end_barriers.data(), submission.end_barriers.size() );
+            end_barriers_cmd_list->End();
+            cmd_lists.emplace_back( end_barriers_cmd_list );
+        }
+
         rhi_submission.cmd_lists = cmd_lists.data();
         rhi_submission.cmd_list_count = cmd_lists.size();
 
+        rhi_submission.wait_semaphore_count = info.wait_semaphore_count;
+        rhi_submission.semaphores_to_wait = info.semaphores_to_wait;
+        rhi_submission.stages_to_wait = info.stages_to_wait;
+        rhi_submission.semaphore_to_signal = info.semaphore_to_signal;
 
-        RHIFence fence = GetRHI().SubmitCommandLists( rhi_submission );
+        last_fence = GetRHI().SubmitCommandLists( rhi_submission );
     }
-    return true;
+    return last_fence;
 }
 
 // RGPass
@@ -213,10 +301,30 @@ bool RGPass::UseTexture( RGTexture& texture, RGTextureUsage usage )
 
 void RGPass::AddCommandList( RHICommandList& cmd_list )
 {
+    if ( m_cmd_lists.empty() && ( m_borrowed_list == false ) )
+    {
+        AddPassBeginCommands( cmd_list );
+    }
+
     m_cmd_lists.emplace_back( &cmd_list );
+}
+
+bool RGPass::BorrowCommandList( RHICommandList& cmd_list )
+{
+    if ( !SE_ENSURE( m_borrowed_list == false ) )
+        return false;
+
+    m_borrowed_list = true;
+    AddPassBeginCommands( cmd_list );
+    return true;
 }
 
 void RGPass::EndPass()
 {
-    NOTIMPL;
+    // nothing to do?
+}
+
+void RGPass::AddPassBeginCommands( RHICommandList& cmd_list )
+{
+    cmd_list.TextureBarriers( m_pass_start_texture_barriers.data(), m_pass_start_texture_barriers.size() );
 }

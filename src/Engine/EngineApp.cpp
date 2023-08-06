@@ -267,33 +267,22 @@ void EngineApp::DrawFrame()
     bool swapchain_recreated = false;
     m_swapchain->AcquireNextImage( m_image_available_semaphores[m_current_frame].get(), swapchain_recreated );
 
-    std::vector<RHICommandList*> cmd_lists;
-
-    Rendergraph framegraph;
-
-    OnDrawFrame( cmd_lists, framegraph );
-
-    framegraph.Submit();
-
     ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;
 
-    if ( imgui_res.cl )
-    {
-        cmd_lists.emplace_back( imgui_res.cl );
-    }
+    Rendergraph framegraph;    
 
-    RHI::SubmitInfo submit_info = {};
-    submit_info.cmd_list_count = cmd_lists.size();
-    submit_info.cmd_lists = cmd_lists.data();
+    OnDrawFrame( framegraph, imgui_res.cl );
+
+    RGSubmitInfo fg_submit_info = {};
     RHISemaphore* wait_semaphores[] = { m_image_available_semaphores[m_current_frame].get() };
-    submit_info.semaphores_to_wait = wait_semaphores;
-    submit_info.wait_semaphore_count = 1;
-    submit_info.semaphore_to_signal = m_render_finished_semaphores[m_current_frame].get();
+    fg_submit_info.semaphores_to_wait = wait_semaphores;
+    fg_submit_info.wait_semaphore_count = 1;
+    fg_submit_info.semaphore_to_signal = m_render_finished_semaphores[m_current_frame].get();
     RHIPipelineStageFlags stages_to_wait[] = { RHIPipelineStageFlags::ColorAttachmentOutput };
-    submit_info.stages_to_wait = stages_to_wait;
+    fg_submit_info.stages_to_wait = stages_to_wait;
 
-    m_inflight_fences[m_current_frame] = m_rhi->SubmitCommandLists( submit_info );
+    m_inflight_fences[m_current_frame] = framegraph.Submit( fg_submit_info );
 
     RHI::PresentInfo present_info = {};
     present_info.semaphore_count = 1;

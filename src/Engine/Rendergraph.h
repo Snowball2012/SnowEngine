@@ -29,10 +29,17 @@ public:
 class RGTexture : public RGResource
 {
     bool m_is_external = false;
+
+    const RHITexture* m_rhi_texture = nullptr;
+
 public:
     RGTexture( uint64_t handle, const char* name, bool is_external );
 
     bool IsExternal() const { return m_is_external; }
+
+    void SetRHITexture( const RHITexture* tex ) { m_rhi_texture = tex; }
+
+    const RHITexture* GetRHITexture() const { return m_rhi_texture; }
 };
 
 
@@ -66,6 +73,8 @@ class RGPass
 
     std::string m_name;
 
+    bool m_borrowed_list = false;
+
 public:
     RGPass( RHI::QueueType queue_type, const char* name );
 
@@ -85,15 +94,17 @@ public:
     // curr_pass->AddCommandList( some_other_list ); // optional
     // curr_pass->EndPass();
     bool CanBorrowCommandListFromPreviousPass() const { NOTIMPL; return false; }
-    void BorrowCommandList( RHICommandList& cmd_list ) { NOTIMPL; }
+    bool BorrowCommandList( RHICommandList& cmd_list );
 
-
+private:
+    void AddPassBeginCommands( RHICommandList& cmd_list );
 };
 
 
 struct RendergraphSubmission
 {
     std::vector<RGPass*> passes;
+    std::vector<RHITextureBarrier> end_barriers;
     RHI::QueueType type = RHI::QueueType::Graphics;
 };
 
@@ -127,6 +138,15 @@ struct RGExternalTextureEntry
 };
 
 
+struct RGSubmitInfo
+{
+    size_t wait_semaphore_count = 0;
+    class RHISemaphore* const* semaphores_to_wait = nullptr;
+    const RHIPipelineStageFlags* stages_to_wait = nullptr;
+    class RHISemaphore* semaphore_to_signal = nullptr;
+};
+
+
 class Rendergraph
 {
 private:
@@ -150,7 +170,7 @@ public:
 
     bool Compile();
 
-    bool Submit();
+    RHIFence Submit( const RGSubmitInfo& info );
 
 private:
     uint64_t GenerateHandle() { return m_handle_generator++; }
