@@ -1,6 +1,12 @@
 #pragma once
 
 
+#include "StdAfx.h"
+
+
+SE_LOG_CATEGORY( Rendergraph );
+
+
 class RHICommandList;
 
 
@@ -22,14 +28,18 @@ public:
 
 class RGTexture : public RGResource
 {
+    bool m_is_external = false;
 public:
-    RGTexture( uint64_t handle, const char* name );
+    RGTexture( uint64_t handle, const char* name, bool is_external );
+
+    bool IsExternal() const { return m_is_external; }
 };
 
 
 enum class RGTextureUsage
 {
-    ShaderRead = 0,
+    Undefined = 0,
+    ShaderRead,
     ShaderReadWrite,
     RenderTarget
 };
@@ -38,7 +48,7 @@ enum class RGTextureUsage
 struct RGPassTexture
 {
     RGTexture* texture = nullptr;
-    RGTextureUsage usage = RGTextureUsage::ShaderRead;
+    RGTextureUsage usage = RGTextureUsage::Undefined;
 };
 
 
@@ -51,6 +61,8 @@ class RGPass
     std::unordered_map<uint64_t, RGPassTexture> m_used_textures;
 
     std::vector<RHICommandList*> m_cmd_lists;
+
+    std::vector<RHITextureBarrier> m_pass_start_texture_barriers;
 
     std::string m_name;
 
@@ -74,6 +86,8 @@ public:
     // curr_pass->EndPass();
     bool CanBorrowCommandListFromPreviousPass() const { NOTIMPL; return false; }
     void BorrowCommandList( RHICommandList& cmd_list ) { NOTIMPL; }
+
+
 };
 
 
@@ -100,6 +114,16 @@ private:
 
 public:
     RGExternalTexture( uint64_t handle, const RGExternalTextureDesc& desc );
+
+    const RGExternalTextureDesc& GetDesc() const { return m_desc; }
+};
+
+
+struct RGExternalTextureEntry
+{
+    std::unique_ptr<RGExternalTexture> texture = nullptr;
+    RGTextureUsage first_usage = RGTextureUsage::Undefined;
+    RGTextureUsage last_usage = RGTextureUsage::Undefined;
 };
 
 
@@ -112,7 +136,9 @@ private:
 
     std::vector<RendergraphSubmission> m_submissions;
 
-    std::vector<std::unique_ptr<RGExternalTexture>> m_external_textures;
+    std::unordered_map<uint64_t, RGExternalTextureEntry> m_external_textures;
+
+    std::vector<RHITextureBarrier> m_final_barriers;
 
 public:
     RGPass* AddPass( RHI::QueueType queue_type, const char* name );

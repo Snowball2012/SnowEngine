@@ -245,9 +245,9 @@ void VulkanCommandList::TextureBarriers( const RHITextureBarrier* barriers, size
         vk_barrier.image = RHIImpl( rhi_barrier.texture )->GetVkImage();
         vk_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         vk_barrier.subresourceRange.baseMipLevel = rhi_barrier.subresources.mip_base;
-        vk_barrier.subresourceRange.levelCount = rhi_barrier.subresources.mip_count;
+        vk_barrier.subresourceRange.levelCount = rhi_barrier.subresources.mip_count == RHITextureSubresourceRange::ALL_MIPS ? VK_REMAINING_MIP_LEVELS : rhi_barrier.subresources.mip_count;
         vk_barrier.subresourceRange.baseArrayLayer = rhi_barrier.subresources.array_base;
-        vk_barrier.subresourceRange.layerCount = rhi_barrier.subresources.array_count;
+        vk_barrier.subresourceRange.layerCount = rhi_barrier.subresources.array_count == RHITextureSubresourceRange::ALL_LAYERS ? VK_REMAINING_ARRAY_LAYERS : rhi_barrier.subresources.array_count;
     }
 
     vkCmdPipelineBarrier(

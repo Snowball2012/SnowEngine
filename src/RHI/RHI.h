@@ -399,15 +399,18 @@ enum class RHIIndexBufferType
 
 struct RHITextureSubresourceRange
 {
+    static constexpr uint32_t ALL_MIPS = -1;
+    static constexpr uint32_t ALL_LAYERS = -1;
+
     uint32_t mip_base = 0;
-    uint32_t mip_count = 0;
+    uint32_t mip_count = ALL_MIPS;
     uint32_t array_base = 0;
-    uint32_t array_count = 0;
+    uint32_t array_count = ALL_LAYERS;
 };
 
 struct RHITextureBarrier
 {
-    RHITexture* texture = nullptr;
+    const RHITexture* texture = nullptr;
     RHITextureSubresourceRange subresources;
     RHITextureLayout layout_src = RHITextureLayout::Undefined;
     RHITextureLayout layout_dst = RHITextureLayout::Undefined;

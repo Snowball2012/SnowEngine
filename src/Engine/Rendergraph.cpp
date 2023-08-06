@@ -4,15 +4,15 @@
 
 // RGTexture
 
-RGTexture::RGTexture( uint64_t handle, const char* name )
-    : RGResource( handle, name )
+RGTexture::RGTexture( uint64_t handle, const char* name, bool is_external )
+    : RGResource( handle, name ), m_is_external( is_external )
 {
 }
 
 // RGExternalTexture
 
 RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDesc& desc )
-    : RGTexture( handle, desc.name ), m_desc( desc )
+    : RGTexture( handle, desc.name, /*is_external=*/true ), m_desc( desc )
 {
 }
 
@@ -31,7 +31,9 @@ RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTexture
 
     RGExternalTexture* texture_ptr = ext_texture.get();
 
-    m_external_textures.emplace_back( std::move( ext_texture ) );
+    auto& entry = m_external_textures[ext_texture->GetHandle()];
+
+    entry.texture = std::move( ext_texture );
 
     return texture_ptr;
 }
@@ -54,8 +56,104 @@ RGResource* Rendergraph::CreateTransientBuffer()
     return nullptr;
 }
 
+namespace
+{
+    RHITextureLayout RGUsageToLayout( RGTextureUsage usage )
+    {
+        switch ( usage )
+        {
+        case RGTextureUsage::ShaderRead:
+            return RHITextureLayout::ShaderReadOnly;
+        case RGTextureUsage::ShaderReadWrite:
+            return RHITextureLayout::ShaderReadWrite;
+        case RGTextureUsage::RenderTarget:
+            return RHITextureLayout::RenderTarget;
+        }
+        NOTIMPL;
+    }
+}
+
 bool Rendergraph::Compile()
 {
+    // 0. Validate all passes are graphics
+    for ( const auto& pass : m_passes )
+    {
+        if ( pass->m_queue_type != RHI::QueueType::Graphics )
+        {
+            NOTIMPL;
+        }
+    }
+
+    // 1. Build layout transitions for external resources
+    for ( const auto& pass : m_passes )
+    {
+        for ( const auto& [handle, used_texture] : pass->m_used_textures )
+        {
+            if ( !used_texture.texture->IsExternal() )
+                continue;
+
+            auto& ext_texture_entry = m_external_textures[handle];
+
+            if ( !SE_ENSURE( ext_texture_entry.texture != nullptr ) )
+                return false;
+
+            if ( ext_texture_entry.first_usage == RGTextureUsage::Undefined )
+            {
+                ext_texture_entry.first_usage = used_texture.usage;
+            }
+
+            ext_texture_entry.last_usage = used_texture.usage;
+        }
+    }
+
+    // there can be textures 
+
+    std::vector<RHITextureBarrier> initial_barriers;
+    m_final_barriers.clear();
+
+    initial_barriers.reserve( m_external_textures.size() );
+    m_final_barriers.reserve( m_external_textures.size() );
+
+    for ( const auto& [handle, ext_texture_entry] : m_external_textures )
+    {
+        const RGExternalTextureDesc& tex_desc = ext_texture_entry.texture->GetDesc();
+
+        // If texture is not really used in any of the passes, we still need to correctly transition it from initial layout to final layout
+        if ( ext_texture_entry.first_usage == RGTextureUsage::Undefined )
+        {
+            SE_LOG_WARNING( Rendergraph, "External texture <%s> is added to the rendergraph but is not used in any pass!", ext_texture_entry.texture->GetName().c_str() );
+        }
+
+        RHITextureLayout required_first_layout =
+            ( ext_texture_entry.first_usage == RGTextureUsage::Undefined )
+                ? tex_desc.initial_layout
+                : RGUsageToLayout( ext_texture_entry.first_usage );
+
+        if ( required_first_layout != tex_desc.initial_layout )
+        {
+            auto& barrier = initial_barriers.emplace_back();
+            barrier.layout_src = tex_desc.initial_layout;
+            barrier.layout_dst = required_first_layout;
+            barrier.texture = tex_desc.rhi_texture;
+        }
+
+        RHITextureLayout required_last_layout =
+            ( ext_texture_entry.last_usage == RGTextureUsage::Undefined )
+                ? tex_desc.initial_layout
+                : RGUsageToLayout( ext_texture_entry.last_usage );
+
+        if ( required_last_layout != tex_desc.final_layout )
+        {
+            auto& barrier = m_final_barriers.emplace_back();
+            barrier.layout_src = required_last_layout;
+            barrier.layout_dst = tex_desc.final_layout;
+            barrier.texture = tex_desc.rhi_texture;
+        }
+    }
+
+    // @todo - interface instead of raw friend access?
+    m_passes.front()->m_pass_start_texture_barriers = std::move( initial_barriers );
+
     NOTIMPL;
     return false;
 }
