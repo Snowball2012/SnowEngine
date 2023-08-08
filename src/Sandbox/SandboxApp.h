@@ -70,9 +70,6 @@ private:
 	std::string m_new_entity_name;
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
-	bool m_show_cube = false;
-	bool m_rt_path = true;
-	bool m_use_rendergraph = true;
 
 public:
 	SandboxApp();
@@ -93,9 +90,6 @@ private:
 	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }
 
 	void CreatePipeline();
-
-	void RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain );
-	void RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain );
 
 	void BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* ui_cmd_list );
 

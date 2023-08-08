@@ -577,137 +577,6 @@ void SandboxApp::CreatePipeline()
     m_rhi_graphics_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
 }
 
-void SandboxApp::RecordCommandBuffer( RHICommandList& list, RHISwapChain& swapchain )
-{
-    list.Begin();
-
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget );
-
-    RHIPassRTVInfo rt = {};
-    rt.load_op = RHILoadOp::Clear;
-    rt.store_op = RHIStoreOp::Store;
-    rt.rtv = m_swapchain->GetRTV();
-    rt.clear_value.float32[3] = 1.0f;
-
-    RHIPassInfo pass_info = {};
-    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = m_swapchain->GetExtent() };
-    pass_info.render_targets = &rt;
-    pass_info.render_targets_count = 1;
-    list.BeginPass( pass_info );
-
-    RHIViewport viewport = {};
-    viewport.x = 0;
-    viewport.y = 0;
-    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
-    viewport.width = float( swapchain_extent.x );
-    viewport.height = float( swapchain_extent.y );
-    viewport.min_depth = 0.0f;
-    viewport.max_depth = 1.0f;
-
-    RHIRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = swapchain_extent;
-
-    list.SetViewports( 0, &viewport, 1 );
-    list.SetScissors( 0, &scissor, 1 );
-
-    if ( m_show_cube )
-        list.SetPSO( *m_cube_graphics_pipeline );
-    else
-        list.SetPSO( *m_rhi_graphics_pipeline );
-
-    list.BindDescriptorSet( 0, *m_binding_tables[GetCurrentFrameIdx()]);
-
-    if ( m_show_cube )
-    {
-        list.SetVertexBuffers( 0, m_cube->GetVertexBuffer(), 1, nullptr );
-        list.SetIndexBuffer( *m_cube->GetIndexBuffer(), m_cube->GetIndexBufferType(), 0 );
-
-        list.DrawIndexed( m_cube->GetNumIndices(), 1, 0, 0, 0 );
-    }
-    else
-    {
-        list.SetVertexBuffers( 0, m_vertex_buffer.get(), 1, nullptr );
-        list.SetIndexBuffer( *m_index_buffer, RHIIndexBufferType::UInt16, 0 );
-
-        list.DrawIndexed( 6, 1, 0, 0, 0 );
-    }
-
-    list.EndPass();
-
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::RenderTarget, RHITextureLayout::Present );
-
-    list.End();
-}
-
-void SandboxApp::RecordCommandBufferRT( RHICommandList& list, RHISwapChain& swapchain )
-{
-    list.Begin();
-
-    if ( !m_tlas.Build( list ) )
-    {
-        SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
-    }
-
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::Present, RHITextureLayout::RenderTarget );
-
-    m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_tlas.GetRHIAS() );
-    m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
-
-    m_fsquad_descsets[GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_frame_roview );
-    m_fsquad_descsets[GetCurrentFrameIdx()]->BindSampler( 1, 0, *m_point_sampler );
-
-    list.SetPSO( *m_rt_pipeline );
-
-    list.BindDescriptorSet( 0, *m_rt_descsets[GetCurrentFrameIdx()] );
-
-    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadOnly, RHITextureLayout::ShaderReadWrite );
-    list.TraceRays( glm::uvec3( m_swapchain->GetExtent(), 1 ) );
-
-    TransitionImageLayout( list, *m_rt_frame, RHITextureLayout::ShaderReadWrite, RHITextureLayout::ShaderReadOnly );
-
-    RHIPassRTVInfo rt = {};
-    rt.load_op = RHILoadOp::Clear;
-    rt.store_op = RHIStoreOp::Store;
-    rt.rtv = m_swapchain->GetRTV();
-    rt.clear_value.float32[3] = 1.0f;
-
-    RHIPassInfo pass_info = {};
-    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = m_swapchain->GetExtent() };
-    pass_info.render_targets = &rt;
-    pass_info.render_targets_count = 1;
-    list.BeginPass( pass_info );
-
-    RHIViewport viewport = {};
-    viewport.x = 0;
-    viewport.y = 0;
-    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
-    viewport.width = float( swapchain_extent.x );
-    viewport.height = float( swapchain_extent.y );
-    viewport.min_depth = 0.0f;
-    viewport.max_depth = 1.0f;
-
-    RHIRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent = swapchain_extent;
-
-    list.SetViewports( 0, &viewport, 1 );
-    list.SetScissors( 0, &scissor, 1 );
-
-    list.SetPSO( *m_draw_fullscreen_quad_pipeline );
-
-    list.BindDescriptorSet( 0, *m_fsquad_descsets[GetCurrentFrameIdx()] );
-
-    list.Draw( 3, 1, 0, 0 );
-
-    list.EndPass();
-
-    TransitionImageLayout( list, *swapchain.GetTexture(), RHITextureLayout::RenderTarget, RHITextureLayout::Present );
-
-
-    list.End();
-}
-
 void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* ui_cmd_list )
 {
     // 1. Setup stage. Setup your resource handles and passes
@@ -825,12 +694,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
 void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
 {
-    RHICommandList* cmd_list = m_rhi->GetCommandList( RHI::QueueType::Graphics );
-
     UpdateUniformBuffer( GetCurrentFrameIdx() );
-
-    if ( !( m_rt_path && m_use_rendergraph ) )
-        NOTIMPL;
 
     BuildRendergraphRT( framegraph, ui_cmd_list );
 }
@@ -890,9 +754,6 @@ void SandboxApp::UpdateGui()
 
     ImGui::Begin( "Demo" );
     {
-        ImGui::Checkbox( "Show cube", &m_show_cube );
-        ImGui::Checkbox( "RT path", &m_rt_path );
-        ImGui::Checkbox( "Use rendergraph", &m_use_rendergraph );
     }
     ImGui::End();
 }
