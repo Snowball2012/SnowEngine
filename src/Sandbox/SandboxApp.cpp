@@ -46,8 +46,13 @@ void SandboxApp::OnInit()
     CreateUniformBuffers();
     CreateDescriptorSets();
 
-    m_cube_instance_tlas_id = m_tlas.Instances().emplace();
-    m_tlas.Instances()[m_cube_instance_tlas_id].blas = m_cube->GetAccelerationStructure();
+    m_cube_entity = m_world.CreateEntity();
+    m_world.AddComponent<NameComponent>( m_cube_entity ).name = "Cube";
+    m_world.AddComponent<TransformComponent>( m_cube_entity );
+    auto& cube_mesh_component = m_world.AddComponent<MeshInstanceComponent>( m_cube_entity );
+    cube_mesh_component.tlas_instance_id = m_tlas.Instances().emplace();
+
+    m_tlas.Instances()[cube_mesh_component.tlas_instance_id].blas = m_cube->GetAccelerationStructure();
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -224,12 +229,17 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
+    const auto* cube_tf = m_world.GetComponent<TransformComponent>( m_cube_entity );
+    const auto* cube_mesh = m_world.GetComponent<MeshInstanceComponent>( m_cube_entity );
+
     Matrices matrices = {};
-    matrices.model = glm::rotate( glm::mat4( 1.0f ), time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
+    matrices.model = glm::scale( glm::identity<glm::mat4>(), cube_tf->scale );
+    matrices.model = matrices.model * glm::toMat4( cube_tf->orientation );
+    matrices.model = glm::translate( matrices.model, cube_tf->translation );
 
     glm::mat4x4 row_major_model = glm::transpose( matrices.model );
 
-    m_tlas.Instances()[m_cube_instance_tlas_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
+    m_tlas.Instances()[cube_mesh->tlas_instance_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
 
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
@@ -702,6 +712,19 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 void SandboxApp::OnUpdate()
 {
     UpdateGui();
+
+    static auto start_time = std::chrono::high_resolution_clock::now();
+
+    auto current_time = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
+
+    auto* cube_tf = m_world.GetComponent<TransformComponent>( m_cube_entity );
+    if ( !SE_ENSURE( cube_tf ) )
+        return;
+
+    cube_tf->translation = glm::vec3( 0, 0, 0 );
+    cube_tf->orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
+    cube_tf->scale = glm::vec3( 1, 1, 1 );
 }
 
 void SandboxApp::OnSwapChainRecreated()

@@ -17,8 +17,22 @@ struct NameComponent
 	std::string name;
 };
 
+struct TransformComponent
+{
+	glm::vec3 translation;
+	glm::quat orientation;
+	glm::vec3 scale;
+};
+
+struct MeshInstanceComponent
+{
+	TLAS::InstanceID tlas_instance_id = TLAS::InstanceID::nullid;
+};
+
 using World = EntityContainer<
-	NameComponent
+	NameComponent,
+	TransformComponent,
+	MeshInstanceComponent
 >;
 
 class SandboxApp : public EngineApp
@@ -63,8 +77,9 @@ private:
 	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;
 
 	World m_world;
+	World::Entity m_cube_entity = World::Entity::nullid;
+
 	TLAS m_tlas;
-	TLAS::InstanceID m_cube_instance_tlas_id = TLAS::InstanceID::nullid;
 
 	// GUI state
 	std::string m_new_entity_name;

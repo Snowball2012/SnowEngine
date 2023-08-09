@@ -25,6 +25,9 @@ VulkanBuffer::VulkanBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemo
     da_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     da_info.buffer = m_vk_buffer;
     m_device_address = vkGetBufferDeviceAddress( m_rhi->GetDevice(), &da_info );
+
+    // VmaAllocationInfo::size may be larger than requested, but it can only be used for host memory operations and not for device operations with the resource. Use buffer size instead
+    m_buffer_size = info.size;
 }
 
 void VulkanBuffer::GetAllocationInfo( VmaAllocationInfo& info ) const
@@ -39,10 +42,7 @@ VulkanBuffer::~VulkanBuffer()
 
 size_t VulkanBuffer::GetSize() const
 {
-    VmaAllocationInfo info = {};
-    GetAllocationInfo( info );
-
-    return size_t( info.size );
+    return m_buffer_size;
 }
 
 IMPLEMENT_RHI_OBJECT( VulkanUploadBuffer )

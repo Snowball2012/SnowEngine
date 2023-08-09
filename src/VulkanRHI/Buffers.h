@@ -11,6 +11,7 @@ class VulkanBuffer : public RHIBuffer
     VkBuffer m_vk_buffer = VK_NULL_HANDLE;
     VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkDeviceAddress m_device_address = -1;
+    size_t m_buffer_size = 0;
 
 public:
     VulkanBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemoryUsage usage, VmaAllocationCreateFlags alloc_create_flags, VkMemoryPropertyFlags alloc_required_flags );
