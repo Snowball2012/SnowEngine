@@ -20,12 +20,38 @@ SandboxApp::SandboxApp()
 
 SandboxApp::~SandboxApp() = default;
 
+void SandboxApp::ParseCommandLineDerived( int argc, char** argv )
+{
+    for ( int i = 1; i < argc; ++i )
+    {
+        if ( !_strcmpi( argv[i], "-DemoAssetPath" ) )
+        {
+            if ( argc > ( i + 1 ) )
+            {
+                // read next arg
+                m_demo_mesh_asset_path = argv[i + 1];
+                i += 1;
+
+
+                SE_LOG_INFO( Sandbox, "Set demo mesh path from command line: %s", m_demo_mesh_asset_path );
+            }
+            else
+            {
+                SE_LOG_ERROR( Sandbox, "Can't set demo asset path from command line because -DemoAssetPath is the last token" );
+            }
+        }
+    }
+}
+
 void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
-    m_cube = boost::dynamic_pointer_cast< CubeAsset >( m_asset_mgr->Load( AssetId( "#engine/Meshes/Cube.sea" ) ) );
-    SE_ENSURE( m_cube && m_cube->GetStatus() == AssetStatus::Ready );
+    m_demo_mesh = boost::dynamic_pointer_cast< MeshAsset >( m_asset_mgr->Load( AssetId( m_demo_mesh_asset_path.c_str() ) ) );
+    if ( !( m_demo_mesh && m_demo_mesh->GetStatus() == AssetStatus::Ready ) )
+    {
+        SE_LOG_FATAL_ERROR( Sandbox, "Could not load demo asset an path %s", m_demo_mesh_asset_path.c_str() );
+    }
 
     CreateIntermediateBuffers();
     
@@ -46,13 +72,13 @@ void SandboxApp::OnInit()
     CreateUniformBuffers();
     CreateDescriptorSets();
 
-    m_cube_entity = m_world.CreateEntity();
-    m_world.AddComponent<NameComponent>( m_cube_entity ).name = "Cube";
-    m_world.AddComponent<TransformComponent>( m_cube_entity );
-    auto& cube_mesh_component = m_world.AddComponent<MeshInstanceComponent>( m_cube_entity );
-    cube_mesh_component.tlas_instance_id = m_tlas.Instances().emplace();
+    m_demo_mesh_entity = m_world.CreateEntity();
+    m_world.AddComponent<NameComponent>( m_demo_mesh_entity ).name = "DemoMesh";
+    m_world.AddComponent<TransformComponent>( m_demo_mesh_entity );
+    auto& demo_mesh_component = m_world.AddComponent<MeshInstanceComponent>( m_demo_mesh_entity );
+    demo_mesh_component.tlas_instance_id = m_tlas.Instances().emplace();
 
-    m_tlas.Instances()[cube_mesh_component.tlas_instance_id].blas = m_cube->GetAccelerationStructure();
+    m_tlas.Instances()[demo_mesh_component.tlas_instance_id].blas = m_demo_mesh->GetAccelerationStructure();
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -86,7 +112,7 @@ void SandboxApp::OnCleanup()
 
     m_tlas.Reset();
 
-    m_cube = nullptr;
+    m_demo_mesh = nullptr;
 
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
@@ -229,17 +255,17 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
-    const auto* cube_tf = m_world.GetComponent<TransformComponent>( m_cube_entity );
-    const auto* cube_mesh = m_world.GetComponent<MeshInstanceComponent>( m_cube_entity );
+    const auto* demo_tf = m_world.GetComponent<TransformComponent>( m_demo_mesh_entity );
+    const auto* demo_mesh = m_world.GetComponent<MeshInstanceComponent>( m_demo_mesh_entity );
 
     Matrices matrices = {};
-    matrices.model = glm::scale( glm::identity<glm::mat4>(), cube_tf->scale );
-    matrices.model = matrices.model * glm::toMat4( cube_tf->orientation );
-    matrices.model = glm::translate( matrices.model, cube_tf->translation );
+    matrices.model = glm::scale( glm::identity<glm::mat4>(), demo_tf->scale );
+    matrices.model = matrices.model * glm::toMat4( demo_tf->orientation );
+    matrices.model = glm::translate( matrices.model, demo_tf->translation );
 
     glm::mat4x4 row_major_model = glm::transpose( matrices.model );
 
-    m_tlas.Instances()[cube_mesh->tlas_instance_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
+    m_tlas.Instances()[demo_mesh->tlas_instance_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
 
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
@@ -411,12 +437,12 @@ void SandboxApp::CreateCubePipeline()
     create_info.entry_point = "TrianglePS";
     RHIObjectPtr<RHIShader> triangle_shader_ps = m_rhi->CreateShader( create_info );
 
-    auto vb_attribute = m_cube->GetPositionBufferInfo();
+    auto vb_attribute = m_demo_mesh->GetPositionBufferInfo();
 
     RHIPrimitiveBufferLayout vb_layout = {};
     vb_layout.attributes = &vb_attribute;
     vb_layout.attributes_count = 1;
-    vb_layout.stride = m_cube->GetPositionBufferStride();
+    vb_layout.stride = m_demo_mesh->GetPositionBufferStride();
 
     const RHIPrimitiveBufferLayout* buffers[] = { &vb_layout };
 
@@ -718,13 +744,13 @@ void SandboxApp::OnUpdate()
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
-    auto* cube_tf = m_world.GetComponent<TransformComponent>( m_cube_entity );
-    if ( !SE_ENSURE( cube_tf ) )
+    auto* demo_tf = m_world.GetComponent<TransformComponent>( m_demo_mesh_entity );
+    if ( !SE_ENSURE( demo_tf ) )
         return;
 
-    cube_tf->translation = glm::vec3( 0, 0, 0 );
-    cube_tf->orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
-    cube_tf->scale = glm::vec3( 1, 1, 1 );
+    demo_tf->translation = glm::vec3( 0, 0, 0 );
+    demo_tf->orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
+    demo_tf->scale = glm::vec3( 1, 1, 1 );
 }
 
 void SandboxApp::OnSwapChainRecreated()

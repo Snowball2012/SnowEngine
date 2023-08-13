@@ -191,6 +191,13 @@ extern CorePaths g_core_paths;
 
 std::string ToOSPath( const char* internal_path );
 
+inline void HandleFatalError()
+{
+	// Just crash immediately for now
+	bool fatal_error_encountered = false;
+	VERIFY( fatal_error_encountered );
+}
+
 struct LogCategory
 {
 	const char* name = "";
@@ -200,7 +207,8 @@ enum class LogMessageType
 {
 	Info = 0,
 	Warning,
-	Error
+	Error,				// Recoverable content errors. Do not use this for code errors, we have SE_ENSURE for that
+	FatalError			// Unrecoverable content errors
 };
 
 class Logger
@@ -231,6 +239,7 @@ extern Logger* g_log;
 
 #define SE_LOG( category, type, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::type, fmt, __VA_ARGS__ )
 
+#define SE_LOG_FATAL_ERROR( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::FatalError, fmt, __VA_ARGS__ )
 #define SE_LOG_ERROR( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Error, fmt, __VA_ARGS__ )
 #define SE_LOG_WARNING( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Warning, fmt, __VA_ARGS__ )
 #define SE_LOG_INFO( category, fmt, ... ) g_log->Log( g_logcategory_ ## category, LogMessageType::Info, fmt, __VA_ARGS__ )

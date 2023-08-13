@@ -68,8 +68,8 @@ private:
 	RHITextureROViewPtr m_frame_roview = nullptr;
 	//RHI
 	// assets
-	CubeAssetPtr m_cube = nullptr;
-
+	MeshAssetPtr m_demo_mesh = nullptr;
+	std::string m_demo_mesh_asset_path = std::string( "#engine/Meshes/Cube.sea" );
 
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_binding_tables;
@@ -77,7 +77,7 @@ private:
 	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;
 
 	World m_world;
-	World::Entity m_cube_entity = World::Entity::nullid;
+	World::Entity m_demo_mesh_entity = World::Entity::nullid;
 
 	TLAS m_tlas;
 
@@ -91,6 +91,8 @@ public:
 	~SandboxApp();
 
 private:
+	virtual void ParseCommandLineDerived( int argc, char** argv ) override;
+
 	virtual void OnInit() override;
 
 	virtual void OnCleanup() override;

@@ -159,6 +159,7 @@ void AssetManager::RegisterGenerators()
 #define REGISTER_ASSET_GENERATOR( className ) m_factories[ S_(className) ] = CreateAsset<className>;
 
 	REGISTER_ASSET_GENERATOR( CubeAsset );
+	REGISTER_ASSET_GENERATOR( MeshAsset );
 
 #undef REGISTER_ASSET_GENERATOR
 }

@@ -94,7 +94,7 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	}
 	if ( m_write_to_std )
 	{
-		if ( msg_type == LogMessageType::Error )
+		if ( msg_type == LogMessageType::Error || msg_type == LogMessageType::FatalError )
 		{
 			std::cerr << message.str();
 		}
@@ -106,6 +106,11 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	if ( m_write_debugstr )
 	{
 		OutputDebugStringA( message.str().c_str() );
+	}
+
+	if ( msg_type == LogMessageType::FatalError )
+	{
+		HandleFatalError();
 	}
 }
 
@@ -128,6 +133,7 @@ const char* Logger::TypeToString( LogMessageType type )
 		case LogMessageType::Info: return "Info";
 		case LogMessageType::Warning: return "Warning";
 		case LogMessageType::Error: return "Error";
+		case LogMessageType::FatalError: return "FatalError";
 	}
 
 	NOTIMPL;

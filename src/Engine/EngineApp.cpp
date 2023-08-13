@@ -40,6 +40,9 @@ void EngineApp::Run( int argc, char** argv )
 
     InitCoreGlobals();
 
+    // We parse app-specific arguments here because we want logger, content paths and other core functionality to be initialized everywhere inside derived app
+    ParseCommandLineDerived( argc, argv );
+
     SDL_Init( SDL_INIT_EVERYTHING );
     m_main_wnd = SDL_CreateWindow( GetMainWindowName(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_window_size.x, m_window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
@@ -100,8 +103,6 @@ void EngineApp::ParseCommandLine( int argc, char** argv )
             }
         }
     }
-
-    ParseCommandLineDerived( argc, argv );
 }
 
 struct SDLVulkanWindowInterface : public IVulkanWindowInterface
