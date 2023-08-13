@@ -270,7 +270,7 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
     glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
-    matrices.proj = glm::perspective( glm::radians( 45.0f ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
+    matrices.proj = glm::perspective( glm::radians( m_fov_degrees ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
 
     matrices.viewport_size = swapchain_extent;
 
@@ -803,6 +803,7 @@ void SandboxApp::UpdateGui()
 
     ImGui::Begin( "Demo" );
     {
+        ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
     }
     ImGui::End();
 }

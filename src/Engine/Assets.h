@@ -5,6 +5,9 @@
 #include <RHI/RHI.h>
 
 
+struct MeshVertex;
+
+
 class MeshAsset : public Asset
 {
 	IMPLEMENT_ASSET_GENERATOR;
@@ -37,6 +40,10 @@ protected:
 	MeshAsset( const AssetId& id, AssetManager& mgr )
 		: Asset( id, mgr )
 	{}
+
+	bool LoadFromObj( const char* path );
+
+	bool LoadFromData( const std::span<MeshVertex>& vertices, const std::span<uint16_t>& indices );
 };
 using MeshAssetPtr = boost::intrusive_ptr<MeshAsset>;
 

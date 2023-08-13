@@ -85,6 +85,7 @@ private:
 	std::string m_new_entity_name;
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
+	float m_fov_degrees = 45.0f;
 
 public:
 	SandboxApp();
