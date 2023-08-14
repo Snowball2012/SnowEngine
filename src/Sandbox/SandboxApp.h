@@ -7,6 +7,7 @@
 #include <Engine/EngineApp.h>
 #include <Engine/Assets.h>
 #include <Engine/RHIUtils.h>
+#include <Engine/Scene.h>
 
 #include "RenderResources.h"
 
@@ -26,7 +27,7 @@ struct TransformComponent
 
 struct MeshInstanceComponent
 {
-	TLAS::InstanceID tlas_instance_id = TLAS::InstanceID::nullid;
+	SceneMeshInstanceID scene_mesh_instance = SceneMeshInstanceID::nullid;
 };
 
 using World = EntityContainer<
@@ -79,7 +80,7 @@ private:
 	World m_world;
 	World::Entity m_demo_mesh_entity = World::Entity::nullid;
 
-	TLAS m_tlas;
+	std::unique_ptr<Scene> m_scene;
 
 	// GUI state
 	std::string m_new_entity_name;
@@ -149,4 +150,6 @@ private:
 	void CreateFullscreenQuadPipeline();
 
 	void CreateIntermediateBuffers();
+
+	void UpdateScene();
 };

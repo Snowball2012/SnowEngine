@@ -53,6 +53,8 @@ void SandboxApp::OnInit()
         SE_LOG_FATAL_ERROR( Sandbox, "Could not load demo asset an path %s", m_demo_mesh_asset_path.c_str() );
     }
 
+    m_scene = std::make_unique<Scene>();
+
     CreateIntermediateBuffers();
     
     CreateDescriptorSetLayout();
@@ -76,9 +78,7 @@ void SandboxApp::OnInit()
     m_world.AddComponent<NameComponent>( m_demo_mesh_entity ).name = "DemoMesh";
     m_world.AddComponent<TransformComponent>( m_demo_mesh_entity );
     auto& demo_mesh_component = m_world.AddComponent<MeshInstanceComponent>( m_demo_mesh_entity );
-    demo_mesh_component.tlas_instance_id = m_tlas.Instances().emplace();
-
-    m_tlas.Instances()[demo_mesh_component.tlas_instance_id].blas = m_demo_mesh->GetAccelerationStructure();
+    demo_mesh_component.scene_mesh_instance = m_scene->AddMeshInstanceFromAsset( m_demo_mesh );
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -110,7 +110,7 @@ void SandboxApp::OnCleanup()
     m_index_buffer = nullptr;
     m_uniform_buffers.clear();
 
-    m_tlas.Reset();
+    m_scene = nullptr;
 
     m_demo_mesh = nullptr;
 
@@ -259,13 +259,6 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
     const auto* demo_mesh = m_world.GetComponent<MeshInstanceComponent>( m_demo_mesh_entity );
 
     Matrices matrices = {};
-    matrices.model = glm::scale( glm::identity<glm::mat4>(), demo_tf->scale );
-    matrices.model = matrices.model * glm::toMat4( demo_tf->orientation );
-    matrices.model = glm::translate( matrices.model, demo_tf->translation );
-
-    glm::mat4x4 row_major_model = glm::transpose( matrices.model );
-
-    m_tlas.Instances()[demo_mesh->tlas_instance_id].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
 
     matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
 
@@ -654,7 +647,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
     update_as_pass->AddCommandList( *cmd_list_rt );
     {
-        if ( !m_tlas.Build( *cmd_list_rt ) )
+        if ( !m_scene->GetTLAS().Build(*cmd_list_rt) )
         {
             SE_LOG_ERROR( Sandbox, "Couldn't build a tlas!" );
         }
@@ -663,7 +656,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
-        m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_tlas.GetRHIAS() );
+        m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_scene->GetTLAS().GetRHIAS() );
         m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
 
         cmd_list_rt->SetPSO( *m_rt_pipeline );
@@ -730,6 +723,8 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
 void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
 {
+    m_scene->Synchronize();
+
     UpdateUniformBuffer( GetCurrentFrameIdx() );
 
     BuildRendergraphRT( framegraph, ui_cmd_list );
@@ -751,6 +746,25 @@ void SandboxApp::OnUpdate()
     demo_tf->translation = glm::vec3( 0, 0, 0 );
     demo_tf->orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
     demo_tf->scale = glm::vec3( 1, 1, 1 );
+
+    UpdateScene();
+}
+
+void SandboxApp::UpdateScene()
+{
+    // this should be somewhere in the engine code
+
+    // @todo - run only for dirty transforms
+    for ( const auto& [entity_id, tf, mesh_instance_component] : m_world.CreateView<TransformComponent, MeshInstanceComponent>() )
+    {
+        SceneMeshInstance* smi = m_scene->GetMeshInstance( mesh_instance_component.scene_mesh_instance );
+        if ( !SE_ENSURE( smi ) )
+            continue;
+
+        smi->m_translation = tf.translation;
+        smi->m_orientation = tf.orientation;
+        smi->m_scale = tf.scale;
+    }
 }
 
 void SandboxApp::OnSwapChainRecreated()
