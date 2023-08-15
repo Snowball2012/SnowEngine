@@ -743,9 +743,7 @@ void SandboxApp::OnUpdate()
     if ( !SE_ENSURE( demo_tf ) )
         return;
 
-    demo_tf->translation = glm::vec3( 0, 0, 0 );
-    demo_tf->orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
-    demo_tf->scale = glm::vec3( 1, 1, 1 );
+    demo_tf->tf.orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
 
     UpdateScene();
 }
@@ -761,9 +759,7 @@ void SandboxApp::UpdateScene()
         if ( !SE_ENSURE( smi ) )
             continue;
 
-        smi->m_translation = tf.translation;
-        smi->m_orientation = tf.orientation;
-        smi->m_scale = tf.scale;
+        smi->m_tf = tf.tf;
     }
 }
 

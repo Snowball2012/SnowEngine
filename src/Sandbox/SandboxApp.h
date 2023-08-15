@@ -20,9 +20,7 @@ struct NameComponent
 
 struct TransformComponent
 {
-	glm::vec3 translation;
-	glm::quat orientation;
-	glm::vec3 scale;
+	Transform tf;
 };
 
 struct MeshInstanceComponent

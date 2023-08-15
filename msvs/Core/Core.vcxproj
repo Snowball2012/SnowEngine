@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Core\Core.h" />
+    <ClInclude Include="..\..\src\Core\Math.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Core\Core.cpp" />

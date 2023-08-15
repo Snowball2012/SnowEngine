@@ -32,13 +32,6 @@ void Scene::UpdateTLASTransforms()
 {
     for ( SceneMeshInstance& mesh_instance : m_mesh_instances )
     {
-        glm::mat4x4 model_mat;
-        model_mat = glm::scale( glm::identity<glm::mat4>(), mesh_instance.m_scale );
-        model_mat = model_mat * glm::toMat4( mesh_instance.m_orientation );
-        model_mat = glm::translate( model_mat, mesh_instance.m_translation );
-
-        glm::mat4x4 row_major_model = glm::transpose( model_mat );
-
-        m_tlas->Instances()[mesh_instance.m_tlas_instance].transform = glm::mat3x4( row_major_model[0], row_major_model[1], row_major_model[2] );
+        m_tlas->Instances()[mesh_instance.m_tlas_instance].transform = ToMatrixRowMajor3x4( mesh_instance.m_tf );
     }
 }

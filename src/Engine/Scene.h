@@ -10,9 +10,8 @@ class SceneMeshInstance
 public:
     // @todo - incapsulate as soon as it becomes more than simple getter/setter pair
     MeshAssetPtr m_asset = nullptr;
-    glm::vec3 m_translation = glm::vec3( 0, 0, 0 );
-    glm::quat m_orientation = glm::quat( 1.0f, 0.0f, 0.0f, 0.0f );
-    glm::vec3 m_scale = glm::vec3( 1, 1, 1 );
+
+    Transform m_tf = {};
 
     TLAS::InstanceID m_tlas_instance = TLAS::InstanceID::nullid;
 };
@@ -40,4 +39,19 @@ public:
 
 private:
     void UpdateTLASTransforms();
+};
+
+class SceneView
+{
+private:
+    glm::uvec2 m_extents = glm::uvec2( 0, 0 );
+    RHITexturePtr m_frame_output = nullptr;
+
+    glm::vec3 m_eye_pos = ZeroVec3();
+    glm::quat m_eye_orientation = IdentityQuat();
+
+    float m_fovXRadians = glm::radians( 60.0f );
+
+public:
+    SceneView() {}
 };

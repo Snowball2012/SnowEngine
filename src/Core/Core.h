@@ -28,14 +28,9 @@ namespace bc = boost::container;
 
 #include <windows.h>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-#define GLM_FORCE_RADIANS
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/quaternion.hpp>
-
 #include <utils/packed_freelist.h>
+
+#include "Math.h"
 
 // double extension trick to stringify __LINE__ and other things
 #define S(x) #x
