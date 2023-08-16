@@ -54,8 +54,9 @@ void SandboxApp::OnInit()
     }
 
     m_scene = std::make_unique<Scene>();
+    m_scene_view = std::make_unique<SceneView>();
 
-    CreateIntermediateBuffers();
+    m_scene_view->SetExtents( m_swapchain->GetExtent() );
     
     CreateDescriptorSetLayout();
     CreatePipeline();
@@ -100,9 +101,6 @@ void SandboxApp::OnCleanup()
     m_texture = nullptr;
 
     m_point_sampler = nullptr;
-    m_frame_rwview = nullptr;
-    m_frame_roview = nullptr;
-    m_rt_frame = nullptr;
 
     CleanupPipeline();
 
@@ -110,6 +108,7 @@ void SandboxApp::OnCleanup()
     m_index_buffer = nullptr;
     m_uniform_buffers.clear();
 
+    m_scene_view = nullptr;
     m_scene = nullptr;
 
     m_demo_mesh = nullptr;
@@ -260,12 +259,11 @@ void SandboxApp::UpdateUniformBuffer( uint32_t current_image )
 
     Matrices matrices = {};
 
-    matrices.view = glm::lookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ), glm::vec3( 0, 1, 0 ) );
+    matrices.view = m_scene_view->CalcViewMatrix();
 
-    glm::uvec2 swapchain_extent = m_swapchain->GetExtent();
-    matrices.proj = glm::perspective( glm::radians( m_fov_degrees ), float( swapchain_extent.x ) / float( swapchain_extent.y ), 0.1f, 10.0f );
+    matrices.proj = m_scene_view->CalcProjectionMatrix();
 
-    matrices.viewport_size = swapchain_extent;
+    matrices.viewport_size = m_scene_view->GetExtents();
 
     glm::mat4x4 view_proj = matrices.proj * matrices.view;
 
@@ -525,19 +523,6 @@ void SandboxApp::CreateFullscreenQuadPipeline()
     m_draw_fullscreen_quad_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
 }
 
-void SandboxApp::CreateIntermediateBuffers()
-{
-    CreateImage( m_swapchain->GetExtent().x, m_swapchain->GetExtent().y, RHIFormat::R8G8B8A8_UNORM, RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView, RHITextureLayout::ShaderReadOnly, m_rt_frame );
-    
-    RHI::TextureRWViewInfo uav_info = {};
-    uav_info.texture = m_rt_frame.get();
-    m_frame_rwview = m_rhi->CreateTextureRWView( uav_info );
-
-    RHI::TextureROViewInfo srv_info = {};
-    srv_info.texture = m_rt_frame.get();
-    m_frame_roview = m_rhi->CreateTextureROView( srv_info );
-}
-
 void SandboxApp::CreateVertexBuffer()
 {
     std::vector<Vertex> vertices =
@@ -619,7 +604,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
     RGExternalTextureDesc frame_output_desc = {};
     frame_output_desc.name = "frame_output";
-    frame_output_desc.rhi_texture = m_rt_frame.get();
+    frame_output_desc.rhi_texture = m_scene_view->GetFrameColorTexture();
     frame_output_desc.initial_layout = RHITextureLayout::ShaderReadOnly;
     frame_output_desc.final_layout = RHITextureLayout::ShaderReadOnly;
 
@@ -657,7 +642,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
         m_rt_descsets[GetCurrentFrameIdx()]->BindAccelerationStructure( 0, 0, m_scene->GetTLAS().GetRHIAS() );
-        m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_frame_rwview );
+        m_rt_descsets[GetCurrentFrameIdx()]->BindTextureRWView( 1, 0, *m_scene_view->GetFrameColorTextureRWView() );
 
         cmd_list_rt->SetPSO( *m_rt_pipeline );
 
@@ -669,7 +654,7 @@ void SandboxApp::BuildRendergraphRT( Rendergraph& rendergraph, RHICommandList* u
 
     blit_to_swapchain->BorrowCommandList( *cmd_list_rt );
     {
-        m_fsquad_descsets[GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_frame_roview );
+        m_fsquad_descsets[GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_scene_view->GetFrameColorTextureROView() );
         m_fsquad_descsets[GetCurrentFrameIdx()]->BindSampler( 1, 0, *m_point_sampler );
 
         RHIPassRTVInfo rt = {};
@@ -745,6 +730,9 @@ void SandboxApp::OnUpdate()
 
     demo_tf->tf.orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
 
+    m_scene_view->SetLookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ) );
+    m_scene_view->SetFOV( glm::radians( m_fov_degrees ) );
+
     UpdateScene();
 }
 
@@ -765,7 +753,7 @@ void SandboxApp::UpdateScene()
 
 void SandboxApp::OnSwapChainRecreated()
 {
-    CreateIntermediateBuffers();
+    m_scene_view->SetExtents( m_swapchain->GetExtent() );
 }
 
 void SandboxApp::UpdateGui()

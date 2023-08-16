@@ -49,9 +49,30 @@ private:
 
     glm::vec3 m_eye_pos = ZeroVec3();
     glm::quat m_eye_orientation = IdentityQuat();
+    glm::vec3 m_up = glm::vec3( 0, 1, 0 );
 
     float m_fovXRadians = glm::radians( 60.0f );
 
+    RHITexturePtr m_rt_frame = nullptr;
+    RHITextureRWViewPtr m_frame_rwview = nullptr;
+    RHITextureROViewPtr m_frame_roview = nullptr;
+
 public:
     SceneView() {}
+
+    void SetLookAt( const glm::vec3& eye, const glm::vec3& center );
+    void SetExtents( const glm::uvec2& extents );
+
+    glm::uvec2 GetExtents() const { return m_extents; }
+
+
+    void SetFOV( float fovXRadians ) { m_fovXRadians = fovXRadians; }
+
+    RHITexture* GetFrameColorTexture() const { return m_rt_frame.get(); }
+    RHITextureROView* GetFrameColorTextureROView() const { return m_frame_roview.get(); }
+    RHITextureRWView* GetFrameColorTextureRWView() const { return m_frame_rwview.get(); }
+
+    glm::mat4x4 CalcViewMatrix() const;
+    glm::mat4x4 CalcProjectionMatrix() const;
+
 };

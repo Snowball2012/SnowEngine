@@ -62,9 +62,6 @@ private:
 	RHISamplerPtr m_texture_sampler = nullptr;
 	RHISamplerPtr m_point_sampler = nullptr;
 
-	RHITexturePtr m_rt_frame = nullptr;
-	RHITextureRWViewPtr m_frame_rwview = nullptr;
-	RHITextureROViewPtr m_frame_roview = nullptr;
 	//RHI
 	// assets
 	MeshAssetPtr m_demo_mesh = nullptr;
@@ -79,6 +76,7 @@ private:
 	World::Entity m_demo_mesh_entity = World::Entity::nullid;
 
 	std::unique_ptr<Scene> m_scene;
+	std::unique_ptr<SceneView> m_scene_view;
 
 	// GUI state
 	std::string m_new_entity_name;
@@ -146,8 +144,6 @@ private:
 	void CreateRTPipeline();
 
 	void CreateFullscreenQuadPipeline();
-
-	void CreateIntermediateBuffers();
 
 	void UpdateScene();
 };
