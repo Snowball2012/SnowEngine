@@ -5,6 +5,11 @@
 #include "Assets.h"
 #include "RHIUtils.h"
 
+SE_LOG_CATEGORY( Renderer );
+
+class Rendergraph;
+class RGTexture;
+
 class SceneMeshInstance
 {
 public:
@@ -44,6 +49,8 @@ private:
 class SceneView
 {
 private:
+    Scene* m_scene = nullptr;
+
     glm::uvec2 m_extents = glm::uvec2( 0, 0 );
     RHITexturePtr m_frame_output = nullptr;
 
@@ -58,13 +65,12 @@ private:
     RHITextureROViewPtr m_frame_roview = nullptr;
 
 public:
-    SceneView() {}
+    SceneView( Scene* scene );
 
     void SetLookAt( const glm::vec3& eye, const glm::vec3& center );
     void SetExtents( const glm::uvec2& extents );
 
-    glm::uvec2 GetExtents() const { return m_extents; }
-
+    glm::uvec2 GetExtent() const { return m_extents; }
 
     void SetFOV( float fovXRadians ) { m_fovXRadians = fovXRadians; }
 
@@ -75,4 +81,58 @@ public:
     glm::mat4x4 CalcViewMatrix() const;
     glm::mat4x4 CalcProjectionMatrix() const;
 
+    Scene& GetScene() const { return *m_scene; }
+};
+
+class ISceneRenderExtension
+{
+public:
+    virtual void PostSetupRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) = 0;
+    virtual void PostCompileRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) = 0;
+};
+
+struct RenderSceneParams
+{
+    SceneView* view = nullptr;
+    Rendergraph* rg = nullptr;
+    ISceneRenderExtension* extension = nullptr; // optional, allows to hook into scene rendering process (add ui passes / blit to swapchain, for example)
+};
+
+class Renderer
+{
+private:
+
+    static constexpr uint32_t NumBufferizedFrames = 3;
+
+    RHIDescriptorSetLayoutPtr m_rt_dsl = nullptr;
+    RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
+    RHIRaytracingPipelinePtr m_rt_pipeline = nullptr;
+
+    std::vector<RHIUploadBufferPtr> m_uniform_buffers;
+    std::vector<RHIUniformBufferViewPtr> m_uniform_buffer_views;
+
+    std::vector<RHIDescriptorSetPtr> m_rt_descsets;
+
+    uint64_t m_frame_idx = 0;
+
+public:
+
+    Renderer();
+
+    void NextFrame();
+
+    // ui_cmd_list is optional
+    bool RenderScene( const RenderSceneParams& parms );
+
+private:
+
+    void CreateDescriptorSetLayout();
+    void CreateUniformBuffers();
+    void CreateDescriptorSets();
+
+    void CreateRTPipeline();
+
+    void UpdateUniformBuffer( const SceneView& scene_view );
+
+    uint32_t GetCurrFrameBufIndex() const;
 };

@@ -107,13 +107,11 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Sandbox\Main.cpp" />
-    <ClCompile Include="..\..\src\Sandbox\RenderResources.cpp" />
     <ClCompile Include="..\..\src\Sandbox\SandboxApp.cpp" />
     <ClCompile Include="..\..\src\Sandbox\stb_image.cpp" />
     <ClCompile Include="..\..\src\Sandbox\StdAfx.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\Sandbox\RenderResources.h" />
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />
     <ClInclude Include="..\..\src\Sandbox\stb_image.h" />
     <ClInclude Include="..\..\src\Sandbox\StdAfx.h" />

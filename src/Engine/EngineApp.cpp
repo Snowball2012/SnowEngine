@@ -4,6 +4,7 @@
 #include "AssetManager.h"
 
 #include "Rendergraph.h"
+#include "Scene.h"
 
 #include <VulkanRHI/VulkanRHI.h>
 #include <D3D12RHI/D3D12RHI.h>
@@ -52,6 +53,8 @@ void EngineApp::Run( int argc, char** argv )
     m_asset_mgr = std::make_unique<AssetManager>();
 
     InitEngineGlobals();
+
+    m_renderer = std::make_unique<Renderer>();
 
     OnInit();
 
@@ -217,6 +220,8 @@ void EngineApp::Cleanup()
     m_render_finished_semaphores.clear();
     m_inflight_fences.clear();
 
+    m_renderer = nullptr;
+
     g_engine.asset_mgr = nullptr;
     m_asset_mgr.reset();
 
@@ -293,6 +298,7 @@ void EngineApp::DrawFrame()
     m_rhi->Present( *m_swapchain, present_info );
 
     m_current_frame = ( m_current_frame + 1 ) % m_max_frames_in_flight;
+    m_renderer->NextFrame();
 }
 
 void EngineApp::InitCoreGlobals()
