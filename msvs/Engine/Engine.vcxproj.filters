@@ -17,6 +17,8 @@
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
+    <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
+    <ClCompile Include="..\..\src\Engine\WorldComponents.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -32,6 +34,8 @@
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
     <ClInclude Include="..\..\src\Engine\Scene.h" />
+    <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
+    <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

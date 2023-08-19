@@ -22,9 +22,6 @@ VulkanGraphicsPSO::VulkanGraphicsPSO( VulkanRHI* rhi, const RHIGraphicsPipelineI
     m_pipeline_info.pStages = m_stages;
     m_pipeline_info.stageCount = i;
 
-    m_pipeline_info.stageCount = 2;
-    m_pipeline_info.pStages = m_stages;
-
     InitInputAssembly( info );
     InitDynamicState( info );
     InitRasterizer( info );

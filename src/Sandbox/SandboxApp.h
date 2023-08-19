@@ -2,35 +2,15 @@
 
 #include "StdAfx.h"
 
-#include <ecs/EntityContainer.h>
+#include "Editor.h"
 
 #include <Engine/EngineApp.h>
 #include <Engine/Assets.h>
 #include <Engine/RHIUtils.h>
 #include <Engine/Scene.h>
+#include <Engine/LevelObjects.h>
 
 SE_LOG_CATEGORY( Sandbox );
-
-struct NameComponent
-{
-	std::string name;
-};
-
-struct TransformComponent
-{
-	Transform tf;
-};
-
-struct MeshInstanceComponent
-{
-	SceneMeshInstanceID scene_mesh_instance = SceneMeshInstanceID::nullid;
-};
-
-using World = EntityContainer<
-	NameComponent,
-	TransformComponent,
-	MeshInstanceComponent
->;
 
 class SandboxApp : public EngineApp
 {
@@ -51,7 +31,6 @@ private:
 	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;
 
 	std::unique_ptr<World> m_world;
-	World::Entity m_demo_mesh_entity = World::Entity::nullid;
 
 	std::unique_ptr<Scene> m_scene;
 	std::unique_ptr<SceneView> m_scene_view;
@@ -61,6 +40,10 @@ private:
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 	float m_fov_degrees = 45.0f;
+
+	std::unique_ptr<LevelObject> m_demo_object;
+
+	std::unique_ptr<Editor> m_editor;
 
 public:
 	SandboxApp();

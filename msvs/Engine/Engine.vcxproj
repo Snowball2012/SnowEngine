@@ -14,6 +14,7 @@
     <ClCompile Include="..\..\src\Engine\AssetManager.cpp" />
     <ClCompile Include="..\..\src\Engine\Assets.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
+    <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
@@ -21,6 +22,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\src\Engine\WorldComponents.cpp" />
     <ClCompile Include="..\..\src\ImguiBackend\ImguiBackend.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -38,10 +40,12 @@
     <ClInclude Include="..\..\src\Engine\AssetManager.h" />
     <ClInclude Include="..\..\src\Engine\Assets.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
+    <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\Scene.h" />
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
+    <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
     <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h" />
     <ClInclude Include="..\..\src\ImguiBackend\imgui_impl_sdl2.h" />
   </ItemGroup>

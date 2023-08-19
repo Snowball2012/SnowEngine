@@ -35,7 +35,7 @@ private:
 
 protected:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
-	static const size_t m_max_frames_in_flight = 2;
+	static const uint32_t m_max_frames_in_flight = 2;
 	RHIPtr m_rhi;
 	CommandLineArguments m_cmd_line_args;
 

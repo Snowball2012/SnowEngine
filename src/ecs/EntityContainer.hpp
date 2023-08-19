@@ -34,7 +34,9 @@ void EntityContainer<Components...>::DestroyEntity( Entity entity )
 
         CursorPlaceholder ph_cursor;
         memcpy( &ph_cursor, &cursor, sizeof( cursor ) );
-        m_components_virtual[component_id]->erase( ph_cursor );
+
+        if ( m_components_virtual[component_id] )
+            m_components_virtual[component_id]->erase( ph_cursor );
     }
 
     m_entities.erase( entity );

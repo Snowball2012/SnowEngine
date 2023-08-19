@@ -5,10 +5,12 @@
     <ClCompile Include="..\..\src\Sandbox\SandboxApp.cpp" />
     <ClCompile Include="..\..\src\Sandbox\StdAfx.cpp" />
     <ClCompile Include="..\..\src\Sandbox\stb_image.cpp" />
+    <ClCompile Include="..\..\src\Sandbox\Editor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />
     <ClInclude Include="..\..\src\Sandbox\StdAfx.h" />
     <ClInclude Include="..\..\src\Sandbox\stb_image.h" />
+    <ClInclude Include="..\..\src\Sandbox\Editor.h" />
   </ItemGroup>
 </Project>

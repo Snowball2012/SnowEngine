@@ -28,6 +28,17 @@ SceneMeshInstanceID Scene::AddMeshInstanceFromAsset( MeshAssetPtr base_asset )
     return new_mesh_id;
 }
 
+void Scene::RemoveMeshInstance( SceneMeshInstanceID id )
+{
+    SceneMeshInstance* instance = m_mesh_instances.try_get( id );
+    if ( !instance )
+        return;
+
+    m_tlas->Instances().erase( instance->m_tlas_instance );
+
+    m_mesh_instances.erase( id );
+}
+
 void Scene::Synchronize()
 {
     UpdateTLASTransforms();

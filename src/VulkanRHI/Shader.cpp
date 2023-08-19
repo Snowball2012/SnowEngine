@@ -19,7 +19,7 @@ Shader::Shader(VulkanRHI* rhi, std::wstring filename, RHI::ShaderFrequency frequ
     , m_defines(std::move(defines))
     , m_rhi(rhi)
 {
-    if ( !bytecode )
+    if ( !m_bytecode_blob )
     {
         VERIFY( Compile( nullptr ) );
     }

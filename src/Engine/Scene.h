@@ -33,7 +33,7 @@ public:
     Scene();
 
     SceneMeshInstanceID AddMeshInstanceFromAsset( MeshAssetPtr base_asset );
-    //void RemoveMeshInstance( SceneMeshInstanceID id );
+    void RemoveMeshInstance( SceneMeshInstanceID id );
     SceneMeshInstance* GetMeshInstance( SceneMeshInstanceID id ) { return m_mesh_instances.try_get( id ); };
     const SceneMeshInstance* GetMeshInstance( SceneMeshInstanceID id ) const { return m_mesh_instances.try_get( id ); }
 

@@ -22,8 +22,8 @@ inline glm::mat4x4 ToMatrix4x4( const Transform& tf )
 {
 	glm::mat4x4 m;
 	m = glm::scale( glm::identity<glm::mat4>(), tf.scale );
-	m = m * glm::toMat4( tf.orientation );
-	m = glm::translate( m, tf.translation );
+	m = glm::toMat4( tf.orientation ) * m;
+	m = glm::translate( glm::identity<glm::mat4>(), tf.translation ) * m;
 
 	return m;
 }

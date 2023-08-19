@@ -66,11 +66,15 @@ void SandboxApp::OnInit()
 
     m_world = std::make_unique<World>();
 
-    m_demo_mesh_entity = m_world->CreateEntity();
-    m_world->AddComponent<NameComponent>( m_demo_mesh_entity ).name = "DemoMesh";
-    m_world->AddComponent<TransformComponent>( m_demo_mesh_entity );
-    auto& demo_mesh_component = m_world->AddComponent<MeshInstanceComponent>( m_demo_mesh_entity );
-    demo_mesh_component.scene_mesh_instance = m_scene->AddMeshInstanceFromAsset( m_demo_mesh );
+    m_demo_object = std::make_unique<LevelObject>( m_world.get() );
+    m_demo_object->SetName( "DemoMesh", true );
+    m_demo_object->AddTrait( std::make_unique<TransformTrait>(), true );
+    std::unique_ptr<MeshInstanceTrait> mesh_trait = std::make_unique<MeshInstanceTrait>();
+    mesh_trait->SetAsset( m_demo_mesh );
+    m_demo_object->AddTrait( std::move( mesh_trait ), true );
+    m_demo_object->RegenerateEntities();
+
+    m_editor = std::make_unique<Editor>();
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -78,6 +82,10 @@ void SandboxApp::OnInit()
 void SandboxApp::OnCleanup()
 {
     SE_LOG_INFO( Sandbox, "Sandbox shutdown started" );
+
+    m_editor = nullptr;
+
+    m_demo_object = nullptr;
 
     m_world = nullptr;
 
@@ -286,12 +294,16 @@ void SandboxApp::OnUpdate()
 {
     UpdateGui();
 
+    // Update world
+    WorldUtils::DestroyMarkedEntities( *m_world, m_scene.get() );
+    WorldUtils::SetupEntities( *m_world, m_scene.get() );
+
     static auto start_time = std::chrono::high_resolution_clock::now();
 
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
-    auto* demo_tf = m_world->GetComponent<TransformComponent>( m_demo_mesh_entity );
+    auto* demo_tf = m_world->GetComponent<TransformComponent>( m_demo_object->GetBaseEntity() );
     if ( !SE_ENSURE( demo_tf ) )
         return;
 
@@ -369,6 +381,11 @@ void SandboxApp::UpdateGui()
     ImGui::Begin( "Demo" );
     {
         ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
+
+        if ( m_demo_object->OnUpdateGUI() )
+        {
+            m_demo_object->RegenerateEntities();
+        }
     }
     ImGui::End();
 }
