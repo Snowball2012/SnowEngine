@@ -30,13 +30,12 @@ void EntityContainer<Components...>::DestroyEntity( Entity entity )
 
     for ( const auto& [component_id, cursor] : m_entities[entity] )
     {
-        assert( m_components_virtual[component_id] );
+        assert( m_components_virtual.find( component_id ) != m_components_virtual.end() );
 
         CursorPlaceholder ph_cursor;
         memcpy( &ph_cursor, &cursor, sizeof( cursor ) );
 
-        if ( m_components_virtual[component_id] )
-            m_components_virtual[component_id]->erase( ph_cursor );
+        m_components_virtual[component_id]->erase( ph_cursor );
     }
 
     m_entities.erase( entity );
@@ -56,7 +55,9 @@ Component& EntityContainer<Components...>::AddComponent( Entity entity, Args&&..
 
     CursorPlaceholder ph;
     memcpy( &ph, &new_cursor, sizeof( ph ) );
-    m_entities[entity][typeid(Component).hash_code()] = ph;
+    size_t hash_code = typeid( Component ).hash_code();
+
+    m_entities[entity][hash_code] = ph;
 
     return new_cursor.node->values()[new_cursor.position];
 }
@@ -276,5 +277,5 @@ template<typename E, typename T>
 void details::ECSBTreeCallback<EC>::operator()(
     const E& entity, const T& new_cursor ) const
 {
-    memcpy( &container.m_entities[entity][typeid(T).hash_code()], &new_cursor, sizeof( new_cursor ) );
+    memcpy( &container.m_entities[entity][typeid( typename T::value_t ).hash_code()], &new_cursor, sizeof( new_cursor ) );
 }

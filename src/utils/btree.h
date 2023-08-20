@@ -9,6 +9,8 @@ struct btree_map_node;
 template<typename Key, typename T, uint32_t F>
 struct btree_map_cursor
 {
+    using value_t = T;
+
     btree_map_node<Key, T, F>* node;
     uint32_t position;
 

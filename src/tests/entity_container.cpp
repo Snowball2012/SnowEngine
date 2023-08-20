@@ -89,6 +89,22 @@ BOOST_AUTO_TEST_CASE( remove_entity )
     BOOST_TEST( world.GetEntityCount() == 0 );
 }
 
+BOOST_AUTO_TEST_CASE( remove_multiple_entities )
+{
+    EntityContainer<Position, Velocity> world;
+    using Entity = decltype( world )::Entity;
+
+    Entity o2 = world.CreateEntity();
+    Entity o3 = world.CreateEntity();
+
+    world.AddComponent<Position>( o2, Position{ DirectX::XMFLOAT3( 1, 2, 3 ) } );
+    world.AddComponent<Position>( o3, Position{ DirectX::XMFLOAT3( 1, 2, 3 ) } );
+
+    world.DestroyEntity( o2 );
+    world.DestroyEntity( o3 );
+    BOOST_TEST( world.GetEntityCount() == 0 );
+}
+
 BOOST_AUTO_TEST_CASE( iterate_over_view )
 {
     EntityContainer<Position, Velocity> world;
