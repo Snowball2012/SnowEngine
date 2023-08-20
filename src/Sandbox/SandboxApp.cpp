@@ -382,10 +382,13 @@ void SandboxApp::UpdateGui()
     {
         ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
 
-        if ( m_demo_object->OnUpdateGUI() )
+        if ( ImGui::CollapsingHeader( m_demo_object->GetName() ) )
         {
-            m_demo_object->RegenerateEntities();
-        }
+            if ( m_demo_object->OnUpdateGUI() )
+            {
+                m_demo_object->RegenerateEntities();
+            }
+        }        
     }
     ImGui::End();
 }

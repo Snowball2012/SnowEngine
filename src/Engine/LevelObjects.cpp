@@ -56,11 +56,11 @@ bool LevelObject::OnUpdateGUI()
     for ( const auto& trait : m_traits )
     {
         bool trait_changed = false;
-        if ( ImGui::BeginChild( trait->GetTraitPrettyName() ) )
+        if ( ImGui::TreeNode( trait->GetTraitPrettyName() ) )
         {
             trait->OnUpdateGUI( trait_changed );
+            ImGui::TreePop();
         }
-        ImGui::EndChild();
 
         if ( trait_changed )
         {
@@ -133,11 +133,36 @@ bool TransformTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelobj 
 
 void TransformTrait::OnUpdateGUI( bool& trait_changed )
 {
-    float new_x_value = m_tf.translation.x;
-    trait_changed = ImGui::SliderFloat( "Translate X", &new_x_value, -1, 1 );
+    trait_changed = false;
+
+    Transform tf = m_tf;
+    ImGui::Checkbox( "Drag", &m_drag_translate );
+    ImGui::SameLine();
+    if ( m_drag_translate )
+    {
+        trait_changed |= ImGui::DragFloat3( "Translate", &tf.translation.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.translation ) ) );
+    }
+    else
+    {
+        trait_changed |= ImGui::InputFloat3( "Translate", &tf.translation.x );
+    }
+
+
+    ImGui::Checkbox( "Drag##2", &m_drag_scale );
+    ImGui::SameLine();
+    if ( m_drag_scale )
+    {
+        trait_changed |= ImGui::DragFloat3( "Scale", &tf.scale.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.scale ) ) );
+    }
+    else
+    {
+        trait_changed |= ImGui::InputFloat3( "Scale", &tf.scale.x );
+    }
 
     if ( trait_changed )
-        m_tf.translation.x = new_x_value;
+    {
+        m_tf = tf;
+    }
 }
 
 
