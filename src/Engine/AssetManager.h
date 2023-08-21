@@ -59,6 +59,8 @@ public:
 
 	AssetStatus GetStatus() const { return m_status; }
 
+	const char* GetPath() const { return m_id.GetPath(); }
+
 protected:
 	Asset( const AssetId& id, AssetManager& mgr )
 		: m_mgr( &mgr ), m_id( id )
@@ -113,3 +115,12 @@ private:
 };
 
 #define IMPLEMENT_ASSET_GENERATOR private: friend class AssetManager
+
+
+// helper
+
+template < typename AssetClass >
+boost::intrusive_ptr<AssetClass> LoadAsset( const char* name )
+{
+	return boost::dynamic_pointer_cast< AssetClass >( GetAssetManager().Load( AssetId( name ) ) );
+}

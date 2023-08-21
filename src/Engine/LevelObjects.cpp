@@ -2,7 +2,10 @@
 
 #include "LevelObjects.h"
 
+#include "Assets.h"
+
 #include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
 
 // Level object
 
@@ -174,12 +177,48 @@ bool MeshInstanceTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelo
 
     component.asset = m_mesh;
 
+    if ( m_mesh != nullptr )
+    {
+        m_gui_path = m_mesh->GetPath();
+    }
+
     return true;
 }
 
 void MeshInstanceTrait::OnUpdateGUI( bool& trait_changed )
 {
     trait_changed = false;
+
+    ImGui::InputText( "Asset", &m_gui_path );
+    if ( ImGui::IsItemDeactivatedAfterEdit() )
+    {
+        if ( m_gui_path.empty() )
+        {
+            if ( m_mesh != nullptr )
+            {
+                trait_changed = true;
+            }
+        }
+        else
+        {
+            MeshAssetPtr new_mesh = LoadAsset<MeshAsset>( m_gui_path.c_str() );
+            if ( new_mesh.get() != m_mesh.get() )
+            {
+                m_mesh = new_mesh;
+                trait_changed = true;
+            }
+
+            if ( new_mesh == nullptr )
+            {
+                SE_LOG_ERROR( Engine, "No mesh asset was found at path %s", m_gui_path.c_str() );
+            }
+        }
+    }
+
+    if ( trait_changed )
+    {
+        SE_LOG_INFO( Temp, "Mesh changed. New mesh path \"%s\"", m_mesh ? m_mesh->GetPath() : "null" );
+    }
 }
 
 void MeshInstanceTrait::SetAsset( MeshAssetPtr mesh )

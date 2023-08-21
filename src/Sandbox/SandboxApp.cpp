@@ -47,7 +47,7 @@ void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
-    m_demo_mesh = boost::dynamic_pointer_cast< MeshAsset >( m_asset_mgr->Load( AssetId( m_demo_mesh_asset_path.c_str() ) ) );
+    m_demo_mesh = LoadAsset<MeshAsset>( m_demo_mesh_asset_path.c_str() );
     if ( !( m_demo_mesh && m_demo_mesh->GetStatus() == AssetStatus::Ready ) )
     {
         SE_LOG_FATAL_ERROR( Sandbox, "Could not load demo asset an path %s", m_demo_mesh_asset_path.c_str() );

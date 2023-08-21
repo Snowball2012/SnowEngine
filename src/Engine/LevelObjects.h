@@ -114,6 +114,8 @@ class MeshInstanceTrait : public LevelObjectTrait
 private:
     MeshAssetPtr m_mesh = nullptr;
 
+    mutable std::string m_gui_path;
+
 public:
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
