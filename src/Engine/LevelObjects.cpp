@@ -59,7 +59,7 @@ bool LevelObject::OnUpdateGUI()
     for ( const auto& trait : m_traits )
     {
         bool trait_changed = false;
-        if ( ImGui::TreeNode( trait->GetTraitPrettyName() ) )
+        if ( ImGui::TreeNode( trait.get(), "%s", trait->GetTraitPrettyName()) )
         {
             trait->OnUpdateGUI( trait_changed );
             ImGui::TreePop();
@@ -141,6 +141,7 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
     Transform tf = m_tf;
     ImGui::Checkbox( "Drag", &m_drag_translate );
     ImGui::SameLine();
+
     if ( m_drag_translate )
     {
         trait_changed |= ImGui::DragFloat3( "Translate", &tf.translation.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.translation ) ) );

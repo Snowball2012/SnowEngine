@@ -37,7 +37,11 @@ private:
     std::vector<std::unique_ptr<LevelObjectTrait>> m_traits;
 
 public:
-    LevelObject( World* world );
+    explicit LevelObject( World* world );
+    
+    LevelObject( LevelObject&& ) = default;
+    LevelObject( const LevelObject& ) = delete;
+
     ~LevelObject();
 
     // Entities must be regenerated from scratch after this. You can defer regeneration, but then you must do it manually or the object won't be updated

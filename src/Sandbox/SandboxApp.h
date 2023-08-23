@@ -41,7 +41,9 @@ private:
 	bool m_show_world_outliner = false;
 	float m_fov_degrees = 45.0f;
 
-	std::unique_ptr<LevelObject> m_demo_object;
+	LevelObject* m_demo_object = nullptr;
+
+	std::vector<std::unique_ptr<LevelObject>> m_level_objects;
 
 	std::unique_ptr<Editor> m_editor;
 

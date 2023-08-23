@@ -66,7 +66,7 @@ void SandboxApp::OnInit()
 
     m_world = std::make_unique<World>();
 
-    m_demo_object = std::make_unique<LevelObject>( m_world.get() );
+    m_demo_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) ).get();
     m_demo_object->SetName( "DemoMesh", true );
     m_demo_object->AddTrait( std::make_unique<TransformTrait>(), true );
     std::unique_ptr<MeshInstanceTrait> mesh_trait = std::make_unique<MeshInstanceTrait>();
@@ -85,6 +85,7 @@ void SandboxApp::OnCleanup()
 
     m_editor = nullptr;
 
+    m_level_objects.clear();
     m_demo_object = nullptr;
 
     m_world = nullptr;
@@ -382,13 +383,57 @@ void SandboxApp::UpdateGui()
     {
         ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
 
-        if ( ImGui::CollapsingHeader( m_demo_object->GetName() ) )
+        // Level outliner
         {
-            if ( m_demo_object->OnUpdateGUI() )
+            ImGui::Text( "Total: %llu level objects", m_level_objects.size() );
+            bool create_object = ImGui::Button( "Add object" );
+            ImGui::SameLine();
+            ImGui::InputText( "Name", &m_new_entity_name );
+
+            if ( create_object )
             {
+                auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
+                new_object->SetName( m_new_entity_name.c_str(), true );
                 m_demo_object->RegenerateEntities();
             }
+
+            for ( auto& level_object : m_level_objects )
+            {
+                ImGui::PushID( level_object.get() );
+                if ( ImGui::CollapsingHeader( level_object->GetName() ) )
+                {
+                    bool create_trait = ImGui::Button( "Add" );
+                    ImGui::SameLine();
+                    static int item_current = 0;
+                    ImGui::Combo( "Trait", &item_current, "Transform\0MeshInstance\0" );
+
+                    if ( create_trait )
+                    {
+                        switch ( item_current )
+                        {
+                            case 0:
+                            {
+                                level_object->AddTrait( std::make_unique<TransformTrait>(), true );
+                            }
+                            break;
+                            case 1:
+                            {
+                                level_object->AddTrait( std::make_unique<MeshInstanceTrait>(), true );
+                            }
+                            break;
+                        }
+                        level_object->RegenerateEntities();
+                    }
+
+                    if ( level_object->OnUpdateGUI() )
+                    {
+                        level_object->RegenerateEntities();
+                    }
+                }
+                ImGui::PopID();
+            }
         }        
+             
     }
     ImGui::End();
 }
