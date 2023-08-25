@@ -2,6 +2,10 @@
 
 #include <RHI/RHI.h>
 
+#include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
+#include <ImGuiFileDialog/ImGuiFileDialog.h>
+
 struct ImguiProcessEventResult
 {
 	bool wantsCaptureKeyboard = false;

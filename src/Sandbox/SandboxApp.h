@@ -9,6 +9,7 @@
 #include <Engine/RHIUtils.h>
 #include <Engine/Scene.h>
 #include <Engine/LevelObjects.h>
+#include <ImguiBackend/ImguiBackend.h>
 
 SE_LOG_CATEGORY( Sandbox );
 

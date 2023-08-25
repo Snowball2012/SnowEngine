@@ -2,12 +2,7 @@
 
 #include "SandboxApp.h"
 
-#include <Engine/Assets.h>
-#include <Engine/RHIUtils.h>
 #include <Engine/Rendergraph.h>
-
-#include <imgui/imgui.h>
-#include <imgui/misc/cpp/imgui_stdlib.h>
 
 CorePaths g_core_paths;
 Logger* g_log;
@@ -340,6 +335,22 @@ void SandboxApp::UpdateGui()
 {
     if ( ImGui::BeginMainMenuBar() )
     {
+        if ( ImGui::BeginMenu( "Level" ) )
+        {
+            if ( ImGui::MenuItem( "New" ) )
+                NOTIMPL;
+
+            if ( ImGui::MenuItem( "Open" ) )
+                NOTIMPL;
+
+            if ( ImGui::MenuItem( "Save" ) )
+            {
+                std::string default_path = g_core_paths.engine_content + "/Levels/";
+                ImGuiFileDialog::Instance()->OpenDialog( "LevelSaveDlg", "Save Level As", "", default_path.c_str() );
+            }
+
+            ImGui::EndMenu();
+        }
         if ( ImGui::MenuItem( "WorldOutliner" ) )
             m_show_world_outliner = true;
 
@@ -350,6 +361,19 @@ void SandboxApp::UpdateGui()
             m_rhi->ReloadAllShaders();
 
         ImGui::EndMainMenuBar();
+    }
+
+    if ( ImGuiFileDialog::Instance()->Display( "LevelSaveDlg" ) )
+    {
+        if ( ImGuiFileDialog::Instance()->IsOk() )
+        {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+
+            SE_LOG_INFO( Temp, "Save level %s to %s", filePathName.c_str(), filePath.c_str() );
+        }
+
+        ImGuiFileDialog::Instance()->Close();
     }
 
     if ( m_show_imgui_demo )
