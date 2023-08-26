@@ -48,8 +48,5 @@
     <ClCompile Include="..\src\tests\intersections.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\tests\hlsl_tester\pso_cache.cpp">
-      <Filter>Source Files\hlsl_tester</Filter>
-    </ClCompile>
   </ItemGroup>
 </Project>

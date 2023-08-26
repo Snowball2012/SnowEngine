@@ -1,20 +1,7 @@
 
-[[vk::binding( 0 )]]
-RaytracingAccelerationStructure scene_tlas;
+#include "SceneViewParams.hlsli"
 
-[[vk::binding( 1 )]]
-RWTexture2D<float4> output;
-
-struct Matrices
-{
-    float4x4 model;
-    float4x4 view;
-    float4x4 proj;
-    float4x4 view_proj_inv;
-    uint2 viewport_size;
-};
-
-[[vk::binding( 2 )]] ConstantBuffer<Matrices> obj_data : register( b0 );
+[[vk::binding( 0, 0 )]] RWTexture2D<float4> output;
 
 float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
 {
@@ -37,9 +24,9 @@ void VisibilityRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
 
-    float3 ray_origin = PixelPositionToWorld( pixel_id, 0, obj_data.viewport_size, obj_data.view_proj_inv );
+    float3 ray_origin = PixelPositionToWorld( pixel_id, 0, view_data.viewport_size_px, view_data.view_proj_inv_mat );
 
-    float3 ray_destination = PixelPositionToWorld( pixel_id, 1.0f, obj_data.viewport_size, obj_data.view_proj_inv );
+    float3 ray_destination = PixelPositionToWorld( pixel_id, 1.0f, view_data.viewport_size_px, view_data.view_proj_inv_mat );
 
     float3 ray_direction = ray_destination - ray_origin;
 

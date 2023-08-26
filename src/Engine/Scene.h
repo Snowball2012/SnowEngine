@@ -108,10 +108,14 @@ private:
     RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
     RHIRaytracingPipelinePtr m_rt_pipeline = nullptr;
 
-    std::vector<RHIUploadBufferPtr> m_uniform_buffers;
-    std::vector<RHIUniformBufferViewPtr> m_uniform_buffer_views;
+    RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
+
+    std::vector<RHIUploadBufferPtr> m_view_buffers;
+    std::vector<RHIUniformBufferViewPtr> m_view_buffer_views;
 
     std::vector<RHIDescriptorSetPtr> m_rt_descsets;
+
+    std::vector<RHIDescriptorSetPtr> m_view_descsets;
 
     uint64_t m_frame_idx = 0;
 
@@ -127,12 +131,16 @@ public:
 private:
 
     void CreateDescriptorSetLayout();
-    void CreateUniformBuffers();
+    void CreateSceneViewParamsBuffers();
     void CreateDescriptorSets();
 
     void CreateRTPipeline();
 
-    void UpdateUniformBuffer( const SceneView& scene_view );
+    void UpdateSceneViewParams( const SceneView& scene_view );
+
+    RHICommandList* CreateInitializedCommandList( RHI::QueueType queue_type ) const;
+
+    void SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso ) const;
 
     uint32_t GetCurrFrameBufIndex() const;
 };

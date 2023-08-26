@@ -109,14 +109,14 @@ void VulkanCommandList::TraceRays( glm::uvec3 threads_count )
         threads_count.x, threads_count.y, threads_count.z );
 }
 
-void VulkanCommandList::SetPSO( RHIGraphicsPipeline& pso )
+void VulkanCommandList::SetPSO( const RHIGraphicsPipeline& pso )
 {
     vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, RHIImpl( pso ).GetVkPipeline() );
     m_currently_bound_graphics_pso = &RHIImpl( pso );
     m_currently_bound_rt_pso = nullptr;
 }
 
-void VulkanCommandList::SetPSO( RHIRaytracingPipeline& pso )
+void VulkanCommandList::SetPSO( const RHIRaytracingPipeline& pso )
 {
     vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RHIImpl( pso ).GetVkPipeline() );
     m_currently_bound_rt_pso = &RHIImpl( pso );

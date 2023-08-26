@@ -25,13 +25,13 @@ struct RHIImplClass
 };
 
 template<typename T>
-RHIImplClass<T>::Type& RHIImpl(T& obj) { return static_cast<RHIImplClass<T>::Type&>(obj); }
+typename RHIImplClass<T>::Type& RHIImpl(T& obj) { return static_cast<RHIImplClass<T>::Type&>(obj); }
 
 template<typename T>
 const typename RHIImplClass<T>::Type& RHIImpl(const T& obj) { return static_cast<const RHIImplClass<T>::Type&>(obj); }
 
 template<typename T>
-RHIImplClass<T>::Type* RHIImpl(T* obj) { return static_cast<RHIImplClass<T>::Type*>(obj); }
+typename RHIImplClass<T>::Type* RHIImpl(T* obj) { return static_cast<RHIImplClass<T>::Type*>(obj); }
 
 template<typename T>
 const typename RHIImplClass<T>::Type* RHIImpl( const T* obj ) { return static_cast<const RHIImplClass<T>::Type*>( obj ); }

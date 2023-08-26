@@ -23,4 +23,9 @@
       <Filter>Source Files</Filter>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\EngineContent\Shaders\SceneViewParams.hlsli">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

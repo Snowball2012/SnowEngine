@@ -12,6 +12,8 @@ class LevelObject;
 class LevelObjectTrait
 {
 public:
+    virtual ~LevelObjectTrait() {}
+
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const = 0;
 
     // Called when user can see and edit trait props

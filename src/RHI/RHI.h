@@ -567,8 +567,8 @@ public:
 
     virtual void TraceRays( glm::uvec3 threads_count ) { NOTIMPL; }
 
-    virtual void SetPSO( RHIGraphicsPipeline& pso ) { NOTIMPL; }
-    virtual void SetPSO( RHIRaytracingPipeline& pso ) { NOTIMPL; }
+    virtual void SetPSO( const RHIGraphicsPipeline& pso ) { NOTIMPL; }
+    virtual void SetPSO( const RHIRaytracingPipeline& pso ) { NOTIMPL; }
 
     virtual void BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& set ) { NOTIMPL; }
 

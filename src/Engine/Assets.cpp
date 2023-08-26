@@ -156,7 +156,7 @@ bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::
     index_buf_info.size = sizeof( indices[0] ) * indices.size();
     index_buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::AccelerationStructureInput;
     m_index_buffer = RHIUtils::CreateInitializedGPUBuffer( index_buf_info, indices.data(), index_buf_info.size );
-    m_indices_num = indices.size();
+    m_indices_num = uint32_t( indices.size() );
 
     RHIASGeometryInfo blas_geom = {};
     blas_geom.type = RHIASGeometryType::Triangles;

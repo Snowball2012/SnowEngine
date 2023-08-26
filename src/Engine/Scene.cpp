@@ -116,7 +116,7 @@ Renderer::Renderer()
         SE_LOG_FATAL_ERROR( Renderer, "Raytracing is not supported on the GPU" );
     }
 
-    CreateUniformBuffers();
+    CreateSceneViewParamsBuffers();
     CreateDescriptorSetLayout();
     CreateDescriptorSets();
     CreateRTPipeline();
@@ -129,31 +129,31 @@ void Renderer::NextFrame()
 
 namespace
 {
-    struct Matrices
+    // must be in sync with SceneViewParams.hlsli
+    struct GPUSceneViewParams
     {
-        glm::mat4 model;
-        glm::mat4 view;
-        glm::mat4 proj;
-        glm::mat4 view_proj_inv;
-        glm::uvec2 viewport_size;
+        glm::mat4 view_mat;
+        glm::mat4 proj_mat;
+        glm::mat4 view_proj_inv_mat;
+        glm::uvec2 viewport_size_px;
     };
 }
 
-void Renderer::CreateUniformBuffers()
+void Renderer::CreateSceneViewParamsBuffers()
 {
-    m_uniform_buffers.resize( NumBufferizedFrames );
-    m_uniform_buffer_views.resize( NumBufferizedFrames );
+    m_view_buffers.resize( NumBufferizedFrames );
+    m_view_buffer_views.resize( NumBufferizedFrames );
 
     RHI::BufferInfo uniform_info = {};
-    uniform_info.size = sizeof( Matrices );
+    uniform_info.size = sizeof( GPUSceneViewParams );
     uniform_info.usage = RHIBufferUsageFlags::UniformBuffer;
 
     for ( size_t i = 0; i < NumBufferizedFrames; ++i )
     {
-        m_uniform_buffers[i] = GetRHI().CreateUploadBuffer( uniform_info );
+        m_view_buffers[i] = GetRHI().CreateUploadBuffer( uniform_info );
         RHI::UniformBufferViewInfo view_info = {};
-        view_info.buffer = m_uniform_buffers[i]->GetBuffer();
-        m_uniform_buffer_views[i] = GetRHI().CreateUniformBufferView( view_info );
+        view_info.buffer = m_view_buffers[i]->GetBuffer();
+        m_view_buffer_views[i] = GetRHI().CreateUniformBufferView( view_info );
     }
 }
 
@@ -163,8 +163,12 @@ void Renderer::CreateDescriptorSets()
     for ( size_t i = 0; i < NumBufferizedFrames; ++i )
     {
         m_rt_descsets[i] = GetRHI().CreateDescriptorSet( *m_rt_dsl );
-        m_rt_descsets[i]->BindUniformBufferView( 2, 0, *m_uniform_buffer_views[i] );
-        m_rt_descsets[i]->FlushBinds(); // optional, will be flushed anyway on cmdlist.BindDescriptorSet
+    }
+
+    m_view_descsets.resize( NumBufferizedFrames );
+    for ( size_t i = 0; i < NumBufferizedFrames; ++i )
+    {
+        m_view_descsets[i] = GetRHI().CreateDescriptorSet( *m_view_dsl );
     }
 }
 
@@ -197,56 +201,87 @@ void Renderer::CreateRTPipeline()
 
 void Renderer::CreateDescriptorSetLayout()
 {
-    RHI::DescriptorViewRange ranges[3] = {};
-    ranges[0].type = RHIShaderBindingType::AccelerationStructure;
-    ranges[0].count = 1;
-    ranges[0].stages = RHIShaderStageFlags::RaygenShader;
+    {
+        RHI::DescriptorViewRange ranges[1] = {};
+        ranges[0].type = RHIShaderBindingType::TextureRW;
+        ranges[0].count = 1;
+        ranges[0].stages = RHIShaderStageFlags::RaygenShader;
 
-    ranges[1].type = RHIShaderBindingType::TextureRW;
-    ranges[1].count = 1;
-    ranges[1].stages = RHIShaderStageFlags::RaygenShader;
+        RHI::DescriptorSetLayoutInfo binding_table = {};
+        binding_table.ranges = ranges;
+        binding_table.range_count = std::size( ranges );
 
-    ranges[2].type = RHIShaderBindingType::UniformBuffer;
-    ranges[2].count = 1;
-    ranges[2].stages = RHIShaderStageFlags::RaygenShader;
+        m_rt_dsl = GetRHI().CreateDescriptorSetLayout( binding_table );
+    }
 
-    RHI::DescriptorSetLayoutInfo binding_table = {};
-    binding_table.ranges = ranges;
-    binding_table.range_count = std::size( ranges );
+    {
+        RHI::DescriptorViewRange ranges[2] = {};
+        ranges[0].type = RHIShaderBindingType::AccelerationStructure;
+        ranges[0].count = 1;
+        ranges[0].stages = RHIShaderStageFlags::AllBits;
 
-    m_rt_dsl = GetRHI().CreateDescriptorSetLayout( binding_table );
+        ranges[1].type = RHIShaderBindingType::UniformBuffer;
+        ranges[1].count = 1;
+        ranges[1].stages = RHIShaderStageFlags::AllBits;
+
+        RHI::DescriptorSetLayoutInfo binding_table = {};
+        binding_table.ranges = ranges;
+        binding_table.range_count = std::size( ranges );
+
+        m_view_dsl = GetRHI().CreateDescriptorSetLayout( binding_table );
+    }
 
     RHI::ShaderBindingLayoutInfo rt_layout_info = {};
 
-    RHIDescriptorSetLayout* rt_dsls[1] = { m_rt_dsl.get() };
+    RHIDescriptorSetLayout* rt_dsls[2] = { m_rt_dsl.get(), m_view_dsl.get() };
     rt_layout_info.tables = rt_dsls;
     rt_layout_info.table_count = std::size( rt_dsls );
 
     m_rt_layout = GetRHI().CreateShaderBindingLayout( rt_layout_info );
 }
 
-void Renderer::UpdateUniformBuffer( const SceneView& scene_view )
+void Renderer::UpdateSceneViewParams( const SceneView& scene_view )
 {
-    Matrices matrices = {};
+    // Fill uniform buffer
+    GPUSceneViewParams svp = {};
 
-    matrices.view = scene_view.CalcViewMatrix();
+    svp.view_mat = scene_view.CalcViewMatrix();
+    svp.proj_mat = scene_view.CalcProjectionMatrix();
+    svp.viewport_size_px = scene_view.GetExtent();
 
-    matrices.proj = scene_view.CalcProjectionMatrix();
+    glm::mat4x4 view_proj = svp.proj_mat * svp.view_mat;
+    svp.view_proj_inv_mat = glm::inverse( view_proj );
 
-    matrices.viewport_size = scene_view.GetExtent();
+    svp.proj_mat[1][1] *= -1; // ogl -> vulkan y axis
 
-    glm::mat4x4 view_proj = matrices.proj * matrices.view;
+    m_view_buffers[GetCurrFrameBufIndex()]->WriteBytes( &svp, sizeof( GPUSceneViewParams ) );
 
-    matrices.view_proj_inv = glm::inverse( view_proj );
+    // Update descriptor set
+    RHIDescriptorSetPtr curr_view_descset = m_view_descsets[GetCurrFrameBufIndex()];
+    curr_view_descset->BindAccelerationStructure( 0, 0, scene_view.GetScene().GetTLAS().GetRHIAS() );
+    curr_view_descset->BindUniformBufferView( 1, 0, *m_view_buffer_views[GetCurrFrameBufIndex()] );
 
-    matrices.proj[1][1] *= -1; // ogl -> vulkan y axis
-
-    m_uniform_buffers[GetCurrFrameBufIndex()]->WriteBytes( &matrices, sizeof( matrices ) );
+    curr_view_descset->FlushBinds();
 }
 
 uint32_t Renderer::GetCurrFrameBufIndex() const
 {
     return m_frame_idx % NumBufferizedFrames;
+}
+
+RHICommandList* Renderer::CreateInitializedCommandList( RHI::QueueType queue_type ) const
+{
+    RHICommandList* cmd_list = GetRHI().GetCommandList( queue_type );
+
+    cmd_list->Begin();
+
+    return cmd_list;
+}
+
+void Renderer::SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso ) const
+{
+    cmd_list.SetPSO( rt_pso );
+    cmd_list.BindDescriptorSet( 1, *m_view_descsets[GetCurrFrameBufIndex()] );
 }
 
 bool Renderer::RenderScene( const RenderSceneParams& parms )
@@ -287,11 +322,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     // 3. Record phase. Fill passes with command lists
 
     // @todo - taskgraph
-    UpdateUniformBuffer( scene_view );
 
-    RHICommandList* cmd_list_rt = GetRHI().GetCommandList( RHI::QueueType::Graphics );
-
-    cmd_list_rt->Begin();
+    RHICommandList* cmd_list_rt = CreateInitializedCommandList( RHI::QueueType::Graphics );
 
     update_as_pass->AddCommandList( *cmd_list_rt );
     {
@@ -302,12 +334,14 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     }
     update_as_pass->EndPass();
 
+    // We have to update tlas for RHI pointer to be valid
+    UpdateSceneViewParams( scene_view );
+
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
-        m_rt_descsets[GetCurrFrameBufIndex()]->BindAccelerationStructure( 0, 0, scene.GetTLAS().GetRHIAS() );
-        m_rt_descsets[GetCurrFrameBufIndex()]->BindTextureRWView( 1, 0, *scene_view.GetFrameColorTextureRWView() );
+        m_rt_descsets[GetCurrFrameBufIndex()]->BindTextureRWView( 0, 0, *scene_view.GetFrameColorTextureRWView() );
 
-        cmd_list_rt->SetPSO( *m_rt_pipeline );
+        SetPSO( *cmd_list_rt, *m_rt_pipeline );
 
         cmd_list_rt->BindDescriptorSet( 0, *m_rt_descsets[GetCurrFrameBufIndex()] );
 

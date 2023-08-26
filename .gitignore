@@ -21,6 +21,10 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+lib/
+
+# Intermediate build files
+intermediate/
 
 # Visual Studio 2015 cache/options directory
 .vs/
@@ -266,3 +270,9 @@ VTune Amplifier Results/
 snow_engine.vcxproj.snowball.nvuser
 snow_engine.sln.startup.json
 *.suppress
+
+# notepad++ backup files
+*.bak
+
+# nsight projects
+*.ngfx-proj

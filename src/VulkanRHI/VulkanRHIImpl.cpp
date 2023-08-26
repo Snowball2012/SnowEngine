@@ -1253,9 +1253,10 @@ void VulkanRHI::CreateDescriptorPool()
     constexpr uint32_t descriptor_count_image = 1024;
     constexpr uint32_t descriptor_count_sampler = 128;
     constexpr uint32_t descriptor_count_as = 128;
+    constexpr uint32_t descriptor_count_storage_image = 128;
     constexpr uint32_t descriptor_set_count = 1024;
 
-    std::array<VkDescriptorPoolSize, 4> pool_sizes = {};
+    std::array<VkDescriptorPoolSize, 5> pool_sizes = {};
     pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     pool_sizes[0].descriptorCount = descriptor_count_ub;
     pool_sizes[1].type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -1264,6 +1265,8 @@ void VulkanRHI::CreateDescriptorPool()
     pool_sizes[2].descriptorCount = descriptor_count_sampler;
     pool_sizes[3].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     pool_sizes[3].descriptorCount = descriptor_count_as;
+    pool_sizes[4].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    pool_sizes[4].descriptorCount = descriptor_count_storage_image;    
 
     VkDescriptorPoolCreateInfo pool_info = {};
     pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
