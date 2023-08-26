@@ -81,4 +81,6 @@ private:
 	void CreateFullscreenQuadPipeline();
 
 	void UpdateScene();
+
+	bool SaveLevel( const char* filepath ) const;
 };

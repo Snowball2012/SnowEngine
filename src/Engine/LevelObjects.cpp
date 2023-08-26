@@ -73,6 +73,40 @@ bool LevelObject::OnUpdateGUI()
     return needs_regeneration;
 }
 
+bool LevelObject::Serialize( JsonValue& out, JsonAllocator& allocator ) const
+{
+    out.SetObject();
+
+    JsonValue name_json_string;
+    name_json_string.SetString( m_name.c_str(), allocator );
+    out.AddMember( "name", name_json_string, allocator );
+
+    JsonValue traits_arr_json;
+    traits_arr_json.SetArray();
+    traits_arr_json.Reserve( rapidjson::SizeType( m_traits.size() ), allocator );
+
+    for ( const auto& trait : m_traits )
+    {
+        // @todo - proper trait reflection
+        JsonValue trait_json;
+        trait_json.SetObject();
+
+        JsonValue trait_type_json_string;
+        trait_type_json_string.SetString( trait->GetTraitPrettyName(), allocator );
+        trait_json.AddMember( "_type", trait_type_json_string, allocator );
+
+        JsonValue trait_contents;
+        trait->Serialize( trait_contents, allocator );
+        trait_json.AddMember( "value", trait_contents, allocator );
+
+        traits_arr_json.PushBack( trait_json, allocator );
+    }
+
+    out.AddMember( "traits", traits_arr_json, allocator );
+
+    return true;
+}
+
 bool LevelObject::RegenerateEntities()
 {
     DestroyEntities();
@@ -169,6 +203,19 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
     }
 }
 
+bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
+{
+    out.SetObject();
+
+    // @todo - add helper serializers for vectors
+
+    out.AddMember( "transx", JsonValue( m_tf.translation.x ), allocator );
+    out.AddMember( "transy", JsonValue( m_tf.translation.y ), allocator );
+    out.AddMember( "transz", JsonValue( m_tf.translation.y ), allocator );
+
+    return true;
+}
+
 
 // Mesh instance trait
 
@@ -220,6 +267,23 @@ void MeshInstanceTrait::OnUpdateGUI( bool& trait_changed )
     {
         SE_LOG_INFO( Temp, "Mesh changed. New mesh path \"%s\"", m_mesh ? m_mesh->GetPath() : "null" );
     }
+}
+
+bool MeshInstanceTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
+{
+    out.SetObject();
+
+    std::string assetPath = "";
+    if ( m_mesh != nullptr )
+    {
+        assetPath = m_mesh->GetPath();
+    }
+
+    JsonValue path_json_string;
+    path_json_string.SetString( assetPath.c_str(), allocator );
+    out.AddMember( "asset", path_json_string, allocator );
+
+    return true;
 }
 
 void MeshInstanceTrait::SetAsset( MeshAssetPtr mesh )

@@ -326,6 +326,43 @@ void SandboxApp::UpdateScene()
     }
 }
 
+bool SandboxApp::SaveLevel( const char* filepath ) const
+{
+    SE_LOG_INFO( Sandbox, "Save level to %s", filepath );
+
+    std::ofstream file( filepath, std::ios_base::trunc );
+
+    if ( !file.good() )
+    {
+        SE_LOG_ERROR( Sandbox, "Can't open file %s for writing", filepath );
+        return false;
+    }
+
+    Json d;
+    d.SetObject();
+
+    JsonValue generator;
+    generator.SetString( "LevelAsset", d.GetAllocator() );
+    d.AddMember( "_generator", generator, d.GetAllocator() );
+    JsonValue levelobjects_array;
+    levelobjects_array.SetArray();
+    levelobjects_array.Reserve( rapidjson::SizeType( m_level_objects.size() ), d.GetAllocator() );
+
+    for ( const auto& level_obj : m_level_objects )
+    {
+        JsonValue obj_json;
+        
+        level_obj->Serialize( obj_json, d.GetAllocator() );
+        levelobjects_array.PushBack( obj_json, d.GetAllocator() );
+    }
+
+    d.AddMember( "objects", levelobjects_array, d.GetAllocator() );
+
+    rapidjson::OStreamWrapper osw( file );
+    rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer( osw );
+    d.Accept( writer );
+}
+
 void SandboxApp::OnSwapChainRecreated()
 {
     m_scene_view->SetExtents( m_swapchain->GetExtent() );
@@ -369,8 +406,9 @@ void SandboxApp::UpdateGui()
         {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
-            SE_LOG_INFO( Temp, "Save level %s to %s", filePathName.c_str(), filePath.c_str() );
+            SaveLevel( filePathName.c_str() );
         }
 
         ImGuiFileDialog::Instance()->Close();

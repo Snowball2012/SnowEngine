@@ -19,7 +19,9 @@ public:
     // Called when user can see and edit trait props
     virtual void OnUpdateGUI( bool& trait_changed ) = 0;
 
-    // 
+    virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const = 0;
+
+    //
     virtual const char* GetTraitPrettyName() const = 0;
 };
 
@@ -55,6 +57,8 @@ public:
 
     // Returns true if entity needs to be regenerated
     bool OnUpdateGUI();
+
+    bool Serialize( JsonValue& out, JsonAllocator& allocator ) const;
 
     bool RegenerateEntities();
 
@@ -112,6 +116,8 @@ public:
     virtual void OnUpdateGUI( bool& trait_changed ) override;
 
     virtual const char* GetTraitPrettyName() const override { return "Transform"; }
+
+    virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
 };
 
 
@@ -128,6 +134,8 @@ public:
     virtual void OnUpdateGUI( bool& trait_changed ) override;
 
     virtual const char* GetTraitPrettyName() const override { return "Mesh Instance"; }
+
+    virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
 
     void SetAsset( MeshAssetPtr mesh );
 };
