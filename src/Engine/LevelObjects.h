@@ -59,6 +59,7 @@ public:
     bool OnUpdateGUI();
 
     bool Serialize( JsonValue& out, JsonAllocator& allocator ) const;
+    bool Deserialize( const JsonValue& in, bool defer_regeneration );
 
     bool RegenerateEntities();
 

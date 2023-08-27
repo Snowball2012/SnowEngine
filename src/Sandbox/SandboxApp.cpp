@@ -61,13 +61,13 @@ void SandboxApp::OnInit()
 
     m_world = std::make_unique<World>();
 
-    m_demo_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) ).get();
-    m_demo_object->SetName( "DemoMesh", true );
-    m_demo_object->AddTrait( std::make_unique<TransformTrait>(), true );
+    auto& demo_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
+    demo_object->SetName( "DemoMesh", true );
+    demo_object->AddTrait( std::make_unique<TransformTrait>(), true );
     std::unique_ptr<MeshInstanceTrait> mesh_trait = std::make_unique<MeshInstanceTrait>();
     mesh_trait->SetAsset( m_demo_mesh );
-    m_demo_object->AddTrait( std::move( mesh_trait ), true );
-    m_demo_object->RegenerateEntities();
+    demo_object->AddTrait( std::move( mesh_trait ), true );
+    demo_object->RegenerateEntities();
 
     m_editor = std::make_unique<Editor>();
 
@@ -81,7 +81,6 @@ void SandboxApp::OnCleanup()
     m_editor = nullptr;
 
     m_level_objects.clear();
-    m_demo_object = nullptr;
 
     m_world = nullptr;
 
@@ -299,12 +298,6 @@ void SandboxApp::OnUpdate()
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
 
-    auto* demo_tf = m_world->GetComponent<TransformComponent>( m_demo_object->GetBaseEntity() );
-    if ( !SE_ENSURE( demo_tf ) )
-        return;
-
-    demo_tf->tf.orientation = glm::angleAxis( time * glm::radians( 90.0f ), glm::vec3( 0, 1, 0 ) );
-
     m_scene_view->SetLookAt( glm::vec3( 2, 2, 2 ), glm::vec3( 0, 0, 0 ) );
     m_scene_view->SetFOV( glm::radians( m_fov_degrees ) );
 
@@ -361,6 +354,49 @@ bool SandboxApp::SaveLevel( const char* filepath ) const
     rapidjson::OStreamWrapper osw( file );
     rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer( osw );
     d.Accept( writer );
+
+    return true;
+}
+
+bool SandboxApp::OpenLevel( const char* filepath )
+{
+    SE_LOG_INFO( Sandbox, "Open level %s", filepath );
+
+    std::ifstream file( filepath );
+    if ( !file.good() )
+    {
+        SE_LOG_ERROR( Engine, "Can't open level file %s", filepath );
+        return false;
+    }
+
+    Json d;
+    rapidjson::IStreamWrapper isw( file );
+    if ( d.ParseStream( isw ).HasParseError() )
+    {
+        SE_LOG_ERROR( Engine, "File %s is not a valid asset file : json parse error", filepath );
+        return false;
+    }
+
+    JsonValue::MemberIterator object_property = d.FindMember( "objects" );
+    if ( object_property == d.MemberEnd() || !object_property->value.IsArray() )
+    {
+        SE_LOG_ERROR( Engine, "File %s is not a valid level file : objects value is invalid (not found or not an array)", filepath );
+        return false;
+    }
+
+    m_level_objects.clear();
+
+    for ( auto& v : object_property->value.GetArray() )
+    {
+        auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
+        if ( !new_object->Deserialize( v, false ) )
+        {
+            m_level_objects.pop_back();
+            continue;
+        }
+    }
+
+    return true;
 }
 
 void SandboxApp::OnSwapChainRecreated()
@@ -378,12 +414,15 @@ void SandboxApp::UpdateGui()
                 NOTIMPL;
 
             if ( ImGui::MenuItem( "Open" ) )
-                NOTIMPL;
+            {
+                std::string default_path = g_core_paths.engine_content + "/Levels/";
+                ImGuiFileDialog::Instance()->OpenDialog( "LevelOpenDlg", "Open Level", ".sel", default_path.c_str() );
+            }
 
             if ( ImGui::MenuItem( "Save" ) )
             {
                 std::string default_path = g_core_paths.engine_content + "/Levels/";
-                ImGuiFileDialog::Instance()->OpenDialog( "LevelSaveDlg", "Save Level As", "", default_path.c_str() );
+                ImGuiFileDialog::Instance()->OpenDialog( "LevelSaveDlg", "Save Level As", ".sel", default_path.c_str() );
             }
 
             ImGui::EndMenu();
@@ -414,6 +453,20 @@ void SandboxApp::UpdateGui()
         ImGuiFileDialog::Instance()->Close();
     }
 
+    if ( ImGuiFileDialog::Instance()->Display( "LevelOpenDlg" ) )
+    {
+        if ( ImGuiFileDialog::Instance()->IsOk() )
+        {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
+
+            OpenLevel( filePathName.c_str() );
+        }
+
+        ImGuiFileDialog::Instance()->Close();
+    }
+
     if ( m_show_imgui_demo )
         ImGui::ShowDemoWindow( &m_show_imgui_demo );
 
@@ -422,16 +475,6 @@ void SandboxApp::UpdateGui()
         ImGui::Begin( "World", &m_show_world_outliner, ImGuiWindowFlags_None );
         {
             ImGui::Text( "Total: %llu entities", m_world->GetEntityCount() );
-            bool create_entity = ImGui::Button( "Add enitity" );
-            ImGui::SameLine();
-            ImGui::InputText( "Name", &m_new_entity_name );
-
-            if ( create_entity )
-            {
-                auto new_entity = m_world->CreateEntity();
-                auto& name_component = m_world->AddComponent<NameComponent>( new_entity );
-                name_component.name = std::move( m_new_entity_name );
-            }
 
             for ( auto&& [id, name_comp] : m_world->CreateView<NameComponent>() )
             {
@@ -450,13 +493,14 @@ void SandboxApp::UpdateGui()
             ImGui::Text( "Total: %llu level objects", m_level_objects.size() );
             bool create_object = ImGui::Button( "Add object" );
             ImGui::SameLine();
-            ImGui::InputText( "Name", &m_new_entity_name );
+            static std::string new_object_name;
+            ImGui::InputText( "Name", &new_object_name );
 
             if ( create_object )
             {
                 auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-                new_object->SetName( m_new_entity_name.c_str(), true );
-                m_demo_object->RegenerateEntities();
+                new_object->SetName( new_object_name.c_str(), true );
+                new_object->RegenerateEntities();
             }
 
             for ( auto& level_object : m_level_objects )

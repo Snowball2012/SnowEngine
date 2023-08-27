@@ -37,12 +37,9 @@ private:
 	std::unique_ptr<SceneView> m_scene_view;
 
 	// GUI state
-	std::string m_new_entity_name;
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 	float m_fov_degrees = 45.0f;
-
-	LevelObject* m_demo_object = nullptr;
 
 	std::vector<std::unique_ptr<LevelObject>> m_level_objects;
 
@@ -83,4 +80,5 @@ private:
 	void UpdateScene();
 
 	bool SaveLevel( const char* filepath ) const;
+	bool OpenLevel( const char* filepath );
 };

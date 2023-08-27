@@ -107,6 +107,27 @@ bool LevelObject::Serialize( JsonValue& out, JsonAllocator& allocator ) const
     return true;
 }
 
+bool LevelObject::Deserialize( const JsonValue& in, bool defer_regeneration )
+{
+    auto name_it = in.FindMember( "name" );
+    if ( name_it == in.MemberEnd() || !name_it->value.IsString() )
+    {
+        SE_LOG_ERROR( Engine, "Level object does not have a name property" );
+        return false;
+    }
+
+    SetName( name_it->value.GetString(), true );
+
+    // @todo - parse traits
+
+    if ( !defer_regeneration )
+    {
+        RegenerateEntities();
+    }
+
+    return true;
+}
+
 bool LevelObject::RegenerateEntities()
 {
     DestroyEntities();
