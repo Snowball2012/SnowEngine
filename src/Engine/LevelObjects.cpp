@@ -226,13 +226,7 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
 
 bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
 {
-    out.SetObject();
-
-    // @todo - add helper serializers for vectors
-
-    out.AddMember( "transx", JsonValue( m_tf.translation.x ), allocator );
-    out.AddMember( "transy", JsonValue( m_tf.translation.y ), allocator );
-    out.AddMember( "transz", JsonValue( m_tf.translation.y ), allocator );
+    Serialization::Serialize( m_tf, out, allocator );
 
     return true;
 }

@@ -19,6 +19,7 @@
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\WorldComponents.cpp" />
+    <ClCompile Include="..\..\src\Engine\Serialization.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="..\..\src\Engine\Scene.h" />
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
+    <ClInclude Include="..\..\src\Engine\Serialization.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

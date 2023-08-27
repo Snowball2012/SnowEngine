@@ -4,6 +4,8 @@
 
 #include "WorldComponents.h"
 
+#include "Serialization.h"
+
 class LevelObject;
 
 // Immutable object for everyone except Editor. Defines some traits for level object (transform, mesh, light properties, etc.) for a piece of functionality

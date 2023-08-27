@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
+    <ClCompile Include="..\..\src\Engine\Serialization.cpp" />
     <ClCompile Include="..\..\src\Engine\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugASAN|x64'">Create</PrecompiledHeader>
@@ -52,6 +53,7 @@
     <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\Scene.h" />
+    <ClInclude Include="..\..\src\Engine\Serialization.h" />
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
     <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
     <ClInclude Include="..\..\src\ImguiBackend\ImguiBackend.h" />

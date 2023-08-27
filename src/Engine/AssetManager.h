@@ -2,6 +2,8 @@
 
 #include "StdAfx.h"
 
+#include "Serialization.h"
+
 class AssetId
 {
 	// todo: guid? hash?
