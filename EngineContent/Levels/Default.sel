@@ -1,0 +1,69 @@
+{
+    "_generator": "LevelAsset",
+    "objects": [
+        {
+            "name": "DemoMesh",
+            "traits": [
+                {
+                    "_type": "TransformTrait",
+                    "value": {
+                        "t": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "o": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "s": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    }
+                },
+                {
+                    "_type": "MeshInstanceTrait",
+                    "value": {
+                        "asset": "#engine/Meshes/StanfordBunny.sea"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Floor",
+            "traits": [
+                {
+                    "_type": "TransformTrait",
+                    "value": {
+                        "t": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "o": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "s": [
+                            5.0,
+                            0.009999999776482582,
+                            5.0
+                        ]
+                    }
+                },
+                {
+                    "_type": "MeshInstanceTrait",
+                    "value": {
+                        "asset": "#engine/Meshes/Cube.sea"
+                    }
+                }
+            ]
+        }
+    ]
+}

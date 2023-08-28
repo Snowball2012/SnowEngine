@@ -22,10 +22,14 @@ public:
     virtual void OnUpdateGUI( bool& trait_changed ) = 0;
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const = 0;
+    virtual bool Deserialize( const JsonValue& in ) = 0;
 
     //
     virtual const char* GetTraitPrettyName() const = 0;
+    virtual const char* GetTraitClassName() const = 0;
 };
+
+#define IMPLEMENT_LEVELOBJECT_TRAIT( className ) virtual const char* GetTraitClassName() const override { return S_(className); }
 
 // Object definition contained in a level file. Serializable. Editor allows to create, delete and modify them.
 // Each level object creates at least one world entity (and may spawn other child entities)
@@ -76,8 +80,18 @@ public:
     template <typename ComponentClass>
     ComponentClass* GetComponent( WorldEntity entity ) const;
 
+    // Has to be called once before first levelobject deserialization
+    static void RegisterTraits();
+
+    static std::unique_ptr<LevelObjectTrait> CreateTrait( const char* className );
 
 private:
+
+    template<typename T> 
+    static std::unique_ptr<LevelObjectTrait> CreateTraitInternal();
+
+    using TraitFactoryFunctionPtr = std::unique_ptr<LevelObjectTrait>( * )( );
+    static std::unordered_map<std::string, TraitFactoryFunctionPtr> s_trait_factories;
 
     void DestroyEntities();
     bool GenerateEntities();
@@ -114,6 +128,8 @@ private:
     bool m_drag_scale = false;
 
 public:
+    IMPLEMENT_LEVELOBJECT_TRAIT( TransformTrait )
+
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
     virtual void OnUpdateGUI( bool& trait_changed ) override;
@@ -121,6 +137,7 @@ public:
     virtual const char* GetTraitPrettyName() const override { return "Transform"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
+    virtual bool Deserialize( const JsonValue& in ) override;
 };
 
 
@@ -132,6 +149,8 @@ private:
     mutable std::string m_gui_path;
 
 public:
+    IMPLEMENT_LEVELOBJECT_TRAIT( MeshInstanceTrait )
+
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
     virtual void OnUpdateGUI( bool& trait_changed ) override;
@@ -139,6 +158,7 @@ public:
     virtual const char* GetTraitPrettyName() const override { return "Mesh Instance"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
+    virtual bool Deserialize( const JsonValue& in ) override;
 
     void SetAsset( MeshAssetPtr mesh );
 };

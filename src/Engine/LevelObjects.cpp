@@ -9,6 +9,8 @@
 
 // Level object
 
+std::unordered_map<std::string, LevelObject::TraitFactoryFunctionPtr> LevelObject::s_trait_factories = {};
+
 LevelObject::LevelObject( World* world )
     : m_world( world )
 {
@@ -92,7 +94,7 @@ bool LevelObject::Serialize( JsonValue& out, JsonAllocator& allocator ) const
         trait_json.SetObject();
 
         JsonValue trait_type_json_string;
-        trait_type_json_string.SetString( trait->GetTraitPrettyName(), allocator );
+        trait_type_json_string.SetString( trait->GetTraitClassName(), allocator );
         trait_json.AddMember( "_type", trait_type_json_string, allocator );
 
         JsonValue trait_contents;
@@ -118,7 +120,47 @@ bool LevelObject::Deserialize( const JsonValue& in, bool defer_regeneration )
 
     SetName( name_it->value.GetString(), true );
 
-    // @todo - parse traits
+    auto traits_it = in.FindMember( "traits" );
+    if ( traits_it == in.MemberEnd() || !traits_it->value.IsArray() )
+    {
+        SE_LOG_ERROR( Engine, "Level object does not have a valid traits property" );
+        return false;
+    }
+
+    auto traits_json_arr = traits_it->value.GetArray();
+    int i = 0;
+    for ( auto&& trait_json_value : traits_json_arr )
+    {
+        auto type_it = trait_json_value.FindMember( "_type" );
+        if ( type_it == trait_json_value.MemberEnd() || !type_it->value.IsString() )
+        {
+            SE_LOG_ERROR( Engine, "Trait #%d does not have a valid _type property", i );
+            return false;
+        }
+
+        auto value_it = trait_json_value.FindMember( "value" );
+        if ( value_it == trait_json_value.MemberEnd() )
+        {
+            SE_LOG_ERROR( Engine, "Trait %s does not have a valid value property", type_it->value.GetString() );
+            return false;
+        }
+
+        std::unique_ptr<LevelObjectTrait> trait = LevelObject::CreateTrait( type_it->value.GetString() );
+        if ( !trait )
+        {
+            return false;
+        }
+
+        if ( !trait->Deserialize( value_it->value ) )
+        {
+            SE_LOG_ERROR( Engine, "Failed to deserialize trait %s", type_it->value.GetString() );
+            return false;
+        }
+
+        m_traits.emplace_back( std::move( trait ) );
+
+        i++;
+    }
 
     if ( !defer_regeneration )
     {
@@ -170,6 +212,34 @@ bool LevelObject::GenerateEntities()
     return true;
 }
 
+template<typename T>
+std::unique_ptr<LevelObjectTrait> LevelObject::CreateTraitInternal()
+{
+    return std::make_unique<T>();
+}
+
+void LevelObject::RegisterTraits()
+{
+#ifdef REGISTER_TRAIT
+#error "Macro REGISTER_TRAIT is already defined"
+#endif
+#define REGISTER_TRAIT( className ) s_trait_factories[ S_(className) ] = CreateTraitInternal<className>;
+
+    REGISTER_TRAIT( TransformTrait );
+    REGISTER_TRAIT( MeshInstanceTrait );
+
+#undef REGISTER_ASSET_GENERATOR
+}
+
+std::unique_ptr<LevelObjectTrait> LevelObject::CreateTrait( const char* className )
+{
+    auto factory = s_trait_factories.find( className );
+
+    if ( !SE_ENSURE( factory != s_trait_factories.end() ) )
+        return nullptr; // if we are here, we probablyy forgot to register trait class inside RegisterTraits
+
+    return factory->second();
+}
 
 // Transform trait
 
@@ -231,6 +301,11 @@ bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
     return true;
 }
 
+bool TransformTrait::Deserialize( const JsonValue& in )
+{
+    return Serialization::Deserialize( in, m_tf );
+}
+
 
 // Mesh instance trait
 
@@ -277,11 +352,6 @@ void MeshInstanceTrait::OnUpdateGUI( bool& trait_changed )
             }
         }
     }
-
-    if ( trait_changed )
-    {
-        SE_LOG_INFO( Temp, "Mesh changed. New mesh path \"%s\"", m_mesh ? m_mesh->GetPath() : "null" );
-    }
 }
 
 bool MeshInstanceTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
@@ -297,6 +367,27 @@ bool MeshInstanceTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) co
     JsonValue path_json_string;
     path_json_string.SetString( assetPath.c_str(), allocator );
     out.AddMember( "asset", path_json_string, allocator );
+
+    return true;
+}
+
+bool MeshInstanceTrait::Deserialize( const JsonValue& in )
+{
+    if ( !in.IsObject() )
+    {
+        SE_LOG_ERROR( Engine, "%s: Json value is not an object", GetTraitPrettyName() );
+        return false;
+    }
+
+    auto asset_it = in.FindMember( "asset" );
+    if ( asset_it == in.MemberEnd() || !asset_it->value.IsString() )
+    {
+        SE_LOG_ERROR( Engine, "%s: asset property not found or invalid", GetTraitPrettyName() );
+        return false;
+    }
+
+    m_mesh = LoadAsset<MeshAsset>( asset_it->value.GetString() );
+    m_gui_path = m_mesh ? m_mesh->GetPath() : "";
 
     return true;
 }

@@ -1,8 +1,9 @@
 #include "StdAfx.h"
 
 #include "EngineApp.h"
-#include "AssetManager.h"
 
+#include "AssetManager.h"
+#include "LevelObjects.h"
 #include "Rendergraph.h"
 #include "Scene.h"
 
@@ -51,6 +52,8 @@ void EngineApp::Run( int argc, char** argv )
     InitImGUI();
 
     m_asset_mgr = std::make_unique<AssetManager>();
+
+    LevelObject::RegisterTraits();
 
     InitEngineGlobals();
 

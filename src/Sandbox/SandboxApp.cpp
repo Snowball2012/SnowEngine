@@ -411,7 +411,9 @@ void SandboxApp::UpdateGui()
         if ( ImGui::BeginMenu( "Level" ) )
         {
             if ( ImGui::MenuItem( "New" ) )
-                NOTIMPL;
+            {
+                OpenLevel( ToOSPath( "#engine/Levels/Default.sel" ).c_str() );
+            }
 
             if ( ImGui::MenuItem( "Open" ) )
             {
