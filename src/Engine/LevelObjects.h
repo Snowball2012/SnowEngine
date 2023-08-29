@@ -123,10 +123,6 @@ class TransformTrait : public LevelObjectTrait
 private:
     Transform m_tf = {};
 
-    // gui state. Probably better to store it somewhere else
-    bool m_drag_translate = false;
-    bool m_drag_scale = false;
-
 public:
     IMPLEMENT_LEVELOBJECT_TRAIT( TransformTrait )
 
