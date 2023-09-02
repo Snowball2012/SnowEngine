@@ -52,7 +52,6 @@ void SandboxApp::OnInit()
     CreateFullscreenQuadPipeline();
 
     CreateTextureSampler();
-    CreateDescriptorSets();
 
     m_world = std::make_unique<World>();
 
@@ -75,8 +74,6 @@ void SandboxApp::OnCleanup()
     m_level_objects.clear();
 
     m_world = nullptr;
-
-    m_fsquad_descsets.clear();
 
     m_point_sampler = nullptr;
 
@@ -119,15 +116,6 @@ void SandboxApp::CreateDescriptorSetLayout()
     layout_info.table_count = std::size( dsls );
 
     m_shader_bindings_layout_fsquad = m_rhi->CreateShaderBindingLayout( layout_info );
-}
-
-void SandboxApp::CreateDescriptorSets()
-{
-    m_fsquad_descsets.resize( m_max_frames_in_flight );
-    for ( size_t i = 0; i < m_max_frames_in_flight; ++i )
-    {
-        m_fsquad_descsets[i] = m_rhi->CreateDescriptorSet( *m_dsl_fsquad );
-    }
 }
 
 void SandboxApp::CreateTextureSampler()
@@ -187,7 +175,7 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
     public:
         SandboxRenderExtension( SandboxApp& app, RHICommandList* ui_cmd_list ) : m_app( app ), m_ui_cmd_list( ui_cmd_list ) {}
 
-        virtual void PostSetupRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) override
+        virtual void PostSetupRendergraph( const SceneViewFrameData& data ) override
         {
             RGExternalTextureDesc swapchain_desc = {};
             swapchain_desc.name = "swapchain";
@@ -195,17 +183,17 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
             swapchain_desc.initial_layout = RHITextureLayout::Present;
             swapchain_desc.final_layout = RHITextureLayout::Present;
 
-            m_rg_swapchain = rg.RegisterExternalTexture( swapchain_desc );
+            m_rg_swapchain = data.rg->RegisterExternalTexture( swapchain_desc );
 
-            m_blit_to_swapchain_pass = rg.AddPass( RHI::QueueType::Graphics, "BlitToSwapchain" );
+            m_blit_to_swapchain_pass = data.rg->AddPass( RHI::QueueType::Graphics, "BlitToSwapchain" );
             m_blit_to_swapchain_pass->UseTexture( *m_rg_swapchain, RGTextureUsage::RenderTarget );
-            m_blit_to_swapchain_pass->UseTexture( sceneOutput, RGTextureUsage::ShaderRead );
+            m_blit_to_swapchain_pass->UseTexture( *data.scene_output, RGTextureUsage::ShaderRead );
 
-            m_ui_pass = rg.AddPass( RHI::QueueType::Graphics, "DrawUI" );
+            m_ui_pass = data.rg->AddPass( RHI::QueueType::Graphics, "DrawUI" );
             m_ui_pass->UseTexture( *m_rg_swapchain, RGTextureUsage::RenderTarget );
         }
 
-        virtual void PostCompileRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) override
+        virtual void PostCompileRendergraph( const SceneViewFrameData& data ) override
         {
             RHICommandList* cmd_list = GetRHI().GetCommandList( RHI::QueueType::Graphics );
 
@@ -213,9 +201,6 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
             m_blit_to_swapchain_pass->AddCommandList( *cmd_list );
             {
-                m_app.m_fsquad_descsets[m_app.GetCurrentFrameIdx()]->BindTextureROView( 0, 0, *m_app.m_scene_view->GetFrameColorTextureROView() );
-                m_app.m_fsquad_descsets[m_app.GetCurrentFrameIdx()]->BindSampler( 1, 0, *m_app.m_point_sampler );
-
                 RHIPassRTVInfo rt = {};
                 rt.load_op = RHILoadOp::Clear;
                 rt.store_op = RHIStoreOp::Store;
@@ -246,7 +231,10 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
                 cmd_list->SetPSO( *m_app.m_draw_fullscreen_quad_pipeline );
 
-                cmd_list->BindDescriptorSet( 0, *m_app.m_fsquad_descsets[m_app.GetCurrentFrameIdx()] );
+                RHIDescriptorSet* descset = m_app.m_renderer->AllocateFrameDescSet( *m_app.m_dsl_fsquad );
+                descset->BindTextureROView( 0, 0, *m_app.m_scene_view->GetFrameColorTextureROView() );
+                descset->BindSampler( 1, 0, *m_app.m_point_sampler );
+                cmd_list->BindDescriptorSet( 0, *descset );
 
                 cmd_list->Draw( 3, 1, 0, 0 );
 

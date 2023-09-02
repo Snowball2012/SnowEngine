@@ -28,7 +28,6 @@ private:
 	std::string m_current_level_path = std::string( "#engine/Levels/Default.sel" );
 
 	// descriptors
-	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;
 
 	std::unique_ptr<World> m_world;
 
@@ -69,8 +68,6 @@ private:
 	void CleanupPipeline();
 
 	void CreateDescriptorSetLayout();
-
-	void CreateDescriptorSets();
 
 	void CreateTextureSampler();
 

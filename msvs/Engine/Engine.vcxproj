@@ -17,6 +17,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\Engine\AssetManager.cpp" />
     <ClCompile Include="..\..\src\Engine\Assets.cpp" />
+    <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
@@ -54,6 +55,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\AssetManager.h" />
     <ClInclude Include="..\..\src\Engine\Assets.h" />
+    <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
     <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />

@@ -10,6 +10,7 @@ SE_LOG_CATEGORY( Renderer );
 class Rendergraph;
 class RGTexture;
 class DisplayMapping;
+class DescriptorSetPool;
 
 class SceneMeshInstance
 {
@@ -85,11 +86,20 @@ public:
     Scene& GetScene() const { return *m_scene; }
 };
 
+// Data associated with a scene view managed by renderer for a single frame
+struct SceneViewFrameData
+{
+    const SceneView* view = nullptr;
+    RHIDescriptorSet* view_desc_set = nullptr;
+    const RGTexture* scene_output = nullptr;
+    Rendergraph* rg = nullptr;
+};
+
 class ISceneRenderExtension
 {
 public:
-    virtual void PostSetupRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) = 0;
-    virtual void PostCompileRendergraph( Rendergraph& rg, RGTexture& sceneOutput ) = 0;
+    virtual void PostSetupRendergraph( const SceneViewFrameData& data ) = 0;
+    virtual void PostCompileRendergraph( const SceneViewFrameData& data ) = 0;
 };
 
 struct RenderSceneParams
@@ -114,9 +124,7 @@ private:
     std::vector<RHIUploadBufferPtr> m_view_buffers;
     std::vector<RHIUniformBufferViewPtr> m_view_buffer_views;
 
-    std::vector<RHIDescriptorSetPtr> m_rt_descsets;
-
-    std::vector<RHIDescriptorSetPtr> m_view_descsets;
+    std::vector<DescriptorSetPool> m_frame_descriptors;
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
 
@@ -132,6 +140,9 @@ public:
     // ui_cmd_list is optional
     bool RenderScene( const RenderSceneParams& parms );
 
+    // returned descriptor may only be used until NextFrame() is called
+    RHIDescriptorSet* AllocateFrameDescSet( RHIDescriptorSetLayout& layout );
+
     void DebugUI();
 
 private:
@@ -142,11 +153,11 @@ private:
 
     void CreateRTPipeline();
 
-    void UpdateSceneViewParams( const SceneView& scene_view );
+    void UpdateSceneViewParams( const SceneViewFrameData& view_data );
 
     RHICommandList* CreateInitializedCommandList( RHI::QueueType queue_type ) const;
 
-    void SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso ) const;
+    void SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso, const SceneViewFrameData& view_data ) const;
 
     uint32_t GetCurrFrameBufIndex() const;
 };

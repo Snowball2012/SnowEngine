@@ -19,6 +19,10 @@
     {
       "Id": "278f289c-d947-4dc0-9b4a-51d8a37ccc57",
       "Command": "-DemoAssetPath #engine/Meshes/StanfordBunny.sea"
+    },
+    {
+      "Id": "9c879afe-290b-4c28-ba33-f6eaf2b496b0",
+      "Command": "+r_debugDisplayMapping 1"
     }
   ]
 }

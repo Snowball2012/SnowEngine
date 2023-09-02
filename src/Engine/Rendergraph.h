@@ -54,7 +54,7 @@ enum class RGTextureUsage
 
 struct RGPassTexture
 {
-    RGTexture* texture = nullptr;
+    const RGTexture* texture = nullptr;
     RGTextureUsage usage = RGTextureUsage::Undefined;
 };
 
@@ -78,7 +78,7 @@ class RGPass
 public:
     RGPass( RHI::QueueType queue_type, const char* name );
 
-    bool UseTexture( RGTexture& texture, RGTextureUsage usage );
+    bool UseTexture( const RGTexture& texture, RGTextureUsage usage );
 
     void AddCommandList( RHICommandList& cmd_list );
 

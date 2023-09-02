@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 
+#include "DescriptorSetPool.h"
 #include "DisplayMapping.h"
 #include "Rendergraph.h"
 
@@ -134,6 +135,7 @@ Renderer::~Renderer() = default;
 void Renderer::NextFrame()
 {
     m_frame_idx++;
+    m_frame_descriptors[GetCurrFrameBufIndex()].Reset();
 }
 
 namespace
@@ -168,17 +170,7 @@ void Renderer::CreateSceneViewParamsBuffers()
 
 void Renderer::CreateDescriptorSets()
 {
-    m_rt_descsets.resize( NumBufferizedFrames );
-    for ( size_t i = 0; i < NumBufferizedFrames; ++i )
-    {
-        m_rt_descsets[i] = GetRHI().CreateDescriptorSet( *m_rt_dsl );
-    }
-
-    m_view_descsets.resize( NumBufferizedFrames );
-    for ( size_t i = 0; i < NumBufferizedFrames; ++i )
-    {
-        m_view_descsets[i] = GetRHI().CreateDescriptorSet( *m_view_dsl );
-    }
+    m_frame_descriptors.resize( NumBufferizedFrames );
 }
 
 void Renderer::CreateRTPipeline()
@@ -249,14 +241,16 @@ void Renderer::CreateDescriptorSetLayout()
     m_rt_layout = GetRHI().CreateShaderBindingLayout( rt_layout_info );
 }
 
-void Renderer::UpdateSceneViewParams( const SceneView& scene_view )
+void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 {
     // Fill uniform buffer
     GPUSceneViewParams svp = {};
 
-    svp.view_mat = scene_view.CalcViewMatrix();
-    svp.proj_mat = scene_view.CalcProjectionMatrix();
-    svp.viewport_size_px = scene_view.GetExtent();
+    const SceneView& view = *view_data.view;
+
+    svp.view_mat = view.CalcViewMatrix();
+    svp.proj_mat = view.CalcProjectionMatrix();
+    svp.viewport_size_px = view.GetExtent();
 
     glm::mat4x4 view_proj = svp.proj_mat * svp.view_mat;
     svp.view_proj_inv_mat = glm::inverse( view_proj );
@@ -266,11 +260,10 @@ void Renderer::UpdateSceneViewParams( const SceneView& scene_view )
     m_view_buffers[GetCurrFrameBufIndex()]->WriteBytes( &svp, sizeof( GPUSceneViewParams ) );
 
     // Update descriptor set
-    RHIDescriptorSetPtr curr_view_descset = m_view_descsets[GetCurrFrameBufIndex()];
-    curr_view_descset->BindAccelerationStructure( 0, 0, scene_view.GetScene().GetTLAS().GetRHIAS() );
-    curr_view_descset->BindUniformBufferView( 1, 0, *m_view_buffer_views[GetCurrFrameBufIndex()] );
+    view_data.view_desc_set->BindAccelerationStructure( 0, 0, view.GetScene().GetTLAS().GetRHIAS() );
+    view_data.view_desc_set->BindUniformBufferView( 1, 0, *m_view_buffer_views[GetCurrFrameBufIndex()] );
 
-    curr_view_descset->FlushBinds();
+    view_data.view_desc_set->FlushBinds();
 }
 
 uint32_t Renderer::GetCurrFrameBufIndex() const
@@ -287,10 +280,10 @@ RHICommandList* Renderer::CreateInitializedCommandList( RHI::QueueType queue_typ
     return cmd_list;
 }
 
-void Renderer::SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso ) const
+void Renderer::SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso, const SceneViewFrameData& view_data ) const
 {
     cmd_list.SetPSO( rt_pso );
-    cmd_list.BindDescriptorSet( 1, *m_view_descsets[GetCurrFrameBufIndex()] );
+    cmd_list.BindDescriptorSet( 1, *view_data.view_desc_set );
 }
 
 bool Renderer::RenderScene( const RenderSceneParams& parms )
@@ -311,13 +304,19 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     RGExternalTexture* scene_output = rg.RegisterExternalTexture( scene_output_desc );
 
+    SceneViewFrameData view_frame_data = {};
+    view_frame_data.view = parms.view;
+    view_frame_data.rg = parms.rg;
+    view_frame_data.view_desc_set = AllocateFrameDescSet( *m_view_dsl );
+    view_frame_data.scene_output = scene_output;
+
     RGPass* update_as_pass = rg.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
 
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
     rt_pass->UseTexture( *scene_output, RGTextureUsage::ShaderReadWrite );
 
     if ( parms.extension ) {
-        parms.extension->PostSetupRendergraph( rg, *scene_output );
+        parms.extension->PostSetupRendergraph( view_frame_data );
     }
 
     // 2. Compile stage. That will create a timeline for each resource, allowing us to fetch real RHI handles for them inside passes
@@ -325,7 +324,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
         return false;
 
     if ( parms.extension ) {
-        parms.extension->PostCompileRendergraph( rg, *scene_output );
+        parms.extension->PostCompileRendergraph( view_frame_data );
     }
 
     // 3. Record phase. Fill passes with command lists
@@ -344,15 +343,16 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     update_as_pass->EndPass();
 
     // We have to update tlas for RHI pointer to be valid
-    UpdateSceneViewParams( scene_view );
+    UpdateSceneViewParams( view_frame_data );
 
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
-        m_rt_descsets[GetCurrFrameBufIndex()]->BindTextureRWView( 0, 0, *scene_view.GetFrameColorTextureRWView() );
+        RHIDescriptorSet* rt_descset = AllocateFrameDescSet( *m_rt_dsl );
+        rt_descset->BindTextureRWView( 0, 0, *scene_view.GetFrameColorTextureRWView() );
 
-        SetPSO( *cmd_list_rt, *m_rt_pipeline );
+        SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
 
-        cmd_list_rt->BindDescriptorSet( 0, *m_rt_descsets[GetCurrFrameBufIndex()] );
+        cmd_list_rt->BindDescriptorSet( 0, *rt_descset );
 
         cmd_list_rt->TraceRays( glm::uvec3( scene_view.GetExtent(), 1 ) );
     }
@@ -361,6 +361,11 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     cmd_list_rt->End();
 
     return true;
+}
+
+RHIDescriptorSet* Renderer::AllocateFrameDescSet( RHIDescriptorSetLayout& layout )
+{
+    return m_frame_descriptors[GetCurrFrameBufIndex()].Allocate( layout );
 }
 
 void Renderer::DebugUI()

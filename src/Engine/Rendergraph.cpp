@@ -281,7 +281,7 @@ RGPass::RGPass( RHI::QueueType queue_type, const char* name )
 {
 }
 
-bool RGPass::UseTexture( RGTexture& texture, RGTextureUsage usage )
+bool RGPass::UseTexture( const RGTexture& texture, RGTextureUsage usage )
 {
     uint64_t key = texture.GetHandle();
 
