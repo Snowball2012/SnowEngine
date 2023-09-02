@@ -261,6 +261,7 @@ void EngineApp::Cleanup()
 
 void EngineApp::Update()
 {
+    m_renderer->DebugUI();
     OnUpdate();
     DrawFrame();
 }

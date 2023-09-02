@@ -128,6 +128,8 @@ public:
     // ui_cmd_list is optional
     bool RenderScene( const RenderSceneParams& parms );
 
+    void DebugUI();
+
 private:
 
     void CreateDescriptorSetLayout();

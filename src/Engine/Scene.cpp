@@ -4,7 +4,12 @@
 
 #include "Rendergraph.h"
 
-// Sceme
+#include <ImguiBackend/ImguiBackend.h>
+
+
+CVAR_DEFINE( r_debugDisplayMapping, int, 0, "Show debug interface for display mapping" );
+
+// Scene
 
 Scene::Scene()
 {
@@ -351,4 +356,22 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     cmd_list_rt->End();
 
     return true;
+}
+
+void Renderer::DebugUI()
+{
+    if ( r_debugDisplayMapping.GetValue() > 0 )
+    {
+        bool window_open = true;
+        if ( ImGui::Begin( "Display mapping debug", &window_open ) )
+        {
+            ImGui::Text( "This window will be used for display mapping debugging. Right now its empty" );
+        }
+        ImGui::End();
+
+        if ( window_open == false )
+        {
+            r_debugDisplayMapping.SetValue( 0 );
+        }
+    }
 }
