@@ -38,6 +38,9 @@ void EngineApp::Run( int argc, char** argv )
     // Input
     // ImGui
 
+    // Console must be the first system to be initialized. We can initialize cvars with command line arguments so all cvars must be have correct values at soon as they are added to the app
+    InitConsole();
+
     ParseCommandLine( argc, argv );
 
     InitCoreGlobals();
@@ -77,7 +80,20 @@ void EngineApp::ParseCommandLine( int argc, char** argv )
 {
     for ( int i = 1; i < argc; ++i )
     {
-        if ( !_strcmpi( argv[i], "-EnginePath" ) )
+        if ( argv[i][0] == '+' )
+        {
+            if ( argc > ( i + 1 ) )
+            {
+                m_console->AddCVarInitialValueOverride( argv[i] + 1, argv[i + 1] );
+
+                std::cout << "[App]: Set cvar from command line: " << argv[i] + 1 << " = " << argv[i + 1] << std::endl;
+            }
+            else
+            {
+                std::cerr << "[Error][App]: Can't set cvar from command line because " << argv[i] << " is the last token" << std::endl;
+            }
+        }
+        else if ( !_strcmpi( argv[i], "-EnginePath" ) )
         {
             if ( argc > ( i + 1 ) )
             {
@@ -158,6 +174,9 @@ void EngineApp::InitRHI()
 
         create_info.logger = g_log;
         create_info.core_paths = &g_core_paths;
+        
+        // we need to override default cvar values before rhi initialization
+        m_console->AddCVars( VulkanRHI_GetCVarListHead() );
 
         m_rhi = CreateVulkanRHI_RAII( create_info );
     }
@@ -314,12 +333,19 @@ void EngineApp::InitCoreGlobals()
     g_log = new Logger( create_info );
 }
 
+void EngineApp::InitConsole()
+{
+    m_console = std::make_unique<Console>();
+    m_console->AddCVars( g_cvars_head );
+}
+
 void EngineApp::InitEngineGlobals()
 {
     SE_ENSURE( m_rhi && m_asset_mgr );
 
     g_engine.rhi = m_rhi.get();
     g_engine.asset_mgr = m_asset_mgr.get();
+    g_engine.console = m_console.get();
 }
 
 void EngineApp::CreateSyncObjects()

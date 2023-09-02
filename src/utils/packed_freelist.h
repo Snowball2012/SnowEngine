@@ -68,6 +68,7 @@ public:
 
     size_t size() const noexcept;
     size_t capacity() const noexcept;
+    bool empty() const noexcept;
 
     void reserve( uint32_t nelems ) noexcept;
     void shrink_to_fit() noexcept;

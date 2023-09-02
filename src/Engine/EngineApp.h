@@ -41,6 +41,7 @@ protected:
 
 	std::unique_ptr<class AssetManager> m_asset_mgr = nullptr;
 	std::unique_ptr<class Renderer> m_renderer = nullptr;
+	std::unique_ptr<class Console> m_console = nullptr;
 
 public:
 	EngineApp();
@@ -65,6 +66,7 @@ protected:
 
 private:
 	void InitCoreGlobals();
+	void InitConsole();
 	void InitEngineGlobals();
 	void ParseCommandLine( int argc, char** argv );
 

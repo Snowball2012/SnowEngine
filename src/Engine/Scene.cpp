@@ -4,7 +4,6 @@
 
 #include "Rendergraph.h"
 
-
 // Sceme
 
 Scene::Scene()

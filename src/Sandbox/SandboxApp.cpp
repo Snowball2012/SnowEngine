@@ -7,6 +7,7 @@
 CorePaths g_core_paths;
 Logger* g_log;
 EngineGlobals g_engine;
+ConsoleVariableBase* g_cvars_head = nullptr;
 
 SandboxApp::SandboxApp()
     : EngineApp()
@@ -19,20 +20,20 @@ void SandboxApp::ParseCommandLineDerived( int argc, char** argv )
 {
     for ( int i = 1; i < argc; ++i )
     {
-        if ( !_strcmpi( argv[i], "-DemoAssetPath" ) )
+        if ( !_strcmpi( argv[i], "-StartLevel" ) )
         {
             if ( argc > ( i + 1 ) )
             {
                 // read next arg
-                m_demo_mesh_asset_path = argv[i + 1];
+                m_current_level_path = argv[i + 1];
                 i += 1;
 
 
-                SE_LOG_INFO( Sandbox, "Set demo mesh path from command line: %s", m_demo_mesh_asset_path );
+                SE_LOG_INFO( Sandbox, "Set level path from command line: %s", m_current_level_path );
             }
             else
             {
-                SE_LOG_ERROR( Sandbox, "Can't set demo asset path from command line because -DemoAssetPath is the last token" );
+                SE_LOG_ERROR( Sandbox, "Can't set level path from command line because -StartLevel is the last token" );
             }
         }
     }
@@ -41,12 +42,6 @@ void SandboxApp::ParseCommandLineDerived( int argc, char** argv )
 void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
-
-    m_demo_mesh = LoadAsset<MeshAsset>( m_demo_mesh_asset_path.c_str() );
-    if ( !( m_demo_mesh && m_demo_mesh->GetStatus() == AssetStatus::Ready ) )
-    {
-        SE_LOG_FATAL_ERROR( Sandbox, "Could not load demo asset an path %s", m_demo_mesh_asset_path.c_str() );
-    }
 
     m_scene = std::make_unique<Scene>();
     m_scene_view = std::make_unique<SceneView>( m_scene.get() );
@@ -61,15 +56,12 @@ void SandboxApp::OnInit()
 
     m_world = std::make_unique<World>();
 
-    auto& demo_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-    demo_object->SetName( "DemoMesh", true );
-    demo_object->AddTrait( std::make_unique<TransformTrait>(), true );
-    std::unique_ptr<MeshInstanceTrait> mesh_trait = std::make_unique<MeshInstanceTrait>();
-    mesh_trait->SetAsset( m_demo_mesh );
-    demo_object->AddTrait( std::move( mesh_trait ), true );
-    demo_object->RegenerateEntities();
-
     m_editor = std::make_unique<Editor>();
+
+    if ( !OpenLevel( ToOSPath( m_current_level_path.c_str() ).c_str() ) )
+    {
+        SE_LOG_ERROR( Sandbox, "Could not open level at path %s", m_current_level_path.c_str() );
+    }
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
 }
@@ -92,8 +84,6 @@ void SandboxApp::OnCleanup()
 
     m_scene_view = nullptr;
     m_scene = nullptr;
-
-    m_demo_mesh = nullptr;
 
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
@@ -438,6 +428,9 @@ void SandboxApp::UpdateGui()
         if ( ImGui::MenuItem( "ReloadShaders" ) )
             m_rhi->ReloadAllShaders();
 
+        if ( ImGui::MenuItem( "PrintCVars" ) )
+            GetConsole().ListAllCVars();
+
         ImGui::EndMainMenuBar();
     }
 
@@ -540,8 +533,7 @@ void SandboxApp::UpdateGui()
                 }
                 ImGui::PopID();
             }
-        }        
-             
+        }
     }
     ImGui::End();
 }

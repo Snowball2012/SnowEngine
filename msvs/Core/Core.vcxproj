@@ -16,10 +16,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Core\Core.h" />
+    <ClInclude Include="..\..\src\Core\CoreMisc.h" />
+    <ClInclude Include="..\..\src\Core\CVars.h" />
     <ClInclude Include="..\..\src\Core\Math.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\Core\Core.cpp" />
+    <ClCompile Include="..\..\src\Core\CVars.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

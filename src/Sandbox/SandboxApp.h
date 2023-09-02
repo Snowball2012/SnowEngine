@@ -25,8 +25,7 @@ private:
 	RHISamplerPtr m_point_sampler = nullptr;
 
 	// assets
-	MeshAssetPtr m_demo_mesh = nullptr;
-	std::string m_demo_mesh_asset_path = std::string( "#engine/Meshes/Cube.sea" );
+	std::string m_current_level_path = std::string( "#engine/Levels/Default.sel" );
 
 	// descriptors
 	std::vector<RHIDescriptorSetPtr> m_fsquad_descsets;

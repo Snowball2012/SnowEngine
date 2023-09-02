@@ -184,6 +184,13 @@ size_t packed_freelist<T, base_container>::capacity() const noexcept
 
 
 template<typename T, template <typename...> typename base_container>
+bool packed_freelist<T, base_container>::empty() const noexcept
+{
+    return m_packed_data.empty();
+}
+
+
+template<typename T, template <typename...> typename base_container>
 void packed_freelist<T, base_container>::reserve( uint32_t nelems ) noexcept
 {
     m_packed_data.reserve( nelems );

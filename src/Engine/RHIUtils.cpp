@@ -146,6 +146,9 @@ bool TLAS::Build( RHICommandList& cmd_list )
     RHIASGeometryInfo geom_info = {};
     geom_info.type = RHIASGeometryType::Instances;
 
+    if ( m_instances.empty() )
+        NOTIMPL;
+
     if ( !gpu_instance_buf )
     {
         RHI::ASInstanceBufferInfo instance_buffer_ci = {};

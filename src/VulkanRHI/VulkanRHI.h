@@ -35,6 +35,8 @@ VULKANRHI_API class RHI* CreateVulkanRHI(const VulkanRHICreateInfo& info);
 
 VULKANRHI_API void DestroyVulkanRHI(RHI* vulkan_rhi);
 
+VULKANRHI_API class ConsoleVariableBase* VulkanRHI_GetCVarListHead();
+
 inline RHIPtr CreateVulkanRHI_RAII(const VulkanRHICreateInfo& info)
 {
 	return RHIPtr(CreateVulkanRHI(info), DestroyVulkanRHI);

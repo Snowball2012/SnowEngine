@@ -20,9 +20,11 @@ struct EngineGlobals
 {
     class RHI* rhi;
     class AssetManager* asset_mgr = nullptr;
+    class Console* console = nullptr;
 };
 
 extern EngineGlobals g_engine;
 
 inline RHI& GetRHI() { return *g_engine.rhi; }
 inline AssetManager& GetAssetManager() { return *g_engine.asset_mgr; }
+inline Console& GetConsole() { return *g_engine.console; }
