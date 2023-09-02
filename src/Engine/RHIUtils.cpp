@@ -27,6 +27,47 @@ RHIBufferPtr RHIUtils::CreateInitializedGPUBuffer( RHI::BufferInfo& buffer_info,
     return gpu_buffer;
 }
 
+RHITexturePtr RHIUtils::CreateInitializedGPUTexture( RHI::TextureInfo& texture_info, const void* src_data, size_t src_size )
+{
+    RHITextureLayout desired_initial_layout = texture_info.initial_layout;
+    texture_info.initial_layout = RHITextureLayout::TransferDst;
+    texture_info.usage |= RHITextureUsageFlags::TransferDst;
+
+    RHI::BufferInfo upload_info = {};
+    upload_info.size = src_size;
+    upload_info.usage = RHIBufferUsageFlags::TransferSrc;
+
+    RHIUploadBufferPtr upload_buffer = GetRHI().CreateUploadBuffer( upload_info );
+    upload_buffer->WriteBytes( src_data, src_size );
+
+    RHITexturePtr gpu_texture = GetRHI().CreateTexture( texture_info );
+
+    RHICommandList* list = BeginSingleTimeCommands( RHI::QueueType::Graphics );
+
+    RHIBufferTextureCopyRegion copy_region = {};
+    copy_region.texture_subresource.mip_count = texture_info.mips;
+    copy_region.texture_subresource.array_count = texture_info.array_layers;
+    copy_region.texture_extent[0] = texture_info.width;
+    copy_region.texture_extent[1] = texture_info.height;
+    copy_region.texture_extent[2] = texture_info.depth;
+    list->CopyBufferToTexture( *upload_buffer->GetBuffer(), *gpu_texture, &copy_region, 1 );
+
+    if ( texture_info.initial_layout != desired_initial_layout )
+    {
+        RHITextureBarrier barrier;
+        barrier.layout_src = texture_info.initial_layout;
+        barrier.layout_dst = desired_initial_layout;
+        barrier.texture = gpu_texture.get();
+        list->TextureBarriers( &barrier, 1 );
+    }
+
+    EndSingleTimeCommands( *list );
+
+    texture_info.initial_layout = desired_initial_layout;
+
+    return gpu_texture;
+}
+
 RHIAccelerationStructurePtr RHIUtils::CreateAS( const RHIASGeometryInfo& geom )
 {
     RHIAccelerationStructureType type = RHIAccelerationStructureType::BLAS;

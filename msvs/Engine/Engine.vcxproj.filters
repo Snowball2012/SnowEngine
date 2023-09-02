@@ -20,6 +20,8 @@
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\WorldComponents.cpp" />
     <ClCompile Include="..\..\src\Engine\Serialization.cpp" />
+    <ClCompile Include="..\..\src\Engine\stb_image.cpp" />
+    <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -38,6 +40,8 @@
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
     <ClInclude Include="..\..\src\Engine\Serialization.h" />
+    <ClInclude Include="..\..\src\Engine\stb_image.h" />
+    <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

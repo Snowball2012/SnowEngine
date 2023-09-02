@@ -155,11 +155,6 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
     <ClCompile Include="..\..\src\Sandbox\Editor.cpp" />
     <ClCompile Include="..\..\src\Sandbox\Main.cpp" />
     <ClCompile Include="..\..\src\Sandbox\SandboxApp.cpp" />
-    <ClCompile Include="..\..\src\Sandbox\stb_image.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugASAN|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\..\src\Sandbox\StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugASAN|x64'">Create</PrecompiledHeader>
@@ -169,7 +164,6 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
   <ItemGroup>
     <ClInclude Include="..\..\src\Sandbox\Editor.h" />
     <ClInclude Include="..\..\src\Sandbox\SandboxApp.h" />
-    <ClInclude Include="..\..\src\Sandbox\stb_image.h" />
     <ClInclude Include="..\..\src\Sandbox\StdAfx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

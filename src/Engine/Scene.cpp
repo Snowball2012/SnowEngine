@@ -2,6 +2,7 @@
 
 #include "Scene.h"
 
+#include "DisplayMapping.h"
 #include "Rendergraph.h"
 
 #include <ImguiBackend/ImguiBackend.h>
@@ -124,7 +125,11 @@ Renderer::Renderer()
     CreateDescriptorSetLayout();
     CreateDescriptorSets();
     CreateRTPipeline();
+
+    m_display_mapping = std::make_unique<DisplayMapping>();
 }
+
+Renderer::~Renderer() = default;
 
 void Renderer::NextFrame()
 {
@@ -365,7 +370,7 @@ void Renderer::DebugUI()
         bool window_open = true;
         if ( ImGui::Begin( "Display mapping debug", &window_open ) )
         {
-            ImGui::Text( "This window will be used for display mapping debugging. Right now its empty" );
+            m_display_mapping->DebugUI();
         }
         ImGui::End();
 

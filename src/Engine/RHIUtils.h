@@ -31,6 +31,10 @@ struct RHIUtils
     // No const ref because the function appends TransferDst usage flag to buffer_info
     static RHIBufferPtr CreateInitializedGPUBuffer( RHI::BufferInfo& buffer_info, const void* src_data, size_t src_size );
 
+    // Creates upload buffer under the hood, and transfers the data. Flushes rhi and waits for completion, so use with care. texture_info must be filled
+    // No const ref because the function appends TransferDst usage flag to texture_info
+    static RHITexturePtr CreateInitializedGPUTexture( RHI::TextureInfo& texture_info, const void* src_data, size_t src_size );
+
     // Super slow because of the flushes and lots of allocations
     static RHIAccelerationStructurePtr CreateAS( const RHIASGeometryInfo& geom );
 

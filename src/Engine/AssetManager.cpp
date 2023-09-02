@@ -160,6 +160,7 @@ void AssetManager::RegisterGenerators()
 
 	REGISTER_ASSET_GENERATOR( CubeAsset );
 	REGISTER_ASSET_GENERATOR( MeshAsset );
+	REGISTER_ASSET_GENERATOR( TextureAsset );
 
 #undef REGISTER_ASSET_GENERATOR
 }

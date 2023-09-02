@@ -22,7 +22,7 @@ protected:
 
 public:
 
-	virtual bool Load( const JsonValue& data );
+	virtual bool Load( const JsonValue& data ) override;
 
 	virtual ~MeshAsset() = default;
 
@@ -47,7 +47,7 @@ protected:
 };
 using MeshAssetPtr = boost::intrusive_ptr<MeshAsset>;
 
-// Test asset
+
 class CubeAsset : public MeshAsset
 {
 	IMPLEMENT_ASSET_GENERATOR;
@@ -56,7 +56,7 @@ class CubeAsset : public MeshAsset
 
 public:
 
-	virtual bool Load( const JsonValue& data );
+	virtual bool Load( const JsonValue& data ) override;
 
 	virtual ~CubeAsset() = default;
 
@@ -66,3 +66,25 @@ protected:
 	{}
 };
 using CubeAssetPtr = boost::intrusive_ptr<CubeAsset>;
+
+
+class TextureAsset : public Asset
+{
+	IMPLEMENT_ASSET_GENERATOR;
+
+	RHITexturePtr m_rhi_texture = nullptr;
+
+public:
+	virtual ~TextureAsset() = default;
+
+	TextureAsset( const AssetId& id, AssetManager& mgr )
+		: Asset( id, mgr )
+	{}
+
+	virtual bool Load( const JsonValue& data ) override;
+
+	bool LoadFromFile( const char* path );
+
+	const RHITexture* GetTexture() const { return m_rhi_texture.get(); }
+};
+using TextureAssetPtr = boost::intrusive_ptr<TextureAsset>;

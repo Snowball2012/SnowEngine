@@ -9,6 +9,7 @@ SE_LOG_CATEGORY( Renderer );
 
 class Rendergraph;
 class RGTexture;
+class DisplayMapping;
 
 class SceneMeshInstance
 {
@@ -117,11 +118,14 @@ private:
 
     std::vector<RHIDescriptorSetPtr> m_view_descsets;
 
+    std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
+
     uint64_t m_frame_idx = 0;
 
 public:
 
     Renderer();
+    ~Renderer();
 
     void NextFrame();
 

@@ -8,6 +8,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
+#include "stb_image.h"
+
 // MeshAsset
 
 struct MeshVertex
@@ -55,8 +57,6 @@ bool MeshAsset::Load( const JsonValue& data )
 bool MeshAsset::LoadFromObj( const char* path )
 {
     // @todo: pre-reserve index array
-
-    std::string inputfile = "cornell_box.obj";
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -208,6 +208,88 @@ bool CubeAsset::Load( const JsonValue& data )
     };
 
     if ( ! LoadFromData( vertices, indices ) )
+    {
+        return false;
+    }
+
+    m_status = AssetStatus::Ready;
+    return true;
+}
+
+// TextureAsset
+
+bool TextureAsset::Load( const JsonValue& data )
+{
+    JsonValue::ConstMemberIterator source = data.FindMember( "source" );
+    if ( source == data.MemberEnd() || !source->value.IsString() )
+    {
+        SE_LOG_ERROR( Engine, "File %s is not a valid texture asset: \"source\" value is invalid", m_id.GetPath() );
+        return false;
+    }
+
+    if ( !LoadFromFile( source->value.GetString() ) )
+    {
+        return false;
+    }
+
+    m_status = AssetStatus::Ready;
+    return true;
+}
+
+bool TextureAsset::LoadFromFile( const char* path )
+{
+    std::string input_file_path = ToOSPath( path );
+
+    bool file_hdr = file_hdr = stbi_is_hdr( input_file_path.c_str() );
+
+    if ( file_hdr )
+    {
+        // requires separate interface, loads floats
+        NOTIMPL;
+    }
+    
+    int file_width, file_height, file_channels;
+
+    stbi_uc* file_pixels = stbi_load( input_file_path.c_str(), &file_width, &file_height, &file_channels, STBI_rgb_alpha );
+    if ( file_pixels == nullptr )
+    {
+        SE_LOG_ERROR( Engine, "Could not load texture file at <%s>", input_file_path.c_str() );
+        return false;
+    }
+
+    BOOST_SCOPE_EXIT( file_pixels )
+    {
+        stbi_image_free( file_pixels );
+    } BOOST_SCOPE_EXIT_END
+    
+    RHI::TextureInfo tex_info = {};
+    tex_info.dimensions = RHITextureDimensions::T2D;
+    if ( file_channels == 4 || file_channels == 3 )
+    {
+        tex_info.format = RHIFormat::R8G8B8A8_SRGB;
+    }
+    else
+    {
+        NOTIMPL;
+    }
+    tex_info.allow_multiformat_views = false;
+
+    tex_info.width = uint32_t( file_width );
+    tex_info.height = uint32_t( file_height );
+    tex_info.depth = 1;
+
+    tex_info.mips = 1;
+    tex_info.array_layers = 1;
+
+    tex_info.usage = RHITextureUsageFlags::TextureROView;
+    tex_info.initial_layout = RHITextureLayout::ShaderReadOnly;
+    tex_info.initial_queue = RHI::QueueType::Graphics;
+
+    size_t file_data_size = file_width * file_height * RHIUtils::GetRHIFormatSize( tex_info.format );
+
+    m_rhi_texture = RHIUtils::CreateInitializedGPUTexture( tex_info, file_pixels, file_data_size );
+
+    if ( !m_rhi_texture )
     {
         return false;
     }
