@@ -153,7 +153,6 @@ namespace
 void Renderer::CreateSceneViewParamsBuffers()
 {
     m_view_buffers.resize( NumBufferizedFrames );
-    m_view_buffer_views.resize( NumBufferizedFrames );
 
     RHI::BufferInfo uniform_info = {};
     uniform_info.size = sizeof( GPUSceneViewParams );
@@ -162,9 +161,6 @@ void Renderer::CreateSceneViewParamsBuffers()
     for ( size_t i = 0; i < NumBufferizedFrames; ++i )
     {
         m_view_buffers[i] = GetRHI().CreateUploadBuffer( uniform_info );
-        RHI::UniformBufferViewInfo view_info = {};
-        view_info.buffer = m_view_buffers[i]->GetBuffer();
-        m_view_buffer_views[i] = GetRHI().CreateUniformBufferView( view_info );
     }
 }
 
@@ -261,7 +257,10 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 
     // Update descriptor set
     view_data.view_desc_set->BindAccelerationStructure( 0, 0, view.GetScene().GetTLAS().GetRHIAS() );
-    view_data.view_desc_set->BindUniformBufferView( 1, 0, *m_view_buffer_views[GetCurrFrameBufIndex()] );
+
+    RHIUniformBufferViewInfo uniform_buffer_view = {};
+    uniform_buffer_view.buffer = m_view_buffers[GetCurrFrameBufIndex()]->GetBuffer();
+    view_data.view_desc_set->BindUniformBufferView( 1, 0, uniform_buffer_view );
 
     view_data.view_desc_set->FlushBinds();
 }

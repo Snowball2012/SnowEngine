@@ -236,7 +236,7 @@ void RHITestApp::CreateUniformBuffers()
     for (size_t i = 0; i < m_max_frames_in_flight; ++i)
     {
         m_uniform_buffers[i] = m_rhi->CreateUploadBuffer(uniform_info);
-        RHI::UniformBufferViewInfo view_info = {};
+        RHIUniformBufferViewInfo view_info = {};
         view_info.buffer = m_uniform_buffers[i]->GetBuffer();
         m_uniform_buffer_views[i] = m_rhi->CreateUniformBufferView(view_info);
     }

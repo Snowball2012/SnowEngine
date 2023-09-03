@@ -122,10 +122,11 @@ class VulkanDescriptorSet : public RHIDescriptorSet
     bc::small_vector<VkWriteDescriptorSet, 4> m_pending_writes;
 
     // we need this to make sure pBufferInfo and such are valid at the time of FlushBinds
-    bc::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_views;
+    bc::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_objects;
 
     // must be static to avoid reallocations (VkWriteDescriptorSet uses raw pointers to these structures)
     bc::static_vector<VkWriteDescriptorSetAccelerationStructureKHR, 4> m_as_infos;
+    bc::static_vector<VkDescriptorBufferInfo, 4> m_buffer_infos;
 
 public:
     virtual ~VulkanDescriptorSet() override;
@@ -133,6 +134,7 @@ public:
     VulkanDescriptorSet(VulkanRHI* rhi, RHIDescriptorSetLayout& layout);
 
     virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& view ) override;
+    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIUniformBufferViewInfo& view ) override;
     virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& view ) override;
     virtual void BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& view ) override;
     virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) override;

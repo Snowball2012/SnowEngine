@@ -17,7 +17,7 @@ class VulkanCBV : public RHIUniformBufferView
 public:
 	virtual ~VulkanCBV() override;
 
-	VulkanCBV(VulkanRHI* rhi, const RHI::UniformBufferViewInfo& info);
+	VulkanCBV(VulkanRHI* rhi, const RHIUniformBufferViewInfo& info);
 
 	const VkDescriptorBufferInfo* GetVkBufferInfo() const { return &m_view_info; }
 };

@@ -122,7 +122,6 @@ private:
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 
     std::vector<RHIUploadBufferPtr> m_view_buffers;
-    std::vector<RHIUniformBufferViewPtr> m_view_buffer_views;
 
     std::vector<DescriptorSetPool> m_frame_descriptors;
 

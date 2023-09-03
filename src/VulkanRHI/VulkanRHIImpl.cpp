@@ -116,7 +116,7 @@ RHIDescriptorSet* VulkanRHI::CreateDescriptorSet( RHIDescriptorSetLayout& layout
     return new VulkanDescriptorSet( this, layout );
 }
 
-RHIUniformBufferView* VulkanRHI::CreateUniformBufferView( const UniformBufferViewInfo& info )
+RHIUniformBufferView* VulkanRHI::CreateUniformBufferView( const RHIUniformBufferViewInfo& info )
 {
     return new VulkanCBV( this, info );
 }

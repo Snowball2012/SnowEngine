@@ -156,6 +156,15 @@ struct RHIASBuildSizes
     size_t scratch_size = 0;
 };
 
+struct RHIUniformBufferViewInfo
+{
+    static constexpr uint64_t WHOLE_SIZE = -1;
+
+    RHIBuffer* buffer = nullptr;
+    uint64_t offset = 0;
+    uint64_t range = WHOLE_SIZE;
+};
+
 class RHI
 {
 public:
@@ -294,11 +303,7 @@ public:
     };
     virtual RHITexture* CreateTexture( const TextureInfo& info ) { NOTIMPL; return nullptr; }
 
-    struct UniformBufferViewInfo
-    {
-        RHIBuffer* buffer = nullptr;
-    };
-    virtual RHIUniformBufferView* CreateUniformBufferView( const UniformBufferViewInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIUniformBufferView* CreateUniformBufferView( const RHIUniformBufferViewInfo& info ) { NOTIMPL; return nullptr; }
 
     struct TextureROViewInfo
     {
@@ -635,6 +640,7 @@ class RHIDescriptorSet : public RHIObject
 {
 public:
     virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv ) { NOTIMPL; }
+    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIUniformBufferViewInfo& cbv ) { NOTIMPL; }
     virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& srv ) { NOTIMPL; }
     virtual void BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& srv ) { NOTIMPL; }
     virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) { NOTIMPL; }

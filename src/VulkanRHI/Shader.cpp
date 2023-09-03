@@ -374,7 +374,28 @@ void VulkanDescriptorSet::BindUniformBufferView(size_t range_idx, size_t idx_in_
     write_struct.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     write_struct.pBufferInfo = vk_cbv.GetVkBufferInfo();
 
-    m_referenced_views.emplace_back(&vk_cbv);
+    m_referenced_objects.emplace_back(&vk_cbv);
+}
+
+void VulkanDescriptorSet::BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIUniformBufferViewInfo& view )
+{
+    VERIFY_NOT_EQUAL( view.buffer, nullptr );
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct( write_struct, range_idx, idx_in_range );
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+    auto& buffer_info = m_buffer_infos.emplace_back();
+    auto& vk_cb = RHIImpl( *view.buffer );
+    buffer_info.buffer = vk_cb.GetVkBuffer();
+    buffer_info.offset = view.offset;
+    buffer_info.range = view.range == RHIUniformBufferViewInfo::WHOLE_SIZE ? VK_WHOLE_SIZE : view.range;
+
+    write_struct.pBufferInfo = &buffer_info;
+
+    m_referenced_objects.emplace_back( &vk_cb );
 }
 
 void VulkanDescriptorSet::BindTextureROView(size_t range_idx, size_t idx_in_range, RHITextureROView& srv)
@@ -388,7 +409,7 @@ void VulkanDescriptorSet::BindTextureROView(size_t range_idx, size_t idx_in_rang
     write_struct.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
     write_struct.pImageInfo = vk_srv.GetVkImageInfo();
 
-    m_referenced_views.emplace_back(&vk_srv);
+    m_referenced_objects.emplace_back(&vk_srv);
 }
 
 void VulkanDescriptorSet::BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& view )
@@ -402,7 +423,7 @@ void VulkanDescriptorSet::BindTextureRWView( size_t range_idx, size_t idx_in_ran
     write_struct.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
     write_struct.pImageInfo = vk_view.GetVkImageInfo();
 
-    m_referenced_views.emplace_back( &vk_view );
+    m_referenced_objects.emplace_back( &vk_view );
 }
 
 void VulkanDescriptorSet::BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as )
@@ -422,7 +443,7 @@ void VulkanDescriptorSet::BindAccelerationStructure( size_t range_idx, size_t id
     vk_as_info.pAccelerationStructures = vk_as.GetVkASPtr();
     write_struct.pNext = &vk_as_info;
 
-    m_referenced_views.emplace_back( &vk_as );
+    m_referenced_objects.emplace_back( &vk_as );
 }
 
 void VulkanDescriptorSet::BindSampler(size_t range_idx, size_t idx_in_range, RHISampler& sampler)
@@ -436,7 +457,7 @@ void VulkanDescriptorSet::BindSampler(size_t range_idx, size_t idx_in_range, RHI
     write_struct.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
     write_struct.pImageInfo = vk_sampler.GetVkImageInfo();
 
-    m_referenced_views.emplace_back(&vk_sampler);
+    m_referenced_objects.emplace_back(&vk_sampler);
 }
 
 void VulkanDescriptorSet::FlushBinds()
@@ -450,8 +471,9 @@ void VulkanDescriptorSet::FlushBinds()
         0, nullptr);
 
     m_pending_writes.clear();
-    m_referenced_views.clear();
+    m_referenced_objects.clear();
     m_as_infos.clear();
+    m_buffer_infos.clear();
 }
 
 void VulkanDescriptorSet::InitWriteStruct(VkWriteDescriptorSet& write_struct, size_t range_idx, size_t idx_in_range) const
