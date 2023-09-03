@@ -3,10 +3,12 @@
 
 #include "StdAfx.h"
 
+#include "UploadBufferPool.h"
 
 SE_LOG_CATEGORY( Rendergraph );
 
 
+class DescriptorSetPool;
 class RHICommandList;
 
 
@@ -160,7 +162,13 @@ private:
 
     std::vector<RHITextureBarrier> m_final_barriers;
 
+    std::unique_ptr<DescriptorSetPool> m_descriptors;
+    std::unique_ptr<UploadBufferPool> m_upload_buffers;
+
 public:
+    Rendergraph();
+    ~Rendergraph();
+
     RGPass* AddPass( RHI::QueueType queue_type, const char* name );
 
     RGExternalTexture* RegisterExternalTexture( const RGExternalTextureDesc& desc );
@@ -171,6 +179,13 @@ public:
     bool Compile();
 
     RHIFence Submit( const RGSubmitInfo& info );
+
+    void Reset();
+
+    // returned descriptor may only be used until Submit() is called
+    RHIDescriptorSet* AllocateFrameDescSet( RHIDescriptorSetLayout& layout );
+    // returned buffer range may only be used until Submit() is called
+    UploadBufferRange AllocateUploadBuffer( size_t size );
 
 private:
     uint64_t GenerateHandle() { return m_handle_generator++; }

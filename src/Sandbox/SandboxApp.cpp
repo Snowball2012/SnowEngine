@@ -231,8 +231,8 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
                 cmd_list->SetPSO( *m_app.m_draw_fullscreen_quad_pipeline );
 
-                RHIDescriptorSet* descset = m_app.m_renderer->AllocateFrameDescSet( *m_app.m_dsl_fsquad );
-                descset->BindTextureROView( 0, 0, *m_app.m_scene_view->GetFrameColorTextureROView() );
+                RHIDescriptorSet* descset = data.rg->AllocateFrameDescSet( *m_app.m_dsl_fsquad );
+                descset->BindTextureROView( 0, 0, *data.view->GetFrameColorTextureROView() );
                 descset->BindSampler( 1, 0, *m_app.m_point_sampler );
                 cmd_list->BindDescriptorSet( 0, *descset );
 

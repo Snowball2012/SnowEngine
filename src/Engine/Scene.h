@@ -4,14 +4,12 @@
 
 #include "Assets.h"
 #include "RHIUtils.h"
-#include "UploadBufferPool.h"
 
 SE_LOG_CATEGORY( Renderer );
 
 class Rendergraph;
 class RGTexture;
 class DisplayMapping;
-class DescriptorSetPool;
 
 class SceneMeshInstance
 {
@@ -122,28 +120,15 @@ private:
 
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 
-    std::vector<DescriptorSetPool> m_frame_descriptors;
-    std::vector<UploadBufferPool> m_frame_uniform_buffers;
-
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
-
-    uint64_t m_frame_idx = 0;
 
 public:
 
     Renderer();
     ~Renderer();
 
-    void NextFrame();
-
     // ui_cmd_list is optional
     bool RenderScene( const RenderSceneParams& parms );
-
-    // returned descriptor may only be used until NextFrame() is called
-    RHIDescriptorSet* AllocateFrameDescSet( RHIDescriptorSetLayout& layout );
-
-    // returned buffer range may only be used until NextFrame() is called
-    UploadBufferRange AllocateUploadBuffer( size_t size );
 
     void DebugUI();
 
@@ -159,6 +144,4 @@ private:
     RHICommandList* CreateInitializedCommandList( RHI::QueueType queue_type ) const;
 
     void SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt_pso, const SceneViewFrameData& view_data ) const;
-
-    uint32_t GetCurrFrameBufIndex() const;
 };

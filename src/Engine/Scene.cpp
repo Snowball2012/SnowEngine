@@ -132,13 +132,6 @@ Renderer::Renderer()
 
 Renderer::~Renderer() = default;
 
-void Renderer::NextFrame()
-{
-    m_frame_idx++;
-    m_frame_descriptors[GetCurrFrameBufIndex()].Reset();
-    m_frame_uniform_buffers[GetCurrFrameBufIndex()].Reset();
-}
-
 namespace
 {
     // must be in sync with SceneViewParams.hlsli
@@ -153,8 +146,6 @@ namespace
 
 void Renderer::CreateFramePools()
 {
-    m_frame_descriptors.resize( NumBufferizedFrames );
-    m_frame_uniform_buffers.resize( NumBufferizedFrames );
 }
 
 void Renderer::CreateRTPipeline()
@@ -241,7 +232,7 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 
     svp.proj_mat[1][1] *= -1; // ogl -> vulkan y axis
 
-    UploadBufferRange gpu_buffer = AllocateUploadBuffer( sizeof( GPUSceneViewParams ) );
+    UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBuffer( sizeof( GPUSceneViewParams ) );
 
     gpu_buffer.UploadData( svp );
 
@@ -250,11 +241,6 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     view_data.view_desc_set->BindUniformBufferView( 1, 0, gpu_buffer.view );
 
     view_data.view_desc_set->FlushBinds();
-}
-
-uint32_t Renderer::GetCurrFrameBufIndex() const
-{
-    return m_frame_idx % NumBufferizedFrames;
 }
 
 RHICommandList* Renderer::CreateInitializedCommandList( RHI::QueueType queue_type ) const
@@ -293,7 +279,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     SceneViewFrameData view_frame_data = {};
     view_frame_data.view = parms.view;
     view_frame_data.rg = parms.rg;
-    view_frame_data.view_desc_set = AllocateFrameDescSet( *m_view_dsl );
+    view_frame_data.view_desc_set = rg.AllocateFrameDescSet( *m_view_dsl );
     view_frame_data.scene_output = scene_output;
 
     RGPass* update_as_pass = rg.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
@@ -333,7 +319,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
-        RHIDescriptorSet* rt_descset = AllocateFrameDescSet( *m_rt_dsl );
+        RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
         rt_descset->BindTextureRWView( 0, 0, *scene_view.GetFrameColorTextureRWView() );
 
         SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
@@ -347,16 +333,6 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     cmd_list_rt->End();
 
     return true;
-}
-
-RHIDescriptorSet* Renderer::AllocateFrameDescSet( RHIDescriptorSetLayout& layout )
-{
-    return m_frame_descriptors[GetCurrFrameBufIndex()].Allocate( layout );
-}
-
-UploadBufferRange Renderer::AllocateUploadBuffer( size_t size )
-{
-    return m_frame_uniform_buffers[GetCurrFrameBufIndex()].Allocate( size );
 }
 
 void Renderer::DebugUI()

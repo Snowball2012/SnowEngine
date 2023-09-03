@@ -2,6 +2,8 @@
 
 #include "Rendergraph.h"
 
+#include "DescriptorSetPool.h"
+
 // RGTexture
 
 RGTexture::RGTexture( uint64_t handle, const char* name, bool is_external )
@@ -17,6 +19,14 @@ RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDe
 }
 
 // Rendergraph
+
+Rendergraph::Rendergraph()
+{
+    m_descriptors = std::make_unique<DescriptorSetPool>();
+    m_upload_buffers = std::make_unique<UploadBufferPool>();
+}
+
+Rendergraph::~Rendergraph() = default;
 
 RGPass* Rendergraph::AddPass( RHI::QueueType queue_type, const char* name )
 {
@@ -272,6 +282,26 @@ RHIFence Rendergraph::Submit( const RGSubmitInfo& info )
         last_fence = GetRHI().SubmitCommandLists( rhi_submission );
     }
     return last_fence;
+}
+
+void Rendergraph::Reset()
+{
+    m_passes.clear();
+    m_submissions.clear();
+    m_external_textures.clear();
+    m_final_barriers.clear();
+    m_descriptors->Reset();
+    m_upload_buffers->Reset();
+}
+
+RHIDescriptorSet* Rendergraph::AllocateFrameDescSet( RHIDescriptorSetLayout& layout )
+{
+    return m_descriptors->Allocate( layout );
+}
+
+UploadBufferRange Rendergraph::AllocateUploadBuffer( size_t size )
+{
+    return m_upload_buffers->Allocate( size );
 }
 
 // RGPass

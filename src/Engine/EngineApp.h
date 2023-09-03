@@ -10,6 +10,8 @@ struct CommandLineArguments
 	std::string log_path;
 };
 
+class Rendergraph;
+
 class EngineApp
 {
 private:
@@ -26,6 +28,8 @@ private:
 	std::vector<RHIFence> m_inflight_fences;
 	std::vector<uint64_t> m_imgui_frames;
 	uint32_t m_current_frame = 0;
+
+	std::vector<std::unique_ptr<Rendergraph>> m_rendergraphs;
 
 	bool m_fb_resized = false;
 

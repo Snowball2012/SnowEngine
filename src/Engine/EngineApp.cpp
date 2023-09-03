@@ -190,6 +190,12 @@ void EngineApp::InitRHI()
 
     CreateSyncObjects();
 
+    m_rendergraphs.resize( m_max_frames_in_flight );
+    for ( auto& rg : m_rendergraphs )
+    {
+        rg = std::make_unique<Rendergraph>();
+    }
+
     SE_LOG_INFO( Engine, "RHI initialization complete" );
 }
 
@@ -247,6 +253,8 @@ void EngineApp::Cleanup()
     g_engine.asset_mgr = nullptr;
     m_asset_mgr.reset();
 
+    m_rendergraphs.clear();
+
     g_engine.rhi = nullptr;
     m_rhi.reset();
 
@@ -299,7 +307,8 @@ void EngineApp::DrawFrame()
     ImguiRenderResult imgui_res = m_imgui->RenderFrame( *m_swapchain->GetRTV() );
     m_imgui_frames[m_current_frame] = imgui_res.frame_idx;
 
-    Rendergraph framegraph;    
+    Rendergraph& framegraph = *m_rendergraphs[m_current_frame].get();
+    framegraph.Reset();
 
     OnDrawFrame( framegraph, imgui_res.cl );
 
@@ -321,7 +330,6 @@ void EngineApp::DrawFrame()
     m_rhi->Present( *m_swapchain, present_info );
 
     m_current_frame = ( m_current_frame + 1 ) % m_max_frames_in_flight;
-    m_renderer->NextFrame();
 }
 
 void EngineApp::InitCoreGlobals()
