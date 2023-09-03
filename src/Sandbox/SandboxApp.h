@@ -16,18 +16,7 @@ SE_LOG_CATEGORY( Sandbox );
 class SandboxApp : public EngineApp
 {
 private:
-	// pipeline
-	RHIDescriptorSetLayoutPtr m_dsl_fsquad = nullptr;
-	RHIShaderBindingLayoutPtr m_shader_bindings_layout_fsquad = nullptr;
-	RHIGraphicsPipelinePtr m_draw_fullscreen_quad_pipeline = nullptr;
-
-	// resources
-	RHISamplerPtr m_point_sampler = nullptr;
-
-	// assets
 	std::string m_current_level_path = std::string( "#engine/Levels/Default.sel" );
-
-	// descriptors
 
 	std::unique_ptr<World> m_world;
 
@@ -64,14 +53,6 @@ private:
 	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }
 
 	void UpdateGui();
-
-	void CleanupPipeline();
-
-	void CreateDescriptorSetLayout();
-
-	void CreateTextureSampler();
-
-	void CreateFullscreenQuadPipeline();
 
 	void UpdateScene();
 

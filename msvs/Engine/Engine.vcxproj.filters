@@ -24,6 +24,7 @@
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\UploadBufferPool.cpp" />
+    <ClCompile Include="..\..\src\Engine\ShaderPrograms.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -46,6 +47,7 @@
     <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
     <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
     <ClInclude Include="..\..\src\Engine\UploadBufferPool.h" />
+    <ClInclude Include="..\..\src\Engine\ShaderPrograms.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">

@@ -4,6 +4,7 @@
 
 #include "DescriptorSetPool.h"
 #include "DisplayMapping.h"
+#include "ShaderPrograms.h"
 #include "Rendergraph.h"
 #include "UploadBufferPool.h"
 
@@ -124,7 +125,8 @@ Renderer::Renderer()
     }
 
     CreateDescriptorSetLayout();
-    CreateFramePools();
+    CreatePrograms();
+    CreateSamplers();
     CreateRTPipeline();
 
     m_display_mapping = std::make_unique<DisplayMapping>();
@@ -142,10 +144,6 @@ namespace
         glm::mat4 view_proj_inv_mat;
         glm::uvec2 viewport_size_px;
     };
-}
-
-void Renderer::CreateFramePools()
-{
 }
 
 void Renderer::CreateRTPipeline()
@@ -173,6 +171,17 @@ void Renderer::CreateRTPipeline()
     rt_pipeline_info.binding_layout = m_rt_layout.get();
 
     m_rt_pipeline = GetRHI().CreatePSO( rt_pipeline_info );
+}
+
+void Renderer::CreatePrograms()
+{
+    m_blit_texture_prog = std::make_unique<BlitTextureProgram>();
+}
+
+void Renderer::CreateSamplers()
+{
+    RHI::SamplerInfo info_point = {};
+    m_point_sampler = GetRHI().CreateSampler( info_point );
 }
 
 void Renderer::CreateDescriptorSetLayout()
@@ -351,4 +360,14 @@ void Renderer::DebugUI()
             r_debugDisplayMapping.SetValue( 0 );
         }
     }
+}
+
+BlitTextureProgram* Renderer::GetBlitTextureProgram() const
+{
+    return m_blit_texture_prog.get();
+}
+
+RHISampler* Renderer::GetPointSampler() const
+{
+    return m_point_sampler.get();
 }

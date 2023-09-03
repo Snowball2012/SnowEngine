@@ -3,6 +3,7 @@
 #include "SandboxApp.h"
 
 #include <Engine/Rendergraph.h>
+#include <Engine/ShaderPrograms.h>
 
 CorePaths g_core_paths;
 Logger* g_log;
@@ -47,11 +48,6 @@ void SandboxApp::OnInit()
     m_scene_view = std::make_unique<SceneView>( m_scene.get() );
 
     m_scene_view->SetExtents( m_swapchain->GetExtent() );
-    
-    CreateDescriptorSetLayout();
-    CreateFullscreenQuadPipeline();
-
-    CreateTextureSampler();
 
     m_world = std::make_unique<World>();
 
@@ -75,86 +71,10 @@ void SandboxApp::OnCleanup()
 
     m_world = nullptr;
 
-    m_point_sampler = nullptr;
-
-    CleanupPipeline();
-
     m_scene_view = nullptr;
     m_scene = nullptr;
 
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
-}
-
-void SandboxApp::CleanupPipeline()
-{
-    m_draw_fullscreen_quad_pipeline = nullptr;
-    m_shader_bindings_layout_fsquad = nullptr;
-    m_dsl_fsquad = nullptr;
-}
-
-void SandboxApp::CreateDescriptorSetLayout()
-{
-    RHI::DescriptorViewRange ranges[2] = {};
-
-    ranges[0].type = RHIShaderBindingType::TextureRO;
-    ranges[0].count = 1;
-    ranges[0].stages = RHIShaderStageFlags::PixelShader;
-
-    ranges[1].type = RHIShaderBindingType::Sampler;
-    ranges[1].count = 1;
-    ranges[1].stages = RHIShaderStageFlags::PixelShader;
-
-    RHI::DescriptorSetLayoutInfo binding_table = {};
-    binding_table.ranges = ranges;
-    binding_table.range_count = std::size( ranges );
-
-    m_dsl_fsquad = m_rhi->CreateDescriptorSetLayout( binding_table );
-
-    RHI::ShaderBindingLayoutInfo layout_info = {};
-    RHIDescriptorSetLayout* dsls[1] = { m_dsl_fsquad.get() };
-    layout_info.tables = dsls;
-    layout_info.table_count = std::size( dsls );
-
-    m_shader_bindings_layout_fsquad = m_rhi->CreateShaderBindingLayout( layout_info );
-}
-
-void SandboxApp::CreateTextureSampler()
-{
-    RHI::SamplerInfo info_point = {};
-    m_point_sampler = m_rhi->CreateSampler( info_point );
-}
-
-void SandboxApp::CreateFullscreenQuadPipeline()
-{
-    RHI::ShaderCreateInfo create_info = {};
-    std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/FullscreenQuad.hlsl" ).c_str() );
-    create_info.filename = shader_path.c_str();
-
-    create_info.frequency = RHI::ShaderFrequency::Vertex;
-    create_info.entry_point = "FullScreenQuadVS";
-    RHIObjectPtr<RHIShader> triangle_shader_vs = m_rhi->CreateShader( create_info );
-
-    create_info.frequency = RHI::ShaderFrequency::Pixel;
-    create_info.entry_point = "FullScreenQuadPS";
-    RHIObjectPtr<RHIShader> triangle_shader_ps = m_rhi->CreateShader( create_info );
-
-    RHIInputAssemblerInfo ia_info = {};
-
-    RHIGraphicsPipelineInfo rhi_pipeline_info = {};
-
-    rhi_pipeline_info.input_assembler = &ia_info;
-    rhi_pipeline_info.vs = triangle_shader_vs.get();
-    rhi_pipeline_info.ps = triangle_shader_ps.get();
-
-    RHIPipelineRTInfo rt_info = {};
-    rt_info.format = m_swapchain->GetFormat();
-    rhi_pipeline_info.rts_count = 1;
-    rhi_pipeline_info.rt_info = &rt_info;
-    rhi_pipeline_info.binding_layout = m_shader_bindings_layout_fsquad.get();
-
-    rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::None;
-
-    m_draw_fullscreen_quad_pipeline = m_rhi->CreatePSO( rhi_pipeline_info );
 }
 
 void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
@@ -201,44 +121,18 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
             m_blit_to_swapchain_pass->AddCommandList( *cmd_list );
             {
-                RHIPassRTVInfo rt = {};
-                rt.load_op = RHILoadOp::Clear;
-                rt.store_op = RHIStoreOp::Store;
-                rt.rtv = m_app.m_swapchain->GetRTV();
-                rt.clear_value.float32[3] = 1.0f;
+                const BlitTextureProgram* blit_prog = m_app.m_renderer->GetBlitTextureProgram();
 
-                RHIPassInfo pass_info = {};
-                pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = m_app.m_swapchain->GetExtent() };
-                pass_info.render_targets = &rt;
-                pass_info.render_targets_count = 1;
-                cmd_list->BeginPass( pass_info );
+                BlitTextureProgram::Params parms = {};
+                {
+                    parms.extent = m_app.m_swapchain->GetExtent();
+                    parms.output_format = m_app.m_swapchain->GetFormat();
+                    parms.output = m_app.m_swapchain->GetRTV();
+                    parms.input = data.view->GetFrameColorTextureROView();
+                    parms.sampler = m_app.m_renderer->GetPointSampler();
+                }
 
-                RHIViewport viewport = {};
-                viewport.x = 0;
-                viewport.y = 0;
-                glm::uvec2 swapchain_extent = m_app.m_swapchain->GetExtent();
-                viewport.width = float( swapchain_extent.x );
-                viewport.height = float( swapchain_extent.y );
-                viewport.min_depth = 0.0f;
-                viewport.max_depth = 1.0f;
-
-                RHIRect2D scissor = {};
-                scissor.offset = { 0, 0 };
-                scissor.extent = swapchain_extent;
-
-                cmd_list->SetViewports( 0, &viewport, 1 );
-                cmd_list->SetScissors( 0, &scissor, 1 );
-
-                cmd_list->SetPSO( *m_app.m_draw_fullscreen_quad_pipeline );
-
-                RHIDescriptorSet* descset = data.rg->AllocateFrameDescSet( *m_app.m_dsl_fsquad );
-                descset->BindTextureROView( 0, 0, *data.view->GetFrameColorTextureROView() );
-                descset->BindSampler( 1, 0, *m_app.m_point_sampler );
-                cmd_list->BindDescriptorSet( 0, *descset );
-
-                cmd_list->Draw( 3, 1, 0, 0 );
-
-                cmd_list->EndPass();
+                blit_prog->Run( *cmd_list, *data.rg, parms );
             }
             m_blit_to_swapchain_pass->EndPass();
 

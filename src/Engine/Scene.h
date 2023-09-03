@@ -7,6 +7,7 @@
 
 SE_LOG_CATEGORY( Renderer );
 
+class BlitTextureProgram;
 class Rendergraph;
 class RGTexture;
 class DisplayMapping;
@@ -112,7 +113,9 @@ class Renderer
 {
 private:
 
-    static constexpr uint32_t NumBufferizedFrames = 3;
+    std::unique_ptr<BlitTextureProgram> m_blit_texture_prog = nullptr;
+
+    RHISamplerPtr m_point_sampler = nullptr;
 
     RHIDescriptorSetLayoutPtr m_rt_dsl = nullptr;
     RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
@@ -121,6 +124,7 @@ private:
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
+
 
 public:
 
@@ -132,10 +136,17 @@ public:
 
     void DebugUI();
 
+    BlitTextureProgram* GetBlitTextureProgram() const;
+
+    RHISampler* GetPointSampler() const;
+
 private:
 
+    void CreatePrograms();
+
+    void CreateSamplers();
+
     void CreateDescriptorSetLayout();
-    void CreateFramePools();
 
     void CreateRTPipeline();
 

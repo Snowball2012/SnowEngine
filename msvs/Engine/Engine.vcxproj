@@ -25,6 +25,7 @@
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
     <ClCompile Include="..\..\src\Engine\Serialization.cpp" />
+    <ClCompile Include="..\..\src\Engine\ShaderPrograms.cpp" />
     <ClCompile Include="..\..\src\Engine\stb_image.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='DebugASAN|x64'">NotUsing</PrecompiledHeader>
@@ -64,6 +65,7 @@
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\Scene.h" />
     <ClInclude Include="..\..\src\Engine\Serialization.h" />
+    <ClInclude Include="..\..\src\Engine\ShaderPrograms.h" />
     <ClInclude Include="..\..\src\Engine\stb_image.h" />
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
     <ClInclude Include="..\..\src\Engine\UploadBufferPool.h" />
