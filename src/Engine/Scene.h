@@ -4,6 +4,7 @@
 
 #include "Assets.h"
 #include "RHIUtils.h"
+#include "UploadBufferPool.h"
 
 SE_LOG_CATEGORY( Renderer );
 
@@ -121,9 +122,8 @@ private:
 
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 
-    std::vector<RHIUploadBufferPtr> m_view_buffers;
-
     std::vector<DescriptorSetPool> m_frame_descriptors;
+    std::vector<UploadBufferPool> m_frame_uniform_buffers;
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
 
@@ -142,13 +142,15 @@ public:
     // returned descriptor may only be used until NextFrame() is called
     RHIDescriptorSet* AllocateFrameDescSet( RHIDescriptorSetLayout& layout );
 
+    // returned buffer range may only be used until NextFrame() is called
+    UploadBufferRange AllocateUploadBuffer( size_t size );
+
     void DebugUI();
 
 private:
 
     void CreateDescriptorSetLayout();
-    void CreateSceneViewParamsBuffers();
-    void CreateDescriptorSets();
+    void CreateFramePools();
 
     void CreateRTPipeline();
 

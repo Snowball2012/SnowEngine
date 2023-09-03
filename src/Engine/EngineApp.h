@@ -31,8 +31,6 @@ private:
 
 	std::unique_ptr<class ImguiBackend> m_imgui;
 
-
-
 protected:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 	static const uint32_t m_max_frames_in_flight = 2;

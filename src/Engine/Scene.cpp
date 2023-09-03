@@ -5,6 +5,7 @@
 #include "DescriptorSetPool.h"
 #include "DisplayMapping.h"
 #include "Rendergraph.h"
+#include "UploadBufferPool.h"
 
 #include <ImguiBackend/ImguiBackend.h>
 
@@ -122,9 +123,8 @@ Renderer::Renderer()
         SE_LOG_FATAL_ERROR( Renderer, "Raytracing is not supported on the GPU" );
     }
 
-    CreateSceneViewParamsBuffers();
     CreateDescriptorSetLayout();
-    CreateDescriptorSets();
+    CreateFramePools();
     CreateRTPipeline();
 
     m_display_mapping = std::make_unique<DisplayMapping>();
@@ -136,6 +136,7 @@ void Renderer::NextFrame()
 {
     m_frame_idx++;
     m_frame_descriptors[GetCurrFrameBufIndex()].Reset();
+    m_frame_uniform_buffers[GetCurrFrameBufIndex()].Reset();
 }
 
 namespace
@@ -150,23 +151,10 @@ namespace
     };
 }
 
-void Renderer::CreateSceneViewParamsBuffers()
-{
-    m_view_buffers.resize( NumBufferizedFrames );
-
-    RHI::BufferInfo uniform_info = {};
-    uniform_info.size = sizeof( GPUSceneViewParams );
-    uniform_info.usage = RHIBufferUsageFlags::UniformBuffer;
-
-    for ( size_t i = 0; i < NumBufferizedFrames; ++i )
-    {
-        m_view_buffers[i] = GetRHI().CreateUploadBuffer( uniform_info );
-    }
-}
-
-void Renderer::CreateDescriptorSets()
+void Renderer::CreateFramePools()
 {
     m_frame_descriptors.resize( NumBufferizedFrames );
+    m_frame_uniform_buffers.resize( NumBufferizedFrames );
 }
 
 void Renderer::CreateRTPipeline()
@@ -253,14 +241,13 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 
     svp.proj_mat[1][1] *= -1; // ogl -> vulkan y axis
 
-    m_view_buffers[GetCurrFrameBufIndex()]->WriteBytes( &svp, sizeof( GPUSceneViewParams ) );
+    UploadBufferRange gpu_buffer = AllocateUploadBuffer( sizeof( GPUSceneViewParams ) );
+
+    gpu_buffer.UploadData( svp );
 
     // Update descriptor set
     view_data.view_desc_set->BindAccelerationStructure( 0, 0, view.GetScene().GetTLAS().GetRHIAS() );
-
-    RHIUniformBufferViewInfo uniform_buffer_view = {};
-    uniform_buffer_view.buffer = m_view_buffers[GetCurrFrameBufIndex()]->GetBuffer();
-    view_data.view_desc_set->BindUniformBufferView( 1, 0, uniform_buffer_view );
+    view_data.view_desc_set->BindUniformBufferView( 1, 0, gpu_buffer.view );
 
     view_data.view_desc_set->FlushBinds();
 }
@@ -365,6 +352,11 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 RHIDescriptorSet* Renderer::AllocateFrameDescSet( RHIDescriptorSetLayout& layout )
 {
     return m_frame_descriptors[GetCurrFrameBufIndex()].Allocate( layout );
+}
+
+UploadBufferRange Renderer::AllocateUploadBuffer( size_t size )
+{
+    return m_frame_uniform_buffers[GetCurrFrameBufIndex()].Allocate( size );
 }
 
 void Renderer::DebugUI()

@@ -23,6 +23,7 @@
     <ClCompile Include="..\..\src\Engine\stb_image.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
+    <ClCompile Include="..\..\src\Engine\UploadBufferPool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -44,6 +45,7 @@
     <ClInclude Include="..\..\src\Engine\stb_image.h" />
     <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
     <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
+    <ClInclude Include="..\..\src\Engine\UploadBufferPool.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">
