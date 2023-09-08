@@ -108,7 +108,7 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
             m_blit_to_swapchain_pass = data.rg->AddPass( RHI::QueueType::Graphics, "BlitToSwapchain" );
             m_blit_to_swapchain_pass->UseTextureView( *swapchain_rt_view );
-            m_blit_to_swapchain_pass->UseTextureView( *data.scene_output[0]->GetROView() );
+            m_blit_to_swapchain_pass->UseTextureView( *data.scene_output[data.scene_output_idx]->GetROView() );
 
             m_ui_pass = data.rg->AddPass( RHI::QueueType::Graphics, "DrawUI" );
             m_ui_pass->UseTextureView( *swapchain_rt_view );
@@ -127,7 +127,7 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
                 BlitTextureProgram::Params parms = {};
                 {
                     parms.output = m_rg_swapchain->GetRTView()->GetRHIView();
-                    parms.input = data.scene_output[0]->GetROView()->GetRHIView();
+                    parms.input = data.scene_output[data.scene_output_idx]->GetROView()->GetRHIView();
                     parms.sampler = m_app.m_renderer->GetPointSampler();
                 }
 

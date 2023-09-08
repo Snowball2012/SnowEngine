@@ -6,6 +6,7 @@
 float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
 {
     float4 ndc = float4( float2( pixel_position ) / float2( viewport_size ) * 2.0f - float2( 1.0f, 1.0f ), ndc_depth, 1.0f );
+    ndc.y = -ndc.y;
 
     float4 world_pos = mul( view_proj_inverse, ndc );
 

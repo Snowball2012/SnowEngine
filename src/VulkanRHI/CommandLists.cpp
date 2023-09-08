@@ -307,10 +307,11 @@ void VulkanCommandList::SetViewports( size_t first_viewport, const RHIViewport* 
         VkViewport& vk_viewport = vk_viewports[i];
         const RHIViewport& rhi_viewport = viewports[i];
 
+        // Vulkan has NDC Y axis pointing down, so we need to flip the viewport
         vk_viewport.x = rhi_viewport.x;
-        vk_viewport.y = rhi_viewport.y;
+        vk_viewport.y = rhi_viewport.y + rhi_viewport.height;
         vk_viewport.width = rhi_viewport.width;
-        vk_viewport.height = rhi_viewport.height;
+        vk_viewport.height = -rhi_viewport.height;
         vk_viewport.minDepth = rhi_viewport.min_depth;
         vk_viewport.maxDepth = rhi_viewport.max_depth;
     }

@@ -87,18 +87,26 @@ void SceneView::SetExtents( const glm::uvec2& extents )
     tex_info.mips = 1;
     tex_info.array_layers = 1;
     tex_info.format = RHIFormat::R8G8B8A8_UNORM;
-    tex_info.usage = RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView;
+    tex_info.usage = RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView | RHITextureUsageFlags::RenderTargetView;
     tex_info.initial_layout = RHITextureLayout::ShaderReadOnly;
 
-    m_rt_frame = GetRHI().CreateTexture( tex_info );
+    for ( int i = 0; i < 2; ++i )
+    {
+        m_rt_frame[i] = GetRHI().CreateTexture(tex_info);
 
-    RHI::TextureRWViewInfo uav_info = {};
-    uav_info.texture = m_rt_frame.get();
-    m_frame_rwview = GetRHI().CreateTextureRWView(uav_info);
+        RHI::TextureRWViewInfo uav_info = {};
+        uav_info.texture = m_rt_frame[i].get();
+        m_frame_rwview[i] = GetRHI().CreateTextureRWView(uav_info);
 
-    RHI::TextureROViewInfo srv_info = {};
-    srv_info.texture = m_rt_frame.get();
-    m_frame_roview = GetRHI().CreateTextureROView(srv_info);
+        RHI::TextureROViewInfo srv_info = {};
+        srv_info.texture = m_rt_frame[i].get();
+        m_frame_roview[i] = GetRHI().CreateTextureROView(srv_info);
+
+        RHI::RenderTargetViewInfo rtv_info = {};
+        rtv_info.texture = m_rt_frame[i].get();
+        rtv_info.format = tex_info.format;
+        m_frame_rtview[i] = GetRHI().CreateRTV(rtv_info);
+    }
 }
 
 glm::mat4x4 SceneView::CalcViewMatrix() const
@@ -239,8 +247,6 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     glm::mat4x4 view_proj = svp.proj_mat * svp.view_mat;
     svp.view_proj_inv_mat = glm::inverse( view_proj );
 
-    svp.proj_mat[1][1] *= -1; // ogl -> vulkan y axis
-
     UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBuffer( sizeof( GPUSceneViewParams ) );
 
     gpu_buffer.UploadData( svp );
@@ -278,25 +284,36 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     // 1. Setup stage. Setup your resource handles and passes
     RGExternalTextureDesc scene_output_desc = {};
-    scene_output_desc.name = "scene_output";
-    scene_output_desc.rhi_texture = scene_view.GetFrameColorTexture();
     scene_output_desc.initial_layout = RHITextureLayout::ShaderReadOnly;
     scene_output_desc.final_layout = RHITextureLayout::ShaderReadOnly;
-
-    RGExternalTexture* scene_output = rg.RegisterExternalTexture( scene_output_desc );
-    const RGTextureROView* scene_output_ro_view = scene_output->RegisterExternalROView( { scene_view.GetFrameColorTextureROView() } );
-    const RGTextureRWView* scene_output_rw_view = scene_output->RegisterExternalRWView( { scene_view.GetFrameColorTextureRWView() } );
 
     SceneViewFrameData view_frame_data = {};
     view_frame_data.view = parms.view;
     view_frame_data.rg = parms.rg;
     view_frame_data.view_desc_set = rg.AllocateFrameDescSet( *m_view_dsl );
-    view_frame_data.scene_output[0] = scene_output;
+    view_frame_data.scene_output_idx = 0;
+
+    RGExternalTexture* scene_output[2];
+    const RGTextureROView* scene_output_ro_view[2];
+    const RGTextureRWView* scene_output_rw_view[2];
+    const RGRenderTargetView* scene_output_rt_view[2];
+    for ( int i = 0; i < 2; i++ )
+    {
+        std::string name = "scene_output#";
+        name += std::to_string( i );
+        scene_output_desc.name = name.c_str();
+        scene_output_desc.rhi_texture = scene_view.GetFrameColorTexture( i );
+        scene_output[i] = rg.RegisterExternalTexture(scene_output_desc);
+        scene_output_ro_view[i] = scene_output[i]->RegisterExternalROView( { scene_view.GetFrameColorTextureROView( i ) } );
+        scene_output_rw_view[i] = scene_output[i]->RegisterExternalRWView( { scene_view.GetFrameColorTextureRWView( i ) } );
+        scene_output_rt_view[i] = scene_output[i]->RegisterExternalRTView( { scene_view.GetFrameColorTextureRTView( i ) } );
+        view_frame_data.scene_output[i] = scene_output[i];
+    }   
 
     RGPass* update_as_pass = rg.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
 
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
-    rt_pass->UseTextureView( *scene_output_rw_view );
+    rt_pass->UseTextureView( *scene_output_rw_view[view_frame_data.scene_output_idx] );
 
     DisplayMappingContext display_mapping_ctx = {};
     m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
@@ -334,7 +351,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
-        rt_descset->BindTextureRWView( 0, 0, *scene_output->GetRWView()->GetRHIView() );
+        rt_descset->BindTextureRWView( 0, 0, *scene_output[0]->GetRWView()->GetRHIView()); // index must match with rgtexture used on setup stage
 
         SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
 

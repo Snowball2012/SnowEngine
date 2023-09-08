@@ -62,9 +62,11 @@ private:
 
     float m_fovXRadians = glm::radians( 60.0f );
 
-    RHITexturePtr m_rt_frame = nullptr;
-    RHITextureRWViewPtr m_frame_rwview = nullptr;
-    RHITextureROViewPtr m_frame_roview = nullptr;
+    // for ping-pong. Not scalable, consider proper transient resources for rendergraph
+    RHITexturePtr m_rt_frame[2] = { nullptr, nullptr };
+    RHITextureRWViewPtr m_frame_rwview[2] = { nullptr, nullptr };
+    RHITextureROViewPtr m_frame_roview[2] = { nullptr, nullptr };
+    RHIRenderTargetViewPtr m_frame_rtview[2] = { nullptr, nullptr };
 
 public:
     SceneView( Scene* scene );
@@ -76,9 +78,10 @@ public:
 
     void SetFOV( float fovXRadians ) { m_fovXRadians = fovXRadians; }
 
-    RHITexture* GetFrameColorTexture() const { return m_rt_frame.get(); }
-    RHITextureROView* GetFrameColorTextureROView() const { return m_frame_roview.get(); }
-    RHITextureRWView* GetFrameColorTextureRWView() const { return m_frame_rwview.get(); }
+    RHITexture* GetFrameColorTexture( uint32_t i ) const { return m_rt_frame[i].get(); }
+    RHITextureROView* GetFrameColorTextureROView( uint32_t i ) const { return m_frame_roview[i].get(); }
+    RHITextureRWView* GetFrameColorTextureRWView( uint32_t i ) const { return m_frame_rwview[i].get(); }
+    RHIRenderTargetView* GetFrameColorTextureRTView( uint32_t i ) const { return m_frame_rtview[i].get(); }
 
     glm::mat4x4 CalcViewMatrix() const;
     glm::mat4x4 CalcProjectionMatrix() const;

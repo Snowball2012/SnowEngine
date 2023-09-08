@@ -348,9 +348,10 @@ void ImguiBackend::RecordCommandList(
 
     cl.BindDescriptorSet( 0, *m_desc_set );
 
+    // Code below assumes Vulkan NDC, we are using DX NDC, so we have to flip the viewport
     RHIViewport viewports[] =
     {
-        {.width = float( fb_width ), .height = float( fb_height ), .max_depth = 1.0f },
+        { .y = float( fb_height ), .width = float( fb_width ), .height = -float( fb_height ), .max_depth = 1.0f },
     };
 
     cl.SetViewports( 0, viewports, _countof( viewports ) );

@@ -73,6 +73,7 @@ class TextureAsset : public Asset
 	IMPLEMENT_ASSET_GENERATOR;
 
 	RHITexturePtr m_rhi_texture = nullptr;
+	RHITextureROViewPtr m_rhi_view = nullptr;
 
 public:
 	virtual ~TextureAsset() = default;
@@ -86,5 +87,6 @@ public:
 	bool LoadFromFile( const char* path );
 
 	const RHITexture* GetTexture() const { return m_rhi_texture.get(); }
+	RHITextureROView* GetTextureROView() const { return m_rhi_view.get(); }
 };
 using TextureAssetPtr = boost::intrusive_ptr<TextureAsset>;

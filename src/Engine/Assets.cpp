@@ -232,6 +232,10 @@ bool TextureAsset::Load( const JsonValue& data )
         return false;
     }
 
+    RHI::TextureROViewInfo view_info = {};
+    view_info.texture = m_rhi_texture.get();
+    m_rhi_view = GetRHI().CreateTextureROView( view_info );
+
     m_status = AssetStatus::Ready;
     return true;
 }

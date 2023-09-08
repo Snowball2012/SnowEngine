@@ -61,6 +61,7 @@ void EngineApp::Run( int argc, char** argv )
     InitEngineGlobals();
 
     m_renderer = std::make_unique<Renderer>();
+    g_engine.renderer = m_renderer.get();
 
     OnInit();
 
@@ -350,7 +351,7 @@ void EngineApp::InitConsole()
 
 void EngineApp::InitEngineGlobals()
 {
-    SE_ENSURE( m_rhi && m_asset_mgr );
+    SE_ENSURE( m_rhi && m_asset_mgr && m_console );
 
     g_engine.rhi = m_rhi.get();
     g_engine.asset_mgr = m_asset_mgr.get();
