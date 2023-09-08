@@ -59,12 +59,13 @@ public:
 };
 IMPLEMENT_RHI_INTERFACE( RHITextureRWView, VulkanTextureRWView )
 
+
 class VulkanRTV : public RHIRenderTargetView
 {
 	GENERATE_RHI_OBJECT_BODY()
 
 	RHIObjectPtr<VulkanTextureBase> m_texture = nullptr;
-
+	RHIFormat m_rhi_format = RHIFormat::Undefined;
 	VkImageView m_vk_image_view = VK_NULL_HANDLE;
 public:
 	virtual ~VulkanRTV() override;
@@ -72,6 +73,7 @@ public:
 	VulkanRTV(VulkanRHI* rhi, const RHI::RenderTargetViewInfo& info);
 
 	virtual glm::uvec3 GetSize() const override;
+	virtual RHIFormat GetFormat() const override;
 
 	VkImageView GetVkImageView() const { return m_vk_image_view; }
 };

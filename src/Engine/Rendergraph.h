@@ -27,23 +27,7 @@ public:
     const std::string& GetName() const { return m_name; }
 };
 
-
-class RGTexture : public RGResource
-{
-    bool m_is_external = false;
-
-    const RHITexture* m_rhi_texture = nullptr;
-
-public:
-    RGTexture( uint64_t handle, const char* name, bool is_external );
-
-    bool IsExternal() const { return m_is_external; }
-
-    void SetRHITexture( const RHITexture* tex ) { m_rhi_texture = tex; }
-
-    const RHITexture* GetRHITexture() const { return m_rhi_texture; }
-};
-
+class RGTexture;
 
 enum class RGTextureUsage
 {
@@ -51,6 +35,85 @@ enum class RGTextureUsage
     ShaderRead,
     ShaderReadWrite,
     RenderTarget
+};
+
+class RGTextureROView
+{
+private:
+    friend class RGTexture;
+    const RGTexture* m_texture = nullptr;
+    RHITextureROView* m_rhi_view = nullptr;
+
+public:
+
+    const RGTexture* GetTexture() const { return m_texture; }
+    RHITextureROView* GetRHIView() const { return m_rhi_view; }
+};
+
+class RGTextureRWView
+{
+private:
+    friend class RGTexture;
+    const RGTexture* m_texture = nullptr;
+    RHITextureRWView* m_rhi_view = nullptr;
+
+public:
+    const RGTexture* GetTexture() const { return m_texture; }
+    RHITextureRWView* GetRHIView() const { return m_rhi_view; }
+};
+
+class RGRenderTargetView
+{
+private:
+    friend class RGTexture;
+    const RGTexture* m_texture = nullptr;
+    RHIRenderTargetView* m_rhi_view = nullptr;
+
+public:
+    const RGTexture* GetTexture() const { return m_texture; }
+    RHIRenderTargetView* GetRHIView() const { return m_rhi_view; }
+};
+
+struct RGExternalTextureROViewDesc
+{
+    RHITextureROView* rhi_view = nullptr;
+};
+
+struct RGExternalTextureRWViewDesc
+{
+    RHITextureRWView* rhi_view = nullptr;
+};
+
+struct RGExternalRenderTargetViewDesc
+{
+    RHIRenderTargetView* rhi_view = nullptr;
+};
+
+class RGTexture : public RGResource
+{
+    bool m_is_external = false;
+
+    const RHITexture* m_rhi_texture = nullptr;
+
+    // @todo: allow multiple views of the same type
+    std::optional<RGTextureROView> m_ro_view;
+    std::optional<RGTextureRWView> m_rw_view;
+    std::optional<RGRenderTargetView> m_rt_view;
+
+public:
+    RGTexture( uint64_t handle, const char* name, bool is_external );
+
+    bool IsExternal() const { return m_is_external; }
+
+    void SetRHITexture( const RHITexture* tex ) { m_rhi_texture = tex; }
+    const RHITexture* GetRHITexture() const { return m_rhi_texture; }
+
+    const RGTextureROView* RegisterExternalROView( const RGExternalTextureROViewDesc& desc );
+    const RGTextureRWView* RegisterExternalRWView( const RGExternalTextureRWViewDesc& desc );
+    const RGRenderTargetView* RegisterExternalRTView( const RGExternalRenderTargetViewDesc& desc );
+    const RGTextureROView* GetROView() const { return m_ro_view.has_value() ? &*m_ro_view : nullptr; }
+    const RGTextureRWView* GetRWView() const { return m_rw_view.has_value() ? &*m_rw_view : nullptr; }
+    const RGRenderTargetView* GetRTView() const { return m_rt_view.has_value() ? &*m_rt_view : nullptr; }
 };
 
 
@@ -81,6 +144,9 @@ public:
     RGPass( RHI::QueueType queue_type, const char* name );
 
     bool UseTexture( const RGTexture& texture, RGTextureUsage usage );
+    bool UseTextureView( const RGRenderTargetView& view );
+    bool UseTextureView( const RGTextureROView& view );
+    bool UseTextureView( const RGTextureRWView& view );
 
     void AddCommandList( RHICommandList& cmd_list );
 

@@ -91,7 +91,8 @@ struct SceneViewFrameData
 {
     const SceneView* view = nullptr;
     RHIDescriptorSet* view_desc_set = nullptr;
-    const RGTexture* scene_output = nullptr;
+    const RGTexture* scene_output[2] = {};
+    int scene_output_idx = 0;
     Rendergraph* rg = nullptr;
 };
 

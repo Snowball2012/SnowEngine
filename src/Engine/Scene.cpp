@@ -284,17 +284,22 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     scene_output_desc.final_layout = RHITextureLayout::ShaderReadOnly;
 
     RGExternalTexture* scene_output = rg.RegisterExternalTexture( scene_output_desc );
+    const RGTextureROView* scene_output_ro_view = scene_output->RegisterExternalROView( { scene_view.GetFrameColorTextureROView() } );
+    const RGTextureRWView* scene_output_rw_view = scene_output->RegisterExternalRWView( { scene_view.GetFrameColorTextureRWView() } );
 
     SceneViewFrameData view_frame_data = {};
     view_frame_data.view = parms.view;
     view_frame_data.rg = parms.rg;
     view_frame_data.view_desc_set = rg.AllocateFrameDescSet( *m_view_dsl );
-    view_frame_data.scene_output = scene_output;
+    view_frame_data.scene_output[0] = scene_output;
 
     RGPass* update_as_pass = rg.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
 
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
-    rt_pass->UseTexture( *scene_output, RGTextureUsage::ShaderReadWrite );
+    rt_pass->UseTextureView( *scene_output_rw_view );
+
+    DisplayMappingContext display_mapping_ctx = {};
+    m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
 
     if ( parms.extension ) {
         parms.extension->PostSetupRendergraph( view_frame_data );
@@ -329,7 +334,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
-        rt_descset->BindTextureRWView( 0, 0, *scene_view.GetFrameColorTextureRWView() );
+        rt_descset->BindTextureRWView( 0, 0, *scene_output->GetRWView()->GetRHIView() );
 
         SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
 
@@ -338,6 +343,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
         cmd_list_rt->TraceRays( glm::uvec3( scene_view.GetExtent(), 1 ) );
     }
     rt_pass->EndPass();
+
+    m_display_mapping->DisplayMappingPass( *cmd_list_rt, view_frame_data, display_mapping_ctx );
 
     cmd_list_rt->End();
 

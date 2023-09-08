@@ -118,6 +118,7 @@ VulkanRTV::~VulkanRTV()
 VulkanRTV::VulkanRTV(VulkanRHI* rhi, const RHI::RenderTargetViewInfo& info)
     : m_rhi(rhi)
 {
+    m_rhi_format = info.format;
     m_vk_image_view = m_rhi->CreateImageView(
         RHIImpl(info.texture)->GetVkImage(),
         VulkanRHI::GetVkFormat(info.format));
@@ -133,4 +134,9 @@ glm::uvec3 VulkanRTV::GetSize() const
         tex_info.width,
         tex_info.height,
         std::max<uint32_t>( tex_info.depth, 1 ) );
+}
+
+RHIFormat VulkanRTV::GetFormat() const
+{
+    return m_rhi_format;
 }

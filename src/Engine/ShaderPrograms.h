@@ -59,11 +59,9 @@ private:
 public:
     struct Params
     {
-        RHIFormat output_format = RHIFormat::Undefined;
         RHIRenderTargetView* output = nullptr;
         RHITextureROView* input = nullptr;
         RHISampler* sampler = nullptr;
-        glm::uvec2 extent = glm::uvec2( 0, 0 );
     };
     BlitTextureProgram();
 

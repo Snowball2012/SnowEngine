@@ -11,6 +11,42 @@ RGTexture::RGTexture( uint64_t handle, const char* name, bool is_external )
 {
 }
 
+const RGTextureROView* RGTexture::RegisterExternalROView( const RGExternalTextureROViewDesc& desc )
+{
+    if ( m_ro_view.has_value() )
+        NOTIMPL;
+
+    m_ro_view.emplace();
+    m_ro_view->m_texture = this;
+    m_ro_view->m_rhi_view = desc.rhi_view;
+
+    return &*m_ro_view;
+}
+
+const RGTextureRWView* RGTexture::RegisterExternalRWView( const RGExternalTextureRWViewDesc& desc )
+{
+    if ( m_rw_view.has_value() )
+        NOTIMPL;
+
+    m_rw_view.emplace();
+    m_rw_view->m_texture = this;
+    m_rw_view->m_rhi_view = desc.rhi_view;
+
+    return &*m_rw_view;
+}
+
+const RGRenderTargetView* RGTexture::RegisterExternalRTView( const RGExternalRenderTargetViewDesc& desc )
+{
+    if ( m_rt_view.has_value() )
+        NOTIMPL;
+
+    m_rt_view.emplace();
+    m_rt_view->m_texture = this;
+    m_rt_view->m_rhi_view = desc.rhi_view;
+
+    return &*m_rt_view;
+}
+
 // RGExternalTexture
 
 RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDesc& desc )
@@ -327,6 +363,21 @@ bool RGPass::UseTexture( const RGTexture& texture, RGTextureUsage usage )
     entry.usage = usage;
 
     return true;
+}
+
+bool RGPass::UseTextureView( const RGTextureROView& view )
+{
+    return UseTexture( *view.GetTexture(), RGTextureUsage::ShaderRead );
+}
+
+bool RGPass::UseTextureView( const RGTextureRWView& view )
+{
+    return UseTexture( *view.GetTexture(), RGTextureUsage::ShaderReadWrite );
+}
+
+bool RGPass::UseTextureView( const RGRenderTargetView& view )
+{
+    return UseTexture( *view.GetTexture(), RGTextureUsage::RenderTarget );
 }
 
 void RGPass::AddCommandList( RHICommandList& cmd_list )

@@ -104,13 +104,14 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
             swapchain_desc.final_layout = RHITextureLayout::Present;
 
             m_rg_swapchain = data.rg->RegisterExternalTexture( swapchain_desc );
+            const RGRenderTargetView* swapchain_rt_view = m_rg_swapchain->RegisterExternalRTView( { m_app.m_swapchain->GetRTV() } );
 
             m_blit_to_swapchain_pass = data.rg->AddPass( RHI::QueueType::Graphics, "BlitToSwapchain" );
-            m_blit_to_swapchain_pass->UseTexture( *m_rg_swapchain, RGTextureUsage::RenderTarget );
-            m_blit_to_swapchain_pass->UseTexture( *data.scene_output, RGTextureUsage::ShaderRead );
+            m_blit_to_swapchain_pass->UseTextureView( *swapchain_rt_view );
+            m_blit_to_swapchain_pass->UseTextureView( *data.scene_output[0]->GetROView() );
 
             m_ui_pass = data.rg->AddPass( RHI::QueueType::Graphics, "DrawUI" );
-            m_ui_pass->UseTexture( *m_rg_swapchain, RGTextureUsage::RenderTarget );
+            m_ui_pass->UseTextureView( *swapchain_rt_view );
         }
 
         virtual void PostCompileRendergraph( const SceneViewFrameData& data ) override
@@ -125,10 +126,8 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
                 BlitTextureProgram::Params parms = {};
                 {
-                    parms.extent = m_app.m_swapchain->GetExtent();
-                    parms.output_format = m_app.m_swapchain->GetFormat();
-                    parms.output = m_app.m_swapchain->GetRTV();
-                    parms.input = data.view->GetFrameColorTextureROView();
+                    parms.output = m_rg_swapchain->GetRTView()->GetRHIView();
+                    parms.input = data.scene_output[0]->GetROView()->GetRHIView();
                     parms.sampler = m_app.m_renderer->GetPointSampler();
                 }
 

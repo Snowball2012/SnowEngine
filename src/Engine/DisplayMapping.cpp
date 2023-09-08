@@ -1,7 +1,49 @@
 #include "StdAfx.h"
 
 #include "DisplayMapping.h"
+
+#include "Rendergraph.h"
+#include "Scene.h"
+#include "ShaderPrograms.h"
+
 #include <ImguiBackend/ImguiBackend.h>
+
+void DisplayMapping::SetupRendergraph( SceneViewFrameData& data, DisplayMappingContext& ctx ) const
+{
+    return;
+    const int cur_output_idx = data.scene_output_idx;
+    ctx.input_tex = data.scene_output[cur_output_idx];
+
+    if ( m_dbg_texture )
+    {
+        ctx.dbg_copy_pass = data.rg->AddPass( RHI::QueueType::Graphics, "DisplayMappingCopyDbgTexture" );
+        ctx.dbg_copy_pass->UseTexture( *ctx.input_tex, RGTextureUsage::RenderTarget );
+    }
+
+    ctx.main_pass = data.rg->AddPass( RHI::QueueType::Graphics, "DisplayMapping" );
+    ctx.main_pass->UseTexture( *ctx.input_tex, RGTextureUsage::ShaderRead );
+    const int new_output_idx = ( cur_output_idx + 1 ) % 2;
+
+    data.scene_output_idx = new_output_idx;
+    ctx.output_tex = data.scene_output[new_output_idx];
+    ctx.main_pass->UseTexture( *ctx.output_tex, RGTextureUsage::RenderTarget );
+}
+
+void DisplayMapping::DisplayMappingPass( RHICommandList& cmd_list, const SceneViewFrameData& data, const DisplayMappingContext& ctx ) const
+{
+    return;
+    BlitTextureProgram* blit_program = GetRenderer().GetBlitTextureProgram();
+
+    if ( ctx.dbg_copy_pass )
+    {
+        ctx.dbg_copy_pass->BorrowCommandList( cmd_list );
+        BlitTextureProgram::Params blit_parms = {};
+
+        blit_parms.input = ctx.input_tex->GetROView()->GetRHIView();
+        blit_parms.output = ctx.output_tex->GetRTView()->GetRHIView();
+        blit_parms.sampler = GetRenderer().GetPointSampler();
+    }
+}
 
 void DisplayMapping::DebugUI()
 {

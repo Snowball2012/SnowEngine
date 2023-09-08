@@ -773,6 +773,9 @@ class RHITexture : public RHIObject
 {
 public:
     virtual ~RHITexture() override {}
+
+    virtual glm::uvec3 GetExtent() const { NOTIMPL; }
+    virtual RHIFormat GetFormat() const { NOTIMPL; }
 };
 using RHITexturePtr = RHIObjectPtr<RHITexture>;
 
@@ -803,7 +806,8 @@ class RHIRenderTargetView : public RHIObject
 public:
     virtual ~RHIRenderTargetView() override {}
 
-    virtual glm::uvec3 GetSize() const { return glm::uvec3( 0, 0, 0 ); }
+    virtual glm::uvec3 GetSize() const { NOTIMPL; }
+    virtual RHIFormat GetFormat() const { NOTIMPL; }
 };
 using RHIRenderTargetViewPtr = RHIObjectPtr<RHIRenderTargetView>;
 

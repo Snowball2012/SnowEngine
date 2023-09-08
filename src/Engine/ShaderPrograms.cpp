@@ -79,7 +79,10 @@ const RHIGraphicsPipeline* BlitTextureProgram::GetPSO( RHIFormat output_format )
 
 bool BlitTextureProgram::Run( RHICommandList& cmd_list, Rendergraph& rg, const Params& parms ) const
 {
-    const RHIGraphicsPipeline* pso = GetPSO( parms.output_format );
+    if ( !SE_ENSURE( parms.output && parms.input ) )
+        return false;
+
+    const RHIGraphicsPipeline* pso = GetPSO( parms.output->GetFormat() );
 
     if ( !SE_ENSURE( pso ) )
         return false;
@@ -91,7 +94,8 @@ bool BlitTextureProgram::Run( RHICommandList& cmd_list, Rendergraph& rg, const P
     rt.clear_value.float32[3] = 1.0f;
 
     RHIPassInfo pass_info = {};
-    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = parms.extent };
+    glm::uvec2 output_extent = glm::uvec2( parms.output->GetSize() );
+    pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = output_extent };
     pass_info.render_targets = &rt;
     pass_info.render_targets_count = 1;
     cmd_list.BeginPass( pass_info );
@@ -103,15 +107,14 @@ bool BlitTextureProgram::Run( RHICommandList& cmd_list, Rendergraph& rg, const P
     RHIViewport viewport = {};
     viewport.x = 0;
     viewport.y = 0;
-    glm::uvec2 swapchain_extent = parms.extent;
-    viewport.width = float( swapchain_extent.x );
-    viewport.height = float( swapchain_extent.y );
+    viewport.width = float( output_extent.x );
+    viewport.height = float( output_extent.y );
     viewport.min_depth = 0.0f;
     viewport.max_depth = 1.0f;
 
     RHIRect2D scissor = {};
     scissor.offset = { 0, 0 };
-    scissor.extent = swapchain_extent;
+    scissor.extent = output_extent;
 
     cmd_list.SetViewports( 0, &viewport, 1 );
     cmd_list.SetScissors( 0, &scissor, 1 );
