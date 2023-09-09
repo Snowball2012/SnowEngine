@@ -6,6 +6,7 @@
 
 struct SceneViewFrameData;
 
+class DisplayMappingProgram;
 class RGPass;
 class RGTexture;
 
@@ -21,8 +22,11 @@ class DisplayMapping
 {
 private:
     TextureAssetPtr m_dbg_texture = nullptr;
+    std::unique_ptr<DisplayMappingProgram> m_program = nullptr;
 
 public:
+    DisplayMapping();
+    ~DisplayMapping();
 
     void SetupRendergraph( SceneViewFrameData& data, DisplayMappingContext& ctx ) const;
 

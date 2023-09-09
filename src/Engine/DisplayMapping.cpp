@@ -8,6 +8,160 @@
 
 #include <ImguiBackend/ImguiBackend.h>
 
+// @todo - unify code with other screen-space programs, the code is identical
+class DisplayMappingProgram : public ShaderProgram
+{
+private:
+    RHIDescriptorSetLayoutPtr m_dsl = nullptr;
+
+    RHIShaderPtr m_vs = nullptr;
+    RHIShaderPtr m_ps = nullptr;
+
+    mutable std::unordered_map<RHIFormat, RHIGraphicsPipelinePtr> m_psos;
+
+public:
+    struct Params
+    {
+        RHIRenderTargetView* output = nullptr;
+        RHITextureROView* input = nullptr;
+        RHISampler* sampler = nullptr;
+    };
+    DisplayMappingProgram()
+        : ShaderProgram()
+    {
+        m_type = ShaderProgramType::Raster;
+
+        {
+            RHI::DescriptorViewRange ranges[2] = {};
+
+            ranges[0].type = RHIShaderBindingType::TextureRO;
+            ranges[0].count = 1;
+            ranges[0].stages = RHIShaderStageFlags::PixelShader;
+
+            ranges[1].type = RHIShaderBindingType::Sampler;
+            ranges[1].count = 1;
+            ranges[1].stages = RHIShaderStageFlags::PixelShader;
+
+            RHI::DescriptorSetLayoutInfo binding_table = {};
+            binding_table.ranges = ranges;
+            binding_table.range_count = std::size( ranges );
+
+            m_dsl = GetRHI().CreateDescriptorSetLayout( binding_table );
+
+            RHI::ShaderBindingLayoutInfo layout_info = {};
+            RHIDescriptorSetLayout* dsls[1] = { m_dsl.get() };
+            layout_info.tables = dsls;
+            layout_info.table_count = std::size( dsls );
+
+            m_layout = GetRHI().CreateShaderBindingLayout( layout_info );
+        }
+
+        {
+            RHI::ShaderCreateInfo create_info = {};
+            std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/DisplayMapping.hlsl" ).c_str() );
+            create_info.filename = shader_path.c_str();
+
+            create_info.frequency = RHI::ShaderFrequency::Vertex;
+            create_info.entry_point = "DisplayMappingVS";
+            m_vs = GetRHI().CreateShader( create_info );
+
+            create_info.frequency = RHI::ShaderFrequency::Pixel;
+            create_info.entry_point = "DisplayMappingPS";
+            m_ps = GetRHI().CreateShader( create_info );
+        }
+    }
+
+    bool Run( RHICommandList& cmd_list, Rendergraph& rg, const Params& parms ) const
+    {
+        if ( !SE_ENSURE( parms.output && parms.input ) )
+            return false;
+
+        const RHIGraphicsPipeline* pso = GetPSO( parms.output->GetFormat() );
+
+        if ( !SE_ENSURE( pso ) )
+            return false;
+
+        RHIPassRTVInfo rt = {};
+        rt.load_op = RHILoadOp::Clear;
+        rt.store_op = RHIStoreOp::Store;
+        rt.rtv = parms.output;
+        rt.clear_value.float32[3] = 1.0f;
+
+        RHIPassInfo pass_info = {};
+        glm::uvec2 output_extent = glm::uvec2( parms.output->GetSize() );
+        pass_info.render_area = RHIRect2D{ .offset = glm::ivec2( 0,0 ), .extent = output_extent };
+        pass_info.render_targets = &rt;
+        pass_info.render_targets_count = 1;
+        cmd_list.BeginPass( pass_info );
+
+        cmd_list.SetPSO( *pso );
+
+        RHIDescriptorSet* pass_descset = rg.AllocateFrameDescSet( *m_dsl );
+
+        RHIViewport viewport = {};
+        viewport.x = 0;
+        viewport.y = 0;
+        viewport.width = float( output_extent.x );
+        viewport.height = float( output_extent.y );
+        viewport.min_depth = 0.0f;
+        viewport.max_depth = 1.0f;
+
+        RHIRect2D scissor = {};
+        scissor.offset = { 0, 0 };
+        scissor.extent = output_extent;
+
+        cmd_list.SetViewports( 0, &viewport, 1 );
+        cmd_list.SetScissors( 0, &scissor, 1 );
+
+        pass_descset->BindTextureROView( 0, 0, *parms.input );
+        pass_descset->BindSampler( 1, 0, *parms.sampler );
+        cmd_list.BindDescriptorSet( 0, *pass_descset );
+
+        cmd_list.Draw( 3, 1, 0, 0 );
+
+        cmd_list.EndPass();
+
+        return true;
+    }
+
+private:
+
+    const RHIGraphicsPipeline* GetPSO( RHIFormat output_format ) const
+    {
+        auto& pso = m_psos[output_format];
+
+        if ( pso == nullptr )
+        {
+            RHIInputAssemblerInfo ia_info = {};
+
+            RHIGraphicsPipelineInfo rhi_pipeline_info = {};
+
+            rhi_pipeline_info.input_assembler = &ia_info;
+            rhi_pipeline_info.vs = m_vs.get();
+            rhi_pipeline_info.ps = m_ps.get();
+
+            RHIPipelineRTInfo rt_info = {};
+            rt_info.format = output_format;
+            rhi_pipeline_info.rts_count = 1;
+            rhi_pipeline_info.rt_info = &rt_info;
+            rhi_pipeline_info.binding_layout = m_layout.get();
+
+            rhi_pipeline_info.rasterizer.cull_mode = RHICullModeFlags::None;
+
+            pso = GetRHI().CreatePSO( rhi_pipeline_info );
+        }
+
+        return pso.get();
+    }
+};
+
+DisplayMapping::DisplayMapping()
+{
+    m_program = std::make_unique<DisplayMappingProgram>();
+}
+
+DisplayMapping::~DisplayMapping() = default;
+
 void DisplayMapping::SetupRendergraph( SceneViewFrameData& data, DisplayMappingContext& ctx ) const
 {
     const int cur_output_idx = data.scene_output_idx;
@@ -47,13 +201,13 @@ void DisplayMapping::DisplayMappingPass( RHICommandList& cmd_list, const SceneVi
 
     {
         ctx.main_pass->BorrowCommandList( cmd_list );
-        BlitTextureProgram::Params blit_parms = {};
+        DisplayMappingProgram::Params prog_parms = {};
 
-        blit_parms.input = ctx.input_tex->GetROView()->GetRHIView();
-        blit_parms.output = ctx.output_tex->GetRTView()->GetRHIView();
-        blit_parms.sampler = GetRenderer().GetPointSampler();
+        prog_parms.input = ctx.input_tex->GetROView()->GetRHIView();
+        prog_parms.output = ctx.output_tex->GetRTView()->GetRHIView();
+        prog_parms.sampler = GetRenderer().GetPointSampler();
 
-        blit_program->Run( cmd_list, *data.rg, blit_parms );
+        m_program->Run( cmd_list, *data.rg, prog_parms );
         ctx.main_pass->EndPass();
     }
 }
