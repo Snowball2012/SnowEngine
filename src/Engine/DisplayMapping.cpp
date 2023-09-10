@@ -292,7 +292,9 @@ void DisplayMapping::DebugUI()
             "Reinhard - with white point",
             "Reinhard - luminance only",
             "Reinhard - Jodie",
-            "Uncharted 2"
+            "Uncharted 2",
+            "ACES",
+            "AgX"
         };
         static int item_current = int( Method::Linear );
         ImGui::ListBox( "Method", &item_current, items, int( std::size( items ) ), 4 );
