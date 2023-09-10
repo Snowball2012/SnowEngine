@@ -344,6 +344,8 @@ public:
 
     // Causes a full pipeline flush
     virtual bool ReloadAllShaders() { NOTIMPL; return false; }
+
+    virtual uint64_t GetUniformBufferMinAlignment() const { NOTIMPL; }
 };
 
 class RHIObject

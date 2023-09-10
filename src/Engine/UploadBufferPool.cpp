@@ -29,7 +29,7 @@ UploadBufferRange UploadBufferPool::Allocate( uint64_t size )
     {
         // try fit into last entry
         auto& last_entry = m_entries.back();
-        uint64_t required_offset = CalcAlignedSize( last_entry.current_offset, AllocationAlignment );
+        uint64_t required_offset = CalcAlignedSize( last_entry.current_offset, GetRHI().GetUniformBufferMinAlignment() );
 
         uint64_t required_size = required_offset + size;
 

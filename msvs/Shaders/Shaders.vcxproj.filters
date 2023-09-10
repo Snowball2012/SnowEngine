@@ -30,5 +30,8 @@
     <None Include="..\..\EngineContent\Shaders\SceneViewParams.hlsli">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="..\..\EngineContent\Shaders\Utils.hlsli">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

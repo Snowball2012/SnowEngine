@@ -20,19 +20,31 @@ private:
     mutable std::unordered_map<RHIFormat, RHIGraphicsPipelinePtr> m_psos;
 
 public:
+    // has to be in sync with DisplayMappingParams in hlsl
+    struct DisplayMappingParams
+    {
+        uint32_t method;
+        float white_point;
+    };
+
     struct Params
     {
         RHIRenderTargetView* output = nullptr;
         RHITextureROView* input = nullptr;
         RHISampler* sampler = nullptr;
-    };
+
+        DisplayMapping::Method method = DisplayMapping::Method::Linear;
+
+        float white_point = 1.0f;
+    };    
+
     DisplayMappingProgram()
         : ShaderProgram()
     {
         m_type = ShaderProgramType::Raster;
 
         {
-            RHI::DescriptorViewRange ranges[2] = {};
+            RHI::DescriptorViewRange ranges[3] = {};
 
             ranges[0].type = RHIShaderBindingType::TextureRO;
             ranges[0].count = 1;
@@ -41,6 +53,10 @@ public:
             ranges[1].type = RHIShaderBindingType::Sampler;
             ranges[1].count = 1;
             ranges[1].stages = RHIShaderStageFlags::PixelShader;
+
+            ranges[2].type = RHIShaderBindingType::UniformBuffer;
+            ranges[2].count = 1;
+            ranges[2].stages = RHIShaderStageFlags::PixelShader;
 
             RHI::DescriptorSetLayoutInfo binding_table = {};
             binding_table.ranges = ranges;
@@ -98,6 +114,13 @@ public:
 
         RHIDescriptorSet* pass_descset = rg.AllocateFrameDescSet( *m_dsl );
 
+        DisplayMappingParams pass_params_ub = {};
+        pass_params_ub.method = uint32_t( parms.method );
+        pass_params_ub.white_point = parms.white_point;
+
+        UploadBufferRange pass_ub = rg.AllocateUploadBuffer<DisplayMappingParams>();
+        pass_ub.UploadData( pass_params_ub );
+
         RHIViewport viewport = {};
         viewport.x = 0;
         viewport.y = 0;
@@ -115,6 +138,7 @@ public:
 
         pass_descset->BindTextureROView( 0, 0, *parms.input );
         pass_descset->BindSampler( 1, 0, *parms.sampler );
+        pass_descset->BindUniformBufferView( 2, 0, pass_ub.view );
         cmd_list.BindDescriptorSet( 0, *pass_descset );
 
         cmd_list.Draw( 3, 1, 0, 0 );
@@ -206,6 +230,8 @@ void DisplayMapping::DisplayMappingPass( RHICommandList& cmd_list, const SceneVi
         prog_parms.input = ctx.input_tex->GetROView()->GetRHIView();
         prog_parms.output = ctx.output_tex->GetRTView()->GetRHIView();
         prog_parms.sampler = GetRenderer().GetPointSampler();
+        prog_parms.method = m_method;
+        prog_parms.white_point = m_white_point;
 
         m_program->Run( cmd_list, *data.rg, prog_parms );
         ctx.main_pass->EndPass();
@@ -256,6 +282,20 @@ void DisplayMapping::DebugUI()
                 SE_LOG_ERROR( Engine, "No texture asset was found at path %s", demo_texture_path.c_str() );
             }
         }
+    }
+
+    {
+        const char* items[] = { "Linear", "Reinhard", "Reinhard with white point" };
+        static int item_current = int( Method::Linear );
+        ImGui::ListBox( "Method", &item_current, items, int( std::size( items ) ), 4 );
+        m_method = Method( item_current );
+    }
+
+    ImGui::DragFloat( "WhitePoint", &m_white_point, 0.1f );
+
+    if ( m_white_point < 1.e-6f )
+    {
+        m_white_point = 1.e-6f;
     }
 
     ImGui::PopID();

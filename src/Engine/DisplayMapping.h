@@ -20,9 +20,25 @@ struct DisplayMappingContext
 
 class DisplayMapping
 {
+public:
+    // has to match hlsl
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_LINEAR = 0;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD = 1;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT = 2;
+
+    enum class Method : uint32_t
+    {
+        Linear = DISPLAY_MAPPING_METHOD_LINEAR,
+        Reinhard = DISPLAY_MAPPING_METHOD_REINHARD,
+        ReinhardWhitePoint = DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT
+    };
+
 private:
     TextureAssetPtr m_dbg_texture = nullptr;
     std::unique_ptr<DisplayMappingProgram> m_program = nullptr;
+
+    float m_white_point = 1.0f;
+    Method m_method = Method::Linear;
 
 public:
     DisplayMapping();

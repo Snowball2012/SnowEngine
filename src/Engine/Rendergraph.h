@@ -253,6 +253,9 @@ public:
     // returned buffer range may only be used until Submit() is called
     UploadBufferRange AllocateUploadBuffer( size_t size );
 
+    template<typename BufferType>
+    UploadBufferRange AllocateUploadBuffer() { return AllocateUploadBuffer( sizeof( BufferType ) ); }
+
 private:
     uint64_t GenerateHandle() { return m_handle_generator++; }
 };

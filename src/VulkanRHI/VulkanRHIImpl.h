@@ -154,6 +154,8 @@ public:
 
 	virtual bool GetASBuildSize( RHIAccelerationStructureType type, const RHIASGeometryInfo* geom_infos, size_t num_geoms, RHIASBuildSizes& out_sizes ) override;
 
+	virtual uint64_t GetUniformBufferMinAlignment() const override { return m_vk_phys_device_props.limits.minUniformBufferOffsetAlignment; }
+
 	VkPhysicalDevice GetPhysDevice() const { return m_vk_phys_device; }
 	VkDevice GetDevice() const { return m_vk_device; }
 	const QueueFamilyIndices& GetQueueFamilyIndices() const { return m_queue_family_indices; }

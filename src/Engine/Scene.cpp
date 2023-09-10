@@ -86,7 +86,8 @@ void SceneView::SetExtents( const glm::uvec2& extents )
     tex_info.depth = 1;
     tex_info.mips = 1;
     tex_info.array_layers = 1;
-    tex_info.format = RHIFormat::R8G8B8A8_UNORM;
+    // @todo - rgbe5
+    tex_info.format = RHIFormat::RGBA32_SFLOAT;
     tex_info.usage = RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView | RHITextureUsageFlags::RenderTargetView;
     tex_info.initial_layout = RHITextureLayout::ShaderReadOnly;
 
