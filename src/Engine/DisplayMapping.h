@@ -25,12 +25,18 @@ public:
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_LINEAR = 0;
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD = 1;
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT = 2;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD_LUMINANCE = 3;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD_JODIE = 4;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_UNCHARTED2 = 5;
 
     enum class Method : uint32_t
     {
         Linear = DISPLAY_MAPPING_METHOD_LINEAR,
         Reinhard = DISPLAY_MAPPING_METHOD_REINHARD,
-        ReinhardWhitePoint = DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT
+        ReinhardWhitePoint = DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT,
+        ReinhardLuminance = DISPLAY_MAPPING_METHOD_REINHARD_LUMINANCE,
+        ReinhardJodie = DISPLAY_MAPPING_METHOD_REINHARD_JODIE,
+        Uncharted2 = DISPLAY_MAPPING_METHOD_UNCHARTED2
     };
 
 private:

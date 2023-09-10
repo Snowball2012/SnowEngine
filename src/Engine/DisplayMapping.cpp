@@ -285,13 +285,21 @@ void DisplayMapping::DebugUI()
     }
 
     {
-        const char* items[] = { "Linear", "Reinhard", "Reinhard with white point" };
+        const char* items[] =
+        {
+            "Linear",
+            "Reinhard",
+            "Reinhard - with white point",
+            "Reinhard - luminance only",
+            "Reinhard - Jodie",
+            "Uncharted 2"
+        };
         static int item_current = int( Method::Linear );
         ImGui::ListBox( "Method", &item_current, items, int( std::size( items ) ), 4 );
         m_method = Method( item_current );
     }
 
-    ImGui::DragFloat( "WhitePoint", &m_white_point, 0.1f );
+    ImGui::DragFloat( "WhitePoint", &m_white_point, 0.1f * m_white_point );
 
     if ( m_white_point < 1.e-6f )
     {
