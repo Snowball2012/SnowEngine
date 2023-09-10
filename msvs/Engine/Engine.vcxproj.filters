@@ -43,7 +43,6 @@
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\WorldComponents.h" />
     <ClInclude Include="..\..\src\Engine\Serialization.h" />
-    <ClInclude Include="..\..\src\Engine\stb_image.h" />
     <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
     <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
     <ClInclude Include="..\..\src\Engine\UploadBufferPool.h" />

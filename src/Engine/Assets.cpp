@@ -8,7 +8,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
-#include "stb_image.h"
+#include <stb/stb_image.h>
 
 // MeshAsset
 
@@ -244,20 +244,50 @@ bool TextureAsset::LoadFromFile( const char* path )
 {
     std::string input_file_path = ToOSPath( path );
 
-    bool file_hdr = file_hdr = stbi_is_hdr( input_file_path.c_str() );
+    // Parse signature
+    uint32_t signature;
+    {
+        std::ifstream file_stream( input_file_path.c_str(), std::ios_base::in | std::ios_base::binary );
+        if ( !file_stream.good() )
+        {
+            SE_LOG_ERROR( Engine, "Could not load texture file at <%s>", input_file_path.c_str() );
+            return false;
+        }
+
+        file_stream.read( reinterpret_cast<char*>( &signature ), sizeof( signature ) );
+
+        if ( file_stream.eof() || !file_stream.good() )
+        {
+            SE_LOG_ERROR( Engine, "Could not load file signature at <%s>", input_file_path.c_str() );
+            return false;
+        }
+    }
+
+    static constexpr uint32_t SIGNATURE_EXR = 0x01312F76;
+    if ( signature == SIGNATURE_EXR )
+    {
+        return LoadEXR( input_file_path.c_str() );
+    }
+
+    return LoadWithSTB( input_file_path.c_str() );
+}
+
+bool TextureAsset::LoadWithSTB( const char* ospath )
+{
+    bool file_hdr = stbi_is_hdr( ospath );
 
     if ( file_hdr )
     {
         // requires separate interface, loads floats
         NOTIMPL;
     }
-    
+
     int file_width, file_height, file_channels;
 
-    stbi_uc* file_pixels = stbi_load( input_file_path.c_str(), &file_width, &file_height, &file_channels, STBI_rgb_alpha );
+    stbi_uc* file_pixels = stbi_load( ospath, &file_width, &file_height, &file_channels, STBI_rgb_alpha );
     if ( file_pixels == nullptr )
     {
-        SE_LOG_ERROR( Engine, "Could not load texture file at <%s>", input_file_path.c_str() );
+        SE_LOG_ERROR( Engine, "Could not load texture file at <%s>", ospath );
         return false;
     }
 
@@ -265,7 +295,7 @@ bool TextureAsset::LoadFromFile( const char* path )
     {
         stbi_image_free( file_pixels );
     } BOOST_SCOPE_EXIT_END
-    
+
     RHI::TextureInfo tex_info = {};
     tex_info.dimensions = RHITextureDimensions::T2D;
     if ( file_channels == 4 || file_channels == 3 )
@@ -292,6 +322,87 @@ bool TextureAsset::LoadFromFile( const char* path )
     size_t file_data_size = file_width * file_height * RHIUtils::GetRHIFormatSize( tex_info.format );
 
     m_rhi_texture = RHIUtils::CreateInitializedGPUTexture( tex_info, file_pixels, file_data_size );
+
+    if ( !m_rhi_texture )
+    {
+        return false;
+    }
+
+    m_status = AssetStatus::Ready;
+    return true;
+}
+
+bool TextureAsset::LoadEXR( const char* ospath )
+{
+    float* out_pixels = nullptr;
+    int width = 0;
+    int height = 0;
+    const char* err = nullptr;
+
+    int ret = ::LoadEXR( &out_pixels, &width, &height, ospath, &err );
+
+    BOOST_SCOPE_EXIT( out_pixels )
+    {
+        if ( out_pixels )
+        {
+            free( out_pixels );
+        }
+    } BOOST_SCOPE_EXIT_END
+
+    if ( ret != TINYEXR_SUCCESS || out_pixels == nullptr )
+    {
+        SE_LOG_ERROR( Engine, "Could not load EXR file at <%s>", ospath );
+        if ( err )
+        {
+            SE_LOG_ERROR( Engine, "[TinyEXR]: %s", err );
+            FreeEXRErrorMessage( err );
+        }
+
+        return false;
+    }
+
+    // @todo - convert to RGB9E5
+
+    struct HDRPixelValue
+    {
+        float r;
+        float g;
+        float b;
+        float a;
+    };
+
+    std::vector<HDRPixelValue> pixels_converted;
+    pixels_converted.resize( width* height );
+
+    for ( int i = 0; i < width * height; ++i )
+    {
+        float* file_pixel = &out_pixels[i * 4];
+        pixels_converted[i].r = file_pixel[0];
+        pixels_converted[i].g = file_pixel[1];
+        pixels_converted[i].b = file_pixel[2];
+        pixels_converted[i].a = file_pixel[3];
+    }
+    
+    RHI::TextureInfo tex_info = {};
+    tex_info.dimensions = RHITextureDimensions::T2D;
+    tex_info.format = RHIFormat::RGBA32_SFLOAT;
+    
+    tex_info.allow_multiformat_views = false;
+
+    tex_info.width = uint32_t( width );
+    tex_info.height = uint32_t( height );
+    tex_info.depth = 1;
+
+    tex_info.mips = 1;
+    tex_info.array_layers = 1;
+
+    tex_info.usage = RHITextureUsageFlags::TextureROView;
+    tex_info.initial_layout = RHITextureLayout::ShaderReadOnly;
+    tex_info.initial_queue = RHI::QueueType::Graphics;
+
+    size_t file_data_size = pixels_converted.size() * RHIUtils::GetRHIFormatSize( tex_info.format );
+
+    m_rhi_texture = RHIUtils::CreateInitializedGPUTexture( tex_info, pixels_converted.data(), file_data_size);
 
     if ( !m_rhi_texture )
     {

@@ -106,6 +106,7 @@ enum class RHIFormat : uint8_t
     R8G8B8A8_SRGB,
     R8G8B8A8_UNORM,
     RGB9E5,
+    RGBA32_SFLOAT,
 
     // Beware that some implementation don't support this format. @todo - query format support form rhi if really needed
     RGB8_SRGB

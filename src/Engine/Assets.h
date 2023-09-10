@@ -88,5 +88,9 @@ public:
 
 	const RHITexture* GetTexture() const { return m_rhi_texture.get(); }
 	RHITextureROView* GetTextureROView() const { return m_rhi_view.get(); }
+
+private:
+	bool LoadWithSTB( const char* ospath );
+	bool LoadEXR( const char* ospath );
 };
 using TextureAssetPtr = boost::intrusive_ptr<TextureAsset>;

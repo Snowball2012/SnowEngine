@@ -170,6 +170,9 @@ uint8_t RHIUtils::GetRHIFormatSize( RHIFormat format )
     case RHIFormat::R8G8B8A8_UNORM:
         return 4;
         break;
+    case RHIFormat::RGBA32_SFLOAT:
+        return 16;
+        break;
     default:
         NOTIMPL;
         break;

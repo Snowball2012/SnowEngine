@@ -12,6 +12,11 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 
+#include <tinyexr/tinyexr.h>
+
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
+
 #define SDL_VERIFY(x) VERIFY_EQUALS(x, SDL_TRUE)
 
 SE_LOG_CATEGORY( Engine );
