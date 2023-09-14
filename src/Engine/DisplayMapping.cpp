@@ -293,7 +293,8 @@ void DisplayMapping::DebugUI()
             "Reinhard - luminance only",
             "Reinhard - Jodie",
             "Uncharted 2",
-            "ACES",
+            "ACES fitted",
+            "ACEScg",
             "AgX"
         };
         static int item_current = int( Method::Linear );

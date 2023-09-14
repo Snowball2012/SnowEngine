@@ -1,5 +1,7 @@
 #include "Utils.hlsli"
 
+#include "ACES.hlsli"
+
 [[vk::binding( 0 )]]
 Texture2D<float4> TextureObject;
 [[vk::binding( 1 )]]
@@ -19,7 +21,8 @@ static const uint DISPLAY_MAPPING_METHOD_REINHARD_LUMINANCE = 3;
 static const uint DISPLAY_MAPPING_METHOD_REINHARD_JODIE = 4;
 static const uint DISPLAY_MAPPING_METHOD_UNCHARTED2 = 5;
 static const uint DISPLAY_MAPPING_METHOD_ACES = 6;
-static const uint DISPLAY_MAPPING_METHOD_AGX = 7;
+static const uint DISPLAY_MAPPING_METHOD_ACESCG = 7;
+static const uint DISPLAY_MAPPING_METHOD_AGX = 8;
 
 static const float2 full_screen_triangle_uv[3] =
 {
@@ -43,7 +46,7 @@ float3 RttAndOdtFit( float3 x )
 }
 
 float3 ACESFitted( float3 x )
-{
+{	
 	const float3x3 aces_input_tf =
 	{
 		{0.59719, 0.35458, 0.04823},
@@ -63,6 +66,15 @@ float3 ACESFitted( float3 x )
 	x = RttAndOdtFit( x );
 	
 	return saturate( mul( aces_output_tf, x ) );
+}
+
+float3 ACEScgRefMapping( float3 srgb_linear )
+{
+	float3 aces_cg = sRGBLinearToACEScg( srgb_linear );
+	
+	aces_cg = RttAndOdtFit( aces_cg );
+	
+	return saturate( ACEScgTosRGBLinear( aces_cg ) );
 }
 
 float3 AgxDefaultContrastApprox( float3 x )
@@ -90,7 +102,7 @@ float3 Agx( float3 val, float exposure_bias )
   const float max_ev = 4.026069f + exposure_bias;
 
   // Input transform (inset)
-  val = mul( agx_mat, val );
+  val = mul( val, agx_mat );
   
   // Log2 space encoding
   val = clamp( log2( val ), min_ev, max_ev );
@@ -110,7 +122,7 @@ float3 AgxEotf( float3 val )
     -0.0990297440797205, -0.0989611768448433, 1.15107367264116 );
     
   // Inverse input transform (outset)
-  val = saturate( mul( agx_mat_inv, val ) );
+  val = saturate( mul( val, agx_mat_inv ) );
   
   // sRGB IEC 61966-2-1 2.2 Exponent Reference EOTF Display
   // NOTE: We're linearizing the output here. Comment/adjust when
@@ -229,6 +241,10 @@ float3 TonemapUncharted2Partial( float3 x )
 	else if ( method == DISPLAY_MAPPING_METHOD_ACES )
 	{
 		output = ACESFitted( input_linear );
+	}
+	else if ( method == DISPLAY_MAPPING_METHOD_ACESCG )
+	{
+		output = ACEScgRefMapping( input_linear );
 	}
 	else if ( method == DISPLAY_MAPPING_METHOD_AGX )
 	{

@@ -29,7 +29,8 @@ public:
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_REINHARD_JODIE = 4;
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_UNCHARTED2 = 5;
     static constexpr uint32_t DISPLAY_MAPPING_METHOD_ACES = 6;
-    static constexpr uint32_t DISPLAY_MAPPING_METHOD_AGX = 7;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_ACESCG = 7;
+    static constexpr uint32_t DISPLAY_MAPPING_METHOD_AGX = 8;
 
     enum class Method : uint32_t
     {
@@ -40,6 +41,7 @@ public:
         ReinhardJodie = DISPLAY_MAPPING_METHOD_REINHARD_JODIE,
         Uncharted2 = DISPLAY_MAPPING_METHOD_UNCHARTED2,
         ACES = DISPLAY_MAPPING_METHOD_ACES,
+        ACEScg = DISPLAY_MAPPING_METHOD_ACESCG,
         AgX = DISPLAY_MAPPING_METHOD_AGX
     };
 

@@ -139,6 +139,7 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\EngineContent\Shaders\ACES.hlsli" />
     <None Include="..\..\EngineContent\Shaders\SceneViewParams.hlsli" />
     <None Include="..\..\EngineContent\Shaders\Utils.hlsli" />
   </ItemGroup>
