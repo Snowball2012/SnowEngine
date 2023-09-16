@@ -22,6 +22,8 @@
 
 #include "Features.h"
 
+CVAR_DEFINE( vk_validation_enableGPUAssisted, bool, false, "Enable GPU-assisted validation" );
+
 VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
 {
     CreateVkInstance( info );
@@ -689,8 +691,22 @@ void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
 
     // layers
     std::vector<const char*> wanted_layers = {};
+
+    VkValidationFeaturesEXT validation_features = {};
+    std::vector<VkValidationFeatureEnableEXT> validation_features_array;
     if ( info.enable_validation )
+    {
         wanted_layers.push_back( "VK_LAYER_KHRONOS_validation" );
+        if ( vk_validation_enableGPUAssisted.GetValue() == true ) {
+            validation_features_array.emplace_back() = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
+            validation_features_array.emplace_back() = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
+        }
+        validation_features.pEnabledValidationFeatures = validation_features_array.data();
+        validation_features.enabledValidationFeatureCount = uint32_t( validation_features_array.size() );
+        validation_features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+
+        create_info.pNext = &validation_features;
+    }
 
     SE_LOG_INFO( VulkanRHI, "Wanted validation layers:" );
     for ( const char* layer : wanted_layers )
@@ -708,6 +724,7 @@ void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
 
     create_info.enabledLayerCount = uint32_t( filtered_layers.size() );
     create_info.ppEnabledLayerNames = filtered_layers.data();
+
 
     VK_VERIFY( vkCreateInstance( &create_info, nullptr, &m_vk_instance ) );
 }

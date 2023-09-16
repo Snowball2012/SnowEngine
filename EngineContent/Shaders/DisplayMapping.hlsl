@@ -10,6 +10,7 @@ SamplerState TextureObject_Sampler;
 struct DisplayMappingParams
 {
     uint method;
+	uint show_hue_test_image;
 	float white_point;
 };
 [[vk::binding( 2 )]] ConstantBuffer<DisplayMappingParams> pass_params;
@@ -38,43 +39,28 @@ static const float2 full_screen_triangle_ndc[3] =
 	float2( 3, 1 )
 };
 
-float3 RttAndOdtFit( float3 x )
+float3 HueChartImage( float2 uv, float exposure )
 {
-	float3 a = x * ( x + 0.0245786f ) - 0.000090537f;
-    float3 b = x * ( 0.983729f * x + 0.4329510f ) + 0.238081f;
-    return a / b;
-}
-
-float3 ACESFitted( float3 x )
-{	
-	const float3x3 aces_input_tf =
+    float L = ( uv.x * 48.0f ) / 48.0f - 0.4f;
+	float3 color;
+	if ( uv.y > 0.8f )
 	{
-		{0.59719, 0.35458, 0.04823},
-		{0.07600, 0.90834, 0.01566},
-		{0.02840, 0.13383, 0.83777}
-	};
-
-	const float3x3 aces_output_tf =
-	{
-		{ 1.60475, -0.53108, -0.07367},
-		{-0.10208,  1.10813, -0.00605},
-		{-0.00327, -0.07276,  1.07602}
-	};
-	
-	x = mul( aces_input_tf, x );
-	
-	x = RttAndOdtFit( x );
-	
-	return saturate( mul( aces_output_tf, x ) );
-}
-
-float3 ACEScgRefMapping( float3 srgb_linear )
-{
-	float3 aces_cg = sRGBLinearToACEScg( srgb_linear );
-	
-	aces_cg = RttAndOdtFit( aces_cg );
-	
-	return saturate( ACEScgTosRGBLinear( aces_cg ) );
+		uv.y = ( uv.y - 0.8f ) * 15.0f;
+		float3 red = float3( 1, 0, 0 );
+		float3 green = float3( 0, 1, 0 );
+		float3 blue = float3( 0, 0, 1 );
+		color = exp( 15.0f * L ) * ( uv.y > 2 ? blue : ( uv.y > 1 ? green : red ) );
+	} else {
+		uv.y /= 0.8f;
+		float h = ( 1.0f + 24.0f * uv.y ) / 24.0f * 3.141592f * 2.0f;
+		color = cos( h + float3( 0.0f, 1.0f, 2.0f ) * 3.141592f * 2.0f / 3.0f );
+		float3 maxRGB = max( color.r, max( color.g, color.b ) );
+		float minRGB = min( color.r, min( color.g, color.b ) );
+		color = exp( 15.0f * L ) * ( color - minRGB ) / ( maxRGB - minRGB );
+	}
+    
+    
+    return max( color, _float3( 0.0f ) ) * pow( 2.0f, exposure );
 }
 
 float3 AgxDefaultContrastApprox( float3 x )
@@ -194,10 +180,14 @@ float3 TonemapUncharted2Partial( float3 x )
 [[vk::location( 0 )]] float4 DisplayMappingPS( [[vk::location( 1 )]] in float2 uv : TEXCOORD0 ) : SV_TARGET0
 {
 	float3 input_linear = TextureObject.Sample( TextureObject_Sampler, uv ).rgb;
+	if ( pass_params.show_hue_test_image )
+	{
+		input_linear = HueChartImage( uv, 1.0f );
+	}
 	
     float3 output = float3( 0, 1, 0 );
 	
-	uint method = pass_params.method;
+	uint method = pass_params.method;	
 	
 	if ( method != DISPLAY_MAPPING_METHOD_REINHARD_WHITE_POINT && method != DISPLAY_MAPPING_METHOD_AGX )
 	{

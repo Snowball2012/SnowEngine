@@ -24,6 +24,7 @@ public:
     struct DisplayMappingParams
     {
         uint32_t method;
+        uint32_t show_hue_test_image;
         float white_point;
     };
 
@@ -34,8 +35,8 @@ public:
         RHISampler* sampler = nullptr;
 
         DisplayMapping::Method method = DisplayMapping::Method::Linear;
-
         float white_point = 1.0f;
+        bool dbg_show_hue_test_image = false;
     };    
 
     DisplayMappingProgram()
@@ -117,6 +118,7 @@ public:
         DisplayMappingParams pass_params_ub = {};
         pass_params_ub.method = uint32_t( parms.method );
         pass_params_ub.white_point = parms.white_point;
+        pass_params_ub.show_hue_test_image = parms.dbg_show_hue_test_image ? 1 : 0;
 
         UploadBufferRange pass_ub = rg.AllocateUploadBuffer<DisplayMappingParams>();
         pass_ub.UploadData( pass_params_ub );
@@ -232,6 +234,7 @@ void DisplayMapping::DisplayMappingPass( RHICommandList& cmd_list, const SceneVi
         prog_parms.sampler = GetRenderer().GetPointSampler();
         prog_parms.method = m_method;
         prog_parms.white_point = m_white_point;
+        prog_parms.dbg_show_hue_test_image = m_dbg_show_hue_test_image;
 
         m_program->Run( cmd_list, *data.rg, prog_parms );
         ctx.main_pass->EndPass();
@@ -297,9 +300,10 @@ void DisplayMapping::DebugUI()
             "ACEScg",
             "AgX"
         };
-        static int item_current = int( Method::Linear );
+        static int item_current = int( m_method );
         ImGui::ListBox( "Method", &item_current, items, int( std::size( items ) ), 4 );
         m_method = Method( item_current );
+        ImGui::Checkbox( "Show hue test image", &m_dbg_show_hue_test_image );
     }
 
     ImGui::DragFloat( "WhitePoint", &m_white_point, 0.1f * m_white_point );

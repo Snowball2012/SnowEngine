@@ -50,7 +50,8 @@ private:
     std::unique_ptr<DisplayMappingProgram> m_program = nullptr;
 
     float m_white_point = 1.0f;
-    Method m_method = Method::Linear;
+    Method m_method = Method::AgX;
+    bool m_dbg_show_hue_test_image = false;
 
 public:
     DisplayMapping();
