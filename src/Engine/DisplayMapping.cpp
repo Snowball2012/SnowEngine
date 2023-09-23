@@ -120,7 +120,7 @@ public:
         pass_params_ub.white_point = parms.white_point;
         pass_params_ub.show_hue_test_image = parms.dbg_show_hue_test_image ? 1 : 0;
 
-        UploadBufferRange pass_ub = rg.AllocateUploadBuffer<DisplayMappingParams>();
+        UploadBufferRange pass_ub = rg.AllocateUploadBufferUniform<DisplayMappingParams>();
         pass_ub.UploadData( pass_params_ub );
 
         RHIViewport viewport = {};

@@ -1,3 +1,4 @@
+#include "Utils.hlsli"
 
 #include "SceneViewParams.hlsli"
 
@@ -15,10 +16,30 @@ float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewpo
     return world_pos.xyz;
 }
 
+static const uint INVALID_PRIMITIVE = -1;
+static const uint INVALID_INSTANCE_INDEX = -1;
+
 struct Payload
 {
-    float2 hit_distance;
+    float2 barycentrics;
+    uint instance_index;
+    uint primitive_index;
 };
+
+float3 ReconstructBarycentrics( float2 payload_barycentrics )
+{
+    return float3( payload_barycentrics, saturate( 1.0f - payload_barycentrics.x - payload_barycentrics.y ) );
+}
+
+Payload PayloadInit()
+{
+    Payload ret;
+    ret.barycentrics = _float3( 0 );
+    ret.instance_index = INVALID_INSTANCE_INDEX;
+    ret.primitive_index = INVALID_INSTANCE_INDEX;
+    
+    return ret;
+}
 
 [shader( "raygeneration" )]
 void VisibilityRGS()
@@ -36,23 +57,25 @@ void VisibilityRGS()
 
     RayDesc ray = { ray_origin, 0, ray_direction, max_t };
 
-    Payload payload = { 0, 0 };
+    Payload payload = PayloadInit();
 
     TraceRay( scene_tlas,
         ( RAY_FLAG_NONE ),
         0xFF, 0, 1, 0, ray, payload );
     
-    output[pixel_id] = float4( payload.hit_distance, 0, 1 );
+    output[pixel_id] = max( float4( 0,0,0,0 ), float4( float( payload.instance_index ), float( payload.instance_index ) - 1.0f, float( payload.instance_index ) - 2.0f, 1 ) );
+    //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
 }
 
 [shader( "miss" )]
 void VisibilityRMS( inout Payload payload )
 {
-    payload.hit_distance = float2( 0,0 );
 }
 
 [shader( "closesthit" )]
 void VisibilityRCS( inout Payload payload, in BuiltInTriangleIntersectionAttributes attr )
 {
-    payload.hit_distance = attr.barycentrics.xy;
+    payload.barycentrics = attr.barycentrics.xy;
+    payload.instance_index = InstanceIndex();
+    payload.primitive_index = PrimitiveIndex();
 }

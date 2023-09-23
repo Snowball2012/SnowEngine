@@ -39,6 +39,8 @@ public:
     SceneMeshInstance* GetMeshInstance( SceneMeshInstanceID id ) { return m_mesh_instances.try_get( id ); };
     const SceneMeshInstance* GetMeshInstance( SceneMeshInstanceID id ) const { return m_mesh_instances.try_get( id ); }
 
+    std::span<const SceneMeshInstance> GetAllMeshInstances() const { return std::span<const SceneMeshInstance>( m_mesh_instances.data(), m_mesh_instances.data() + m_mesh_instances.size() ); }
+
     TLAS& GetTLAS() { return *m_tlas; }
 
     // Call before any render operation on the scene. This makes changes made to scene objects (mesh instances, etc.) visible to the renderer
@@ -113,6 +115,21 @@ struct RenderSceneParams
     ISceneRenderExtension* extension = nullptr; // optional, allows to hook into scene rendering process (add ui passes / blit to swapchain, for example)
 };
 
+class GlobalDescriptors
+{
+private:
+    RHIDescriptorSetLayoutPtr m_global_dsl;
+    RHIDescriptorSetPtr m_global_descset;
+    std::vector<uint32_t> m_free_geom_slots;
+public:
+    GlobalDescriptors();
+
+    uint32_t AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices );
+
+    RHIDescriptorSet& GetDescSet() const { return *m_global_descset; }
+    RHIDescriptorSetLayout* GetLayout() const { return m_global_dsl.get(); }
+};
+
 class Renderer
 {
 private:
@@ -129,6 +146,7 @@ private:
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
 
+    std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
 public:
 
@@ -143,6 +161,8 @@ public:
     BlitTextureProgram* GetBlitTextureProgram() const;
 
     RHISampler* GetPointSampler() const;
+
+    GlobalDescriptors& GetGlobalDescriptors() const { return *m_global_descriptors; }
 
 private:
 

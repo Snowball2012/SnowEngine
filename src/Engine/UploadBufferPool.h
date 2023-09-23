@@ -5,7 +5,7 @@
 struct UploadBufferRange
 {
     RHIUploadBuffer* buffer = nullptr;
-    RHIUniformBufferViewInfo view;
+    RHIBufferViewInfo view;
 
     template<typename T>
     bool UploadData( const T& data )
@@ -14,6 +14,17 @@ struct UploadBufferRange
             return false;
 
         buffer->WriteBytes( &data, sizeof( data ), view.offset );
+        return true;
+    }
+
+    template<typename T>
+    bool UploadData( const T* data, size_t num_elems )
+    {
+        size_t total_size = sizeof( data[0] ) * num_elems;
+        if ( !SE_ENSURE( total_size <= view.range) )
+            return false;
+
+        buffer->WriteBytes( &data, total_size, view.offset );
         return true;
     }
 };
@@ -32,10 +43,11 @@ private:
     static constexpr uint64_t DefaultBlockSize = 64 * SizeKB;
     static constexpr uint64_t AllocationAlignment = 16;
     std::vector<UploadBufferPoolEntry> m_entries;
+    RHIBufferUsageFlags m_usage = RHIBufferUsageFlags::None;
 
 public:
 
-    UploadBufferPool() = default;
+    UploadBufferPool( RHIBufferUsageFlags usage ) : m_usage( usage ) { }
 
     void Reset();
 

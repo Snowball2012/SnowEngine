@@ -145,7 +145,7 @@ public:
 
 	virtual RHIAccelerationStructure* CreateAS( const RHI::ASInfo& info ) override;
 
-	virtual RHIUniformBufferView* CreateUniformBufferView( const RHIUniformBufferViewInfo& info ) override;
+	virtual RHIUniformBufferView* CreateUniformBufferView( const RHIBufferViewInfo& info ) override;
 	virtual RHITextureROView* CreateTextureROView( const TextureROViewInfo& info ) override;
 	virtual RHITextureRWView* CreateTextureRWView( const TextureRWViewInfo& info ) override;
 	virtual RHIRenderTargetView* CreateRTV( const RenderTargetViewInfo& info ) override;

@@ -4,6 +4,7 @@
 #include "Assets.h"
 
 #include "RHIUtils.h"
+#include "Scene.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
@@ -149,12 +150,12 @@ bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::
 {
     RHI::BufferInfo vertex_buf_info = {};
     vertex_buf_info.size = sizeof( MeshVertex ) * vertices.size();
-    vertex_buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::AccelerationStructureInput;
+    vertex_buf_info.usage = RHIBufferUsageFlags::VertexBuffer | RHIBufferUsageFlags::AccelerationStructureInput | RHIBufferUsageFlags::StructuredBuffer;
     m_vertex_buffer = RHIUtils::CreateInitializedGPUBuffer( vertex_buf_info, vertices.data(), vertex_buf_info.size );
 
     RHI::BufferInfo index_buf_info = {};
     index_buf_info.size = sizeof( indices[0] ) * indices.size();
-    index_buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::AccelerationStructureInput;
+    index_buf_info.usage = RHIBufferUsageFlags::IndexBuffer | RHIBufferUsageFlags::AccelerationStructureInput | RHIBufferUsageFlags::StructuredBuffer;
     m_index_buffer = RHIUtils::CreateInitializedGPUBuffer( index_buf_info, indices.data(), index_buf_info.size );
     m_indices_num = uint32_t( indices.size() );
 
@@ -166,6 +167,8 @@ bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::
     blas_geom.triangles.vtx_format = GetPositionBufferInfo().format;
     blas_geom.triangles.vtx_stride = RHIUtils::GetRHIFormatSize( blas_geom.triangles.vtx_format );
     m_blas = RHIUtils::CreateAS( blas_geom );
+
+    m_global_geom_index = GetRenderer().GetGlobalDescriptors().AddGeometry( RHIBufferViewInfo{ m_vertex_buffer.get() }, RHIBufferViewInfo{ m_index_buffer.get() } );
 
     return true;
 }

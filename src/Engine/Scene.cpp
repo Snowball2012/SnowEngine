@@ -124,24 +124,7 @@ glm::mat4x4 SceneView::CalcProjectionMatrix() const
 }
 
 
-// Renderer
-
-Renderer::Renderer()
-{
-    if ( !GetRHI().SupportsRaytracing() )
-    {
-        SE_LOG_FATAL_ERROR( Renderer, "Raytracing is not supported on the GPU" );
-    }
-
-    CreateDescriptorSetLayout();
-    CreatePrograms();
-    CreateSamplers();
-    CreateRTPipeline();
-
-    m_display_mapping = std::make_unique<DisplayMapping>();
-}
-
-Renderer::~Renderer() = default;
+// GlobalDescriptors
 
 namespace
 {
@@ -153,7 +136,76 @@ namespace
         glm::mat4 view_proj_inv_mat;
         glm::uvec2 viewport_size_px;
     };
+
+    struct GPUTLASItemParams
+    {
+        glm::mat3x4 object_to_world_mat;
+        uint32_t geom_buf_index;
+    };
+
+    static constexpr int MAX_SCENE_GEOMS = 256;
 }
+
+GlobalDescriptors::GlobalDescriptors()
+{
+    m_free_geom_slots.resize( MAX_SCENE_GEOMS );
+    for ( uint32_t i = 0; i < m_free_geom_slots.size(); ++i )
+    {
+        m_free_geom_slots[i] = uint32_t( m_free_geom_slots.size() ) - i - 1;
+    }
+
+    {
+        RHI::DescriptorViewRange ranges[1] = {};
+
+        ranges[0].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[0].count = MAX_SCENE_GEOMS + MAX_SCENE_GEOMS;
+        ranges[0].stages = RHIShaderStageFlags::AllBits;
+
+        RHI::DescriptorSetLayoutInfo dsl_info = {};
+        dsl_info.ranges = ranges;
+        dsl_info.range_count = std::size( ranges );
+
+        m_global_dsl = GetRHI().CreateDescriptorSetLayout( dsl_info );
+    }
+
+    m_global_descset = GetRHI().CreateDescriptorSet( *m_global_dsl );
+}
+
+uint32_t GlobalDescriptors::AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices )
+{
+    if ( m_free_geom_slots.empty() )
+        return -1; // no place left
+
+    uint32_t geom_index = m_free_geom_slots.back();
+    m_free_geom_slots.pop_back();
+
+    m_global_descset->BindStructuredBuffer( 0, geom_index, vertices );
+    m_global_descset->BindStructuredBuffer( 0, MAX_SCENE_GEOMS + geom_index, indices );
+
+    return geom_index;
+}
+
+
+// Renderer
+
+Renderer::Renderer()
+{
+    if ( !GetRHI().SupportsRaytracing() )
+    {
+        SE_LOG_FATAL_ERROR( Renderer, "Raytracing is not supported on the GPU" );
+    }
+
+    m_global_descriptors = std::make_unique<GlobalDescriptors>();
+
+    CreateDescriptorSetLayout();
+    CreatePrograms();
+    CreateSamplers();
+    CreateRTPipeline();
+
+    m_display_mapping = std::make_unique<DisplayMapping>();
+}
+
+Renderer::~Renderer() = default;
 
 void Renderer::CreateRTPipeline()
 {
@@ -209,7 +261,7 @@ void Renderer::CreateDescriptorSetLayout()
     }
 
     {
-        RHI::DescriptorViewRange ranges[2] = {};
+        RHI::DescriptorViewRange ranges[3] = {};
         ranges[0].type = RHIShaderBindingType::AccelerationStructure;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::AllBits;
@@ -217,6 +269,10 @@ void Renderer::CreateDescriptorSetLayout()
         ranges[1].type = RHIShaderBindingType::UniformBuffer;
         ranges[1].count = 1;
         ranges[1].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[2].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[2].count = 1;
+        ranges[2].stages = RHIShaderStageFlags::AllBits;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -227,7 +283,7 @@ void Renderer::CreateDescriptorSetLayout()
 
     RHI::ShaderBindingLayoutInfo rt_layout_info = {};
 
-    RHIDescriptorSetLayout* rt_dsls[2] = { m_rt_dsl.get(), m_view_dsl.get() };
+    RHIDescriptorSetLayout* rt_dsls[3] = { m_rt_dsl.get(), m_view_dsl.get(), m_global_descriptors->GetLayout() };
     rt_layout_info.tables = rt_dsls;
     rt_layout_info.table_count = std::size( rt_dsls );
 
@@ -248,13 +304,31 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     glm::mat4x4 view_proj = svp.proj_mat * svp.view_mat;
     svp.view_proj_inv_mat = glm::inverse( view_proj );
 
-    UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBuffer( sizeof( GPUSceneViewParams ) );
+    UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBufferUniform<GPUSceneViewParams>();
 
     gpu_buffer.UploadData( svp );
+
+    auto& tlas_instances = view.GetScene().GetTLAS().Instances();
+
+    std::vector<GPUTLASItemParams> tlas_instances_data( tlas_instances.size() );
+    for ( size_t i = 0; i < tlas_instances.size(); ++i )
+    {
+        tlas_instances_data[i].object_to_world_mat = tlas_instances.data()[i].transform;
+    }
+
+    for ( const auto& mesh_instance : view.GetScene().GetAllMeshInstances() )
+    {
+        size_t packed_idx = tlas_instances.get_packed_idx( mesh_instance.m_tlas_instance );
+        tlas_instances_data[packed_idx].geom_buf_index = mesh_instance.m_asset->GetGlobalGeomIndex();
+    }
+
+    UploadBufferRange gpu_tlas_item_params = view_data.rg->AllocateUploadBufferStructured<GPUTLASItemParams>( tlas_instances_data.size() );
+    gpu_tlas_item_params.UploadData( tlas_instances_data.data(), tlas_instances_data.size() );
 
     // Update descriptor set
     view_data.view_desc_set->BindAccelerationStructure( 0, 0, view.GetScene().GetTLAS().GetRHIAS() );
     view_data.view_desc_set->BindUniformBufferView( 1, 0, gpu_buffer.view );
+    view_data.view_desc_set->BindStructuredBuffer( 2, 0, gpu_tlas_item_params.view );
 
     view_data.view_desc_set->FlushBinds();
 }
@@ -272,12 +346,15 @@ void Renderer::SetPSO( RHICommandList& cmd_list, const RHIRaytracingPipeline& rt
 {
     cmd_list.SetPSO( rt_pso );
     cmd_list.BindDescriptorSet( 1, *view_data.view_desc_set );
+    cmd_list.BindDescriptorSet( 2, m_global_descriptors->GetDescSet() );
 }
 
 bool Renderer::RenderScene( const RenderSceneParams& parms )
 {
     if ( !SE_ENSURE( parms.view && parms.rg ) )
         return false;
+
+    m_global_descriptors->GetDescSet().FlushBinds();
 
     SceneView& scene_view = *parms.view;
     Scene& scene = scene_view.GetScene();
@@ -319,7 +396,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     DisplayMappingContext display_mapping_ctx = {};
     m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
 
-    if ( parms.extension ) {
+    if ( parms.extension )
+    {
         parms.extension->PostSetupRendergraph( view_frame_data );
     }
 
@@ -327,7 +405,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     if ( !rg.Compile() )
         return false;
 
-    if ( parms.extension ) {
+    if ( parms.extension )
+    {
         parms.extension->PostCompileRendergraph( view_frame_data );
     }
 

@@ -229,7 +229,8 @@ private:
     std::vector<RHITextureBarrier> m_final_barriers;
 
     std::unique_ptr<DescriptorSetPool> m_descriptors;
-    std::unique_ptr<UploadBufferPool> m_upload_buffers;
+    std::unique_ptr<UploadBufferPool> m_upload_buffers_uniform;
+    std::unique_ptr<UploadBufferPool> m_upload_buffers_structured;
 
 public:
     Rendergraph();
@@ -251,10 +252,15 @@ public:
     // returned descriptor may only be used until Submit() is called
     RHIDescriptorSet* AllocateFrameDescSet( RHIDescriptorSetLayout& layout );
     // returned buffer range may only be used until Submit() is called
-    UploadBufferRange AllocateUploadBuffer( size_t size );
+    UploadBufferRange AllocateUploadBufferUniform( size_t size );
+    UploadBufferRange AllocateUploadBufferStructured( size_t size );
 
     template<typename BufferType>
-    UploadBufferRange AllocateUploadBuffer() { return AllocateUploadBuffer( sizeof( BufferType ) ); }
+    UploadBufferRange AllocateUploadBufferUniform() { return AllocateUploadBufferUniform( sizeof( BufferType ) ); }
+
+    // This may be problematic in DX12 where structured buffer element size is fixed on creation. Suballocation can be tricky
+    template<typename BufferType>
+    UploadBufferRange AllocateUploadBufferStructured( size_t num_elems ) { return AllocateUploadBufferStructured( sizeof( BufferType ) * num_elems ); }
 
 private:
     uint64_t GenerateHandle() { return m_handle_generator++; }

@@ -102,6 +102,14 @@ const T& packed_freelist<T, base_container>::get( id elem_id ) const noexcept
 
 
 template<typename T, template <typename...> typename base_container>
+size_t packed_freelist<T, base_container>::get_packed_idx( id elem_id ) const noexcept
+{
+    assert( has( elem_id ) );
+    return m_freelist[elem_id.idx].packed_idx;
+}
+
+
+template<typename T, template <typename...> typename base_container>
 const T& packed_freelist<T, base_container>::operator[]( id elem_id ) const noexcept
 {
     return get( elem_id );

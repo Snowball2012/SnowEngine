@@ -62,7 +62,7 @@ UploadBufferPoolEntry* UploadBufferPool::AllocateNewEntry( uint64_t size )
 
     RHI::BufferInfo buf_info = {};
     buf_info.size = size;
-    buf_info.usage = RHIBufferUsageFlags::UniformBuffer;
+    buf_info.usage = m_usage;
     auto& new_entry = m_entries.emplace_back();
     new_entry.buffer = GetRHI().CreateUploadBuffer( buf_info );
     new_entry.current_offset = 0;

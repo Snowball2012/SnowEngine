@@ -16,6 +16,8 @@ struct VulkanFeatures
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR rt_pipe_props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
     VkPhysicalDeviceAccelerationStructurePropertiesKHR as_props = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR };
 
+    VkPhysicalDevice16BitStorageFeatures vk_16bit_features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
+
     void InitFromDevice( VkPhysicalDevice device, bool need_raytracing );
     void LinkPointers( bool need_rt );
     VulkanFeatures& operator=( const VulkanFeatures& );

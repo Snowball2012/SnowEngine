@@ -12,7 +12,7 @@ VulkanCBV::~VulkanCBV()
 {
 }
 
-VulkanCBV::VulkanCBV(VulkanRHI* rhi, const RHIUniformBufferViewInfo& info)
+VulkanCBV::VulkanCBV(VulkanRHI* rhi, const RHIBufferViewInfo& info)
 	: m_rhi(rhi)
 {
 	VERIFY_NOT_EQUAL(info.buffer, nullptr);

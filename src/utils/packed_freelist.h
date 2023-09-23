@@ -54,6 +54,8 @@ public:
     T& get( id elem_id ) noexcept;
     const T& get( id elem_id ) const noexcept;
 
+    size_t get_packed_idx( id elem_id ) const noexcept;
+
     // ub if element with elem_id has been deleted
     T& operator[]( id elem_id ) noexcept;
     const T& operator[]( id elem_id ) const noexcept;

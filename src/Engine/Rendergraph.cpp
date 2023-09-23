@@ -59,7 +59,8 @@ RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDe
 Rendergraph::Rendergraph()
 {
     m_descriptors = std::make_unique<DescriptorSetPool>();
-    m_upload_buffers = std::make_unique<UploadBufferPool>();
+    m_upload_buffers_uniform = std::make_unique<UploadBufferPool>( RHIBufferUsageFlags::UniformBuffer );
+    m_upload_buffers_structured = std::make_unique<UploadBufferPool>( RHIBufferUsageFlags::StructuredBuffer );
 }
 
 Rendergraph::~Rendergraph() = default;
@@ -327,7 +328,8 @@ void Rendergraph::Reset()
     m_external_textures.clear();
     m_final_barriers.clear();
     m_descriptors->Reset();
-    m_upload_buffers->Reset();
+    m_upload_buffers_uniform->Reset();
+    m_upload_buffers_structured->Reset();
 }
 
 RHIDescriptorSet* Rendergraph::AllocateFrameDescSet( RHIDescriptorSetLayout& layout )
@@ -335,9 +337,14 @@ RHIDescriptorSet* Rendergraph::AllocateFrameDescSet( RHIDescriptorSetLayout& lay
     return m_descriptors->Allocate( layout );
 }
 
-UploadBufferRange Rendergraph::AllocateUploadBuffer( size_t size )
+UploadBufferRange Rendergraph::AllocateUploadBufferUniform( size_t size )
 {
-    return m_upload_buffers->Allocate( size );
+    return m_upload_buffers_uniform->Allocate( size );
+}
+
+UploadBufferRange Rendergraph::AllocateUploadBufferStructured( size_t size )
+{
+    return m_upload_buffers_structured->Allocate( size );
 }
 
 // RGPass

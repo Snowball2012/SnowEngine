@@ -26,6 +26,11 @@ void VulkanFeatures::LinkPointers( bool need_rt )
             current_features_head = &rtpipe;
         }
 
+        {
+            vk_16bit_features.pNext = current_features_head;
+            current_features_head = &vk_16bit_features;
+        }
+
         features2_head.pNext = current_features_head;
     }
 

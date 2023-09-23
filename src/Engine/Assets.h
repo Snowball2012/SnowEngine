@@ -20,6 +20,8 @@ protected:
 
 	uint32_t m_indices_num = 0;
 
+	uint32_t m_global_geom_index = -1;
+
 public:
 
 	virtual bool Load( const JsonValue& data ) override;
@@ -35,6 +37,8 @@ public:
 
 	const RHIIndexBufferType GetIndexBufferType() const;
 	uint32_t GetNumIndices() const { return m_indices_num; }
+
+	uint32_t GetGlobalGeomIndex() const { return m_global_geom_index; }
 
 protected:
 	MeshAsset( const AssetId& id, AssetManager& mgr )

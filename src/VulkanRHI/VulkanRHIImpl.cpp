@@ -118,7 +118,7 @@ RHIDescriptorSet* VulkanRHI::CreateDescriptorSet( RHIDescriptorSetLayout& layout
     return new VulkanDescriptorSet( this, layout );
 }
 
-RHIUniformBufferView* VulkanRHI::CreateUniformBufferView( const RHIUniformBufferViewInfo& info )
+RHIUniformBufferView* VulkanRHI::CreateUniformBufferView( const RHIBufferViewInfo& info )
 {
     return new VulkanCBV( this, info );
 }
@@ -282,6 +282,10 @@ VkDescriptorType VulkanRHI::GetVkDescriptorType( RHIShaderBindingType type )
         vk_type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         break;
 
+    case RHIShaderBindingType::StructuredBuffer:
+        vk_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        break;
+
     default:
         NOTIMPL;
     }
@@ -303,7 +307,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHIBufferUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 9 );
+    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 10 );
 
     add_flag( RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT );
@@ -314,6 +318,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
     add_flag( RHIBufferUsageFlags::AccelerationStructureInput, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR );
     add_flag( RHIBufferUsageFlags::AccelerationStructureScratch, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
     add_flag( RHIBufferUsageFlags::ShaderBindingTable, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR );
+    add_flag( RHIBufferUsageFlags::StructuredBuffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
 
     return retval;
 }
@@ -895,6 +900,9 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
         return false;
 
     if ( !features.vk12.bufferDeviceAddress )
+        return false;
+
+    if ( !features.vk_16bit_features.storageBuffer16BitAccess )
         return false;
 
     if ( need_raytracing )

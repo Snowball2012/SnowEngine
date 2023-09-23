@@ -46,8 +46,9 @@ enum class RHIBufferUsageFlags : uint32_t
     AccelerationStructureInput = 0x40,
     AccelerationStructureScratch = 0x80,
     ShaderBindingTable = 0x100,
+    StructuredBuffer = 0x200,
 
-    NumFlags = 9
+    NumFlags = 10
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
@@ -118,7 +119,8 @@ enum class RHIShaderBindingType : uint8_t
     TextureRO,
     AccelerationStructure,
     TextureRW,
-    Sampler
+    Sampler,
+    StructuredBuffer
 };
 
 enum class RHITextureLayout : uint8_t
@@ -157,7 +159,7 @@ struct RHIASBuildSizes
     size_t scratch_size = 0;
 };
 
-struct RHIUniformBufferViewInfo
+struct RHIBufferViewInfo
 {
     static constexpr uint64_t WHOLE_SIZE = -1;
 
@@ -304,7 +306,7 @@ public:
     };
     virtual RHITexture* CreateTexture( const TextureInfo& info ) { NOTIMPL; return nullptr; }
 
-    virtual RHIUniformBufferView* CreateUniformBufferView( const RHIUniformBufferViewInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIUniformBufferView* CreateUniformBufferView( const RHIBufferViewInfo& info ) { NOTIMPL; return nullptr; }
 
     struct TextureROViewInfo
     {
@@ -643,11 +645,12 @@ class RHIDescriptorSet : public RHIObject
 {
 public:
     virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, RHIUniformBufferView& cbv ) { NOTIMPL; }
-    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIUniformBufferViewInfo& cbv ) { NOTIMPL; }
+    virtual void BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIBufferViewInfo& cbv ) { NOTIMPL; }
     virtual void BindTextureROView( size_t range_idx, size_t idx_in_range, RHITextureROView& srv ) { NOTIMPL; }
     virtual void BindTextureRWView( size_t range_idx, size_t idx_in_range, RHITextureRWView& srv ) { NOTIMPL; }
     virtual void BindAccelerationStructure( size_t range_idx, size_t idx_in_range, RHIAccelerationStructure& as ) { NOTIMPL; }
     virtual void BindSampler( size_t range_idx, size_t idx_in_range, RHISampler& sampler ) { NOTIMPL; }
+    virtual void BindStructuredBuffer( size_t range_idx, size_t idx_in_range, const RHIBufferViewInfo& view ) { NOTIMPL; }
 
     virtual void FlushBinds() { NOTIMPL; }
 

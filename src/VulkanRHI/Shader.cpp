@@ -189,9 +189,9 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
 
     LPCWSTR profiles[uint32_t(RHI::ShaderFrequency::Count)] =
     {
-        L"vs_6_1",
-        L"ps_6_1",
-        L"cs_6_1",
+        L"vs_6_3",
+        L"ps_6_3",
+        L"cs_6_3",
         L"lib_6_3",
         L"lib_6_3",
         L"lib_6_3"
@@ -211,7 +211,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
     }
 
     // generate spirv
-    std::vector<LPCWSTR> args = { L"-spirv", L"-fspv-target-env=vulkan1.2" };
+    std::vector<LPCWSTR> args = { L"-spirv", L"-fspv-target-env=vulkan1.2", L"/enable-16bit-types" };
 
     std::wstring entry_point_wstr = WstringFromChar(entry_point.c_str());
 
@@ -377,7 +377,7 @@ void VulkanDescriptorSet::BindUniformBufferView(size_t range_idx, size_t idx_in_
     m_referenced_objects.emplace_back(&vk_cbv);
 }
 
-void VulkanDescriptorSet::BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIUniformBufferViewInfo& view )
+void VulkanDescriptorSet::BindUniformBufferView( size_t range_idx, size_t idx_in_range, const RHIBufferViewInfo& view )
 {
     VERIFY_NOT_EQUAL( view.buffer, nullptr );
 
@@ -391,7 +391,7 @@ void VulkanDescriptorSet::BindUniformBufferView( size_t range_idx, size_t idx_in
     auto& vk_cb = RHIImpl( *view.buffer );
     buffer_info.buffer = vk_cb.GetVkBuffer();
     buffer_info.offset = view.offset;
-    buffer_info.range = view.range == RHIUniformBufferViewInfo::WHOLE_SIZE ? VK_WHOLE_SIZE : view.range;
+    buffer_info.range = view.range == RHIBufferViewInfo::WHOLE_SIZE ? VK_WHOLE_SIZE : view.range;
 
     write_struct.pBufferInfo = &buffer_info;
 
@@ -458,6 +458,27 @@ void VulkanDescriptorSet::BindSampler(size_t range_idx, size_t idx_in_range, RHI
     write_struct.pImageInfo = vk_sampler.GetVkImageInfo();
 
     m_referenced_objects.emplace_back(&vk_sampler);
+}
+
+void VulkanDescriptorSet::BindStructuredBuffer( size_t range_idx, size_t idx_in_range, const RHIBufferViewInfo& view )
+{
+    VERIFY_NOT_EQUAL( view.buffer, nullptr );
+
+    auto& write_struct = m_pending_writes.emplace_back();
+    InitWriteStruct( write_struct, range_idx, idx_in_range );
+
+    write_struct.descriptorCount = 1;
+    write_struct.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+    auto& buffer_info = m_buffer_infos.emplace_back();
+    auto& vk_cb = RHIImpl( *view.buffer );
+    buffer_info.buffer = vk_cb.GetVkBuffer();
+    buffer_info.offset = view.offset;
+    buffer_info.range = view.range == RHIBufferViewInfo::WHOLE_SIZE ? VK_WHOLE_SIZE : view.range;
+
+    write_struct.pBufferInfo = &buffer_info;
+
+    m_referenced_objects.emplace_back( &vk_cb );
 }
 
 void VulkanDescriptorSet::FlushBinds()
