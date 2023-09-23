@@ -211,7 +211,7 @@ ComPtr<IDxcBlob> ShaderCompiler::CompileFromSource(const ShaderSourceFile& sourc
     }
 
     // generate spirv
-    std::vector<LPCWSTR> args = { L"-spirv", L"-fspv-target-env=vulkan1.2", L"/enable-16bit-types" };
+    std::vector<LPCWSTR> args = { L"-spirv", L"-fspv-target-env=vulkan1.2", L"-fvk-use-dx-layout", L"-enable-16bit-types"};
 
     std::wstring entry_point_wstr = WstringFromChar(entry_point.c_str());
 

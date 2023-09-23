@@ -22,7 +22,7 @@
 
 #include "Features.h"
 
-CVAR_DEFINE( vk_validation_enableGPUAssisted, bool, false, "Enable GPU-assisted validation" );
+CVAR_DEFINE( vk_validation_enableGPUAssisted, int, 0, "Enable GPU-assisted validation" );
 
 VulkanRHI::VulkanRHI( const VulkanRHICreateInfo& info )
 {
@@ -702,7 +702,7 @@ void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
     if ( info.enable_validation )
     {
         wanted_layers.push_back( "VK_LAYER_KHRONOS_validation" );
-        if ( vk_validation_enableGPUAssisted.GetValue() == true ) {
+        if ( vk_validation_enableGPUAssisted.GetValue() > 0 ) {
             validation_features_array.emplace_back() = VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT;
             validation_features_array.emplace_back() = VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT;
         }
@@ -903,6 +903,9 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
         return false;
 
     if ( !features.vk_16bit_features.storageBuffer16BitAccess )
+        return false;
+
+    if ( !features.vk12.scalarBlockLayout )
         return false;
 
     if ( need_raytracing )

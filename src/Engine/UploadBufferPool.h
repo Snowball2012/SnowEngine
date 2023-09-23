@@ -24,7 +24,7 @@ struct UploadBufferRange
         if ( !SE_ENSURE( total_size <= view.range) )
             return false;
 
-        buffer->WriteBytes( &data, total_size, view.offset );
+        buffer->WriteBytes( data, total_size, view.offset );
         return true;
     }
 };

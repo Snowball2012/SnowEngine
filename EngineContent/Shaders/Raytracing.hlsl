@@ -62,8 +62,18 @@ void VisibilityRGS()
     TraceRay( scene_tlas,
         ( RAY_FLAG_NONE ),
         0xFF, 0, 1, 0, ray, payload );
+        
+    uint geom_index = -1;
+    float3x4 obj_to_world;
+    if ( payload.instance_index != INVALID_INSTANCE_INDEX )
+    {
+        TLASItemParams item_params = tlas_items[ payload.instance_index ];
+        
+        geom_index = item_params.geom_buf_index.x;
+        obj_to_world = item_params.object_to_world_mat;
+    }
     
-    output[pixel_id] = max( float4( 0,0,0,0 ), float4( float( payload.instance_index ), float( payload.instance_index ) - 1.0f, float( payload.instance_index ) - 2.0f, 1 ) );
+    output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
 }
 
