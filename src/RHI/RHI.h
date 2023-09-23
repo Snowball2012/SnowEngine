@@ -507,6 +507,7 @@ struct RHIASTrianglesInfo
     RHIFormat vtx_format = RHIFormat::Undefined;
     const RHIBuffer* vtx_buf = nullptr;
     size_t vtx_stride = 0;
+    size_t vtx_offset = 0;
     RHIIndexBufferType idx_type = RHIIndexBufferType::UInt16;
     const RHIBuffer* idx_buf = nullptr;
 };

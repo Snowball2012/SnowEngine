@@ -155,11 +155,15 @@ GlobalDescriptors::GlobalDescriptors()
     }
 
     {
-        RHI::DescriptorViewRange ranges[1] = {};
+        RHI::DescriptorViewRange ranges[2] = {};
 
         ranges[0].type = RHIShaderBindingType::StructuredBuffer;
-        ranges[0].count = MAX_SCENE_GEOMS + MAX_SCENE_GEOMS;
+        ranges[0].count = MAX_SCENE_GEOMS;
         ranges[0].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[1].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[1].count = MAX_SCENE_GEOMS;
+        ranges[1].stages = RHIShaderStageFlags::AllBits;
 
         RHI::DescriptorSetLayoutInfo dsl_info = {};
         dsl_info.ranges = ranges;
@@ -179,8 +183,8 @@ uint32_t GlobalDescriptors::AddGeometry( const RHIBufferViewInfo& vertices, cons
     uint32_t geom_index = m_free_geom_slots.back();
     m_free_geom_slots.pop_back();
 
-    m_global_descset->BindStructuredBuffer( 0, geom_index, vertices );
-    m_global_descset->BindStructuredBuffer( 0, MAX_SCENE_GEOMS + geom_index, indices );
+    m_global_descset->BindStructuredBuffer( 0, geom_index, indices );
+    m_global_descset->BindStructuredBuffer( 1, geom_index, vertices );
 
     return geom_index;
 }

@@ -35,4 +35,4 @@ static const int MAX_SCENE_GEOMS = 256;
 [[vk::binding( 1, 1 )]] ConstantBuffer<SceneViewParams> view_data;
 [[vk::binding( 2, 1 )]] StructuredBuffer<TLASItemParams> tlas_items;
 [[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
-[[vk::binding( MAX_SCENE_GEOMS, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];
+[[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];

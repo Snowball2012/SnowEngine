@@ -16,6 +16,7 @@
 struct MeshVertex
 {
     glm::vec3 position;
+    glm::vec3 normal;
 };
 
 RHIPrimitiveAttributeInfo MeshAsset::GetPositionBufferInfo() const
@@ -96,7 +97,7 @@ bool MeshAsset::LoadFromObj( const char* path )
         tinyobj::real_t vy = attrib.vertices[i + 1];
         tinyobj::real_t vz = attrib.vertices[i + 2];
 
-        vertices.emplace_back( MeshVertex{ glm::vec3( vx, vy, vz ) } );
+        vertices.emplace_back( MeshVertex{ glm::vec3( vx, vy, vz ), glm::vec3( 0, 0, 1 ) } );
     }
 
     // Loop over shapes
@@ -165,7 +166,8 @@ bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::
     blas_geom.triangles.idx_type = GetIndexBufferType();
     blas_geom.triangles.vtx_buf = m_vertex_buffer.get();
     blas_geom.triangles.vtx_format = GetPositionBufferInfo().format;
-    blas_geom.triangles.vtx_stride = RHIUtils::GetRHIFormatSize( blas_geom.triangles.vtx_format );
+    blas_geom.triangles.vtx_stride = GetPositionBufferStride();
+    blas_geom.triangles.vtx_offset = GetPositionBufferInfo().offset;
     m_blas = RHIUtils::CreateAS( blas_geom );
 
     m_global_geom_index = GetRenderer().GetGlobalDescriptors().AddGeometry( RHIBufferViewInfo{ m_vertex_buffer.get() }, RHIBufferViewInfo{ m_index_buffer.get() } );
@@ -179,14 +181,14 @@ bool CubeAsset::Load( const JsonValue& data )
 {
     static std::array<MeshVertex, 8> vertices =
     {
-        MeshVertex{.position = { -0.5f, -0.5f, -0.5f } },
-        MeshVertex{.position = { -0.5f, -0.5f,  0.5f } },
-        MeshVertex{.position = { -0.5f,  0.5f, -0.5f } },
-        MeshVertex{.position = { -0.5f,  0.5f,  0.5f } },
-        MeshVertex{.position = {  0.5f, -0.5f, -0.5f } },
-        MeshVertex{.position = {  0.5f, -0.5f,  0.5f } },
-        MeshVertex{.position = {  0.5f,  0.5f, -0.5f } },
-        MeshVertex{.position = {  0.5f,  0.5f,  0.5f } },
+        MeshVertex{.position = { -0.5f, -0.5f, -0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = { -0.5f, -0.5f,  0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = { -0.5f,  0.5f, -0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = { -0.5f,  0.5f,  0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = {  0.5f, -0.5f, -0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = {  0.5f, -0.5f,  0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = {  0.5f,  0.5f, -0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
+        MeshVertex{.position = {  0.5f,  0.5f,  0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
     };
 
     static std::array<uint16_t, m_cube_indices_count> indices =

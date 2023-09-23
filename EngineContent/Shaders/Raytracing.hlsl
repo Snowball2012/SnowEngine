@@ -18,6 +18,7 @@ float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewpo
 
 static const uint INVALID_PRIMITIVE = -1;
 static const uint INVALID_INSTANCE_INDEX = -1;
+static const uint INVALID_GEOM_INDEX = -1;
 
 struct Payload
 {
@@ -34,7 +35,7 @@ float3 ReconstructBarycentrics( float2 payload_barycentrics )
 Payload PayloadInit()
 {
     Payload ret;
-    ret.barycentrics = _float3( 0 );
+    ret.barycentrics = float2( 0, 0 );
     ret.instance_index = INVALID_INSTANCE_INDEX;
     ret.primitive_index = INVALID_INSTANCE_INDEX;
     
@@ -69,11 +70,35 @@ void VisibilityRGS()
     {
         TLASItemParams item_params = tlas_items[ payload.instance_index ];
         
-        geom_index = item_params.geom_buf_index.x;
+        geom_index = item_params.geom_buf_index;
         obj_to_world = item_params.object_to_world_mat;
     }
     
-    output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
+    float3 output_color = _float3( 0 );
+    if ( geom_index != INVALID_GEOM_INDEX )
+    {
+        uint base_index = payload.primitive_index * 3;
+        uint16_t i0 = geom_indices[geom_index][base_index + 0];
+        uint16_t i1 = geom_indices[geom_index][base_index + 1];
+        uint16_t i2 = geom_indices[geom_index][base_index + 2];
+        
+        MeshVertex v0 = geom_vertices[geom_index][i0];
+        MeshVertex v1 = geom_vertices[geom_index][i1];
+        MeshVertex v2 = geom_vertices[geom_index][i2];
+        
+        float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
+        
+        float3 triangle_normal_ws = normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
+        
+        output_color = triangle_normal_ws * 0.5f + _float3( 0.5f );
+    }
+    else
+    {
+        output_color = float3( 0, 0.5f, 0.5f );
+    }
+    
+    //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
+    output[pixel_id] = float4( output_color, 1 );
     //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
 }
 

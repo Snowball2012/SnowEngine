@@ -335,6 +335,17 @@ VulkanDescriptorSetLayout::VulkanDescriptorSetLayout(VulkanRHI* rhi, const RHI::
     layout_info.bindingCount = uint32_t(vk_bindings.size());
     layout_info.pBindings = vk_bindings.data();
 
+    bc::small_vector<VkDescriptorBindingFlags, 4> flags;
+    for ( uint32_t i = 0; i < layout_info.bindingCount; ++i )
+    {
+        flags.emplace_back( VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT );
+    }
+    VkDescriptorSetLayoutBindingFlagsCreateInfo binding_info = {};
+    binding_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+    binding_info.pBindingFlags = flags.data();
+    binding_info.bindingCount = layout_info.bindingCount;
+
+    layout_info.pNext = &binding_info;
     VK_VERIFY(vkCreateDescriptorSetLayout(m_rhi->GetDevice(), &layout_info, nullptr, &m_vk_desc_set_layout));
 }
 

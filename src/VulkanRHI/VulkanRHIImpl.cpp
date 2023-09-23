@@ -616,7 +616,7 @@ bool VulkanRHI::GetVkASGeometry(
             }
             if ( SE_ENSURE( triangles.vtx_buf ) )
             {
-                vk_triangles.vertexData.deviceAddress = RHIImpl( triangles.vtx_buf )->GetDeviceAddress();
+                vk_triangles.vertexData.deviceAddress = RHIImpl( triangles.vtx_buf )->GetDeviceAddress() + triangles.vtx_offset;
                 vk_triangles.vertexFormat = VulkanRHI::GetVkFormat( triangles.vtx_format );
                 vk_triangles.vertexStride = triangles.vtx_stride;
                 vk_triangles.maxVertex = uint32_t( triangles.vtx_buf->GetSize() / triangles.vtx_stride ); // reconsider if we want to keep all geo in one big buffer
@@ -906,6 +906,9 @@ bool VulkanRHI::IsDeviceSuitable( VkPhysicalDevice device, VkSurfaceKHR surface,
         return false;
 
     if ( !features.vk12.scalarBlockLayout )
+        return false;
+
+    if ( !features.vk12.descriptorBindingPartiallyBound )
         return false;
 
     if ( need_raytracing )
