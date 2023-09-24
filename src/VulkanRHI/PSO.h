@@ -62,6 +62,8 @@ private:
     void InitMultisampling( const RHIGraphicsPipelineInfo& info );
     void InitColorBlending( const RHIGraphicsPipelineInfo& info );
     void InitDynamicRendering( const RHIGraphicsPipelineInfo& info );
+
+    static VkPrimitiveTopology GetVkPrimitiveTopology( RHIPrimitiveTopology rhi_topo );
 };
 IMPLEMENT_RHI_INTERFACE( RHIGraphicsPipeline, VulkanGraphicsPSO )
 

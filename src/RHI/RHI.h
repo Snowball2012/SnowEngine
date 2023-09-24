@@ -588,6 +588,8 @@ public:
         NOTIMPL;
     }
 
+    virtual void DrawIndirect( const RHIBufferViewInfo& indirect_args ) { NOTIMPL; }
+
     virtual void Dispatch( glm::uvec3 group_num ) { NOTIMPL; }
 
     virtual void TraceRays( glm::uvec3 threads_count ) { NOTIMPL; }
@@ -705,16 +707,24 @@ struct RHIPrimitiveBufferLayout
     size_t stride = 0;
 };
 
+enum class RHIPrimitiveTopology : uint8_t
+{
+    TriangleList = 0,
+    LineList = 1
+};
+
 struct RHIInputAssemblerInfo
 {
     const RHIPrimitiveBufferLayout** primitive_buffers = nullptr;
     const RHIPrimitiveFrequency* frequencies = nullptr;
     size_t buffers_count = 0;
+    RHIPrimitiveTopology topology = RHIPrimitiveTopology::TriangleList;
 };
 
 struct RHIRasterizerInfo
 {
     RHICullModeFlags cull_mode = RHICullModeFlags::None;
+    float line_width = 1.0f;
 };
 
 enum class RHIBlendFactor

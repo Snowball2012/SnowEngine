@@ -3,6 +3,7 @@
 #include "../StdAfx.h"
 
 class DebugDrawingInitProgram;
+class DebugDrawingDrawProgram;
 class RGBuffer;
 class RGPass;
 struct SceneViewFrameData;
@@ -27,6 +28,7 @@ class DebugDrawing
 {
 private:
     std::unique_ptr<DebugDrawingInitProgram> m_program_init = nullptr;
+    std::unique_ptr<DebugDrawingDrawProgram> m_program_draw = nullptr;
 
 public:
     DebugDrawing( RHIDescriptorSetLayout* scene_view_dsl );

@@ -90,15 +90,16 @@ void VisibilityRGS()
         
         float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
         
-        float3 triangle_normal_ws = triangle_normal_ls;// normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
+        float3 triangle_normal_ws = normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
         
-        if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) == 0 )
+        uint2 grid = ( pixel_id % 5 );
+        if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) < 100 && ( grid.x == 0 && grid.y == 0 ) )
         {
             float3 hit_point = ray_origin + ray_direction * payload.t;
-            AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws, COLOR_RED, COLOR_GREEN ) );
+            AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws * payload.t * 0.01f, COLOR_RED, COLOR_GREEN ) );
         }
         
-        output_color = triangle_normal_ws;// * 0.5f + _float3( 0.5f );
+        output_color = triangle_normal_ws * 0.5f + _float3( 0.5f );
     }
     else
     {

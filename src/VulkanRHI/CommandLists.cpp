@@ -96,6 +96,13 @@ void VulkanCommandList::DrawIndexed( uint32_t index_count, uint32_t instance_cou
     vkCmdDrawIndexed( m_vk_cmd_buffer, index_count, instance_count, first_index, vertex_offset, first_instance );
 }
 
+void VulkanCommandList::DrawIndirect( const RHIBufferViewInfo& indirect_args )
+{
+    PushConstantsIfNeeded();
+
+    vkCmdDrawIndirect( m_vk_cmd_buffer, RHIImpl( indirect_args.buffer )->GetVkBuffer(), indirect_args.offset, 1, 0 );
+}
+
 void VulkanCommandList::TraceRays( glm::uvec3 threads_count )
 {
     PushConstantsIfNeeded();

@@ -87,6 +87,8 @@ public:
 		int32_t vertex_offset,
 		uint32_t first_instance) override;
 
+	virtual void DrawIndirect( const RHIBufferViewInfo& indirect_args ) override;
+
 	virtual void TraceRays(	glm::uvec3 threads_count ) override;
 
 	virtual void Dispatch( glm::uvec3 groups_count ) override;

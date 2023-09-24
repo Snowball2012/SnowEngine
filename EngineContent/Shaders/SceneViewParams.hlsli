@@ -14,7 +14,7 @@ struct SceneViewParams
 
 struct TLASItemParams
 {
-    float3x4 object_to_world_mat;
+    row_major float3x4 object_to_world_mat;
     uint geom_buf_index;
 };
 

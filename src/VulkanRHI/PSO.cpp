@@ -89,7 +89,7 @@ void VulkanGraphicsPSO::InitRasterizer( const RHIGraphicsPipelineInfo& info )
     m_rasterizer_info.cullMode = VulkanRHI::GetCullModeFlags( info.rasterizer.cull_mode );
     m_rasterizer_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     m_rasterizer_info.depthBiasEnable = VK_FALSE;
-    m_rasterizer_info.lineWidth = 1.0f;
+    m_rasterizer_info.lineWidth = info.rasterizer.line_width;
 
     m_pipeline_info.pRasterizationState = &m_rasterizer_info;
 }
@@ -97,10 +97,11 @@ void VulkanGraphicsPSO::InitRasterizer( const RHIGraphicsPipelineInfo& info )
 void VulkanGraphicsPSO::InitInputAssembly( const RHIGraphicsPipelineInfo& info )
 {
     m_input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    m_input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_input_assembly.primitiveRestartEnable = VK_FALSE;
 
     VERIFY_NOT_EQUAL( info.input_assembler, nullptr );
+
+    m_input_assembly.topology = GetVkPrimitiveTopology( info.input_assembler->topology );
 
     size_t attribute_count = 0;
     for ( size_t i = 0; i < m_binding_descs.size(); ++i )
@@ -230,6 +231,20 @@ void VulkanGraphicsPSO::InitDynamicRendering( const RHIGraphicsPipelineInfo& inf
     m_pipeline_dynamic_rendering_info.pColorAttachmentFormats = m_color_attachment_formats.data();
 
     m_pipeline_info.pNext = &m_pipeline_dynamic_rendering_info;
+}
+
+VkPrimitiveTopology VulkanGraphicsPSO::GetVkPrimitiveTopology( RHIPrimitiveTopology rhi_topo )
+{
+    switch ( rhi_topo )
+    {
+    case RHIPrimitiveTopology::TriangleList:
+        return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+    case RHIPrimitiveTopology::LineList:
+        return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    }
+
+    NOTIMPL;
 }
 
 
