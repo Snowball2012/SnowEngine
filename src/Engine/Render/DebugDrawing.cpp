@@ -83,6 +83,15 @@ public:
             m_cs = GetRHI().CreateShader( create_info );
             VERIFY_NOT_EQUAL( m_cs, nullptr );
         }
+
+        {
+            RHIComputePipelineInfo pso_info = {};
+            pso_info.compute_shader = m_cs.get();
+            pso_info.binding_layout = m_layout.get();
+
+            m_pso = GetRHI().CreatePSO( pso_info );
+            VERIFY_NOT_EQUAL( m_pso, nullptr );
+        }
     }
 
     bool Run( RHICommandList& cmd_list, Rendergraph& rg, const Params& parms ) const
@@ -183,5 +192,5 @@ void DebugDrawing::RecordInitPasses( RHICommandList& cmd_list, const SceneViewFr
 
 void DebugDrawing::RecordDrawPasses( RHICommandList& cmd_list, const SceneViewFrameData& data, const DebugDrawingContext& ctx ) const
 {
-    NOTIMPL;
+    //NOTIMPL;
 }

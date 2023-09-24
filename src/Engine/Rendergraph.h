@@ -164,7 +164,7 @@ class RGPass
 
     std::unordered_map<uint64_t, RGPassTexture> m_used_textures;
 
-    std::unordered_map<uint64_t, RGPassTexture> m_used_buffers;
+    std::unordered_map<uint64_t, RGPassBuffer> m_used_buffers;
 
     std::vector<RHICommandList*> m_cmd_lists;
 
@@ -242,7 +242,7 @@ struct RGExternalTextureEntry
 struct RGExternalBufferDesc
 {
     const char* name = nullptr;
-    const RHIBuffer* rhi_buffer = nullptr;
+    RHIBuffer* rhi_buffer = nullptr;
 };
 
 class RGExternalBuffer : public RGBuffer
@@ -280,7 +280,7 @@ private:
     std::vector<RendergraphSubmission> m_submissions;
 
     std::unordered_map<uint64_t, RGExternalTextureEntry> m_external_textures;
-    std::unordered_map<uint64_t, RGExternalTextureEntry> m_external_buffers;
+    std::unordered_map<uint64_t, RGExternalBufferEntry> m_external_buffers;
 
     std::vector<RHITextureBarrier> m_final_barriers;
 

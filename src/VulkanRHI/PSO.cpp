@@ -420,3 +420,49 @@ void VulkanRaytracingPSO::InitSBT()
     }   
 
 }
+
+
+IMPLEMENT_RHI_OBJECT( VulkanComputePSO )
+
+VulkanComputePSO::VulkanComputePSO( VulkanRHI* rhi, const RHIComputePipelineInfo& info )
+    : m_rhi( rhi ), m_cs( static_cast< Shader* >( info.compute_shader ) )
+{
+    m_pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+
+    VERIFY_NOT_EQUAL( m_cs, nullptr );
+
+    m_pipeline_info.stage = m_cs->GetVkStageInfo();
+
+    VERIFY_NOT_EQUAL( info.binding_layout, nullptr );
+    m_shader_bindings = &RHIImpl( *info.binding_layout );
+
+    m_pipeline_info.layout = m_shader_bindings->GetVkPipelineLayout();
+
+
+    VK_VERIFY( vkCreateComputePipelines( m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &m_vk_pipeline ) );
+
+    m_rhi->RegisterLoadedPSO( *this );
+}
+
+VulkanComputePSO::~VulkanComputePSO()
+{
+    m_rhi->UnregisterLoadedPSO( *this );
+
+    vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
+}
+
+bool VulkanComputePSO::Recompile()
+{
+    m_pipeline_info.stage = m_cs->GetVkStageInfo();
+
+    VkPipeline new_pipeline = VK_NULL_HANDLE;
+    VkResult res = vkCreateComputePipelines( m_rhi->GetDevice(), VK_NULL_HANDLE, 1, &m_pipeline_info, nullptr, &new_pipeline );
+
+    if ( res != VK_SUCCESS )
+        return false;
+
+    vkDestroyPipeline( m_rhi->GetDevice(), m_vk_pipeline, nullptr );
+    m_vk_pipeline = new_pipeline;
+
+    return res == VK_SUCCESS;
+}

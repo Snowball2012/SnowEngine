@@ -109,11 +109,19 @@ void VulkanCommandList::TraceRays( glm::uvec3 threads_count )
         threads_count.x, threads_count.y, threads_count.z );
 }
 
+void VulkanCommandList::Dispatch( glm::uvec3 groups_count )
+{
+    PushConstantsIfNeeded();
+
+    vkCmdDispatch( m_vk_cmd_buffer, groups_count.x, groups_count.y, groups_count.z );
+}
+
 void VulkanCommandList::SetPSO( const RHIGraphicsPipeline& pso )
 {
     vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, RHIImpl( pso ).GetVkPipeline() );
     m_currently_bound_graphics_pso = &RHIImpl( pso );
     m_currently_bound_rt_pso = nullptr;
+    m_currently_bound_compute_pso = nullptr;
 }
 
 void VulkanCommandList::SetPSO( const RHIRaytracingPipeline& pso )
@@ -121,6 +129,15 @@ void VulkanCommandList::SetPSO( const RHIRaytracingPipeline& pso )
     vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RHIImpl( pso ).GetVkPipeline() );
     m_currently_bound_rt_pso = &RHIImpl( pso );
     m_currently_bound_graphics_pso = nullptr;
+    m_currently_bound_compute_pso = nullptr;
+}
+
+void VulkanCommandList::SetPSO( const RHIComputePipeline& pso )
+{
+    vkCmdBindPipeline( m_vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, RHIImpl( pso ).GetVkPipeline() );
+    m_currently_bound_compute_pso = &RHIImpl( pso );
+    m_currently_bound_graphics_pso = nullptr;
+    m_currently_bound_rt_pso = nullptr;
 }
 
 void VulkanCommandList::SetVertexBuffers( uint32_t first_binding, const RHIBuffer* buffers, size_t buffers_count, const size_t* opt_offsets )
@@ -171,6 +188,11 @@ void VulkanCommandList::BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& se
     {
         layout = m_currently_bound_rt_pso->GetVkPipelineLayout();
         bind_point = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+    }
+    else if ( m_currently_bound_compute_pso )
+    {
+        layout = m_currently_bound_compute_pso->GetVkPipielineLayout();
+        bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
     }
 
     VERIFY_NOT_EQUAL( layout, VK_NULL_HANDLE );

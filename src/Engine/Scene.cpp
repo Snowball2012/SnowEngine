@@ -268,7 +268,7 @@ void Renderer::CreateDescriptorSetLayout()
     }
 
     {
-        RHI::DescriptorViewRange ranges[3] = {};
+        RHI::DescriptorViewRange ranges[5] = {};
         ranges[0].type = RHIShaderBindingType::AccelerationStructure;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::AllBits;
@@ -280,6 +280,14 @@ void Renderer::CreateDescriptorSetLayout()
         ranges[2].type = RHIShaderBindingType::StructuredBuffer;
         ranges[2].count = 1;
         ranges[2].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[3].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[3].count = 1;
+        ranges[3].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[4].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[4].count = 1;
+        ranges[4].stages = RHIShaderStageFlags::AllBits;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -338,6 +346,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     view_data.view_desc_set->BindAccelerationStructure( 0, 0, view.GetScene().GetTLAS().GetRHIAS() );
     view_data.view_desc_set->BindUniformBufferView( 1, 0, gpu_buffer.view );
     view_data.view_desc_set->BindStructuredBuffer( 2, 0, gpu_tlas_item_params.view );
+    view_data.view_desc_set->BindStructuredBuffer( 3, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_buf.get() } );
+    view_data.view_desc_set->BindStructuredBuffer( 4, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_indirect_args_buf.get() } );
 
     view_data.view_desc_set->FlushBinds();
 }

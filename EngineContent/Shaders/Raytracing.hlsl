@@ -95,7 +95,7 @@ void VisibilityRGS()
         if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) == 0 )
         {
             float3 hit_point = ray_origin + ray_direction * payload.t;
-            //AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws, COLOR_RED, COLOR_GREEN ) );
+            AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws, COLOR_RED, COLOR_GREEN ) );
         }
         
         output_color = triangle_normal_ws;// * 0.5f + _float3( 0.5f );

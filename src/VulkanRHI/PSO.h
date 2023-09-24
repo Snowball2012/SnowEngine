@@ -112,3 +112,28 @@ private:
     void InitSBT();
 };
 IMPLEMENT_RHI_INTERFACE( RHIRaytracingPipeline, VulkanRaytracingPSO )
+
+
+class VulkanComputePSO : public RHIComputePipeline
+{
+    GENERATE_RHI_OBJECT_BODY()
+
+    VkPipeline m_vk_pipeline = VK_NULL_HANDLE;
+
+    RHIObjectPtr<VulkanShaderBindingLayout> m_shader_bindings = nullptr;
+    RHIObjectPtr<Shader> m_cs = nullptr;
+
+    VkComputePipelineCreateInfo m_pipeline_info = {};
+
+public:
+
+    VulkanComputePSO( VulkanRHI* rhi, const RHIComputePipelineInfo& info );
+
+    virtual ~VulkanComputePSO() override;
+
+    bool Recompile();
+
+    VkPipeline GetVkPipeline() const { return m_vk_pipeline; }
+    VkPipelineLayout GetVkPipielineLayout() const { return m_shader_bindings->GetVkPipelineLayout(); }
+};
+IMPLEMENT_RHI_INTERFACE( RHIComputePipeline, VulkanComputePSO )

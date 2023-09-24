@@ -525,6 +525,11 @@ RHIRaytracingPipeline* VulkanRHI::CreatePSO( const RHIRaytracingPipelineInfo& ps
     return new VulkanRaytracingPSO( this, pso_info );
 }
 
+RHIComputePipeline* VulkanRHI::CreatePSO( const RHIComputePipelineInfo& pso_info )
+{
+    return new VulkanComputePSO( this, pso_info );
+}
+
 RHIDescriptorSetLayout* VulkanRHI::CreateDescriptorSetLayout( const DescriptorSetLayoutInfo& info )
 {
     return new VulkanDescriptorSetLayout( this, info );
@@ -535,48 +540,42 @@ RHIShaderBindingLayout* VulkanRHI::CreateShaderBindingLayout( const ShaderBindin
     return new VulkanShaderBindingLayout( this, info );
 }
 
-VkPipelineStageFlagBits VulkanRHI::GetVkPipelineStageFlags( RHIPipelineStageFlags rhi_flags )
+VkPipelineStageFlags VulkanRHI::GetVkPipelineStageFlags( RHIPipelineStageFlags rhi_flags )
 {
-    uint64_t res_raw = 0;
-    uint64_t checked_flags = 0;
+    VkPipelineStageFlags retval = {};
 
-    auto add_flag = [&res_raw, &checked_flags, rhi_flags]( RHIPipelineStageFlags rhi_flag, VkPipelineStageFlagBits vk_flag )
+    auto add_flag = [&]( auto rhiflag, auto vkflag )
     {
-        res_raw |= ( uint64_t( rhi_flags ) & uint64_t( rhi_flag ) ) ? vk_flag : 0;
-        checked_flags |= uint64_t( rhi_flag );
+        retval |= ( ( rhi_flags & rhiflag ) != RHIPipelineStageFlags::None ) ? vkflag : 0;
     };
+
+    static_assert( int( RHIPipelineStageFlags::NumFlags ) == 3 );
 
     add_flag( RHIPipelineStageFlags::ColorAttachmentOutput, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
     add_flag( RHIPipelineStageFlags::VertexShader, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT );
     add_flag( RHIPipelineStageFlags::PixelShader, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT );
 
-#ifndef NDEBUG
-    VERIFY_EQUALS( checked_flags & uint64_t( rhi_flags ), uint64_t( RHIPipelineStageFlags::AllBits ) & uint64_t( rhi_flags ) ); // some flags were not handled if this fires
-#endif
-
-    return VkPipelineStageFlagBits( res_raw );
+    return retval;
 }
 
-VkShaderStageFlagBits VulkanRHI::GetVkShaderStageFlags( RHIShaderStageFlags rhi_flags )
+VkShaderStageFlags VulkanRHI::GetVkShaderStageFlags( RHIShaderStageFlags rhi_flags )
 {
-    uint64_t res_raw = 0;
-    uint64_t checked_flags = 0;
+    VkShaderStageFlags retval = {};
 
-    auto add_flag = [&res_raw, &checked_flags, rhi_flags]( RHIShaderStageFlags rhi_flag, VkShaderStageFlagBits vk_flag )
+    auto add_flag = [&]( auto rhiflag, auto vkflag )
     {
-        res_raw |= ( uint64_t( rhi_flags ) & uint64_t( rhi_flag ) ) ? vk_flag : 0;
-        checked_flags |= uint64_t( rhi_flag );
+        retval |= ( ( rhi_flags & rhiflag ) != RHIShaderStageFlags::None ) ? vkflag : 0;
     };
+
+    static_assert( int( RHIShaderStageFlags::NumFlags ) == 5 );
 
     add_flag( RHIShaderStageFlags::VertexShader, VK_SHADER_STAGE_VERTEX_BIT );
     add_flag( RHIShaderStageFlags::PixelShader, VK_SHADER_STAGE_FRAGMENT_BIT );
     add_flag( RHIShaderStageFlags::RaygenShader, VK_SHADER_STAGE_RAYGEN_BIT_KHR );
+    add_flag( RHIShaderStageFlags::MissShader, VK_SHADER_STAGE_MISS_BIT_KHR );
+    add_flag( RHIShaderStageFlags::ComputeShader, VK_SHADER_STAGE_COMPUTE_BIT );
 
-#ifndef NDEBUG
-    VERIFY_EQUALS( checked_flags & uint64_t( rhi_flags ), uint64_t( RHIPipelineStageFlags::AllBits ) & uint64_t( rhi_flags ) ); // some flags were not handled if this fires
-#endif
-
-    return VkShaderStageFlagBits( res_raw );
+    return retval;
 }
 
 VulkanQueue* VulkanRHI::GetQueue( QueueType type )
@@ -1394,6 +1393,20 @@ void VulkanRHI::UnregisterLoadedPSO( VulkanRaytracingPSO& pso )
     m_loaded_rt_psos.erase( &pso );
 }
 
+void VulkanRHI::RegisterLoadedPSO( VulkanComputePSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_compute_psos.insert( &pso );
+}
+
+void VulkanRHI::UnregisterLoadedPSO( VulkanComputePSO& pso )
+{
+    ScopedSpinLock cs( m_loaded_psos_lock );
+
+    m_loaded_compute_psos.erase( &pso );
+}
+
 bool VulkanRHI::ReloadAllPipelines()
 {
     SE_LOG_INFO( VulkanRHI, "Reload PSOs: start" );
@@ -1409,6 +1422,11 @@ bool VulkanRHI::ReloadAllPipelines()
     }
 
     for ( VulkanRaytracingPSO* pso : m_loaded_rt_psos )
+    {
+        succeeded &= pso->Recompile();
+    }
+
+    for ( VulkanComputePSO* pso : m_loaded_compute_psos )
     {
         succeeded &= pso->Recompile();
     }

@@ -106,8 +106,20 @@ RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTexture
 
 RGExternalBuffer* Rendergraph::RegisterExternalBuffer( const RGExternalBufferDesc& desc )
 {
-    NOTIMPL;
-    return nullptr;
+    if ( !SE_ENSURE( desc.rhi_buffer != nullptr ) )
+        return nullptr;
+
+    std::unique_ptr<RGExternalBuffer> ext_buffer = std::make_unique<RGExternalBuffer>( GenerateHandle(), desc );
+
+    ext_buffer->SetRHIBuffer( desc.rhi_buffer );
+
+    RGExternalBuffer* buffer_ptr = ext_buffer.get();
+
+    auto& entry = m_external_buffers[ext_buffer->GetHandle()];
+
+    entry.buffer = std::move( ext_buffer );
+
+    return buffer_ptr;
 }
 
 RGResource* Rendergraph::CreateTransientTexture()
@@ -404,8 +416,20 @@ bool RGPass::UseTextureView( const RGTextureRWView& view )
 
 bool RGPass::UseBuffer( const RGBuffer& buffer, RGBufferUsage usage )
 {
-    NOTIMPL;
-    return false;
+    uint64_t key = buffer.GetHandle();
+
+    RGPassBuffer& entry = m_used_buffers[key];
+
+    if ( !SE_ENSURE( ( entry.buffer == nullptr ) || ( usage == entry.usage ) ) )
+    {
+        // we are trying to add a buffer multiple times with different usage, that shouldn't happen
+        return false;
+    }
+
+    entry.buffer = &buffer;
+    entry.usage = usage;
+
+    return true;
 }
 
 bool RGPass::UseTextureView( const RGRenderTargetView& view )

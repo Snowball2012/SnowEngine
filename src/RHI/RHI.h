@@ -27,6 +27,7 @@ struct RHIASGeometryInfo;
 struct RHIASInstanceData;
 struct RHIGraphicsPipelineInfo;
 struct RHIRaytracingPipelineInfo;
+struct RHIComputePipelineInfo;
 
 struct RHIFence
 {
@@ -56,6 +57,8 @@ IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
 enum class RHIPipelineStageFlags : uint32_t
 {
+    None = 0,
+
     ColorAttachmentOutput = 0x00000001,
     VertexShader = 0x00000002,
     PixelShader = 0x00000004,
@@ -68,6 +71,7 @@ IMPLEMENT_SCOPED_ENUM_FLAGS( RHIPipelineStageFlags )
 
 enum class RHIShaderStageFlags : uint32_t
 {
+    None = 0,
     VertexShader = 0x00000001,
     PixelShader = 0x00000002,
     RaygenShader = 0x00000004,
@@ -272,6 +276,8 @@ public:
     virtual RHIGraphicsPipeline* CreatePSO( const RHIGraphicsPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
 
     virtual RHIRaytracingPipeline* CreatePSO( const RHIRaytracingPipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
+
+    virtual RHIComputePipeline* CreatePSO( const RHIComputePipelineInfo& pso_info ) { NOTIMPL; return nullptr; }
 
     struct BufferInfo
     {
@@ -755,6 +761,12 @@ struct RHIRaytracingPipelineInfo
 
     RHIShader* closest_hit_shader = nullptr;
 
+    RHIShaderBindingLayout* binding_layout = nullptr;
+};
+
+struct RHIComputePipelineInfo
+{
+    RHIShader* compute_shader = nullptr;
     RHIShaderBindingLayout* binding_layout = nullptr;
 };
 

@@ -99,6 +99,7 @@ private:
 	SpinLock m_loaded_psos_lock;
 	std::set<class VulkanGraphicsPSO*> m_loaded_psos;
 	std::set<class VulkanRaytracingPSO*> m_loaded_rt_psos;
+	std::set<class VulkanComputePSO*> m_loaded_compute_psos;
 
 	bool m_raytracing_supported = false;
 
@@ -131,6 +132,7 @@ public:
 
 	virtual RHIGraphicsPipeline* CreatePSO( const RHIGraphicsPipelineInfo& pso_info ) override;
 	virtual RHIRaytracingPipeline* CreatePSO( const RHIRaytracingPipelineInfo& pso_info ) override;
+	virtual RHIComputePipeline* CreatePSO( const RHIComputePipelineInfo& pso_info ) override;
 
 	virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& buf_info ) override;
 	virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& buf_info ) override;
@@ -180,8 +182,8 @@ public:
 	// Has to be thread-safe
 	void DeferredDestroyRHIObject( RHIObject* obj );
 
-	static VkPipelineStageFlagBits GetVkPipelineStageFlags( RHIPipelineStageFlags rhi_flags );
-	static VkShaderStageFlagBits GetVkShaderStageFlags( RHIShaderStageFlags rhi_flags );
+	static VkPipelineStageFlags GetVkPipelineStageFlags( RHIPipelineStageFlags rhi_flags );
+	static VkShaderStageFlags GetVkShaderStageFlags( RHIShaderStageFlags rhi_flags );
 
 	static VkFormat GetVkFormat( RHIFormat format );
 	static RHIFormat GetRHIFormat( VkFormat format );
@@ -229,6 +231,9 @@ public:
 
 	void RegisterLoadedPSO( VulkanRaytracingPSO& pso );
 	void UnregisterLoadedPSO( VulkanRaytracingPSO& pso );
+
+	void RegisterLoadedPSO( VulkanComputePSO& pso );
+	void UnregisterLoadedPSO( VulkanComputePSO& pso );
 
 	bool ReloadAllPipelines();
 
