@@ -22,6 +22,11 @@
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
+    <ClCompile Include="..\..\src\Engine\Render\DebugDrawing.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='DebugASAN|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="..\..\src\Engine\RHIUtils.cpp" />
     <ClCompile Include="..\..\src\Engine\Scene.cpp" />
     <ClCompile Include="..\..\src\Engine\Serialization.cpp" />
@@ -62,6 +67,7 @@
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
+    <ClInclude Include="..\..\src\Engine\Render\DebugDrawing.h" />
     <ClInclude Include="..\..\src\Engine\RHIUtils.h" />
     <ClInclude Include="..\..\src\Engine\Scene.h" />
     <ClInclude Include="..\..\src\Engine\Serialization.h" />

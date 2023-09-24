@@ -4,6 +4,7 @@
 
 #include "Assets.h"
 #include "RHIUtils.h"
+#include "Render/DebugDrawing.h"
 
 SE_LOG_CATEGORY( Renderer );
 
@@ -56,7 +57,6 @@ private:
     Scene* m_scene = nullptr;
 
     glm::uvec2 m_extents = glm::uvec2( 0, 0 );
-    RHITexturePtr m_frame_output = nullptr;
 
     glm::vec3 m_eye_pos = ZeroVec3();
     glm::quat m_eye_orientation = IdentityQuat();
@@ -71,6 +71,8 @@ private:
     RHITextureRWViewPtr m_frame_rwview[2] = { nullptr, nullptr };
     RHITextureROViewPtr m_frame_roview[2] = { nullptr, nullptr };
     RHIRenderTargetViewPtr m_frame_rtview[2] = { nullptr, nullptr };
+
+    DebugDrawingSceneViewData m_debug_draw_data;
 
 public:
     SceneView( Scene* scene );
@@ -89,6 +91,8 @@ public:
     RHITextureROView* GetFrameColorTextureROView( uint32_t i ) const { return m_frame_roview[i].get(); }
     RHITextureRWView* GetFrameColorTextureRWView( uint32_t i ) const { return m_frame_rwview[i].get(); }
     RHIRenderTargetView* GetFrameColorTextureRTView( uint32_t i ) const { return m_frame_rtview[i].get(); }
+
+    const DebugDrawingSceneViewData& GetDebugDrawData() const { return m_debug_draw_data; }
 
     glm::mat4x4 CalcViewMatrix() const;
     glm::mat4x4 CalcProjectionMatrix() const;
@@ -150,6 +154,7 @@ private:
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
+    std::unique_ptr<DebugDrawing> m_debug_drawing = nullptr;
 
     std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
@@ -168,6 +173,8 @@ public:
     RHISampler* GetPointSampler() const;
 
     GlobalDescriptors& GetGlobalDescriptors() const { return *m_global_descriptors; }
+
+    const DebugDrawing& GetDebugDrawing() const { return *m_debug_drawing; }
 
 private:
 

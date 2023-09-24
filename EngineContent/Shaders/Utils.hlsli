@@ -28,3 +28,6 @@ int DistanceToCursorSqr( int2 test_pos, int2 cursor_pos )
     int2 pix_to_cursor = abs( test_pos - cursor_pos );
     return dot( pix_to_cursor, pix_to_cursor );
 }
+
+static const float3 COLOR_RED = float3( 1, 0, 0 );
+static const float3 COLOR_GREEN = float3( 0, 1, 0 );

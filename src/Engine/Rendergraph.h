@@ -124,6 +124,38 @@ struct RGPassTexture
 };
 
 
+
+
+class RGBuffer;
+
+enum class RGBufferUsage
+{
+    Undefined = 0,
+    ShaderRead,
+    ShaderReadWrite,
+    ShaderWriteOnly,
+    IndirectArgs,
+};
+
+class RGBuffer : public RGResource
+{
+    RHIBuffer* m_rhi_buffer = nullptr;
+
+public:
+    RGBuffer( uint64_t handle, const char* name );
+
+    void SetRHIBuffer( RHIBuffer* buf ) { m_rhi_buffer = buf; }
+    RHIBuffer* GetRHIBuffer() const { return m_rhi_buffer; }
+};
+
+struct RGPassBuffer
+{
+    const RGBuffer* buffer = nullptr;
+    RGBufferUsage usage = RGBufferUsage::Undefined;
+};
+
+
+
 class RGPass
 {
     friend class Rendergraph;
@@ -131,6 +163,8 @@ class RGPass
     RHI::QueueType m_queue_type = RHI::QueueType::Count;
 
     std::unordered_map<uint64_t, RGPassTexture> m_used_textures;
+
+    std::unordered_map<uint64_t, RGPassTexture> m_used_buffers;
 
     std::vector<RHICommandList*> m_cmd_lists;
 
@@ -147,6 +181,7 @@ public:
     bool UseTextureView( const RGRenderTargetView& view );
     bool UseTextureView( const RGTextureROView& view );
     bool UseTextureView( const RGTextureRWView& view );
+    bool UseBuffer( const RGBuffer& buffer, RGBufferUsage usage );
 
     void AddCommandList( RHICommandList& cmd_list );
 
@@ -197,7 +232,6 @@ public:
     const RGExternalTextureDesc& GetDesc() const { return m_desc; }
 };
 
-
 struct RGExternalTextureEntry
 {
     std::unique_ptr<RGExternalTexture> texture = nullptr;
@@ -205,6 +239,27 @@ struct RGExternalTextureEntry
     RGTextureUsage last_usage = RGTextureUsage::Undefined;
 };
 
+struct RGExternalBufferDesc
+{
+    const char* name = nullptr;
+    const RHIBuffer* rhi_buffer = nullptr;
+};
+
+class RGExternalBuffer : public RGBuffer
+{
+private:
+    RGExternalBufferDesc m_desc = {};
+
+public:
+    RGExternalBuffer( uint64_t handle, const RGExternalBufferDesc& desc );
+
+    const RGExternalBufferDesc& GetDesc() const { return m_desc; }
+};
+
+struct RGExternalBufferEntry
+{
+    std::unique_ptr<RGExternalBuffer> buffer = nullptr;
+};
 
 struct RGSubmitInfo
 {
@@ -225,6 +280,7 @@ private:
     std::vector<RendergraphSubmission> m_submissions;
 
     std::unordered_map<uint64_t, RGExternalTextureEntry> m_external_textures;
+    std::unordered_map<uint64_t, RGExternalTextureEntry> m_external_buffers;
 
     std::vector<RHITextureBarrier> m_final_barriers;
 
@@ -239,6 +295,7 @@ public:
     RGPass* AddPass( RHI::QueueType queue_type, const char* name );
 
     RGExternalTexture* RegisterExternalTexture( const RGExternalTextureDesc& desc );
+    RGExternalBuffer* RegisterExternalBuffer( const RGExternalBufferDesc& desc );
     RGResource* CreateTransientTexture();
     RGResource* RegisterExternalAS();
     RGResource* CreateTransientBuffer();

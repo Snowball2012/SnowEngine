@@ -67,6 +67,7 @@ SceneView::SceneView( Scene* scene )
     : m_scene( scene )
 {
     VERIFY_NOT_EQUAL( m_scene, nullptr );
+    VERIFY_NOT_EQUAL( GetRenderer().GetDebugDrawing().InitSceneViewData( m_debug_draw_data ), false );
 }
 
 void SceneView::SetLookAt( const glm::vec3& eye, const glm::vec3& center )
@@ -208,6 +209,7 @@ Renderer::Renderer()
     CreateRTPipeline();
 
     m_display_mapping = std::make_unique<DisplayMapping>();
+    m_debug_drawing = std::make_unique<DebugDrawing>( m_view_dsl.get() );
 }
 
 Renderer::~Renderer() = default;
@@ -397,11 +399,16 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     RGPass* update_as_pass = rg.AddPass( RHI::QueueType::Graphics, "UpdateAS" );
 
+    DebugDrawingContext debug_drawing_ctx = {};
+    m_debug_drawing->AddInitPasses( view_frame_data, debug_drawing_ctx );
+
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
     rt_pass->UseTextureView( *scene_output_rw_view[view_frame_data.scene_output_idx] );
 
     DisplayMappingContext display_mapping_ctx = {};
     m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
+
+    m_debug_drawing->AddDrawPasses( view_frame_data, debug_drawing_ctx );
 
     if ( parms.extension )
     {
@@ -435,6 +442,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     // We have to update tlas for RHI pointer to be valid
     UpdateSceneViewParams( view_frame_data );
 
+    m_debug_drawing->RecordInitPasses( *cmd_list_rt, view_frame_data, debug_drawing_ctx );
+
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
@@ -449,6 +458,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     rt_pass->EndPass();
 
     m_display_mapping->DisplayMappingPass( *cmd_list_rt, view_frame_data, display_mapping_ctx );
+
+    m_debug_drawing->RecordDrawPasses( *cmd_list_rt, view_frame_data, debug_drawing_ctx );
 
     cmd_list_rt->End();
 

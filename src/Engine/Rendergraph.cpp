@@ -54,6 +54,20 @@ RGExternalTexture::RGExternalTexture( uint64_t handle, const RGExternalTextureDe
 {
 }
 
+// RGBuffer
+
+RGBuffer::RGBuffer( uint64_t handle, const char* name )
+    : RGResource( handle, name )
+{
+}
+
+// RGExternalBuffer
+
+RGExternalBuffer::RGExternalBuffer( uint64_t handle, const RGExternalBufferDesc& desc )
+    : RGBuffer( handle, desc.name )
+{
+}
+
 // Rendergraph
 
 Rendergraph::Rendergraph()
@@ -88,6 +102,12 @@ RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTexture
     entry.texture = std::move( ext_texture );
 
     return texture_ptr;
+}
+
+RGExternalBuffer* Rendergraph::RegisterExternalBuffer( const RGExternalBufferDesc& desc )
+{
+    NOTIMPL;
+    return nullptr;
 }
 
 RGResource* Rendergraph::CreateTransientTexture()
@@ -380,6 +400,12 @@ bool RGPass::UseTextureView( const RGTextureROView& view )
 bool RGPass::UseTextureView( const RGTextureRWView& view )
 {
     return UseTexture( *view.GetTexture(), RGTextureUsage::ShaderReadWrite );
+}
+
+bool RGPass::UseBuffer( const RGBuffer& buffer, RGBufferUsage usage )
+{
+    NOTIMPL;
+    return false;
 }
 
 bool RGPass::UseTextureView( const RGRenderTargetView& view )

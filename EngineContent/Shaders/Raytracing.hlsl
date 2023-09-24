@@ -25,6 +25,7 @@ struct Payload
     float2 barycentrics;
     uint instance_index;
     uint primitive_index;
+    float t;
 };
 
 float3 ReconstructBarycentrics( float2 payload_barycentrics )
@@ -32,12 +33,13 @@ float3 ReconstructBarycentrics( float2 payload_barycentrics )
     return float3( payload_barycentrics, saturate( 1.0f - payload_barycentrics.x - payload_barycentrics.y ) );
 }
 
-Payload PayloadInit()
+Payload PayloadInit( float max_t )
 {
     Payload ret;
     ret.barycentrics = float2( 0, 0 );
     ret.instance_index = INVALID_INSTANCE_INDEX;
     ret.primitive_index = INVALID_INSTANCE_INDEX;
+    ret.t = max_t;
     
     return ret;
 }
@@ -58,7 +60,7 @@ void VisibilityRGS()
 
     RayDesc ray = { ray_origin, 0, ray_direction, max_t };
 
-    Payload payload = PayloadInit();
+    Payload payload = PayloadInit( max_t );
 
     TraceRay( scene_tlas,
         ( RAY_FLAG_NONE ),
@@ -90,6 +92,12 @@ void VisibilityRGS()
         
         float3 triangle_normal_ws = triangle_normal_ls;// normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
         
+        if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) == 0 )
+        {
+            float3 hit_point = ray_origin + ray_direction * payload.t;
+            //AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws, COLOR_RED, COLOR_GREEN ) );
+        }
+        
         output_color = triangle_normal_ws;// * 0.5f + _float3( 0.5f );
     }
     else
@@ -97,10 +105,7 @@ void VisibilityRGS()
         output_color = float3( 0, 0.5f, 0.5f );
     }
     
-    if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) < 10 )
-    {
-        output_color = float3( 0, 1, 0 );
-    }
+    
     
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     output[pixel_id] = float4( output_color, 1 );
@@ -119,4 +124,5 @@ void VisibilityRCS( inout Payload payload, in BuiltInTriangleIntersectionAttribu
     payload.barycentrics = attr.barycentrics.xy;
     payload.instance_index = InstanceIndex();
     payload.primitive_index = PrimitiveIndex();
+    payload.t = RayTCurrent();
 }

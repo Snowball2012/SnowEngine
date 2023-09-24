@@ -106,6 +106,9 @@ namespace
         case RHI::ShaderFrequency::ClosestHit:
             retval = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
             break;
+        case RHI::ShaderFrequency::Compute:
+            retval = VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
         default:
             NOTIMPL;
             break;

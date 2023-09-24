@@ -307,7 +307,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
         retval |= ( ( usage & rhiflag ) != RHIBufferUsageFlags::None ) ? vkflag : 0;
     };
 
-    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 10 );
+    static_assert( int( RHIBufferUsageFlags::NumFlags ) == 11 );
 
     add_flag( RHIBufferUsageFlags::TransferSrc, VK_BUFFER_USAGE_TRANSFER_SRC_BIT );
     add_flag( RHIBufferUsageFlags::TransferDst, VK_BUFFER_USAGE_TRANSFER_DST_BIT );
@@ -319,6 +319,7 @@ VkBufferUsageFlags VulkanRHI::GetVkBufferUsageFlags( RHIBufferUsageFlags usage )
     add_flag( RHIBufferUsageFlags::AccelerationStructureScratch, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
     add_flag( RHIBufferUsageFlags::ShaderBindingTable, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR );
     add_flag( RHIBufferUsageFlags::StructuredBuffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT );
+    add_flag( RHIBufferUsageFlags::IndirectArgs, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT );
 
     return retval;
 }

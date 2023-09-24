@@ -24,6 +24,23 @@ struct MeshVertex
     float3 normal;
 };
 
+struct DebugLine
+{
+    float3 start_ws;
+    float3 end_ws;
+    float3 color_start;
+    float3 color_end;
+};
+
+static const uint MAX_DEBUG_LINES = 1024;
+struct DebugLineIndirectArgs
+{
+    uint vertex_per_instance;
+    uint num_instances;
+    uint start_vertex_location;
+    uint start_instance_location;
+};
+
 // bindings description:
 // bind point #0 - pass specific params
 // bind point #1 - scene global params
@@ -35,5 +52,29 @@ static const int MAX_SCENE_GEOMS = 256;
 [[vk::binding( 0, 1 )]] RaytracingAccelerationStructure scene_tlas;
 [[vk::binding( 1, 1 )]] ConstantBuffer<SceneViewParams> view_data;
 [[vk::binding( 2, 1 )]] StructuredBuffer<TLASItemParams> tlas_items;
+[[vk::binding( 3, 1 )]] RWStructuredBuffer<DebugLine> debug_lines;
+[[vk::binding( 4, 1 )]] RWStructuredBuffer<DebugLineIndirectArgs> debug_lines_indirect_args;
+
 [[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
 [[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];
+
+DebugLine MakeDebugVector( float3 start_ws, float3 dir_ws, float3 color_start, float3 color_end )
+{
+    DebugLine new_line;
+    new_line.start_ws = start_ws;
+    new_line.end_ws = start_ws + dir_ws;
+    new_line.color_start = color_start;
+    new_line.color_end = color_end;
+    
+    return new_line;
+}
+
+void AddDebugLine( DebugLine new_line )
+{
+    uint line_dst_idx;
+    InterlockedAdd( debug_lines_indirect_args[0].num_instances, 1, line_dst_idx );
+    if ( line_dst_idx < MAX_DEBUG_LINES )
+    {
+        debug_lines[line_dst_idx] = new_line;
+    }
+}

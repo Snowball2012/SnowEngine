@@ -25,6 +25,9 @@
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\UploadBufferPool.cpp" />
     <ClCompile Include="..\..\src\Engine\ShaderPrograms.cpp" />
+    <ClCompile Include="..\..\src\Engine\Render\DebugDrawing.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\Engine\StdAfx.h" />
@@ -47,10 +50,16 @@
     <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
     <ClInclude Include="..\..\src\Engine\UploadBufferPool.h" />
     <ClInclude Include="..\..\src\Engine\ShaderPrograms.h" />
+    <ClInclude Include="..\..\src\Engine\Render\DebugDrawing.h">
+      <Filter>Render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="ImguiBackend">
       <UniqueIdentifier>{a742af38-90d2-4eb2-8da5-eba649d66965}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Render">
+      <UniqueIdentifier>{f59d48a7-72a1-4304-ba79-4e652a4bacb7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

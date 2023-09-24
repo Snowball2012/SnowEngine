@@ -15,6 +15,7 @@ class RHIAccelerationStructure;
 class RHIDescriptorSetLayout;
 class RHIDescriptorSet;
 class RHIShaderBindingLayout;
+class RHIComputePipeline;
 class RHIGraphicsPipeline;
 class RHIRaytracingPipeline;
 class RHIUniformBufferView;
@@ -47,8 +48,9 @@ enum class RHIBufferUsageFlags : uint32_t
     AccelerationStructureScratch = 0x80,
     ShaderBindingTable = 0x100,
     StructuredBuffer = 0x200,
+    IndirectArgs = 0x400,
 
-    NumFlags = 10
+    NumFlags = 11
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIBufferUsageFlags )
 
@@ -70,10 +72,11 @@ enum class RHIShaderStageFlags : uint32_t
     PixelShader = 0x00000002,
     RaygenShader = 0x00000004,
     MissShader = 0x00000008,
+    ComputeShader = 0x00000010,
 
-    AllBits = 0x0000000f,
+    AllBits = 0x0000001f,
 
-    NumFlags = 4,
+    NumFlags = 5,
 };
 IMPLEMENT_SCOPED_ENUM_FLAGS( RHIShaderStageFlags )
 
@@ -579,10 +582,13 @@ public:
         NOTIMPL;
     }
 
+    virtual void Dispatch( glm::uvec3 group_num ) { NOTIMPL; }
+
     virtual void TraceRays( glm::uvec3 threads_count ) { NOTIMPL; }
 
     virtual void SetPSO( const RHIGraphicsPipeline& pso ) { NOTIMPL; }
     virtual void SetPSO( const RHIRaytracingPipeline& pso ) { NOTIMPL; }
+    virtual void SetPSO( const RHIComputePipeline& pso ) { NOTIMPL; }
 
     virtual void BindDescriptorSet( size_t slot_idx, RHIDescriptorSet& set ) { NOTIMPL; }
 
@@ -627,6 +633,13 @@ public:
     virtual ~RHIGraphicsPipeline() {}
 };
 using RHIGraphicsPipelinePtr = RHIObjectPtr<RHIGraphicsPipeline>;
+
+class RHIComputePipeline : public RHIObject
+{
+public:
+    virtual ~RHIComputePipeline() {}
+};
+using RHIComputePipelinePtr = RHIObjectPtr<RHIComputePipeline>;
 
 class RHIRaytracingPipeline : public RHIObject
 {
