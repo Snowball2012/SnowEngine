@@ -135,6 +135,7 @@ namespace
         glm::mat4 proj_mat;
         glm::mat4 view_proj_inv_mat;
         glm::uvec2 viewport_size_px;
+        glm::ivec2 cursor_position_px;
     };
 
     struct GPUTLASItemParams
@@ -307,6 +308,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 
     glm::mat4x4 view_proj = svp.proj_mat * svp.view_mat;
     svp.view_proj_inv_mat = glm::inverse( view_proj );
+
+    svp.cursor_position_px = glm::ivec2( view.GetCursorPosition() );
 
     UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBufferUniform<GPUSceneViewParams>();
 

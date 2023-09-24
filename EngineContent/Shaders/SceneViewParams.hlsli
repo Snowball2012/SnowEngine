@@ -9,6 +9,7 @@ struct SceneViewParams
     float4x4 proj_mat;
     float4x4 view_proj_inv_mat;
     uint2 viewport_size_px;
+    int2 cursor_position_px;
 };
 
 struct TLASItemParams

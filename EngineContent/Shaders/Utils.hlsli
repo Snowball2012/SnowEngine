@@ -22,3 +22,9 @@ float3 ColorFromIndex( uint idx )
 {
     return float3( ( idx % 3 ) == 0, ( idx % 3 ) == 1, ( idx % 3 ) == 2 );
 }
+
+int DistanceToCursorSqr( int2 test_pos, int2 cursor_pos )
+{
+    int2 pix_to_cursor = abs( test_pos - cursor_pos );
+    return dot( pix_to_cursor, pix_to_cursor );
+}

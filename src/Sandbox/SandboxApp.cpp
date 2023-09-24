@@ -188,6 +188,10 @@ void SandboxApp::UpdateScene()
 
         smi->m_tf = tf.tf;
     }
+
+    ImVec2 imgui_mouse_pos = ImGui::GetMousePos();
+    glm::uvec2 scene_cursor_pos = glm::uvec2( imgui_mouse_pos.x, imgui_mouse_pos.y );
+    m_scene_view->SetCursorPosition( scene_cursor_pos );
 }
 
 bool SandboxApp::SaveLevel( const char* filepath ) const

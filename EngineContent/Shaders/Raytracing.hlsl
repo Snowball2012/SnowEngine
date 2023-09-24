@@ -88,17 +88,23 @@ void VisibilityRGS()
         
         float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
         
-        float3 triangle_normal_ws = normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
+        float3 triangle_normal_ws = triangle_normal_ls;// normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
         
-        output_color = triangle_normal_ws * 0.5f + _float3( 0.5f );
+        output_color = triangle_normal_ws;// * 0.5f + _float3( 0.5f );
     }
     else
     {
         output_color = float3( 0, 0.5f, 0.5f );
     }
     
+    if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) < 10 )
+    {
+        output_color = float3( 0, 1, 0 );
+    }
+    
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     output[pixel_id] = float4( output_color, 1 );
+    
     //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
 }
 

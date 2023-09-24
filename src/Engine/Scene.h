@@ -64,6 +64,8 @@ private:
 
     float m_fovXRadians = glm::radians( 60.0f );
 
+    glm::uvec2 m_cursor_position = glm::uvec2( -1, -1 );
+
     // for ping-pong. Not scalable, consider proper transient resources for rendergraph
     RHITexturePtr m_rt_frame[2] = { nullptr, nullptr };
     RHITextureRWViewPtr m_frame_rwview[2] = { nullptr, nullptr };
@@ -79,6 +81,9 @@ public:
     glm::uvec2 GetExtent() const { return m_extents; }
 
     void SetFOV( float fovXRadians ) { m_fovXRadians = fovXRadians; }
+
+    void SetCursorPosition( glm::uvec2 pos ) { m_cursor_position = pos; }
+    glm::uvec2 GetCursorPosition() const { return m_cursor_position; }
 
     RHITexture* GetFrameColorTexture( uint32_t i ) const { return m_rt_frame[i].get(); }
     RHITextureROView* GetFrameColorTextureROView( uint32_t i ) const { return m_frame_roview[i].get(); }
