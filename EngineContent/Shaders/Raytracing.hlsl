@@ -44,6 +44,68 @@ Payload PayloadInit( float max_t )
     return ret;
 }
 
+float3 GetHitNormal( Payload payload, out bool hit_valid )
+{
+    hit_valid = false;
+    uint geom_index = -1;
+    float3x4 obj_to_world;
+    if ( payload.instance_index != INVALID_INSTANCE_INDEX )
+    {
+        TLASItemParams item_params = tlas_items[ payload.instance_index ];
+        
+        geom_index = item_params.geom_buf_index;
+        obj_to_world = item_params.object_to_world_mat;
+    }
+    
+    float3 out_normal = _float3( 0 );
+    if ( geom_index != INVALID_GEOM_INDEX )
+    {
+        hit_valid = true;
+        uint base_index = payload.primitive_index * 3;
+        uint16_t i0 = geom_indices[geom_index][base_index + 0];
+        uint16_t i1 = geom_indices[geom_index][base_index + 1];
+        uint16_t i2 = geom_indices[geom_index][base_index + 2];
+        
+        MeshVertex v0 = geom_vertices[geom_index][i0];
+        MeshVertex v1 = geom_vertices[geom_index][i1];
+        MeshVertex v2 = geom_vertices[geom_index][i2];
+        
+        float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
+        
+        float3 triangle_normal_ws = normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
+        
+        out_normal = triangle_normal_ws;
+    }
+    
+    return out_normal;
+}
+
+float3 SampleSphereUniform( float2 e )
+{
+	float phi = 2 * M_PI * e.x;
+	float cos_theta = 1 - 2 * e.y;
+	float sin_theta = sqrt( 1 - sqr( cos_theta ) );
+
+    return float3( sin_theta * cos( phi ), sin_theta * sin( phi ), cos_theta );
+}
+
+float3 SampleHemisphereCosineWeighted( float2 e, float3 halfplane_normal )
+{
+    float3 h = SampleSphereUniform( e ).xyz;
+	return normalize( halfplane_normal * 1.001f + h ); // slightly biased, but does not hit NaN    
+}
+
+// https://github.com/skeeto/hash-prospector
+uint HashUint32( uint x )
+{
+	x ^= x >> 16;
+	x *= 0xa812d533;
+	x ^= x >> 15;
+	x *= 0xb278e4ad;
+	x ^= x >> 17;
+	return x;
+}
+
 [shader( "raygeneration" )]
 void VisibilityRGS()
 {
@@ -65,48 +127,47 @@ void VisibilityRGS()
     TraceRay( scene_tlas,
         ( RAY_FLAG_NONE ),
         0xFF, 0, 1, 0, ray, payload );
-        
-    uint geom_index = -1;
-    float3x4 obj_to_world;
-    if ( payload.instance_index != INVALID_INSTANCE_INDEX )
+    
+    bool is_hit_valid = false;    
+    float3 hit_normal_ws = GetHitNormal( payload, is_hit_valid );
+    if ( dot( hit_normal_ws, ray_direction ) > 0 )
     {
-        TLASItemParams item_params = tlas_items[ payload.instance_index ];
-        
-        geom_index = item_params.geom_buf_index;
-        obj_to_world = item_params.object_to_world_mat;
+        hit_normal_ws = -hit_normal_ws;
     }
+    float3 hit_position = ray_origin + ray_direction * payload.t + hit_normal_ws * 1.0e-4f;
     
     float3 output_color = _float3( 0 );
-    if ( geom_index != INVALID_GEOM_INDEX )
+    if ( !is_hit_valid )
     {
-        uint base_index = payload.primitive_index * 3;
-        uint16_t i0 = geom_indices[geom_index][base_index + 0];
-        uint16_t i1 = geom_indices[geom_index][base_index + 1];
-        uint16_t i2 = geom_indices[geom_index][base_index + 2];
+        output[pixel_id] = float4( output_color, 1 );
+        return;
+    }
+    
+    const int n_samples = 64;
+    float ao_accum = 0;
+    for ( int sample_i = 0; sample_i < n_samples; ++sample_i )
+    {
+        uint2 e = uint2( sample_i % 8, sample_i / 8 );
+        e += pixel_id * uint2( 37, 71 );
+        e.x = HashUint32( e.x );
+        e.y = HashUint32( e.y );
+        float2 ef = float2( e % uint2( 1024, 1024 ) ) / _float2( 1023.0f );
         
-        MeshVertex v0 = geom_vertices[geom_index][i0];
-        MeshVertex v1 = geom_vertices[geom_index][i1];
-        MeshVertex v2 = geom_vertices[geom_index][i2];
+        RayDesc ray = { hit_position, 0, SampleHemisphereCosineWeighted( ef, hit_normal_ws ), max_t };
+        Payload payload = PayloadInit( max_t );
         
-        float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
-        
-        float3 triangle_normal_ws = normalize( mul( float3x3( obj_to_world[0].xyz, obj_to_world[1].xyz, obj_to_world[2].xyz ), triangle_normal_ls ) );
-        
-        uint2 grid = ( pixel_id % 5 );
-        if ( DistanceToCursorSqr( pixel_id, view_data.cursor_position_px ) < 100 && ( grid.x == 0 && grid.y == 0 ) )
+        TraceRay( scene_tlas,
+            ( RAY_FLAG_NONE ),
+            0xFF, 0, 1, 0, ray, payload );
+            
+        if ( payload.instance_index == INVALID_INSTANCE_INDEX )
         {
-            float3 hit_point = ray_origin + ray_direction * payload.t;
-            AddDebugLine( MakeDebugVector( hit_point, triangle_normal_ws * payload.t * 0.01f, COLOR_RED, COLOR_GREEN ) );
+            ao_accum += 1.0f;
         }
-        
-        output_color = triangle_normal_ws * 0.5f + _float3( 0.5f );
-    }
-    else
-    {
-        output_color = float3( 0, 0.5f, 0.5f );
     }
     
-    
+    float ao = ao_accum / float( n_samples );
+    output_color = _float3( ao );
     
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     output[pixel_id] = float4( output_color, 1 );

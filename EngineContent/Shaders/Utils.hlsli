@@ -1,6 +1,12 @@
 #pragma once
 
 static const float FLT_EPSILON = 1.19209290E-07f;
+static const float M_PI = 3.14159265358979323846f;
+
+float2 _float2( float v )
+{
+    return float2( v, v );
+}
 
 float3 _float3( float v )
 {
