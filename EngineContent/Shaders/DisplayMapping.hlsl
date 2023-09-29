@@ -118,7 +118,7 @@ float3 AgxEotf( float3 val )
   return val;
 }
 
-//#define AGX_LOOK 1
+#define AGX_LOOK 2
 
 float3 AgxLook( float3 val )
 {

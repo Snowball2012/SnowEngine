@@ -82,9 +82,9 @@ float3 GetHitNormal( Payload payload, out bool hit_valid )
 
 float3 SampleSphereUniform( float2 e )
 {
-	float phi = 2 * M_PI * e.x;
-	float cos_theta = 1 - 2 * e.y;
-	float sin_theta = sqrt( 1 - sqr( cos_theta ) );
+	float phi = 2.0f * M_PI * e.x;
+	float cos_theta = 1.0f - 2.0f * e.y;
+	float sin_theta = sqrt( 1.0f - sqr( cos_theta ) );
 
     return float3( sin_theta * cos( phi ), sin_theta * sin( phi ), cos_theta );
 }
@@ -123,7 +123,7 @@ void VisibilityRGS()
     {
         hit_normal_ws = -hit_normal_ws;
     }
-    float3 hit_position = ray_origin + ray_direction * payload.t + hit_normal_ws * 1.0e-4f;
+    const float3 hit_position = ray_origin + ray_direction * payload.t + hit_normal_ws * 1.0e-4f;
     
     float3 output_color = _float3( 0 );
     if ( !is_hit_valid )
@@ -133,53 +133,54 @@ void VisibilityRGS()
     }
     
     float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f );
-    float3 floor_albedo = float3( 0.05f, 0.05f, 0.05f );
+    float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f );
     
-    float3 albedo = payload.instance_index == 1 ? rabbit_albedo : floor_albedo;
+    float3 albedo_init = payload.instance_index == 1 ? rabbit_albedo : floor_albedo;
     
-    const uint n_samples = 128;
+    const uint n_samples = 32;
     float3 radiance_accum = _float3( 0 );
     
     for ( uint sample_i = 0; sample_i < n_samples; ++sample_i )
     {
-    
-        float3 current_bsdf = albedo;
+        float3 current_bsdf = albedo_init;
         
         const uint n_bounces = 8;
+        float3 cur_hit_pos = hit_position;
+        float3 cur_hit_normal_ws = hit_normal_ws;
         for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )
         {
-            float2 e = GetUnitRandomUniform( sample_i * 64 + bounce_i, pixel_id );
+            float2 e = GetUnitRandomUniform( sample_i * n_bounces + bounce_i, pixel_id );
             
-            RayDesc ray = { hit_position, 0, SampleHemisphereCosineWeighted( e, hit_normal_ws ), max_t };
-            Payload payload = PayloadInit( max_t );
+            RayDesc ray_bounce = { cur_hit_pos, 0, SampleHemisphereCosineWeighted( e, cur_hit_normal_ws ), max_t };
+            Payload payload_local = PayloadInit( max_t );
         
             TraceRay( scene_tlas,
                 ( RAY_FLAG_NONE ),
-                0xFF, 0, 1, 0, ray, payload );
+                0xFF, 0, 1, 0, ray_bounce, payload_local );
                 
-            hit_normal_ws = GetHitNormal( payload, is_hit_valid );
-            if ( dot( hit_normal_ws, ray.Direction ) > 0 )
+            cur_hit_normal_ws = GetHitNormal( payload_local, is_hit_valid );
+            if ( dot( cur_hit_normal_ws, ray_bounce.Direction ) > 0 )
             {
-                hit_normal_ws = -hit_normal_ws;
+                cur_hit_normal_ws = -cur_hit_normal_ws;
             }
-            hit_position = ray.Origin + ray.Direction * payload.t + hit_normal_ws * 1.0e-4f;
+            cur_hit_pos = ray_bounce.Origin + ray_bounce.Direction * payload_local.t + cur_hit_normal_ws * 1.0e-4f;
             
             if ( !is_hit_valid )
             {
-                radiance_accum += _float3(  3.0f ) * current_bsdf;
+                radiance_accum += _float3(  1.0f ) * current_bsdf;
                 break;
             }
             
-            albedo = payload.instance_index == 1 ? rabbit_albedo : floor_albedo;
+            float3 albedo_hit = payload_local.instance_index == 1 ? rabbit_albedo : floor_albedo;
             
-            current_bsdf *= albedo;
+            current_bsdf *= albedo_hit;
             
-            if ( all( current_bsdf < _float3( 0.001f ) ) )
+            if ( all( current_bsdf < _float3( 0.0001f ) ) )
                 break;
         }
     }
     
-    output_color = radiance_accum / float( n_samples );
+    output_color = radiance_accum / _float3( n_samples );
     
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     output[pixel_id] = float4( output_color, 1 );
