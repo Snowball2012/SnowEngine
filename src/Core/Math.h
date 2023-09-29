@@ -35,3 +35,14 @@ inline glm::mat3x4 ToMatrixRowMajor3x4( const Transform& tf )
 
 	return glm::mat3x4( m_row_major[0], m_row_major[1], m_row_major[2] );
 }
+
+// https://github.com/skeeto/hash-prospector
+inline uint32_t HashUint32( uint32_t x )
+{
+	x ^= x >> 16;
+	x *= 0xa812d533;
+	x ^= x >> 15;
+	x *= 0xb278e4ad;
+	x ^= x >> 17;
+	return x;
+}

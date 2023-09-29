@@ -95,17 +95,6 @@ float3 SampleHemisphereCosineWeighted( float2 e, float3 halfplane_normal )
 	return normalize( halfplane_normal * 1.001f + h ); // slightly biased, but does not hit NaN    
 }
 
-// https://github.com/skeeto/hash-prospector
-uint HashUint32( uint x )
-{
-	x ^= x >> 16;
-	x *= 0xa812d533;
-	x ^= x >> 15;
-	x *= 0xb278e4ad;
-	x ^= x >> 17;
-	return x;
-}
-
 [shader( "raygeneration" )]
 void VisibilityRGS()
 {
@@ -143,17 +132,13 @@ void VisibilityRGS()
         return;
     }
     
-    const int n_samples = 64;
+    const uint n_samples = 8;
     float ao_accum = 0;
-    for ( int sample_i = 0; sample_i < n_samples; ++sample_i )
+    for ( uint sample_i = 0; sample_i < n_samples; ++sample_i )
     {
-        uint2 e = uint2( sample_i % 8, sample_i / 8 );
-        e += pixel_id * uint2( 37, 71 );
-        e.x = HashUint32( e.x );
-        e.y = HashUint32( e.y );
-        float2 ef = float2( e % uint2( 1024, 1024 ) ) / _float2( 1023.0f );
+        float2 e = GetUnitRandomUniform( sample_i, pixel_id );
         
-        RayDesc ray = { hit_position, 0, SampleHemisphereCosineWeighted( ef, hit_normal_ws ), max_t };
+        RayDesc ray = { hit_position, 0, SampleHemisphereCosineWeighted( e, hit_normal_ws ), max_t };
         Payload payload = PayloadInit( max_t );
         
         TraceRay( scene_tlas,

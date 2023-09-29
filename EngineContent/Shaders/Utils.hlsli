@@ -35,5 +35,16 @@ int DistanceToCursorSqr( int2 test_pos, int2 cursor_pos )
     return dot( pix_to_cursor, pix_to_cursor );
 }
 
+// https://github.com/skeeto/hash-prospector
+uint HashUint32( uint x )
+{
+	x ^= x >> 16;
+	x *= 0xa812d533;
+	x ^= x >> 15;
+	x *= 0xb278e4ad;
+	x ^= x >> 17;
+	return x;
+}
+
 static const float3 COLOR_RED = float3( 1, 0, 0 );
 static const float3 COLOR_GREEN = float3( 0, 1, 0 );

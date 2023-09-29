@@ -137,6 +137,7 @@ namespace
         glm::mat4 view_proj_inv_mat;
         glm::uvec2 viewport_size_px;
         glm::ivec2 cursor_position_px;
+        uint32_t random_uint;
     };
 
     struct GPUTLASItemParams
@@ -320,6 +321,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     svp.view_proj_inv_mat = glm::inverse( view_proj );
 
     svp.cursor_position_px = glm::ivec2( view.GetCursorPosition() );
+
+    svp.random_uint = HashUint32( m_random_seed++ );
 
     UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBufferUniform<GPUSceneViewParams>();
 

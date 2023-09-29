@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Utils.hlsli"
+
 // @todo - could probably be generated from c++ code?
 
 // must be in sync with GPUSceneViewParams
@@ -10,6 +12,7 @@ struct SceneViewParams
     float4x4 view_proj_inv_mat;
     uint2 viewport_size_px;
     int2 cursor_position_px;
+    uint random_uint;
 };
 
 struct TLASItemParams
@@ -77,4 +80,16 @@ void AddDebugLine( DebugLine new_line )
     {
         debug_lines[line_dst_idx] = new_line;
     }
+}
+
+// returns 2 floats in [0, 1] range
+float2 GetUnitRandomUniform( uint seed, uint2 pixel_id )
+{
+    uint seed_hash = HashUint32( seed );
+    
+    uint pixel_id_hash = HashUint32( ( pixel_id.x & 0xffff ) | ( ( pixel_id.y & 0xffff ) << 16 ) );
+    
+    uint random_uint = pixel_id_hash ^ seed_hash ^ view_data.random_uint;
+    
+    return float2( random_uint & 0xffff, ( random_uint >> 16 ) & 0xffff ) / _float2( float( 0xffff ) );
 }

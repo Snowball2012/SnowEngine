@@ -158,6 +158,8 @@ private:
 
     std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
+    mutable std::atomic<uint32_t> m_random_seed = 0;
+
 public:
 
     Renderer();
