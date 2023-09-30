@@ -179,7 +179,9 @@ float3 TonemapUncharted2Partial( float3 x )
 
 [[vk::location( 0 )]] float4 DisplayMappingPS( [[vk::location( 1 )]] in float2 uv : TEXCOORD0 ) : SV_TARGET0
 {
-	float3 input_linear = TextureObject.Sample( TextureObject_Sampler, uv ).rgb;
+	float4 input_tex_value = TextureObject.Sample( TextureObject_Sampler, uv ).rgba;
+	float3 input_linear = input_tex_value.rgb / input_tex_value.a;
+	
 	if ( pass_params.show_hue_test_image )
 	{
 		input_linear = HueChartImage( uv, 1.0f );

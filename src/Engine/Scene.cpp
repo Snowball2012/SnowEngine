@@ -120,6 +120,8 @@ void SceneView::SetExtents( const glm::uvec2& extents )
         rtv_info.format = tex_info.format;
         m_frame_rtview[i] = GetRHI().CreateRTV(rtv_info);
     }
+
+    ResetAccumulation();
 }
 
 glm::mat4x4 SceneView::CalcViewMatrix() const
@@ -149,6 +151,8 @@ namespace
         glm::uvec2 viewport_size_px;
         glm::ivec2 cursor_position_px;
         uint32_t random_uint;
+        uint32_t use_accumulation;
+        uint32_t pad[2];
     };
 
     struct GPUTLASItemParams
@@ -335,6 +339,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
 
     svp.random_uint = HashUint32( m_random_seed++ );
 
+    svp.use_accumulation = view_data.accumulated_idx != -1 ? 1 : 0;
+
     UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBufferUniform<GPUSceneViewParams>();
 
     gpu_buffer.UploadData( svp );
@@ -402,7 +408,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     view_frame_data.view = parms.view;
     view_frame_data.rg = parms.rg;
     view_frame_data.view_desc_set = rg.AllocateFrameDescSet( *m_view_dsl );
-    view_frame_data.scene_output_idx = 0;
+    view_frame_data.accumulated_idx = parms.view->GetAccumulatedTextureIdx();
+    view_frame_data.scene_output_idx = view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx;
 
     RGExternalTexture* scene_output[2];
     const RGTextureROView* scene_output_ro_view[2];
@@ -471,7 +478,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     rt_pass->BorrowCommandList( *cmd_list_rt );
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
-        rt_descset->BindTextureRWView( 0, 0, *scene_output[0]->GetRWView()->GetRHIView()); // index must match with rgtexture used on setup stage
+        rt_descset->BindTextureRWView( 0, 0, *scene_output[view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx]->GetRWView()->GetRHIView()); // index must match with rgtexture used on setup stage
 
         SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
 
@@ -479,6 +486,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
         cmd_list_rt->TraceRays( glm::uvec3( scene_view.GetExtent(), 1 ) );
     }
+    parms.view->SetAccumulatedTextureIdx( view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx );
     rt_pass->EndPass();
 
     m_display_mapping->DisplayMappingPass( *cmd_list_rt, view_frame_data, display_mapping_ctx );

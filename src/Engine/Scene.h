@@ -72,6 +72,8 @@ private:
     RHITextureROViewPtr m_frame_roview[2] = { nullptr, nullptr };
     RHIRenderTargetViewPtr m_frame_rtview[2] = { nullptr, nullptr };
 
+    int m_accumulated_rt_texture_idx = -1;
+
     DebugDrawingSceneViewData m_debug_draw_data;
 
 public:
@@ -81,6 +83,11 @@ public:
     glm::quat SetCameraOrientation( const glm::vec2& angles );
     void SetCameraPosition( const glm::vec3& eye );
     void SetExtents( const glm::uvec2& extents );
+
+    void ResetAccumulation() { m_accumulated_rt_texture_idx = -1; }
+
+    int GetAccumulatedTextureIdx() const { return m_accumulated_rt_texture_idx; }
+    void SetAccumulatedTextureIdx( int idx ) { m_accumulated_rt_texture_idx = idx; }
 
     glm::uvec2 GetExtent() const { return m_extents; }
 
@@ -110,6 +117,7 @@ struct SceneViewFrameData
     const RGTexture* scene_output[2] = {};
     int scene_output_idx = 0;
     Rendergraph* rg = nullptr;
+    int accumulated_idx = -1;
 };
 
 class ISceneRenderExtension

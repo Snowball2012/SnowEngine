@@ -13,6 +13,8 @@ struct SceneViewParams
     uint2 viewport_size_px;
     int2 cursor_position_px;
     uint random_uint;
+    uint use_accumulation;
+    uint2 _pad;
 };
 
 struct TLASItemParams
@@ -90,6 +92,16 @@ float2 GetUnitRandomUniform( uint seed, uint2 pixel_id )
     uint pixel_id_hash = HashUint32( ( pixel_id.x & 0xffff ) | ( ( pixel_id.y & 0xffff ) << 16 ) );
     
     uint random_uint = pixel_id_hash ^ seed_hash ^ view_data.random_uint;
+    
+    return float2( random_uint & 0xffff, ( random_uint >> 16 ) & 0xffff ) / _float2( float( 0xffff ) );
+}
+
+// returns 2 floats in [0, 1] range
+float2 GetUnitRandomUniform( uint2 pixel_id )
+{    
+    uint pixel_id_hash = HashUint32( ( pixel_id.x & 0xffff ) | ( ( pixel_id.y & 0xffff ) << 16 ) );
+    
+    uint random_uint = pixel_id_hash ^ HashUint32( view_data.random_uint );
     
     return float2( random_uint & 0xffff, ( random_uint >> 16 ) & 0xffff ) / _float2( float( 0xffff ) );
 }

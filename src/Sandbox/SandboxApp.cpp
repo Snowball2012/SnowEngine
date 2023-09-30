@@ -312,6 +312,8 @@ void SandboxApp::UpdateCamera( float delta_time )
             camera_movement_ls.y += 1.0f;
         }
         camera_movement_ls *= m_cam_move_speed * delta_time;
+
+        m_scene_view->ResetAccumulation();
     }
     
     glm::quat orientation_ws = m_scene_view->SetCameraOrientation( m_cam_angles_radians );

@@ -4,9 +4,10 @@
 
 [[vk::binding( 0, 0 )]] RWTexture2D<float4> output;
 
-float3 PixelPositionToWorld( uint2 pixel_position, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
+// pixel_shift is in range [0,1]. 0.5 means middle of the pixel
+float3 PixelPositionToWorld( uint2 pixel_position, float2 pixel_shift, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
 {
-    float4 ndc = float4( float2( pixel_position ) / float2( viewport_size ) * 2.0f - float2( 1.0f, 1.0f ), ndc_depth, 1.0f );
+    float4 ndc = float4( ( float2( pixel_position ) + pixel_shift ) / float2( viewport_size ) * 2.0f - float2( 1.0f, 1.0f ), ndc_depth, 1.0f );
     ndc.y = -ndc.y;
 
     float4 world_pos = mul( view_proj_inverse, ndc );
@@ -99,10 +100,12 @@ float3 SampleHemisphereCosineWeighted( float2 e, float3 halfplane_normal )
 void VisibilityRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
+    
+    float2 pixel_shift = GetUnitRandomUniform( pixel_id );
+    
+    float3 ray_origin = PixelPositionToWorld( pixel_id, pixel_shift, 0, view_data.viewport_size_px, view_data.view_proj_inv_mat );
 
-    float3 ray_origin = PixelPositionToWorld( pixel_id, 0, view_data.viewport_size_px, view_data.view_proj_inv_mat );
-
-    float3 ray_destination = PixelPositionToWorld( pixel_id, 1.0f, view_data.viewport_size_px, view_data.view_proj_inv_mat );
+    float3 ray_destination = PixelPositionToWorld( pixel_id, pixel_shift, 1.0f, view_data.viewport_size_px, view_data.view_proj_inv_mat );
 
     float3 ray_direction = ray_destination - ray_origin;
 
@@ -128,7 +131,14 @@ void VisibilityRGS()
     float3 output_color = _float3( 0 );
     if ( !is_hit_valid )
     {
-        output[pixel_id] = float4( output_color, 1 );
+        if ( view_data.use_accumulation )
+        {
+            output[pixel_id] += float4( output_color, 1 );
+        }
+        else
+        {
+            output[pixel_id] = float4( output_color, 1 );
+        }
         return;
     }
     
@@ -144,7 +154,7 @@ void VisibilityRGS()
     {
         float3 current_bsdf = albedo_init;
         
-        const uint n_bounces = 3;
+        const uint n_bounces = 16;
         float3 cur_hit_pos = hit_position;
         float3 cur_hit_normal_ws = hit_normal_ws;
         for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )
@@ -167,7 +177,7 @@ void VisibilityRGS()
             
             if ( !is_hit_valid )
             {
-                radiance_accum += _float3(  1.0f ) * current_bsdf;
+                radiance_accum += _float3(  1000.0f ) * current_bsdf;
                 break;
             }
             
@@ -183,7 +193,14 @@ void VisibilityRGS()
     output_color = radiance_accum / _float3( n_samples );
     
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
-    output[pixel_id] = float4( output_color, 1 );
+    if ( view_data.use_accumulation )
+    {
+        output[pixel_id] += float4( output_color, 1 );
+    }
+    else
+    {
+        output[pixel_id] = float4( output_color, 1 );
+    }
     
     //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
 }
