@@ -137,14 +137,14 @@ void VisibilityRGS()
     
     float3 albedo_init = payload.instance_index == 1 ? rabbit_albedo : floor_albedo;
     
-    const uint n_samples = 32;
+    const uint n_samples = 1;
     float3 radiance_accum = _float3( 0 );
     
     for ( uint sample_i = 0; sample_i < n_samples; ++sample_i )
     {
         float3 current_bsdf = albedo_init;
         
-        const uint n_bounces = 8;
+        const uint n_bounces = 3;
         float3 cur_hit_pos = hit_position;
         float3 cur_hit_normal_ws = hit_normal_ws;
         for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )

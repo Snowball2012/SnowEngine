@@ -78,6 +78,8 @@ public:
     SceneView( Scene* scene );
 
     void SetLookAt( const glm::vec3& eye, const glm::vec3& center );
+    glm::quat SetCameraOrientation( const glm::vec2& angles );
+    void SetCameraPosition( const glm::vec3& eye );
     void SetExtents( const glm::uvec2& extents );
 
     glm::uvec2 GetExtent() const { return m_extents; }

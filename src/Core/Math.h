@@ -36,6 +36,16 @@ inline glm::mat3x4 ToMatrixRowMajor3x4( const Transform& tf )
 	return glm::mat3x4( m_row_major[0], m_row_major[1], m_row_major[2] );
 }
 
+inline glm::vec3 SphericalToCartesian( float radius, float phi, float theta )
+{
+	glm::vec3 res;
+
+	res.x = radius * sinf( theta ) * cosf( phi );
+	res.z = radius * sinf( theta ) * sinf( phi );
+	res.y = radius * cosf( theta );
+	return res;
+}
+
 // https://github.com/skeeto/hash-prospector
 inline uint32_t HashUint32( uint32_t x )
 {

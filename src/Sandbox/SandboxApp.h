@@ -32,6 +32,13 @@ private:
 
 	std::unique_ptr<Editor> m_editor;
 
+	glm::vec3 m_cam_pos = glm::vec3( 2, 2, 2 );
+	glm::vec2 m_cam_angles_radians = glm::vec2( -2.43f, 2.15f );
+	float m_cam_turn_speed = 0.005f;
+	float m_cam_move_speed = 1.0f;
+
+	decltype( std::chrono::high_resolution_clock::now() ) m_last_tick_time;
+
 public:
 	SandboxApp();
 	~SandboxApp();
@@ -58,4 +65,6 @@ private:
 
 	bool SaveLevel( const char* filepath ) const;
 	bool OpenLevel( const char* filepath );
+
+	void UpdateCamera( float delta_time );
 };
