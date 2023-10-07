@@ -283,7 +283,7 @@ void SandboxApp::UpdateCamera( float delta_time )
         float cam_turn_speed = m_cam_turn_speed * ( m_fov_degrees / 45.0f );
         m_cam_angles_radians.x -= ImGui::GetIO().MouseDelta.x * cam_turn_speed;
         m_cam_angles_radians.y += ImGui::GetIO().MouseDelta.y * cam_turn_speed;
-        m_cam_angles_radians.y = std::clamp<float>( m_cam_angles_radians.y, M_PI * 0.01f, M_PI * 0.99f );
+        m_cam_angles_radians.y = std::clamp<float>( m_cam_angles_radians.y, float( M_PI * 0.01f ), float( M_PI * 0.99f ) );
 
         m_cam_angles_radians.x = fmodf( m_cam_angles_radians.x, M_PI * 2.0f );
 
@@ -359,7 +359,11 @@ void SandboxApp::UpdateGui()
             m_show_imgui_demo = true;
 
         if ( ImGui::MenuItem( "ReloadShaders" ) )
+        {
             m_rhi->ReloadAllShaders();
+            if ( m_scene_view != nullptr )
+                m_scene_view->ResetAccumulation();
+        }
 
         if ( ImGui::MenuItem( "PrintCVars" ) )
             GetConsole().ListAllCVars();
@@ -412,10 +416,11 @@ void SandboxApp::UpdateGui()
         ImGui::End();
     }
 
+    bool scene_view_changed = false;
     ImGui::Begin( "Demo" );
     {
         ImGui::DragFloat( "Cam turning speed", &m_cam_turn_speed, std::max( 0.001f, m_cam_turn_speed ) );
-        ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
+        scene_view_changed |= ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
         ImGui::Text( "%f %f", m_cam_angles_radians.x, m_cam_angles_radians.y );
 
         // Level outliner
@@ -431,6 +436,7 @@ void SandboxApp::UpdateGui()
                 auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
                 new_object->SetName( new_object_name.c_str(), true );
                 new_object->RegenerateEntities();
+                scene_view_changed = true;
             }
 
             for ( auto& level_object : m_level_objects )
@@ -459,16 +465,22 @@ void SandboxApp::UpdateGui()
                             break;
                         }
                         level_object->RegenerateEntities();
+                        scene_view_changed = true;
                     }
 
                     if ( level_object->OnUpdateGUI() )
                     {
                         level_object->RegenerateEntities();
+                        scene_view_changed = true;
                     }
                 }
                 ImGui::PopID();
             }
         }
+    }
+    if ( scene_view_changed && m_scene_view != nullptr )
+    {
+        m_scene_view->ResetAccumulation();
     }
     ImGui::End();
 }

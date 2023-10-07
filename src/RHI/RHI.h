@@ -605,6 +605,10 @@ public:
 
     virtual void TextureBarriers( const RHITextureBarrier* barriers, size_t barrier_count ) { NOTIMPL; }
 
+    // GPU suffix is needed because MemoryBarrier is sadly a macro in winrt
+    // @todo - do proper buffer barriers
+    virtual void MemoryBarrierGPU() { NOTIMPL; }
+
     virtual void BeginPass( const RHIPassInfo& pass_info ) { NOTIMPL; }
     virtual void EndPass() { NOTIMPL; }
 

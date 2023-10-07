@@ -287,6 +287,20 @@ void VulkanCommandList::TextureBarriers( const RHITextureBarrier* barriers, size
         uint32_t( vk_barriers.size() ), vk_barriers.data() );
 }
 
+void VulkanCommandList::MemoryBarrierGPU()
+{
+    VkMemoryBarrier vk_barrier = {};
+    vk_barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    vk_barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    vk_barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    vkCmdPipelineBarrier(
+        m_vk_cmd_buffer,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT | VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0,
+        1, &vk_barrier,
+        0, nullptr,
+        0, nullptr );
+}
+
 void VulkanCommandList::CopyBufferToTexture( const RHIBuffer& buf, RHITexture& texture, const RHIBufferTextureCopyRegion* regions, size_t region_count )
 {
     boost::container::small_vector<VkBufferImageCopy, 4> vk_regions;

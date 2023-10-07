@@ -107,6 +107,8 @@ public:
 
 	virtual void TextureBarriers(const RHITextureBarrier* barriers, size_t barrier_count) override;
 
+	virtual void MemoryBarrierGPU() override;
+
 	virtual void CopyBufferToTexture(
 		const RHIBuffer& buf, RHITexture& texture,
 		const RHIBufferTextureCopyRegion* regions, size_t region_count) override;

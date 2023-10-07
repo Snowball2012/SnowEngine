@@ -265,37 +265,14 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
 
     Transform tf = m_tf;
 
-    static bool drag_translate = false;
-    static bool drag_euler = false;
-    static bool drag_scale = false;
+    trait_changed |= ImGui::DragFloat3( "Translate", &tf.translation.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.translation ) ) );
 
-    ImGui::Checkbox( "Drag", &drag_translate );
-    ImGui::SameLine();
-
-    if ( drag_translate )
-    {
-        trait_changed |= ImGui::DragFloat3( "Translate", &tf.translation.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.translation ) ) );
-    }
-    else
-    {
-        trait_changed |= ImGui::InputFloat3( "Translate", &tf.translation.x );
-    }
-
-    ImGui::Checkbox( "Drag##2", &drag_euler );
-    ImGui::SameLine();
     {
         glm::vec3 euler_angles = glm::degrees( glm::eulerAngles( tf.orientation ) );
         
         bool angles_changed = false;
-        if ( drag_euler )
-        {
-            angles_changed = ImGui::DragFloat3( "Orientation (Pitch Yaw Roll)", &euler_angles.x, 0.1f );
-        }
-        else
-        {
-            angles_changed = ImGui::InputFloat3( "Orientation (Pitch Yaw Roll)", &euler_angles.x );
-        }
-
+        angles_changed = ImGui::DragFloat3( "Orientation (Pitch Yaw Roll)", &euler_angles.x, 0.1f );
+        
         if ( angles_changed )
         {
             trait_changed = true;
@@ -303,16 +280,7 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
         }
     }
 
-    ImGui::Checkbox( "Drag##3", &drag_scale );
-    ImGui::SameLine();
-    if ( drag_scale )
-    {
-        trait_changed |= ImGui::DragFloat3( "Scale", &tf.scale.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.scale ) ) );
-    }
-    else
-    {
-        trait_changed |= ImGui::InputFloat3( "Scale", &tf.scale.x );
-    }
+    trait_changed |= ImGui::DragFloat3( "Scale", &tf.scale.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.scale ) ) );
 
     if ( trait_changed )
     {

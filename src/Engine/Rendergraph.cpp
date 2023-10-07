@@ -465,4 +465,5 @@ void RGPass::EndPass()
 void RGPass::AddPassBeginCommands( RHICommandList& cmd_list )
 {
     cmd_list.TextureBarriers( m_pass_start_texture_barriers.data(), m_pass_start_texture_barriers.size() );
+    cmd_list.MemoryBarrierGPU();
 }
