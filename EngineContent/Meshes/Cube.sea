@@ -1,4 +1,4 @@
 {
-	"_generator" : "CubeAsset",
-	"size" : 1
+	"_generator" : "MeshAsset",
+	"source" : "#engine/Meshes/cube.obj"
 }

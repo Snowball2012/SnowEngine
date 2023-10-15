@@ -4,6 +4,9 @@
 
 [[vk::binding( 0, 0 )]] RWTexture2D<float4> output;
 
+//#define USE_IMPORTANCE_SAMPLING
+//#define USE_GGX_SAMPLING
+
 // pixel_shift is in range [0,1]. 0.5 means middle of the pixel
 float3 PixelPositionToWorld( uint2 pixel_position, float2 pixel_shift, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
 {
@@ -94,6 +97,8 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid )
                     hit_data.obj_to_world[2].xyz ),
                 triangle_normal_ls ) );
         
+        //if ( hit_data.geom_index != 0 )
+        //    triangle_normal_ws = -triangle_normal_ws;
         out_normal = triangle_normal_ws;
     }
     
@@ -115,18 +120,246 @@ float3 SampleHemisphereCosineWeighted( float2 e, float3 halfplane_normal )
 	return normalize( halfplane_normal * 1.001f + h ); // slightly biased, but does not hit NaN    
 }
 
-float3 GetMissRadiance()
+// result is local space ( Y up )
+float3 SampleHemisphereUniform( float2 e )
 {
-    return _float3( 10.0f );
+    float3 uniform_hemisphere_sample = SampleSphereUniform( e );
+    uniform_hemisphere_sample.y = abs( uniform_hemisphere_sample.y );
+    return uniform_hemisphere_sample;
 }
 
+// pdf in .w
+float4 SampleHemisphereCosineWeighted( float2 e )
+{
+    float3 h = SampleSphereUniform( e ).xyz;
+    h.y += 1.0001f;
+    
+    h = normalize( h );
+    
+    float pdf = h.y / M_PI;
+	return float4( normalize( h ), pdf ); // slightly biased, but does not hit NaN    
+}
+
+float VisibleGGXPDF(float3 V, float3 H, float a2)
+{
+	float NoV = V.z;
+	float NoH = H.z;
+	float VoH = saturate( dot(V, H) );
+
+	float d = (NoH * a2 - NoH) * NoH + 1;
+	float D = a2 / (M_PI*d*d);
+
+	float PDF = 2 * VoH * D / (NoV + sqrt(NoV * (NoV - NoV * a2) + a2));
+	return PDF;
+}
+
+float2 UniformSampleDisk( float2 E )
+{
+	float Theta = 2 * M_PI * E.x;
+	float Radius = sqrt( E.y );
+	return Radius * float2( cos( Theta ), sin( Theta ) );
+}
+
+float4 ImportanceSampleVisibleGGX( float2 E, float a2, float3 V )
+{
+    float2 DiskE = UniformSampleDisk( E );
+
+	// NOTE: See below for anisotropic version that avoids this sqrt
+	float a = sqrt(a2);
+
+	// stretch
+	float3 Vh = normalize( float3( a * V.xy, V.z ) );
+
+	// Stable tangent basis based on V
+	// Tangent0 is orthogonal to N
+	float LenSq = Vh.x * Vh.x + Vh.y * Vh.y;
+	float3 Tangent0 = LenSq > 0 ? float3(-Vh.y, Vh.x, 0) * rsqrt(LenSq) : float3(1, 0, 0);
+	float3 Tangent1 = cross(Vh, Tangent0);
+
+	float2 p = DiskE;
+	float s = 0.5 + 0.5 * Vh.z;
+	p.y = (1 - s) * sqrt( 1 - p.x * p.x ) + s * p.y;
+
+	float3 H;
+	H  = p.x * Tangent0;
+	H += p.y * Tangent1;
+	H += sqrt( saturate( 1 - dot( p, p ) ) ) * Vh;
+
+	// unstretch
+	H = normalize( float3( a * H.xy, max(0.0, H.z) ) );
+
+    float3 L = reflect( -V, H );
+	return float4(L, VisibleGGXPDF(V, H, a2));
+}
+
+struct BSDFInputs
+{
+    float3 albedo;
+    float roughness;
+    float3 normal;
+    float3 f0;
+    float3x3 tnb; // Tangent frame. N is _second_ vector to work nice with Y-up local space
+};
+
+// Opaque. Does not contain NoL term ( it's not a part of BSDF, it's just a rendering equation term and should be applied outside
+float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
+{
+    // simple lambertian bsdf + GGX mixed on Fresnel
+    
+    float3 n = inputs.normal.xyz;
+    float3 f0 = inputs.f0;
+    float3 albedo = inputs.albedo;
+    float roughness = inputs.roughness;
+
+    float3 h = normalize( l + v );
+    
+    float NoL = saturate( dot( l, n ) );
+    float NoH = saturate( dot( n, h ) );
+    float NoV = saturate( dot( n, v ) );
+    
+    float3 lambertian_diffuse = albedo / M_PI;    
+    
+    float a = sqr( roughness );
+    float a2 = sqr( a );
+    
+    float d_h = a2 / ( M_PI * sqr( sqr( NoH ) * ( a2 - 1.0f ) + 1.0f ) );
+    
+    float g_ggx_l_inv = max( 1.e-3f, NoL + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoL ) ) );
+    float g_ggx_v_inv = max( 1.e-3f, NoV + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoV ) ) );    
+    
+    float3 ggx_spec = _float3( d_h / ( g_ggx_l_inv * g_ggx_v_inv ) );    
+    
+    float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - NoL, 5 );
+
+    return lerp( lambertian_diffuse, ggx_spec, fresnel );
+}
+
+// dir_i is incoming ray direction (view)
+// e - 3 uniformly distributed random variables
+struct BSDFSampleOutput
+{
+    float3 integration_term; // bsdf * dot( n, l ) / pdf
+    float3 dir_o;
+};
+
+BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e )
+{
+    #if defined USE_IMPORTANCE_SAMPLING
+        #if defined USE_GGX_SAMPLING
+            float3 v_ts = mul( inputs.tnb, -dir_i );
+            float4 dir_o_ts = ImportanceSampleVisibleGGX( e.xy, pow( inputs.roughness, 4 ), v_ts.xzy );
+            dir_o_ts.xyz = dir_o_ts.xzy;
+        #else
+            float4 dir_o_ts = SampleHemisphereCosineWeighted( e.xy );
+        #endif
+        float pdf = dir_o_ts.w;
+    #else
+        float3 dir_o_ts = SampleHemisphereUniform( e.xy );
+        float pdf = 0.5f / M_PI;
+    #endif
+    
+    float3 dir_o_ws = mul( dir_o_ts.xyz, inputs.tnb );
+    
+    
+    float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i );
+    
+    BSDFSampleOutput output;
+    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) ) / max( pdf, 1.e-6f );
+    output.dir_o = dir_o_ws;
+    
+    return output;
+}
+
+static const float TEST_ROUGHNESS = 0.9f;
+
+BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out bool hit_valid )
+{
+    hit_valid = false;
+    BSDFInputs inputs;
+    
+    float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid );
+    if ( dot( hit_normal_ws, hit_direction_ws ) > 0 )
+    {
+        hit_valid = false;
+        hit_normal_ws = -hit_normal_ws;
+    }
+    
+    if ( hit_valid == false )
+        return inputs;
+    
+    float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f );
+    float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f );
+    
+    float rabbit_roughness = TEST_ROUGHNESS;
+    float floor_roughness = TEST_ROUGHNESS;
+    
+    inputs.albedo = hit_data.geom_index == 0 ? rabbit_albedo : floor_albedo;
+    inputs.roughness = hit_data.geom_index == 0 ? rabbit_roughness : floor_roughness;
+    inputs.f0 = _float3( 0.04f );
+    
+    inputs.normal = hit_normal_ws;
+    
+    float3 tan_unnormalized = cross( float3( 0, 1, 0 ), hit_normal_ws );
+    if ( dot( tan_unnormalized, tan_unnormalized ) < 1.e-6f )
+    {
+        tan_unnormalized = cross( float3( 0, 0, 1 ), hit_normal_ws );
+    }
+    float3 tan = normalize( tan_unnormalized );
+    float3 bitan = normalize( cross( tan, hit_normal_ws ) );
+                
+    float3x3 tnb = float3x3( tan, hit_normal_ws, bitan );
+    
+    inputs.tnb = tnb;
+    
+    return inputs;
+}
+
+struct PathData
+{
+    float3 bsdf_acc;
+    float3 current_direction_ws;
+    float3 current_position_ws;
+    bool terminated;
+};
+
+void TracePath( HitData hit, float3 e, inout PathData path )
+{
+    bool is_hit_valid = false;
+    BSDFInputs bsdf_inputs = SampleHitMaterial( hit, path.current_direction_ws, is_hit_valid );
+    if ( ! is_hit_valid )
+    {
+        path.terminated = true;
+        return;
+    }
+    
+    float3 current_position_ws = path.current_position_ws + path.current_direction_ws * hit.ray_payload.t + bsdf_inputs.normal * 1.e-4f;
+    path.current_position_ws = current_position_ws;
+    
+    BSDFSampleOutput bsdf_sample = SampleBSDFMonteCarlo( bsdf_inputs, path.current_direction_ws, e );
+    
+    path.current_direction_ws = bsdf_sample.dir_o;
+    path.bsdf_acc *= bsdf_sample.integration_term;
+}
+
+PathData PathInit( float3 ray_start_pos_ws, float3 ray_direction_ws )
+{
+    PathData data;
+    data.bsdf_acc = _float3( 1.0f );
+    data.terminated = false;
+    data.current_position_ws = ray_start_pos_ws;
+    data.current_direction_ws = ray_direction_ws;
+    
+    return data;
+}
+
+/*
 float3 EvaluateBSDF( HitData hit_data, float3 normal, float3 dir_i, float3 dir_o )
 {
     float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f );
     float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f );
     
-    float rabbit_roughness = 0.5f;
-    float floor_roughness = 0.1f;
+    float rabbit_roughness = TEST_ROUGHNESS;
+    float floor_roughness = TEST_ROUGHNESS;
     
     float3 albedo = hit_data.geom_index == 0 ? rabbit_albedo : floor_albedo;
     float roughness = hit_data.geom_index == 0 ? rabbit_roughness : floor_roughness;
@@ -139,27 +372,104 @@ float3 EvaluateBSDF( HitData hit_data, float3 normal, float3 dir_i, float3 dir_o
 
     float3 h = normalize( l + v );
     
-    float3 lambertian_diffuse = albedo / M_PI;
+    float3 lambertian_diffuse = _float3(0);//albedo / M_PI;
     
-    float3 f0 = _float3( 0.04f );
+    float3 f0 = albedo * 2;//_float3( 0.04f );
     
     float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - saturate( dot( l, normal ) ), 5 );
-    
     
     float a = sqr( roughness );
     float a2 = sqr( a );
     
     float d_h = a2 / ( M_PI * sqr( sqr( dot( n, h ) ) * ( a2 - 1.0f ) + 1.0f ) );
     
-    float g_ggx_l_inv = dot( n, l ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, l ) ) );
-    float g_ggx_v_inv = dot( n, v ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, v ) ) );
+    float g_ggx_l_inv = max( 1.e-3f, dot( n, l ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, l ) ) ) );
+    float g_ggx_v_inv = max( 1.e-3f, dot( n, v ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, v ) ) ) );
     
     
     float3 ggx_spec = _float3( d_h / ( g_ggx_l_inv * g_ggx_v_inv ) );
-    
+    //return ggx_spec;
     return lerp( lambertian_diffuse, ggx_spec, fresnel );
+}*/
+
+
+float3 GetMissRadiance()
+{
+    return _float3( 10.0f );
 }
 
+// PDF = D * NoH / (4 * VoH)
+float4 ImportanceSampleGGX( float2 E, float a2 )
+{
+	float Phi = 2 * M_PI * E.x;
+	float CosTheta = sqrt( (1 - E.y) / ( 1 + (a2 - 1) * E.y ) );
+	float SinTheta = sqrt( 1 - CosTheta * CosTheta );
+
+	float3 H;
+	H.x = SinTheta * cos( Phi );
+	H.y = SinTheta * sin( Phi );
+	H.z = CosTheta;
+	
+	float d = ( CosTheta * a2 - CosTheta ) * CosTheta + 1;
+	float D = a2 / ( M_PI*d*d );
+	float PDF = D * CosTheta;
+
+	return float4( H, PDF );
+}
+
+
+/*
+float3 EvaluateBSDF( HitData hit_data, float3 normal, float3 dir_i, float3 dir_o )
+{
+    float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f ) * 3;
+    float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f ) * 5;
+    
+    float rabbit_roughness = TEST_ROUGHNESS;
+    float floor_roughness = TEST_ROUGHNESS;
+    
+    float3 albedo = hit_data.geom_index == 0 ? rabbit_albedo : floor_albedo;
+    float roughness = hit_data.geom_index == 0 ? rabbit_roughness : floor_roughness;
+    
+    // simple lambertian bsdf + GGX mixed on Fresnel
+    
+    float3 l = dir_i;
+    float3 v = dir_o;
+    float3 n = normal;
+
+    float3 h = normalize( l + v );
+    
+    float3 lambertian_diffuse = _float3(0);//albedo / M_PI;
+    
+    float3 f0 = albedo * 2;//_float3( 0.04f );
+    
+    float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - saturate( dot( l, normal ) ), 5 );
+    
+    float a = sqr( roughness );
+    float a2 = sqr( a );
+    
+    float d_h = a2 / ( M_PI * sqr( sqr( dot( n, h ) ) * ( a2 - 1.0f ) + 1.0f ) );
+    
+    float g_ggx_l_inv = max( 1.e-3f, dot( n, l ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, l ) ) ) );
+    float g_ggx_v_inv = max( 1.e-3f, dot( n, v ) + sqrt( a2 + ( 1.0f - a2 ) * sqr( dot( n, v ) ) ) );
+    
+    
+    float3 ggx_spec = _float3( d_h / ( g_ggx_l_inv * g_ggx_v_inv ) );
+    //return ggx_spec;
+    return lerp( lambertian_diffuse, ggx_spec, fresnel );
+}*/
+
+float3x3 GetTangentBasis( float3 TangentZ )
+{
+	const float Sign = TangentZ.z >= 0 ? 1 : -1;
+	const float a = -rcp( Sign + TangentZ.z );
+	const float b = TangentZ.x * TangentZ.y * a;
+	
+	float3 TangentX = { 1 + Sign * a * sqr( TangentZ.x ), Sign * b, -Sign * TangentZ.x };
+	float3 TangentY = { b,  Sign + a * sqr( TangentZ.y ), -TangentZ.y };
+
+	return float3x3( TangentX, TangentY, TangentZ );
+}
+/*
 [shader( "raygeneration" )]
 void VisibilityRGS()
 {
@@ -189,6 +499,7 @@ void VisibilityRGS()
     float3 hit_normal_ws = GetHitNormal( initial_hit, is_hit_valid );
     if ( dot( hit_normal_ws, ray_direction ) > 0 )
     {
+        is_hit_valid = false;
         hit_normal_ws = -hit_normal_ws;
     }
     const float3 hit_position = ray_origin + ray_direction * payload.t + hit_normal_ws * 1.0e-4f;
@@ -209,6 +520,7 @@ void VisibilityRGS()
     
     const uint n_samples = 1;
     float3 radiance_accum = _float3( 0 );
+    float pdf_total = float( 0 );
     
     for ( uint sample_i = 0; sample_i < n_samples; ++sample_i )
     {
@@ -219,13 +531,45 @@ void VisibilityRGS()
         float3 cur_hit_normal_ws = hit_normal_ws;
         HitData current_hit = initial_hit;
         float3 cur_ray_direction = ray_direction;
+        
+        float acc_pdf = 1.0f;
+        bool use_ggx = ( view_data.random_uint ^ ( pixel_id.x + pixel_id.y ) ) % 2;
         for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )
         {
             float2 e = GetUnitRandomUniform( sample_i * n_bounces + bounce_i, pixel_id );
             
-            RayDesc ray_bounce = { cur_hit_pos, 0, SampleHemisphereCosineWeighted( e, cur_hit_normal_ws ), max_t };
+            float3 sample_dir = SampleHemisphereCosineWeighted( e, cur_hit_normal_ws );
+            float pdf = max( FLT_EPSILON, saturate( dot( sample_dir, cur_hit_normal_ws ) ) / M_PI );
+            if ( use_ggx == ( HashUint32( HashUint32( bounce_i ) ) % 2 ) )
+            {
+                // GGX sampling
+                
+                
+                float3 tan = normalize( cross( float3( 0, 0, 1 ), cur_hit_normal_ws ) );
+                float3 bitan = normalize( cross( tan, cur_hit_normal_ws ) );
+                
+                float3x3 tbn = float3x3( tan, bitan, cur_hit_normal_ws );
+                
+                float3 TangentV = mul( tbn, -cur_ray_direction );
+                
+                float4 ggx_importance = ImportanceSampleVisibleGGX( e, sqr( sqr( TEST_ROUGHNESS ) ), TangentV );
+                
+                //ue_normal.x = -ue_normal.x;
+                float3 WorldH = mul( ggx_importance.xyz, tbn );
+                //WorldH = WorldH.xzy;
+                //WorldH.x = -WorldH.x;
+                
+                sample_dir = reflect( cur_ray_direction, WorldH );
+                
+                pdf = max( FLT_EPSILON, ggx_importance.w );
+            }
             
-            current_bsdf *= EvaluateBSDF( current_hit, cur_hit_normal_ws, ray_bounce.Direction, -cur_ray_direction );
+            RayDesc ray_bounce = { cur_hit_pos, 0, sample_dir, max_t };
+            
+            acc_pdf *= pdf;
+            current_bsdf *= max( _float3( 0 ), saturate( EvaluateBSDF( current_hit, cur_hit_normal_ws, ray_bounce.Direction, -cur_ray_direction ) * saturate( dot( sample_dir, cur_hit_normal_ws ) ) / pdf ) );
+            
+            //acc_pdf *= pdf;
             
             //if ( all( current_bsdf < _float3( 0.0001f ) ) )
             //    break;
@@ -238,16 +582,17 @@ void VisibilityRGS()
                 ( RAY_FLAG_NONE ),
                 0xFF, 0, 1, 0, ray_bounce, payload_local );
                 
-            //if ( all( pixel_id == view_data.cursor_position_px ) )
-            //{
-            //    AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_local.t, COLOR_RED, COLOR_GREEN ) );
-            //}
+            if ( all( pixel_id == view_data.cursor_position_px ) )
+            {
+                AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_local.t, COLOR_RED, COLOR_GREEN ) );
+            }
                 
             current_hit = GetHitData( payload_local );
                 
             cur_hit_normal_ws = GetHitNormal( current_hit, is_hit_valid );
             if ( dot( cur_hit_normal_ws, ray_bounce.Direction ) > 0 )
             {
+                is_hit_valid = false;
                 cur_hit_normal_ws = -cur_hit_normal_ws;
             }
             cur_hit_pos = ray_bounce.Origin + ray_bounce.Direction * payload_local.t + cur_hit_normal_ws * 1.0e-4f;
@@ -255,12 +600,17 @@ void VisibilityRGS()
             if ( !is_hit_valid )
             {
                 radiance_accum += GetMissRadiance() * current_bsdf;
+                pdf_total += acc_pdf;
                 break;
             }
         }
     }
     
     output_color = radiance_accum / _float3( n_samples );
+    
+    //if ( any( isnan( output_color ) )
+    //       || any( isinf( output_color ) ) )
+    //    return;
     
     //output[pixel_id] = float4( ColorFromIndex( geom_index ), 1 );
     if ( view_data.use_accumulation )
@@ -273,6 +623,106 @@ void VisibilityRGS()
     }
     
     //output[pixel_id] = float4( ReconstructBarycentrics( payload.barycentrics ), 1 );
+}*/
+
+
+[shader( "raygeneration" )]
+void VisibilityRGS()
+{
+    uint2 pixel_id = DispatchRaysIndex().xy;
+    
+    float2 pixel_shift = GetUnitRandomUniform( pixel_id );
+    
+    float3 camera_ray_origin = PixelPositionToWorld( pixel_id, pixel_shift, 0, view_data.viewport_size_px, view_data.view_proj_inv_mat );
+
+    float3 camera_ray_destination = PixelPositionToWorld( pixel_id, pixel_shift, 1.0f, view_data.viewport_size_px, view_data.view_proj_inv_mat );
+
+    float3 camera_ray_direction = camera_ray_destination - camera_ray_origin;
+
+    float max_t = length( camera_ray_direction );
+    camera_ray_direction = normalize( camera_ray_direction );
+
+    RayDesc camera_ray = { camera_ray_origin, 0, camera_ray_direction, max_t };
+
+    Payload payload = PayloadInit( max_t );
+
+    TraceRay( scene_tlas,
+        ( RAY_FLAG_NONE ),
+        0xFF, 0, 1, 0, camera_ray, payload );
+    
+    HitData initial_hit = GetHitData( payload );
+    
+    if ( initial_hit.geom_index == INVALID_GEOM_INDEX )
+    {
+        if ( view_data.use_accumulation )
+        {
+            output[pixel_id] += float4( GetMissRadiance(), 1 );
+        }
+        else
+        {
+            output[pixel_id] = float4( GetMissRadiance(), 1 );
+        }
+        return;
+    }
+    
+    const uint n_samples = 1;
+    float3 radiance_accum = _float3( 0 );
+    
+    for ( uint sample_i = 0; sample_i < n_samples; ++sample_i )
+    {
+        PathData path = PathInit( camera_ray_origin, camera_ray_direction );
+        
+        const uint n_bounces = 16;
+        HitData current_hit = initial_hit;
+        
+        for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )
+        {
+            float2 e2d = GetUnitRandomUniform( sample_i * n_bounces + bounce_i, pixel_id );
+            
+            // @todo - third random variable
+            float3 e3d = float3( e2d, 0.0f );
+            
+            TracePath( current_hit, e3d, path );
+            
+            if ( path.terminated )
+            {
+                radiance_accum += float3( 1, 0, 1 ) * path.bsdf_acc;
+                break;
+            }
+            
+            RayDesc ray_bounce = { path.current_position_ws, 0, path.current_direction_ws, max_t };
+            
+            Payload payload_bounce = PayloadInit( max_t );
+        
+            TraceRay( scene_tlas,
+                ( RAY_FLAG_NONE ),
+                0xFF, 0, 1, 0, ray_bounce, payload_bounce );
+                
+            if ( all( pixel_id == view_data.cursor_position_px ) )
+            {
+                AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_bounce.t, COLOR_RED, COLOR_GREEN ) );
+            }
+                
+            current_hit = GetHitData( payload_bounce );
+            
+            if ( current_hit.geom_index == INVALID_GEOM_INDEX )
+            {
+                radiance_accum += GetMissRadiance() * path.bsdf_acc;
+                break;
+            }
+        }
+    }
+    
+    float3 output_color = radiance_accum / _float3( n_samples );
+    
+    if ( view_data.use_accumulation )
+    {
+        output[pixel_id] += float4( output_color, 1 );
+    }
+    else
+    {
+        output[pixel_id] = float4( output_color, 1 );
+    }
 }
 
 [shader( "miss" )]

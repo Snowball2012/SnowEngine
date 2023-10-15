@@ -193,23 +193,23 @@ bool CubeAsset::Load( const JsonValue& data )
 
     static std::array<uint16_t, m_cube_indices_count> indices =
     {
-        0, 2, 1,
-        2, 3, 1,
+        0, 1, 2,
+        2, 1, 3,
 
-        4, 5, 6,
-        6, 5, 7,
+        4, 6, 5,
+        6, 7, 6,
 
-        0, 4, 6,
-        0, 6, 2,
+        0, 6, 4,
+        0, 2, 6,
 
-        1, 7, 5,
-        1, 3, 7,
+        1, 5, 7,
+        1, 7, 3,
 
-        0, 5, 4,
-        0, 1, 5,
+        0, 4, 5,
+        0, 5, 1,
 
-        2, 6, 3,
-        3, 6, 7
+        2, 3, 6,
+        3, 7, 6
     };
 
     if ( ! LoadFromData( vertices, indices ) )
