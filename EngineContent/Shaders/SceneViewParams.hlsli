@@ -84,8 +84,8 @@ void AddDebugLine( DebugLine new_line )
     }
 }
 
-// returns 2 floats in [0, 1] range
-float2 GetUnitRandomUniform( uint seed, uint2 pixel_id )
+// returns 3 floats in [0, 1] range
+float3 GetUnitRandomUniform( uint seed, uint2 pixel_id )
 {
    // uint seed_hash = HashUint32( seed );
     
@@ -93,7 +93,7 @@ float2 GetUnitRandomUniform( uint seed, uint2 pixel_id )
     
     uint random_uint = pixel_id_hash;// ^ view_data.random_uint;
     
-    return saturate( float2( random_uint & 0xffff, ( random_uint >> 16 ) & 0xffff ) / _float2( float( 0xffff ) ) );
+    return saturate( float3( random_uint & 1023, ( random_uint >> 10 ) & 1023, ( random_uint >> 20 ) & 1023 ) / _float3( float( 1023 ) ) );
 }
 
 // returns 2 floats in [0, 1] range

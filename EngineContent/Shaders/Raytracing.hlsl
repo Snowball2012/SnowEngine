@@ -4,8 +4,8 @@
 
 [[vk::binding( 0, 0 )]] RWTexture2D<float4> output;
 
-//#define USE_IMPORTANCE_SAMPLING
-//#define USE_GGX_SAMPLING
+#define USE_IMPORTANCE_SAMPLING
+#define USE_GGX_SAMPLING
 
 // pixel_shift is in range [0,1]. 0.5 means middle of the pixel
 float3 PixelPositionToWorld( uint2 pixel_position, float2 pixel_shift, float ndc_depth, uint2 viewport_size, float4x4 view_proj_inverse )
@@ -147,7 +147,16 @@ float VisibleGGXPDF(float3 V, float3 H, float a2)
 	float VoH = saturate( dot(V, H) );
 
 	float d = (NoH * a2 - NoH) * NoH + 1;
-	float D = a2 / (M_PI*d*d);
+	float D = a2 / ( M_PI*d*d );
+
+	float PDF = 2 * VoH * D / (NoV + sqrt(NoV * (NoV - NoV * a2) + a2));
+	return PDF;
+}
+
+float VisibleGGXPDF(float NoV, float NoH, float VoH, float a2)
+{
+	float d = (NoH * a2 - NoH) * NoH + 1;
+	float D = a2 / ( M_PI*d*d );
 
 	float PDF = 2 * VoH * D / (NoV + sqrt(NoV * (NoV - NoV * a2) + a2));
 	return PDF;
@@ -213,21 +222,32 @@ float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
 
     float3 h = normalize( l + v );
     
-    float NoL = saturate( dot( l, n ) );
-    float NoH = saturate( dot( n, h ) );
-    float NoV = saturate( dot( n, v ) );
+    float NoL = ( dot( l, n ) );
+    float NoH = ( dot( n, h ) );
+    float NoV = ( dot( n, v ) );
     
-    float3 lambertian_diffuse = albedo / M_PI;    
+    if ( ( NoL <= FLT_EPSILON ) || ( NoH <= FLT_EPSILON ) || ( NoV <= FLT_EPSILON ) )
+        return float3( 0, 0, 0 );
+        
+    NoL = saturate( NoL );
+    NoH = saturate( NoH );
+    NoV = saturate( NoV );
+    
+    float3 lambertian_diffuse = albedo / M_PI;
     
     float a = sqr( roughness );
     float a2 = sqr( a );
     
-    float d_h = a2 / ( M_PI * sqr( sqr( NoH ) * ( a2 - 1.0f ) + 1.0f ) );
+    float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, NoH, a2 ) );
     
-    float g_ggx_l_inv = max( 1.e-3f, NoL + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoL ) ) );
-    float g_ggx_v_inv = max( 1.e-3f, NoV + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoV ) ) );    
-    
-    float3 ggx_spec = _float3( d_h / ( g_ggx_l_inv * g_ggx_v_inv ) );    
+    //float d_h = a2 / ( M_PI * sqr( sqr( NoH ) * ( a2 - 1.0f ) + 1.0f ) );
+    //
+    //float g_ggx_l_inv = max( 1.e-3f, NoL + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoL ) ) );
+    //float g_ggx_v_inv = max( 1.e-3f, NoV + sqrt( a2 + ( 1.0f - a2 ) * sqr( NoV ) ) );    
+    //
+    //float denom = ( 1.0f / ( g_ggx_l_inv * g_ggx_v_inv ) );
+    //
+    //float3 ggx_spec = _float3( d_h * denom );    
     
     float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - NoL, 5 );
 
@@ -245,32 +265,53 @@ struct BSDFSampleOutput
 BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e )
 {
     #if defined USE_IMPORTANCE_SAMPLING
-        #if defined USE_GGX_SAMPLING
-            float3 v_ts = mul( inputs.tnb, -dir_i );
-            float4 dir_o_ts = ImportanceSampleVisibleGGX( e.xy, pow( inputs.roughness, 4 ), v_ts.xzy );
-            dir_o_ts.xyz = dir_o_ts.xzy;
-        #else
-            float4 dir_o_ts = SampleHemisphereCosineWeighted( e.xy );
-        #endif
+        float4 dir_o_ts = float4( 0, 0, 0, 0 );
+        float3 v_ts = mul( inputs.tnb, -dir_i );
+        float a2 = pow( inputs.roughness, 4 );
+        if ( e.z > 0.5f/* inputs.roughness*/ )
+        {
+            float4 dir_o_ts_spec = float4( 0, 0, 0, 0 );
+            dir_o_ts_spec = ImportanceSampleVisibleGGX( e.xy, a2, v_ts.xzy );
+            dir_o_ts_spec.xyz = dir_o_ts_spec.xzy;
+            
+            dir_o_ts.xyz = dir_o_ts_spec.xyz;
+            
+            float difuse_pdf = abs( dir_o_ts.y ) / M_PI; 
+            dir_o_ts.w = lerp( dir_o_ts_spec.w, difuse_pdf, 0.5f/*inputs.roughness*/ );
+        }
+        else
+        {
+            float4 dir_o_ts_diffuse = SampleHemisphereCosineWeighted( e.xy );
+            
+            dir_o_ts.xyz = dir_o_ts_diffuse.xyz;
+            
+            float3 h = normalize( dir_o_ts.xyz + v_ts );
+            
+            float spec_pdf = VisibleGGXPDF( v_ts.xzy, h.xzy, a2 ); 
+            dir_o_ts.w = lerp( spec_pdf, dir_o_ts_diffuse.w, 0.5f/*inputs.roughness*/ );
+        }
         float pdf = dir_o_ts.w;
     #else
         float3 dir_o_ts = SampleHemisphereUniform( e.xy );
         float pdf = 0.5f / M_PI;
     #endif
     
-    float3 dir_o_ws = mul( dir_o_ts.xyz, inputs.tnb );
-    
+    float3 dir_o_ws = normalize( mul( dir_o_ts.xyz, inputs.tnb ) );
     
     float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i );
     
     BSDFSampleOutput output;
     output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) ) / max( pdf, 1.e-6f );
+    
+    if ( dir_o_ts.y < 0 )
+        output.integration_term = _float3( 0 );
+    
     output.dir_o = dir_o_ws;
     
     return output;
 }
 
-static const float TEST_ROUGHNESS = 0.9f;
+static const float TEST_ROUGHNESS = 0.3f;
 
 BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out bool hit_valid )
 {
@@ -290,12 +331,15 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f );
     float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f );
     
-    float rabbit_roughness = TEST_ROUGHNESS;
-    float floor_roughness = TEST_ROUGHNESS;
+    float rabbit_roughness = 0.3f;
+    float floor_roughness = 0.03f;
     
-    inputs.albedo = hit_data.geom_index == 0 ? rabbit_albedo : floor_albedo;
+    float3 rabbit_f0 = rabbit_albedo * 5;
+    float3 floor_f0 = _float3( 0.04f );
+    
+    inputs.albedo = hit_data.geom_index == 0 ?  _float3( 0 ) : floor_albedo;
     inputs.roughness = hit_data.geom_index == 0 ? rabbit_roughness : floor_roughness;
-    inputs.f0 = _float3( 0.04f );
+    inputs.f0 = hit_data.geom_index == 0 ? rabbit_f0 : floor_f0;
     
     inputs.normal = hit_normal_ws;
     
@@ -656,11 +700,12 @@ void VisibilityRGS()
     {
         if ( view_data.use_accumulation )
         {
-            output[pixel_id] += float4( GetMissRadiance(), 1 );
+            float4 cur_value = output[pixel_id];
+            output[pixel_id] = float4( cur_value.xyz + GetMissRadiance(), asfloat( asuint( cur_value.w ) + 1 ) );
         }
         else
         {
-            output[pixel_id] = float4( GetMissRadiance(), 1 );
+            output[pixel_id] = float4( GetMissRadiance(), asfloat( uint( 1 ) ) );
         }
         return;
     }
@@ -677,12 +722,16 @@ void VisibilityRGS()
         
         for ( uint bounce_i = 0; bounce_i < n_bounces; ++bounce_i )
         {
-            float2 e2d = GetUnitRandomUniform( sample_i * n_bounces + bounce_i, pixel_id );
+            float3 e3d = GetUnitRandomUniform( sample_i * n_bounces + bounce_i, pixel_id );
             
             // @todo - third random variable
-            float3 e3d = float3( e2d, 0.0f );
             
             TracePath( current_hit, e3d, path );
+            
+            if ( all( path.bsdf_acc < FLT_EPSILON ) )
+            {
+                break;
+            }
             
             if ( path.terminated )
             {
@@ -717,11 +766,12 @@ void VisibilityRGS()
     
     if ( view_data.use_accumulation )
     {
-        output[pixel_id] += float4( output_color, 1 );
+        float4 cur_value = output[pixel_id];
+        output[pixel_id] = float4( cur_value.xyz + output_color, asfloat( asuint( cur_value.w ) + 1 ) );
     }
     else
     {
-        output[pixel_id] = float4( output_color, 1 );
+        output[pixel_id] = float4( output_color, asfloat( uint( 1 ) ) );
     }
 }
 
