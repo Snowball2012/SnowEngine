@@ -277,49 +277,8 @@ bool SandboxApp::OpenLevel( const char* filepath )
 
 void SandboxApp::UpdateCamera( float delta_time )
 {
-    glm::vec3 camera_movement_ls = glm::vec3( 0, 0, 0 );
-    if ( ImGui::GetIO().MouseDown[1] )
-    {
-        float cam_turn_speed = m_cam_turn_speed * ( m_fov_degrees / 45.0f );
-        m_cam_angles_radians.x -= ImGui::GetIO().MouseDelta.x * cam_turn_speed;
-        m_cam_angles_radians.y += ImGui::GetIO().MouseDelta.y * cam_turn_speed;
-        m_cam_angles_radians.y = std::clamp<float>( m_cam_angles_radians.y, float( M_PI * 0.01f ), float( M_PI * 0.99f ) );
-
-        m_cam_angles_radians.x = fmodf( m_cam_angles_radians.x, M_PI * 2.0f );
-
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_W ) )
-        {
-            camera_movement_ls.z += 1.0f;
-        }
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_S ) )
-        {
-            camera_movement_ls.z -= 1.0f;
-        }
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_A ) )
-        {
-            camera_movement_ls.x -= 1.0f;
-        }
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_D ) )
-        {
-            camera_movement_ls.x += 1.0f;
-        }
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_C ) )
-        {
-            camera_movement_ls.y -= 1.0f;
-        }
-        if ( ImGui::IsKeyDown( ImGuiKey::ImGuiKey_Space ) )
-        {
-            camera_movement_ls.y += 1.0f;
-        }
-        camera_movement_ls *= m_cam_move_speed * delta_time;
-
-        m_scene_view->ResetAccumulation();
-    }
-    
-    glm::quat orientation_ws = m_scene_view->SetCameraOrientation( m_cam_angles_radians );
-    m_cam_pos += glm::rotate( orientation_ws, camera_movement_ls );
-    m_scene_view->SetCameraPosition( m_cam_pos );
-    m_scene_view->SetFOV( glm::radians( m_fov_degrees ) );
+    m_editor_camera.Update( delta_time );
+    m_editor_camera.SetupView( *m_scene_view );
 }
 
 void SandboxApp::OnSwapChainRecreated()
@@ -419,9 +378,7 @@ void SandboxApp::UpdateGui()
     bool scene_view_changed = false;
     ImGui::Begin( "Demo" );
     {
-        ImGui::DragFloat( "Cam turning speed", &m_cam_turn_speed, std::max( 0.001f, m_cam_turn_speed ) );
-        scene_view_changed |= ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
-        ImGui::Text( "%f %f", m_cam_angles_radians.x, m_cam_angles_radians.y );
+        scene_view_changed |= m_editor_camera.UpdateGUI();
 
         // Level outliner
         {

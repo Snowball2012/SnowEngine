@@ -80,7 +80,7 @@ public:
     SceneView( Scene* scene );
 
     void SetLookAt( const glm::vec3& eye, const glm::vec3& center );
-    glm::quat SetCameraOrientation( const glm::vec2& angles );
+    void SetCameraOrientation( const glm::quat& orientation );
     void SetCameraPosition( const glm::vec3& eye );
     void SetExtents( const glm::uvec2& extents );
 

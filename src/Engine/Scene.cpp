@@ -76,10 +76,9 @@ void SceneView::SetLookAt( const glm::vec3& eye, const glm::vec3& center )
     m_eye_orientation = glm::quatLookAt( glm::normalize( center - eye ), m_up );
 }
 
-glm::quat SceneView::SetCameraOrientation( const glm::vec2& angles )
+void SceneView::SetCameraOrientation( const glm::quat& orientation )
 {
-    m_eye_orientation = glm::quatLookAt( SphericalToCartesian( 1.0f, angles.x, angles.y ), m_up );
-    return m_eye_orientation;
+    m_eye_orientation = orientation;
 }
 
 void SceneView::SetCameraPosition( const glm::vec3& eye )
