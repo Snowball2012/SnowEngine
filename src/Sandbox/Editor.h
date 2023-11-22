@@ -4,23 +4,6 @@
 
 #include <Engine/LevelObjects.h>
 
-class Editor
-{
-private:
-public:
-};
-
-
-struct EditorCameraCommands
-{
-	bool forward = false;
-	bool back = false;
-	bool move_left = false;
-	bool move_right = false;
-	bool up = false;
-	bool down = false;
-};
-
 class EditorCamera
 {
 private:
@@ -41,4 +24,41 @@ public:
 	bool UpdateGUI();
 
 	void Update( float delta_time );
+};
+
+class LevelEditor
+{
+private:
+
+	std::vector<std::unique_ptr<LevelObject>> m_level_objects;
+
+	EditorCamera m_editor_camera;
+
+	std::unique_ptr<World> m_world;
+
+	std::unique_ptr<Scene> m_scene;
+	std::unique_ptr<SceneView> m_scene_view;
+
+public:
+	LevelEditor();
+	~LevelEditor();
+
+	bool OpenLevel( const char* filepath );
+	bool SaveLevel( const char* filepath ) const;
+
+	bool Update( float delta_time_sec );
+	bool Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension );
+
+	bool SetViewportExtents( glm::uvec2 extents );
+
+	void ResetAccumulation();
+
+	// @todo: can't return const world because const views are not supported in ecs yet
+	World* GetWorld() const { return m_world.get(); }
+
+private:
+
+	void UpdateCamera( float delta_time_sec );
+
+	void UpdateScene();
 };

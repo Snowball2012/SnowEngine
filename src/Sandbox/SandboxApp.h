@@ -11,27 +11,16 @@
 #include <Engine/LevelObjects.h>
 #include <ImguiBackend/ImguiBackend.h>
 
-SE_LOG_CATEGORY( Sandbox );
-
 class SandboxApp : public EngineApp
 {
 private:
 	std::string m_current_level_path = std::string( "#engine/Levels/Default.sel" );
 
-	std::unique_ptr<World> m_world;
-
-	std::unique_ptr<Scene> m_scene;
-	std::unique_ptr<SceneView> m_scene_view;
-
 	// GUI state
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
 
-	std::vector<std::unique_ptr<LevelObject>> m_level_objects;
-
-	std::unique_ptr<Editor> m_editor;
-
-	EditorCamera m_editor_camera;
+	std::unique_ptr<LevelEditor> m_editor;
 
 	decltype( std::chrono::high_resolution_clock::now() ) m_last_tick_time;
 
@@ -56,11 +45,4 @@ private:
 	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }
 
 	void UpdateGui();
-
-	void UpdateScene();
-
-	bool SaveLevel( const char* filepath ) const;
-	bool OpenLevel( const char* filepath );
-
-	void UpdateCamera( float delta_time );
 };

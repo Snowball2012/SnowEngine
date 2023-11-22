@@ -45,16 +45,10 @@ void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
-    m_scene = std::make_unique<Scene>();
-    m_scene_view = std::make_unique<SceneView>( m_scene.get() );
+    m_editor = std::make_unique<LevelEditor>();
+    m_editor->SetViewportExtents( m_swapchain->GetExtent() );
 
-    m_scene_view->SetExtents( m_swapchain->GetExtent() );
-
-    m_world = std::make_unique<World>();
-
-    m_editor = std::make_unique<Editor>();
-
-    if ( !OpenLevel( ToOSPath( m_current_level_path.c_str() ).c_str() ) )
+    if ( !m_editor->OpenLevel( ToOSPath( m_current_level_path.c_str() ).c_str() ) )
     {
         SE_LOG_ERROR( Sandbox, "Could not open level at path %s", m_current_level_path.c_str() );
     }
@@ -68,20 +62,11 @@ void SandboxApp::OnCleanup()
 
     m_editor = nullptr;
 
-    m_level_objects.clear();
-
-    m_world = nullptr;
-
-    m_scene_view = nullptr;
-    m_scene = nullptr;
-
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
 
 void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
 {
-    m_scene->Synchronize();
-
     class SandboxRenderExtension : public ISceneRenderExtension
     {
         SandboxApp& m_app;
@@ -149,141 +134,29 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_li
 
     } extension( *this, ui_cmd_list );
 
-    RenderSceneParams parms = {};
-    parms.rg = &framegraph;
-    parms.view = m_scene_view.get();
-    parms.extension = &extension;
 
-    m_renderer->RenderScene( parms );
+    m_editor->Draw( framegraph, &extension );
 }
 
 void SandboxApp::OnUpdate()
 {
     UpdateGui();
 
-    // Update world
-    WorldUtils::DestroyMarkedEntities( *m_world, m_scene.get() );
-    WorldUtils::SetupEntities( *m_world, m_scene.get() );
-
+    // @todo - some helper to manage app time
     static auto start_time = std::chrono::high_resolution_clock::now();
 
     auto current_time = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - start_time ).count();
     float delta_time = std::chrono::duration<float, std::chrono::seconds::period>( current_time - m_last_tick_time ).count();
     m_last_tick_time = current_time;
-    UpdateCamera( delta_time );
 
-    UpdateScene();
+    m_editor->Update( delta_time );
 }
 
-void SandboxApp::UpdateScene()
-{
-    // this should be somewhere in the engine code
-
-    // @todo - run only for dirty transforms
-    for ( const auto& [entity_id, tf, mesh_instance_component] : m_world->CreateView<TransformComponent, MeshInstanceComponent>() )
-    {
-        SceneMeshInstance* smi = m_scene->GetMeshInstance( mesh_instance_component.scene_mesh_instance );
-        if ( !SE_ENSURE( smi ) )
-            continue;
-
-        smi->m_tf = tf.tf;
-    }
-
-    ImVec2 imgui_mouse_pos = ImGui::GetMousePos();
-    glm::uvec2 scene_cursor_pos = glm::uvec2( imgui_mouse_pos.x, imgui_mouse_pos.y );
-    m_scene_view->SetCursorPosition( scene_cursor_pos );
-}
-
-bool SandboxApp::SaveLevel( const char* filepath ) const
-{
-    SE_LOG_INFO( Sandbox, "Save level to %s", filepath );
-
-    std::ofstream file( filepath, std::ios_base::trunc );
-
-    if ( !file.good() )
-    {
-        SE_LOG_ERROR( Sandbox, "Can't open file %s for writing", filepath );
-        return false;
-    }
-
-    Json d;
-    d.SetObject();
-
-    JsonValue generator;
-    generator.SetString( "LevelAsset", d.GetAllocator() );
-    d.AddMember( "_generator", generator, d.GetAllocator() );
-    JsonValue levelobjects_array;
-    levelobjects_array.SetArray();
-    levelobjects_array.Reserve( rapidjson::SizeType( m_level_objects.size() ), d.GetAllocator() );
-
-    for ( const auto& level_obj : m_level_objects )
-    {
-        JsonValue obj_json;
-        
-        level_obj->Serialize( obj_json, d.GetAllocator() );
-        levelobjects_array.PushBack( obj_json, d.GetAllocator() );
-    }
-
-    d.AddMember( "objects", levelobjects_array, d.GetAllocator() );
-
-    rapidjson::OStreamWrapper osw( file );
-    rapidjson::PrettyWriter<rapidjson::OStreamWrapper> writer( osw );
-    d.Accept( writer );
-
-    return true;
-}
-
-bool SandboxApp::OpenLevel( const char* filepath )
-{
-    SE_LOG_INFO( Sandbox, "Open level %s", filepath );
-
-    std::ifstream file( filepath );
-    if ( !file.good() )
-    {
-        SE_LOG_ERROR( Engine, "Can't open level file %s", filepath );
-        return false;
-    }
-
-    Json d;
-    rapidjson::IStreamWrapper isw( file );
-    if ( d.ParseStream( isw ).HasParseError() )
-    {
-        SE_LOG_ERROR( Engine, "File %s is not a valid asset file : json parse error", filepath );
-        return false;
-    }
-
-    JsonValue::MemberIterator object_property = d.FindMember( "objects" );
-    if ( object_property == d.MemberEnd() || !object_property->value.IsArray() )
-    {
-        SE_LOG_ERROR( Engine, "File %s is not a valid level file : objects value is invalid (not found or not an array)", filepath );
-        return false;
-    }
-
-    m_level_objects.clear();
-
-    for ( auto& v : object_property->value.GetArray() )
-    {
-        auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-        if ( !new_object->Deserialize( v, false ) )
-        {
-            m_level_objects.pop_back();
-            continue;
-        }
-    }
-
-    return true;
-}
-
-void SandboxApp::UpdateCamera( float delta_time )
-{
-    m_editor_camera.Update( delta_time );
-    m_editor_camera.SetupView( *m_scene_view );
-}
 
 void SandboxApp::OnSwapChainRecreated()
 {
-    m_scene_view->SetExtents( m_swapchain->GetExtent() );
+    m_editor->SetViewportExtents( m_swapchain->GetExtent() );
 }
 
 void SandboxApp::UpdateGui()
@@ -294,7 +167,7 @@ void SandboxApp::UpdateGui()
         {
             if ( ImGui::MenuItem( "New" ) )
             {
-                OpenLevel( ToOSPath( "#engine/Levels/Default.sel" ).c_str() );
+                m_editor->OpenLevel( ToOSPath( "#engine/Levels/Default.sel" ).c_str() );
             }
 
             if ( ImGui::MenuItem( "Open" ) )
@@ -320,8 +193,7 @@ void SandboxApp::UpdateGui()
         if ( ImGui::MenuItem( "ReloadShaders" ) )
         {
             m_rhi->ReloadAllShaders();
-            if ( m_scene_view != nullptr )
-                m_scene_view->ResetAccumulation();
+            m_editor->ResetAccumulation();
         }
 
         if ( ImGui::MenuItem( "PrintCVars" ) )
@@ -338,7 +210,7 @@ void SandboxApp::UpdateGui()
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
             std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
-            SaveLevel( filePathName.c_str() );
+            m_editor->SaveLevel( filePathName.c_str() );
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -352,7 +224,7 @@ void SandboxApp::UpdateGui()
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
             std::string fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
 
-            OpenLevel( filePathName.c_str() );
+            m_editor->OpenLevel( filePathName.c_str() );
         }
 
         ImGuiFileDialog::Instance()->Close();
@@ -365,79 +237,21 @@ void SandboxApp::UpdateGui()
     {
         ImGui::Begin( "World", &m_show_world_outliner, ImGuiWindowFlags_None );
         {
-            ImGui::Text( "Total: %llu entities", m_world->GetEntityCount() );
-
-            for ( auto&& [id, name_comp] : m_world->CreateView<NameComponent>() )
+            World* current_world = m_editor->GetWorld();
+            if ( SE_ENSURE( current_world != nullptr ) )
             {
-                ImGui::Text( name_comp.name.c_str() );
+                ImGui::Text( "Total: %llu entities", current_world->GetEntityCount() );
+
+                for ( auto&& [id, name_comp] : current_world->CreateView<NameComponent>() )
+                {
+                    ImGui::Text( name_comp.name.c_str() );
+                }
+            }
+            else
+            {
+                ImGui::Text( "World not found" );
             }
         }
         ImGui::End();
     }
-
-    bool scene_view_changed = false;
-    ImGui::Begin( "Demo" );
-    {
-        scene_view_changed |= m_editor_camera.UpdateGUI();
-
-        // Level outliner
-        {
-            ImGui::Text( "Total: %llu level objects", m_level_objects.size() );
-            bool create_object = ImGui::Button( "Add object" );
-            ImGui::SameLine();
-            static std::string new_object_name;
-            ImGui::InputText( "Name", &new_object_name );
-
-            if ( create_object )
-            {
-                auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-                new_object->SetName( new_object_name.c_str(), true );
-                new_object->RegenerateEntities();
-                scene_view_changed = true;
-            }
-
-            for ( auto& level_object : m_level_objects )
-            {
-                ImGui::PushID( level_object.get() );
-                if ( ImGui::CollapsingHeader( level_object->GetName() ) )
-                {
-                    bool create_trait = ImGui::Button( "Add" );
-                    ImGui::SameLine();
-                    static int item_current = 0;
-                    ImGui::Combo( "Trait", &item_current, "Transform\0MeshInstance\0" );
-
-                    if ( create_trait )
-                    {
-                        switch ( item_current )
-                        {
-                            case 0:
-                            {
-                                level_object->AddTrait( std::make_unique<TransformTrait>(), true );
-                            }
-                            break;
-                            case 1:
-                            {
-                                level_object->AddTrait( std::make_unique<MeshInstanceTrait>(), true );
-                            }
-                            break;
-                        }
-                        level_object->RegenerateEntities();
-                        scene_view_changed = true;
-                    }
-
-                    if ( level_object->OnUpdateGUI() )
-                    {
-                        level_object->RegenerateEntities();
-                        scene_view_changed = true;
-                    }
-                }
-                ImGui::PopID();
-            }
-        }
-    }
-    if ( scene_view_changed && m_scene_view != nullptr )
-    {
-        m_scene_view->ResetAccumulation();
-    }
-    ImGui::End();
 }
