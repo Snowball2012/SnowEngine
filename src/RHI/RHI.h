@@ -10,6 +10,7 @@ class RHIShader;
 class RHIBuffer;
 class RHITexture;
 class RHIUploadBuffer;
+class RHIReadbackBuffer;
 class RHIASInstanceBuffer;
 class RHIAccelerationStructure;
 class RHIDescriptorSetLayout;
@@ -285,6 +286,7 @@ public:
         RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
     };
     virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
+    virtual RHIReadbackBuffer* CreateReadbackBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
     virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
     
     struct ASInstanceBufferInfo
@@ -805,6 +807,19 @@ public:
     virtual void WriteBytes( const void* src, size_t size, size_t offset = 0 ) { NOTIMPL; }
 };
 using RHIUploadBufferPtr = RHIObjectPtr<RHIUploadBuffer>;
+
+class RHIReadbackBuffer : public RHIObject
+{
+public:
+    virtual ~RHIReadbackBuffer() override {}
+
+    // For rhi needs
+    virtual RHIBuffer* GetBuffer() { NOTIMPL; return nullptr; }
+    virtual const RHIBuffer* GetBuffer() const { NOTIMPL; return nullptr; }
+
+    virtual void ReadBytes( void* src, size_t size, size_t offset = 0 ) { NOTIMPL; }
+};
+using RHIReadbackBufferPtr = RHIObjectPtr<RHIReadbackBuffer>;
 
 class RHIASInstanceBuffer : public RHIObject
 {

@@ -1525,6 +1525,11 @@ RHIUploadBuffer* VulkanRHI::CreateUploadBuffer( const RHI::BufferInfo& buf_info 
     return new VulkanUploadBuffer( this, buf_info );
 }
 
+RHIReadbackBuffer* VulkanRHI::CreateReadbackBuffer( const BufferInfo& buf_info )
+{
+    return new VulkanReadbackBuffer( this, buf_info );
+}
+
 RHIBuffer* VulkanRHI::CreateDeviceBuffer( const BufferInfo& buf_info )
 {
     return new VulkanBuffer( this, buf_info, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, 0, 0 );

@@ -136,6 +136,7 @@ public:
 
 	virtual RHIBuffer* CreateDeviceBuffer( const BufferInfo& buf_info ) override;
 	virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& buf_info ) override;
+	virtual RHIReadbackBuffer* CreateReadbackBuffer( const BufferInfo& buf_info ) override;
 
 	virtual RHIASInstanceBuffer* CreateASInstanceBuffer( const ASInstanceBufferInfo& info ) override;
 

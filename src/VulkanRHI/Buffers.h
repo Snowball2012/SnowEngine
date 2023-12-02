@@ -47,3 +47,22 @@ public:
 };
 IMPLEMENT_RHI_INTERFACE( RHIUploadBuffer, VulkanUploadBuffer )
 using VulkanUploadBufferPtr = RHIObjectPtr<VulkanUploadBuffer>;
+
+class VulkanReadbackBuffer : public RHIReadbackBuffer
+{
+    GENERATE_RHI_OBJECT_BODY()
+
+    VulkanBufferPtr m_buffer = nullptr;
+
+public:
+    VulkanReadbackBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info );
+
+    virtual ~VulkanReadbackBuffer() override;
+
+    virtual void ReadBytes( void* dst, size_t size, size_t offset ) override;
+
+    virtual RHIBuffer* GetBuffer() override { return m_buffer.get(); }
+    virtual const RHIBuffer* GetBuffer() const override { return m_buffer.get(); }
+};
+IMPLEMENT_RHI_INTERFACE( RHIReadbackBuffer, VulkanReadbackBuffer )
+using VulkanReadbackBufferPtr = RHIObjectPtr<VulkanReadbackBuffer>;

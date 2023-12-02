@@ -45,6 +45,7 @@ size_t VulkanBuffer::GetSize() const
     return m_buffer_size;
 }
 
+
 IMPLEMENT_RHI_OBJECT( VulkanUploadBuffer )
 
 VulkanUploadBuffer::VulkanUploadBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info )
@@ -67,3 +68,28 @@ void VulkanUploadBuffer::WriteBytes( const void* src, size_t size, size_t offset
     VERIFY_NOT_EQUAL( info.pMappedData, nullptr );
     memcpy( ( uint8_t* )info.pMappedData + offset, src, size );
 }
+
+
+IMPLEMENT_RHI_OBJECT( VulkanReadbackBuffer )
+
+VulkanReadbackBuffer::VulkanReadbackBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info )
+    : m_rhi( rhi )
+{
+    m_buffer = new VulkanBuffer(
+        rhi, info, VMA_MEMORY_USAGE_AUTO,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+        VK_MEMORY_PROPERTY_HOST_CACHED_BIT );
+}
+
+VulkanReadbackBuffer::~VulkanReadbackBuffer()
+{
+}
+
+void VulkanReadbackBuffer::ReadBytes( void* dst, size_t size, size_t offset )
+{
+    VmaAllocationInfo info;
+    m_buffer->GetAllocationInfo( info );
+    VERIFY_NOT_EQUAL( info.pMappedData, nullptr );
+    memcpy( dst, ( uint8_t* )info.pMappedData + offset, size );
+}
+
