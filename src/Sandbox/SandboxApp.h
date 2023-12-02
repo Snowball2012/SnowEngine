@@ -35,11 +35,14 @@ private:
 
 	virtual void OnCleanup() override;
 
-	virtual void OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list ) override;
+	virtual void OnDrawFrame( Rendergraph& framegraph, const AppGPUReadbackData& readback_data, RHICommandList* ui_cmd_list ) override;
 
 	virtual void OnUpdate() override;
 
 	virtual void OnSwapChainRecreated() override;
+
+	virtual void OnFrameRenderFinish( const AppGPUReadbackData& data ) override;
+	virtual void CreateReadbackData( AppGPUReadbackData& data ) override;
 
 	virtual const char* GetMainWindowName() const override { return "SnowEngine Sandbox"; }
 	virtual const char* GetAppName() const override { return "SnowEngineSandbox"; }

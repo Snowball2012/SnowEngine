@@ -149,6 +149,11 @@ public:
     RHIDescriptorSetLayout* GetLayout() const { return m_global_dsl.get(); }
 };
 
+struct ViewFrameReadbackData
+{
+    int32_t as_instance_idx_under_cursor;
+};
+
 class Renderer
 {
 private:
@@ -187,6 +192,8 @@ public:
     GlobalDescriptors& GetGlobalDescriptors() const { return *m_global_descriptors; }
 
     const DebugDrawing& GetDebugDrawing() const { return *m_debug_drawing; }
+
+    RHIReadbackBufferPtr CreateViewFrameReadbackBuffer() const;
 
 private:
 

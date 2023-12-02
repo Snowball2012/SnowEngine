@@ -12,6 +12,11 @@ struct CommandLineArguments
 
 class Rendergraph;
 
+struct AppGPUReadbackData
+{
+	RHIReadbackBufferPtr buffer;
+};
+
 class EngineApp
 {
 private:
@@ -28,8 +33,10 @@ private:
 	std::vector<RHIFence> m_inflight_fences;
 	std::vector<uint64_t> m_imgui_frames;
 	uint32_t m_current_frame = 0;
+	bool m_readback_valid = false;
 
 	std::vector<std::unique_ptr<Rendergraph>> m_rendergraphs;
+	std::vector<AppGPUReadbackData> m_readback_data;
 
 	bool m_fb_resized = false;
 
@@ -60,8 +67,10 @@ protected:
 	virtual void OnInit() {}
 	virtual void OnCleanup() {}
 	virtual void OnUpdate() {}
-	virtual void OnDrawFrame( class Rendergraph& framegraph, RHICommandList* ui_cmd_list ) {}
+	virtual void OnDrawFrame( class Rendergraph& framegraph, const AppGPUReadbackData& readback_data, RHICommandList* ui_cmd_list ) {}
 	virtual void OnSwapChainRecreated() {}
+	virtual void OnFrameRenderFinish( const AppGPUReadbackData& data ) {}
+	virtual void CreateReadbackData( AppGPUReadbackData& data ) {}
 
 	// returns frame index % m_max_frames_in_flight
 	uint32_t GetCurrentFrameIdx() const { return m_current_frame; }
@@ -70,6 +79,7 @@ private:
 	void InitCoreGlobals();
 	void InitConsole();
 	void InitEngineGlobals();
+	void InitReadbacks();
 	void ParseCommandLine( int argc, char** argv );
 
 	void InitRHI();

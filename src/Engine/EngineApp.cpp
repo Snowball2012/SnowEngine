@@ -63,6 +63,8 @@ void EngineApp::Run( int argc, char** argv )
     m_renderer = std::make_unique<Renderer>();
     g_engine.renderer = m_renderer.get();
 
+    InitReadbacks();
+
     OnInit();
 
     MainLoop();
@@ -296,6 +298,11 @@ void EngineApp::DrawFrame()
     m_rhi->WaitForFenceCompletion( m_inflight_fences[m_current_frame] );
     m_imgui->MarkFrameAsCompleted( m_imgui_frames[m_current_frame] );
 
+    if ( m_readback_valid )
+    {
+        OnFrameRenderFinish( m_readback_data[m_current_frame] );
+    }
+
     if ( m_fb_resized )
     {
         m_swapchain->Recreate();
@@ -311,7 +318,7 @@ void EngineApp::DrawFrame()
     Rendergraph& framegraph = *m_rendergraphs[m_current_frame].get();
     framegraph.Reset();
 
-    OnDrawFrame( framegraph, imgui_res.cl );
+    OnDrawFrame( framegraph, m_readback_data[m_current_frame], imgui_res.cl );
 
     RGSubmitInfo fg_submit_info = {};
     RHISemaphore* wait_semaphores[] = { m_image_available_semaphores[m_current_frame].get() };
@@ -331,6 +338,11 @@ void EngineApp::DrawFrame()
     m_rhi->Present( *m_swapchain, present_info );
 
     m_current_frame = ( m_current_frame + 1 ) % m_max_frames_in_flight;
+    if ( m_current_frame == 0 )
+    {
+        // that means we saturated frame queue and can start receiving initialized readback structure
+        m_readback_valid = true;
+    }
 }
 
 void EngineApp::InitCoreGlobals()
@@ -356,6 +368,15 @@ void EngineApp::InitEngineGlobals()
     g_engine.rhi = m_rhi.get();
     g_engine.asset_mgr = m_asset_mgr.get();
     g_engine.console = m_console.get();
+}
+
+void EngineApp::InitReadbacks()
+{
+    m_readback_data.resize( m_max_frames_in_flight );
+    for ( auto& data : m_readback_data )
+    {
+        CreateReadbackData( data );
+    }
 }
 
 void EngineApp::CreateSyncObjects()

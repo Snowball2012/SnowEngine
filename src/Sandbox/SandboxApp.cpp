@@ -65,7 +65,7 @@ void SandboxApp::OnCleanup()
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
 }
 
-void SandboxApp::OnDrawFrame( Rendergraph& framegraph, RHICommandList* ui_cmd_list )
+void SandboxApp::OnDrawFrame( Rendergraph& framegraph, const AppGPUReadbackData& readback_data, RHICommandList* ui_cmd_list )
 {
     class SandboxRenderExtension : public ISceneRenderExtension
     {
@@ -157,6 +157,16 @@ void SandboxApp::OnUpdate()
 void SandboxApp::OnSwapChainRecreated()
 {
     m_editor->SetViewportExtents( m_swapchain->GetExtent() );
+}
+
+void SandboxApp::OnFrameRenderFinish( const AppGPUReadbackData& data )
+{
+    // Do nothing for now
+}
+
+void SandboxApp::CreateReadbackData( AppGPUReadbackData& data )
+{
+    data.buffer = GetRenderer().CreateViewFrameReadbackBuffer();
 }
 
 void SandboxApp::UpdateGui()

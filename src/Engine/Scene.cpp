@@ -256,6 +256,15 @@ void Renderer::CreateRTPipeline()
     m_rt_pipeline = GetRHI().CreatePSO( rt_pipeline_info );
 }
 
+RHIReadbackBufferPtr Renderer::CreateViewFrameReadbackBuffer() const
+{
+    RHI::BufferInfo view_frame_readback_info;
+    view_frame_readback_info.size = sizeof( ViewFrameReadbackData );
+    view_frame_readback_info.usage = RHIBufferUsageFlags::StructuredBuffer;
+
+    return GetRHI().CreateReadbackBuffer( view_frame_readback_info );
+}
+
 void Renderer::CreatePrograms()
 {
     m_blit_texture_prog = std::make_unique<BlitTextureProgram>();
