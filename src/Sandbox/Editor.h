@@ -32,6 +32,8 @@ private:
 
 	std::vector<std::unique_ptr<LevelObject>> m_level_objects;
 
+	int m_selected_object = -1;
+
 	EditorCamera m_editor_camera;
 
 	std::unique_ptr<World> m_world;

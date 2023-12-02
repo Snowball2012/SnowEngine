@@ -187,18 +187,38 @@ bool LevelEditor::Update( float delta_time_sec )
             static std::string new_object_name;
             ImGui::InputText( "Name", &new_object_name );
 
+            ImGui::Text( "Level Objects" );
+            if ( ImGui::BeginListBox( "##levelobjectslistbox", ImVec2( -FLT_MIN, 5 * ImGui::GetTextLineHeightWithSpacing() ) ) )
+            {
+                for ( int n = 0; n < m_level_objects.size(); n++ )
+                {
+                    const bool is_selected = ( m_selected_object == n );
+                    if ( ImGui::Selectable( m_level_objects[n]->GetName(), is_selected) )
+                        m_selected_object = n;
+
+                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                    if ( is_selected )
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndListBox();
+            }
+
             if ( create_object )
             {
                 auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
                 new_object->SetName( new_object_name.c_str(), true );
                 new_object->RegenerateEntities();
                 scene_view_changed = true;
+
+                m_selected_object = int( m_level_objects.size() ) - 1;
             }
 
-            for ( auto& level_object : m_level_objects )
+            if ( m_selected_object >= 0 && m_selected_object < int( m_level_objects.size() ) )
             {
+                auto& level_object = m_level_objects[m_selected_object];
+
                 ImGui::PushID( level_object.get() );
-                if ( ImGui::CollapsingHeader( level_object->GetName() ) )
+                ImGui::SeparatorText( level_object->GetName() );
                 {
                     bool create_trait = ImGui::Button( "Add" );
                     ImGui::SameLine();
@@ -242,6 +262,12 @@ bool LevelEditor::Update( float delta_time_sec )
     ImGui::End();
 
     UpdateCamera( delta_time_sec );
+
+    // handle deselection
+    if ( ImGui::IsKeyPressed( ImGuiKey_Escape, false ) )
+    {
+        m_selected_object = -1;
+    }
 
     // Update world
     WorldUtils::DestroyMarkedEntities( *m_world, m_scene.get() );
