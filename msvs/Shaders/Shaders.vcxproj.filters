@@ -28,6 +28,9 @@
     <FxCompile Include="..\..\EngineContent\Shaders\DebugDrawing.hlsl">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="..\..\EngineContent\Shaders\Readback.hlsl">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\EngineContent\Shaders\SceneViewParams.hlsli">

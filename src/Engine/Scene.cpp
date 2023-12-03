@@ -265,9 +265,93 @@ RHIReadbackBufferPtr Renderer::CreateViewFrameReadbackBuffer() const
     return GetRHI().CreateReadbackBuffer( view_frame_readback_info );
 }
 
+// ReadbackClearProgram
+
+class ReadbackClearProgram : public ShaderProgram
+{
+private:
+    RHIDescriptorSetLayoutPtr m_dsl;
+
+    RHIShaderPtr m_cs = nullptr;
+
+    RHIComputePipelinePtr m_pso;
+
+public:
+    struct Params
+    {
+        RHIBufferViewInfo readback_buffer_info;
+    };
+
+    ReadbackClearProgram()
+        : ShaderProgram()
+    {
+        m_type = ShaderProgramType::Compute;
+        {
+            RHI::DescriptorViewRange ranges[1] = {};
+
+            ranges[0].type = RHIShaderBindingType::StructuredBuffer;
+            ranges[0].count = 1;
+            ranges[0].stages = RHIShaderStageFlags::ComputeShader;
+
+            RHI::DescriptorSetLayoutInfo dsl_info = {};
+            dsl_info.ranges = ranges;
+            dsl_info.range_count = std::size( ranges );
+
+            m_dsl = GetRHI().CreateDescriptorSetLayout( dsl_info );
+            VERIFY_NOT_EQUAL( m_dsl, nullptr );
+
+            RHI::ShaderBindingLayoutInfo layout_info = {};
+            RHIDescriptorSetLayout* dsls[1] = { m_dsl.get() };
+            layout_info.tables = dsls;
+            layout_info.table_count = std::size( dsls );
+
+            m_layout = GetRHI().CreateShaderBindingLayout( layout_info );
+            VERIFY_NOT_EQUAL( m_layout, nullptr );
+        }
+
+        {
+            RHI::ShaderCreateInfo create_info = {};
+            std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/Readback.hlsl" ).c_str() );
+            create_info.filename = shader_path.c_str();
+
+            create_info.frequency = RHI::ShaderFrequency::Compute;
+            create_info.entry_point = "ReadbackDataClearCS";
+            m_cs = GetRHI().CreateShader( create_info );
+            VERIFY_NOT_EQUAL( m_cs, nullptr );
+        }
+
+        {
+            RHIComputePipelineInfo pso_info = {};
+            pso_info.compute_shader = m_cs.get();
+            pso_info.binding_layout = m_layout.get();
+
+            m_pso = GetRHI().CreatePSO( pso_info );
+            VERIFY_NOT_EQUAL( m_pso, nullptr );
+        }
+    }
+
+    bool Run( RHICommandList& cmd_list, Rendergraph& rg, const Params& parms ) const
+    {
+        if ( !SE_ENSURE( parms.readback_buffer_info.buffer != nullptr ) )
+            return false;
+
+        cmd_list.SetPSO( *m_pso );
+
+        RHIDescriptorSet* pass_descset = rg.AllocateFrameDescSet( *m_dsl );
+
+        pass_descset->BindStructuredBuffer( 0, 0, parms.readback_buffer_info );
+        cmd_list.BindDescriptorSet( 0, *pass_descset );
+
+        cmd_list.Dispatch( glm::uvec3( 1, 1, 1 ) );
+
+        return true;
+    }
+};
+
 void Renderer::CreatePrograms()
 {
     m_blit_texture_prog = std::make_unique<BlitTextureProgram>();
+    m_clear_readback_prog = std::make_unique<ReadbackClearProgram>();
 }
 
 void Renderer::CreateSamplers()
@@ -292,7 +376,7 @@ void Renderer::CreateDescriptorSetLayout()
     }
 
     {
-        RHI::DescriptorViewRange ranges[5] = {};
+        RHI::DescriptorViewRange ranges[6] = {};
         ranges[0].type = RHIShaderBindingType::AccelerationStructure;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::AllBits;
@@ -312,6 +396,10 @@ void Renderer::CreateDescriptorSetLayout()
         ranges[4].type = RHIShaderBindingType::StructuredBuffer;
         ranges[4].count = 1;
         ranges[4].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[5].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[5].count = 1;
+        ranges[5].stages = RHIShaderStageFlags::AllBits;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -376,6 +464,7 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     view_data.view_desc_set->BindStructuredBuffer( 2, 0, gpu_tlas_item_params.view );
     view_data.view_desc_set->BindStructuredBuffer( 3, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_buf.get() } );
     view_data.view_desc_set->BindStructuredBuffer( 4, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_indirect_args_buf.get() } );
+    view_data.view_desc_set->BindStructuredBuffer( 5, 0, RHIBufferViewInfo{ view_data.readback_buf } );
 
     view_data.view_desc_set->FlushBinds();
 }
@@ -418,6 +507,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     view_frame_data.view_desc_set = rg.AllocateFrameDescSet( *m_view_dsl );
     view_frame_data.accumulated_idx = parms.view->GetAccumulatedTextureIdx();
     view_frame_data.scene_output_idx = view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx;
+    view_frame_data.readback_buf = parms.readback_buffer;
 
     RGExternalTexture* scene_output[2];
     const RGTextureROView* scene_output_ro_view[2];
@@ -440,6 +530,20 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     DebugDrawingContext debug_drawing_ctx = {};
     m_debug_drawing->AddInitPasses( view_frame_data, debug_drawing_ctx );
+
+    if ( !SE_ENSURE( parms.readback_buffer ) )
+    {
+        // @todo - set some dummy transient buffer
+        return false;
+    }
+
+    RGExternalBufferDesc buf_desc = {};
+    buf_desc.name = "view_frame_readback";
+    buf_desc.rhi_buffer = parms.readback_buffer;
+    RGExternalBuffer* readback_buf = parms.rg->RegisterExternalBuffer( buf_desc );
+
+    RGPass* initialize_readback_pass = rg.AddPass( RHI::QueueType::Graphics, "InitializeReadback" );
+    initialize_readback_pass->UseBuffer( *readback_buf, RGBufferUsage::ShaderReadWrite );
 
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
     rt_pass->UseTextureView( *scene_output_rw_view[view_frame_data.scene_output_idx] );
@@ -483,7 +587,15 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     m_debug_drawing->RecordInitPasses( *cmd_list_rt, view_frame_data, debug_drawing_ctx );
 
-    rt_pass->BorrowCommandList( *cmd_list_rt );
+    SE_ENSURE( initialize_readback_pass->BorrowCommandList( *cmd_list_rt ) );
+    {
+        ReadbackClearProgram::Params readback_prog_parms = {};
+        readback_prog_parms.readback_buffer_info.buffer = parms.readback_buffer;
+        m_clear_readback_prog->Run( *cmd_list_rt, *parms.rg, readback_prog_parms );
+    }
+    initialize_readback_pass->EndPass();
+
+    SE_ENSURE( rt_pass->BorrowCommandList( *cmd_list_rt ) );
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
         rt_descset->BindTextureRWView( 0, 0, *scene_output[view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx]->GetRWView()->GetRHIView()); // index must match with rgtexture used on setup stage

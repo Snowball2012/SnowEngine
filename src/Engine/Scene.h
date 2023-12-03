@@ -9,6 +9,7 @@
 SE_LOG_CATEGORY( Renderer );
 
 class BlitTextureProgram;
+class ReadbackClearProgram;
 class Rendergraph;
 class RGTexture;
 class DisplayMapping;
@@ -117,6 +118,7 @@ struct SceneViewFrameData
     const RGTexture* scene_output[2] = {};
     int scene_output_idx = 0;
     Rendergraph* rg = nullptr;
+    RHIBuffer* readback_buf = nullptr;
     int accumulated_idx = -1;
 };
 
@@ -132,6 +134,7 @@ struct RenderSceneParams
     SceneView* view = nullptr;
     Rendergraph* rg = nullptr;
     ISceneRenderExtension* extension = nullptr; // optional, allows to hook into scene rendering process (add ui passes / blit to swapchain, for example)
+    RHIBuffer* readback_buffer = nullptr;
 };
 
 class GlobalDescriptors
@@ -165,6 +168,7 @@ private:
     RHIDescriptorSetLayoutPtr m_rt_dsl = nullptr;
     RHIShaderBindingLayoutPtr m_rt_layout = nullptr;
     RHIRaytracingPipelinePtr m_rt_pipeline = nullptr;
+    std::unique_ptr<ReadbackClearProgram> m_clear_readback_prog = nullptr;
 
     RHIDescriptorSetLayoutPtr m_view_dsl = nullptr;
 

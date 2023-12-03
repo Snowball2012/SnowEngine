@@ -134,8 +134,7 @@ void SandboxApp::OnDrawFrame( Rendergraph& framegraph, const AppGPUReadbackData&
 
     } extension( *this, ui_cmd_list );
 
-
-    m_editor->Draw( framegraph, &extension );
+    m_editor->Draw( framegraph, &extension, readback_data.buffer->GetBuffer() );
 }
 
 void SandboxApp::OnUpdate()
@@ -161,7 +160,14 @@ void SandboxApp::OnSwapChainRecreated()
 
 void SandboxApp::OnFrameRenderFinish( const AppGPUReadbackData& data )
 {
-    // Do nothing for now
+    ViewFrameReadbackData readback_data = {};
+    data.buffer->ReadBytes( &readback_data, sizeof( readback_data ) );
+
+    // @todo: some kind of subscription for systems that want to use readback data?
+    if ( m_editor )
+    {
+        m_editor->UpdateReadback( readback_data );
+    }
 }
 
 void SandboxApp::CreateReadbackData( AppGPUReadbackData& data )

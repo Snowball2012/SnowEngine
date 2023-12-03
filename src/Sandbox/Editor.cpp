@@ -278,7 +278,7 @@ bool LevelEditor::Update( float delta_time_sec )
     return true;
 }
 
-bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension )
+bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension, RHIBuffer* readback_buffer )
 {
     m_scene->Synchronize();
 
@@ -286,10 +286,16 @@ bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required
     parms.rg = &framegraph;
     parms.view = m_scene_view.get();
     parms.extension = required_extension;
+    parms.readback_buffer = readback_buffer;
 
-    GetRenderer().RenderScene(parms);
+    GetRenderer().RenderScene( parms );
 
     return true;
+}
+
+void LevelEditor::UpdateReadback( const ViewFrameReadbackData& readback_data )
+{
+    m_mouse_hover_as_instance = readback_data.as_instance_idx_under_cursor;
 }
 
 bool LevelEditor::SetViewportExtents( glm::uvec2 extents )
@@ -326,4 +332,29 @@ void LevelEditor::UpdateScene()
     ImVec2 imgui_mouse_pos = ImGui::GetMousePos();
     glm::uvec2 scene_cursor_pos = glm::uvec2( imgui_mouse_pos.x, imgui_mouse_pos.y );
     m_scene_view->SetCursorPosition( scene_cursor_pos );
+}
+
+bool LevelEditor::HandleMousePicking()
+{
+    // @todo - resolve level object from instance id
+
+    /*
+    if ( !ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
+        return false;
+
+    if ( m_mouse_hover_as_instance < 0 )
+    {
+        m_selected_object = -1;
+        return true;
+    }
+
+    if ( m_mouse_hover_as_instance >= m_scene->GetTLAS().Instances().size() )
+    {
+        m_selected_object = -1;
+        return true;
+    }
+
+    //m_scene->GetTLAS().Instances().[m_mouse_hover_as_instance].
+    */
+    return true;
 }

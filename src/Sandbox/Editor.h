@@ -34,6 +34,8 @@ private:
 
 	int m_selected_object = -1;
 
+	int m_mouse_hover_as_instance = -1;
+
 	EditorCamera m_editor_camera;
 
 	std::unique_ptr<World> m_world;
@@ -49,7 +51,9 @@ public:
 	bool SaveLevel( const char* filepath ) const;
 
 	bool Update( float delta_time_sec );
-	bool Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension );
+	bool Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension, RHIBuffer* readback_buffer );
+
+	void UpdateReadback( const ViewFrameReadbackData& readback_data );
 
 	bool SetViewportExtents( glm::uvec2 extents );
 
@@ -63,4 +67,6 @@ private:
 	void UpdateCamera( float delta_time_sec );
 
 	void UpdateScene();
+
+	bool HandleMousePicking();
 };

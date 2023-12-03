@@ -46,6 +46,11 @@ struct DebugLineIndirectArgs
     uint start_instance_location;
 };
 
+struct ViewFrameReadbackData
+{
+    int geom_id_under_cursor;
+};
+
 // bindings description:
 // bind point #0 - pass specific params
 // bind point #1 - scene global params
@@ -59,6 +64,7 @@ static const int MAX_SCENE_GEOMS = 256;
 [[vk::binding( 2, 1 )]] StructuredBuffer<TLASItemParams> tlas_items;
 [[vk::binding( 3, 1 )]] RWStructuredBuffer<DebugLine> debug_lines;
 [[vk::binding( 4, 1 )]] RWStructuredBuffer<DebugLineIndirectArgs> debug_lines_indirect_args;
+[[vk::binding( 5, 1 )]] RWStructuredBuffer<ViewFrameReadbackData> view_frame_readback_data;
 
 [[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
 [[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];

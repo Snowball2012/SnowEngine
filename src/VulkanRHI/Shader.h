@@ -126,7 +126,7 @@ class VulkanDescriptorSet : public RHIDescriptorSet
 
     // must be static to avoid reallocations (VkWriteDescriptorSet uses raw pointers to these structures)
     bc::static_vector<VkWriteDescriptorSetAccelerationStructureKHR, 4> m_as_infos;
-    bc::static_vector<VkDescriptorBufferInfo, 4> m_buffer_infos;
+    bc::static_vector<VkDescriptorBufferInfo, 16> m_buffer_infos;
 
 public:
     virtual ~VulkanDescriptorSet() override;
