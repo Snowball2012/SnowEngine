@@ -21,6 +21,7 @@ struct TLASItemParams
 {
     row_major float3x4 object_to_world_mat;
     uint geom_buf_index;
+    int picking_id;
 };
 
 struct MeshVertex
@@ -48,7 +49,7 @@ struct DebugLineIndirectArgs
 
 struct ViewFrameReadbackData
 {
-    int geom_id_under_cursor;
+    int picking_id_under_cursor;
 };
 
 // bindings description:

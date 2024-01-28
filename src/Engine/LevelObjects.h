@@ -69,6 +69,8 @@ public:
 
     bool RegenerateEntities();
 
+    bool SetPickingId( int32_t picking_id );
+
     WorldEntity GetBaseEntity() const;
 
     // this interface exists for LevelObjectTraits to interact with the world (to spawn entities, add components, etc.)

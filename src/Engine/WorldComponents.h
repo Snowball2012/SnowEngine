@@ -31,13 +31,19 @@ struct MeshInstanceSetupComponent
 	MeshAssetPtr asset = nullptr;
 };
 
+struct EditorPickingComponent
+{
+	int32_t picking_id = -1;
+};
+
 
 using World = EntityContainer<
 	NameComponent,
 	DestroyEntityComponent,
 	TransformComponent,
 	MeshInstanceComponent,
-	MeshInstanceSetupComponent
+	MeshInstanceSetupComponent,
+	EditorPickingComponent
 >;
 
 using WorldEntity = World::Entity;

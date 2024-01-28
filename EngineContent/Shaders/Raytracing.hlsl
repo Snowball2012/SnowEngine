@@ -52,6 +52,7 @@ struct HitData
 {
     Payload ray_payload;
     uint geom_index;
+    int picking_id;
     float3x4 obj_to_world;
 };
 
@@ -60,12 +61,14 @@ HitData GetHitData( Payload ray_payload )
     HitData data;
     data.ray_payload = ray_payload;
     data.geom_index = INVALID_GEOM_INDEX;
+    data.picking_id = -1;
     if ( ray_payload.instance_index != INVALID_INSTANCE_INDEX )
     {
         TLASItemParams item_params = tlas_items[ ray_payload.instance_index ];
         
         data.geom_index = item_params.geom_buf_index;
         data.obj_to_world = item_params.object_to_world_mat;
+        data.picking_id = item_params.picking_id;
     }
     
     return data;
@@ -708,6 +711,11 @@ void VisibilityRGS()
             output[pixel_id] = float4( GetMissRadiance(), asfloat( uint( 1 ) ) );
         }
         return;
+    }
+    
+    if ( all( pixel_id == view_data.cursor_position_px ) )
+    {
+        view_frame_readback_data[0].picking_id_under_cursor = initial_hit.picking_id;
     }
     
     const uint n_samples = 1;

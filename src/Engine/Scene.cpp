@@ -158,6 +158,7 @@ namespace
     {
         glm::mat3x4 object_to_world_mat;
         uint32_t geom_buf_index;
+        uint32_t picking_id;
     };
 
     static constexpr int MAX_SCENE_GEOMS = 256;
@@ -453,6 +454,7 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     {
         size_t packed_idx = tlas_instances.get_packed_idx( mesh_instance.m_tlas_instance );
         tlas_instances_data[packed_idx].geom_buf_index = mesh_instance.m_asset->GetGlobalGeomIndex();
+        tlas_instances_data[packed_idx].picking_id = mesh_instance.picking_id;
     }
 
     UploadBufferRange gpu_tlas_item_params = view_data.rg->AllocateUploadBufferStructured<GPUTLASItemParams>( tlas_instances_data.size() );

@@ -176,6 +176,15 @@ bool LevelObject::RegenerateEntities()
     return GenerateEntities();
 }
 
+bool LevelObject::SetPickingId( int32_t picking_id )
+{
+    for ( auto& entity : m_created_entities ) {
+        m_world->AddComponent<EditorPickingComponent>( entity, EditorPickingComponent{ picking_id } );
+    }
+
+    return true;
+}
+
 WorldEntity LevelObject::GetBaseEntity() const
 {
     if ( m_created_entities.empty() )

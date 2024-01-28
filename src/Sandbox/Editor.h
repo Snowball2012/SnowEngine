@@ -34,7 +34,7 @@ private:
 
 	int m_selected_object = -1;
 
-	int m_mouse_hover_as_instance = -1;
+	int m_mouse_hover_picking_id = -1;
 
 	EditorCamera m_editor_camera;
 

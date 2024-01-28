@@ -23,6 +23,8 @@ public:
     Transform m_tf = {};
 
     TLAS::InstanceID m_tlas_instance = TLAS::InstanceID::nullid;
+
+    int32_t picking_id = -1;
 };
 using SceneMeshInstanceList = packed_freelist<SceneMeshInstance>;
 using SceneMeshInstanceID = SceneMeshInstanceList::id;
@@ -154,7 +156,7 @@ public:
 
 struct ViewFrameReadbackData
 {
-    int32_t as_instance_idx_under_cursor;
+    int32_t picking_id_under_cursor;
 };
 
 class Renderer

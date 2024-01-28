@@ -128,6 +128,7 @@ bool LevelEditor::OpenLevel( const char* filepath )
             m_level_objects.pop_back();
             continue;
         }
+        new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
     }
 
     return true;
@@ -174,6 +175,11 @@ bool LevelEditor::SaveLevel( const char* filepath ) const
 
 bool LevelEditor::Update( float delta_time_sec )
 {
+    if ( !ImGui::GetIO().WantCaptureMouse )
+    {
+        HandleMousePicking();
+    }
+
     // Level outliner
     bool scene_view_changed = false;
     ImGui::Begin( "Level Editor" );
@@ -208,6 +214,7 @@ bool LevelEditor::Update( float delta_time_sec )
                 auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
                 new_object->SetName( new_object_name.c_str(), true );
                 new_object->RegenerateEntities();
+                new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
                 scene_view_changed = true;
 
                 m_selected_object = int( m_level_objects.size() ) - 1;
@@ -295,7 +302,7 @@ bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required
 
 void LevelEditor::UpdateReadback( const ViewFrameReadbackData& readback_data )
 {
-    m_mouse_hover_as_instance = readback_data.as_instance_idx_under_cursor;
+    m_mouse_hover_picking_id = readback_data.picking_id_under_cursor;
 }
 
 bool LevelEditor::SetViewportExtents( glm::uvec2 extents )
@@ -329,6 +336,15 @@ void LevelEditor::UpdateScene()
         smi->m_tf = tf.tf;
     }
 
+    for ( const auto& [entity_id, mesh_instance_component, picking_component] : m_world->CreateView<MeshInstanceComponent, EditorPickingComponent>() )
+    {
+        SceneMeshInstance* smi = m_scene->GetMeshInstance( mesh_instance_component.scene_mesh_instance );
+        if ( !SE_ENSURE( smi ) )
+            continue;
+
+        smi->picking_id = picking_component.picking_id;
+    }
+
     ImVec2 imgui_mouse_pos = ImGui::GetMousePos();
     glm::uvec2 scene_cursor_pos = glm::uvec2( imgui_mouse_pos.x, imgui_mouse_pos.y );
     m_scene_view->SetCursorPosition( scene_cursor_pos );
@@ -336,25 +352,22 @@ void LevelEditor::UpdateScene()
 
 bool LevelEditor::HandleMousePicking()
 {
-    // @todo - resolve level object from instance id
-
-    /*
     if ( !ImGui::IsMouseClicked( ImGuiMouseButton_Left ) )
         return false;
 
-    if ( m_mouse_hover_as_instance < 0 )
+    if ( m_mouse_hover_picking_id < 0 )
     {
         m_selected_object = -1;
         return true;
     }
 
-    if ( m_mouse_hover_as_instance >= m_scene->GetTLAS().Instances().size() )
+    if ( m_mouse_hover_picking_id >= m_level_objects.size() )
     {
         m_selected_object = -1;
         return true;
     }
 
-    //m_scene->GetTLAS().Instances().[m_mouse_hover_as_instance].
-    */
+    m_selected_object = m_mouse_hover_picking_id;
+    
     return true;
 }
