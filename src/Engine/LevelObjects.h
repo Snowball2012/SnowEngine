@@ -124,6 +124,7 @@ class TransformTrait : public LevelObjectTrait
 {
 private:
     Transform m_tf = {};
+    glm::vec3 m_euler = {};
 
 public:
     IMPLEMENT_LEVELOBJECT_TRAIT( TransformTrait )

@@ -56,3 +56,13 @@ inline uint32_t HashUint32( uint32_t x )
 	x ^= x >> 17;
 	return x;
 }
+
+inline float Wrap( float x, float min, float max )
+{
+	if ( x > max || x < min )
+	{
+		float range = max - min;
+		return glm::fract( ( x - min ) / range ) * range + min;
+	}
+	return x;
+}

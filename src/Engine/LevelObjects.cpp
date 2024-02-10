@@ -277,15 +277,18 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
     trait_changed |= ImGui::DragFloat3( "Translate", &tf.translation.x, 0.01f * std::max<float>( 0.1f, glm::length( tf.translation ) ) );
 
     {
-        glm::vec3 euler_angles = glm::degrees( glm::eulerAngles( tf.orientation ) );
-        
         bool angles_changed = false;
-        angles_changed = ImGui::DragFloat3( "Orientation (Pitch Yaw Roll)", &euler_angles.x, 0.1f );
+        angles_changed = ImGui::DragFloat3( "Orientation (Pitch Yaw Roll)", &m_euler.x, 0.1f );
         
         if ( angles_changed )
         {
             trait_changed = true;
-            tf.orientation = glm::quat( glm::radians( euler_angles ) );
+
+            m_euler.x = Wrap( m_euler.x, -180.0f, 180.0f );
+            m_euler.y = Wrap( m_euler.y, -180.0f, 180.0f );
+            m_euler.z = Wrap( m_euler.z, -180.0f, 180.0f );
+
+            tf.orientation = glm::quat( glm::radians( m_euler ) );
         }
     }
 
@@ -300,13 +303,19 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
 bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
 {
     Serialization::Serialize( m_tf, out, allocator );
+    Serialization::Serialize( m_euler, out, allocator );
 
     return true;
 }
 
 bool TransformTrait::Deserialize( const JsonValue& in )
 {
-    return Serialization::Deserialize( in, m_tf );
+    bool has_tf = Serialization::Deserialize( in, m_tf );
+    bool has_euler = Serialization::Deserialize( in, m_euler );
+    if ( has_euler )
+        m_tf.orientation = glm::quat( glm::radians( m_euler ) );
+
+    return has_tf;
 }
 
 
