@@ -2,6 +2,8 @@
 
 #include <Core/RHICommon.h>
 
+SE_LOG_CATEGORY( VulkanRHI );
+
 #include <vma/vk_mem_alloc.h>
 
 // use this macro to define RHIObject body
@@ -11,5 +13,3 @@ protected: \
 	GENERATE_RHI_OBJECT_BODY_NO_RHI()
 
 #define VK_VERIFY(x) VERIFY_EQUALS(x, VK_SUCCESS)
-
-SE_LOG_CATEGORY( VulkanRHI );

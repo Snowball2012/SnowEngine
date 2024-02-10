@@ -91,9 +91,6 @@ DEFINE_VK_FUNCTION8( void, vkCmdTraceRaysKHR,
     uint32_t,                                    height,
     uint32_t,                                    depth );
 
-
-void Extensions::LoadRT( VkDevice device )
-{
 #ifdef DEVICE_LEVEL_VULKAN_FUNCTION
 #error "DEVICE_LEVEL_VULKAN_FUNCTION is already defined"
 #else
@@ -101,6 +98,10 @@ void Extensions::LoadRT( VkDevice device )
 pfn_##name = ( decltype( pfn_##name ) )vkGetDeviceProcAddr( device, #name );  \
 VERIFY_NOT_EQUAL( name, nullptr );
 #endif
+
+void Extensions::LoadRT( VkDevice device )
+{
+
 
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCreateAccelerationStructureKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkDestroyAccelerationStructureKHR );
@@ -111,5 +112,18 @@ VERIFY_NOT_EQUAL( name, nullptr );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCreateRayTracingPipelinesKHR );
     DEVICE_LEVEL_VULKAN_FUNCTION( vkCmdTraceRaysKHR );
 
-#undef DEVICE_LEVEL_VULKAN_FUNCTION
 }
+
+// Debug Utils
+
+DEFINE_VK_FUNCTION2( VkResult, vkSetDebugUtilsObjectNameEXT,
+    VkDevice, device,
+    const VkDebugUtilsObjectNameInfoEXT*, pNameInfo );
+
+
+void Extensions::LoadDebugUtils( VkDevice device )
+{
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkSetDebugUtilsObjectNameEXT );
+}
+
+#undef DEVICE_LEVEL_VULKAN_FUNCTION

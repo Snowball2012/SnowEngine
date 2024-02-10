@@ -243,6 +243,8 @@ void EngineApp::Cleanup()
 {
     SE_LOG_INFO( Engine, "RHI shutdown started" );
 
+    m_readback_data.clear();
+
     m_imgui = nullptr;
 
     m_swapchain = nullptr;

@@ -284,6 +284,7 @@ public:
     {
         uint64_t size = 0;
         RHIBufferUsageFlags usage = RHIBufferUsageFlags::None;
+        const char* name = nullptr;
     };
     virtual RHIUploadBuffer* CreateUploadBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }
     virtual RHIReadbackBuffer* CreateReadbackBuffer( const BufferInfo& info ) { NOTIMPL; return nullptr; }

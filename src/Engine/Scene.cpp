@@ -262,6 +262,7 @@ RHIReadbackBufferPtr Renderer::CreateViewFrameReadbackBuffer() const
     RHI::BufferInfo view_frame_readback_info;
     view_frame_readback_info.size = sizeof( ViewFrameReadbackData );
     view_frame_readback_info.usage = RHIBufferUsageFlags::StructuredBuffer;
+    view_frame_readback_info.name = "viewFrameReadback";
 
     return GetRHI().CreateReadbackBuffer( view_frame_readback_info );
 }

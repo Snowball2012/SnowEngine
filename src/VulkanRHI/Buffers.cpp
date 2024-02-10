@@ -21,6 +21,18 @@ VulkanBuffer::VulkanBuffer( VulkanRHI* rhi, const RHI::BufferInfo& info, VmaMemo
     vma_alloc_info.requiredFlags = alloc_required_flags;
     VK_VERIFY( vmaCreateBuffer( m_rhi->GetVMA(), &vk_create_info, &vma_alloc_info, &m_vk_buffer, &m_allocation, nullptr ) );
 
+    if ( info.name != nullptr )
+    {
+        vmaSetAllocationName( m_rhi->GetVMA(), m_allocation, info.name );
+        VkDebugUtilsObjectNameInfoEXT vk_name_info = {};
+        vk_name_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        vk_name_info.objectType = VK_OBJECT_TYPE_BUFFER;
+        vk_name_info.objectHandle = uint64_t( m_vk_buffer );
+        vk_name_info.pObjectName = info.name;
+        vk_name_info.pNext = nullptr;
+        vkSetDebugUtilsObjectNameEXT( m_rhi->GetDevice(), &vk_name_info );
+    }
+
     VkBufferDeviceAddressInfo da_info = {};
     da_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
     da_info.buffer = m_vk_buffer;

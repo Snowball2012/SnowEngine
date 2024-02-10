@@ -496,6 +496,7 @@ RHICommandList* VulkanRHI::GetCommandList( QueueType type )
 
 void VulkanRHI::LoadExtensions()
 {
+    Extensions::LoadDebugUtils( m_vk_device );
     if ( m_raytracing_supported )
         Extensions::LoadRT( m_vk_device );
 }
