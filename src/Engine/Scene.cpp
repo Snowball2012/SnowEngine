@@ -356,10 +356,121 @@ public:
     }
 };
 
+
+// ComputeOutlineProgram
+
+class ComputeOutlineProgram : public ShaderProgram
+{
+private:
+    RHIDescriptorSetLayoutPtr m_dsl = nullptr;
+    RHIShaderPtr m_cs = nullptr;
+
+    RHIComputePipelinePtr m_pso = nullptr;
+
+public:
+    struct Params
+    {
+        RHITextureRWView* object_id_tex = nullptr;
+        RHITextureRWView* dst_tex = nullptr;
+        int object_id;
+    };
+
+    ComputeOutlineProgram()
+        : ShaderProgram()
+    {
+        m_type = ShaderProgramType::Compute;
+        {
+            RHI::DescriptorViewRange ranges[3] = {};
+
+            ranges[0].type = RHIShaderBindingType::TextureRW;
+            ranges[0].count = 1;
+            ranges[0].stages = RHIShaderStageFlags::ComputeShader;
+
+            ranges[1].type = RHIShaderBindingType::TextureRW;
+            ranges[1].count = 1;
+            ranges[1].stages = RHIShaderStageFlags::ComputeShader;
+
+            ranges[2].type = RHIShaderBindingType::UniformBuffer;
+            ranges[2].count = 1;
+            ranges[2].stages = RHIShaderStageFlags::ComputeShader;
+
+            RHI::DescriptorSetLayoutInfo dsl_info = {};
+            dsl_info.ranges = ranges;
+            dsl_info.range_count = std::size( ranges );
+
+            m_dsl = GetRHI().CreateDescriptorSetLayout( dsl_info );
+            VERIFY_NOT_EQUAL( m_dsl, nullptr );
+
+            RHI::ShaderBindingLayoutInfo layout_info = {};
+            RHIDescriptorSetLayout* dsls[1] = { m_dsl.get() };
+            layout_info.tables = dsls;
+            layout_info.table_count = std::size( dsls );
+
+            m_layout = GetRHI().CreateShaderBindingLayout( layout_info );
+            VERIFY_NOT_EQUAL( m_layout, nullptr );
+        }
+
+        {
+            RHI::ShaderCreateInfo create_info = {};
+            std::wstring shader_path = ToWString( ToOSPath( "#engine/shaders/Outline.hlsl" ).c_str() );
+            create_info.filename = shader_path.c_str();
+
+            create_info.frequency = RHI::ShaderFrequency::Compute;
+            create_info.entry_point = "ComputeOutlineCS";
+            m_cs = GetRHI().CreateShader( create_info );
+            VERIFY_NOT_EQUAL( m_cs, nullptr );
+        }
+
+        {
+            RHIComputePipelineInfo pso_info = {};
+            pso_info.compute_shader = m_cs.get();
+            pso_info.binding_layout = m_layout.get();
+
+            m_pso = GetRHI().CreatePSO( pso_info );
+            VERIFY_NOT_EQUAL( m_pso, nullptr );
+        }
+    }
+
+    bool Run( RHICommandList& cmd_list, Rendergraph& rg, const Params& parms ) const
+    {
+        if ( !SE_ENSURE( parms.dst_tex != nullptr ) )
+            return false;
+
+        if ( !SE_ENSURE( parms.object_id_tex != nullptr ) )
+            return false;
+
+        cmd_list.SetPSO( *m_pso );
+
+        RHIDescriptorSet* pass_descset = rg.AllocateFrameDescSet( *m_dsl );
+
+        struct GPUOutlineParams
+        {
+            uint32_t object_id;
+        } gpu_outline_parms;
+        gpu_outline_parms.object_id = parms.object_id;
+        UploadBufferRange gpu_buf = rg.AllocateUploadBufferUniform<GPUOutlineParams>();
+        gpu_buf.UploadData( gpu_outline_parms );
+
+        pass_descset->BindTextureRWView( 0, 0, *parms.object_id_tex );
+        pass_descset->BindTextureRWView( 1, 0, *parms.dst_tex );
+        pass_descset->BindUniformBufferView( 2, 0, gpu_buf.view );
+        cmd_list.BindDescriptorSet( 0, *pass_descset );
+
+        glm::uvec3 dispatch_size = parms.dst_tex->GetSize();
+        dispatch_size.z = 1;
+        dispatch_size.x = ( dispatch_size.x + 7 ) / 8;
+        dispatch_size.y = ( dispatch_size.y + 7 ) / 8;
+        cmd_list.Dispatch( dispatch_size );
+
+        return true;
+    }
+};
+
 void Renderer::CreatePrograms()
 {
     m_blit_texture_prog = std::make_unique<BlitTextureProgram>();
     m_clear_readback_prog = std::make_unique<ReadbackClearProgram>();
+    m_compute_outline_prog = std::make_unique<ComputeOutlineProgram>();
 }
 
 void Renderer::CreateSamplers()
@@ -570,6 +681,16 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     DisplayMappingContext display_mapping_ctx = {};
     m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
 
+    RGPass* outline_pass = nullptr;
+    const RGTextureRWView* outline_pass_dst_view = nullptr;
+    if ( parms.outline_id >= 0 )
+    {
+        outline_pass = rg.AddPass( RHI::QueueType::Graphics, "DrawOutline" );
+        outline_pass_dst_view = view_frame_data.scene_output[view_frame_data.scene_output_idx]->GetRWView();
+        outline_pass->UseTextureView( *view_frame_data.scene_output[view_frame_data.scene_output_idx]->GetRWView() );
+        outline_pass->UseTextureView( *level_objects_id->GetRWView() );
+    }
+
     m_debug_drawing->AddDrawPasses( view_frame_data, debug_drawing_ctx );
 
     if ( parms.extension )
@@ -630,6 +751,17 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     rt_pass->EndPass();
 
     m_display_mapping->DisplayMappingPass( *cmd_list_rt, view_frame_data, display_mapping_ctx );
+
+    if ( outline_pass != nullptr )
+    {
+        outline_pass->BorrowCommandList( *cmd_list_rt );
+        ComputeOutlineProgram::Params outline_parms = {};
+        outline_parms.object_id_tex = level_objects_id->GetRWView()->GetRHIView();
+        outline_parms.dst_tex = outline_pass_dst_view->GetRHIView();
+        outline_parms.object_id = parms.outline_id;
+        m_compute_outline_prog->Run( *cmd_list_rt, rg, outline_parms );
+        outline_pass->EndPass();
+    }
 
     m_debug_drawing->RecordDrawPasses( *cmd_list_rt, view_frame_data, debug_drawing_ctx );
 

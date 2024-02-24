@@ -108,6 +108,8 @@ VulkanTextureRWView::VulkanTextureRWView( VulkanRHI* rhi, bool make_hard_texture
     m_view_info.imageView = m_vk_image_view;
     m_view_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
     m_view_info.sampler = nullptr;
+
+    m_size = glm::uvec3( texture_impl->GetInfo().width, texture_impl->GetInfo().height, texture_impl->GetInfo().depth );
 }
 
 

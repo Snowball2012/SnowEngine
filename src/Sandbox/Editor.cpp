@@ -294,6 +294,7 @@ bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required
     parms.view = m_scene_view.get();
     parms.extension = required_extension;
     parms.readback_buffer = readback_buffer;
+    parms.outline_id = m_selected_object;
 
     GetRenderer().RenderScene( parms );
 

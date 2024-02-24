@@ -863,6 +863,7 @@ class RHITextureRWView : public RHIObject
 {
 public:
     virtual ~RHITextureRWView() override {}
+    virtual glm::uvec3 GetSize() const { NOTIMPL; }
 };
 using RHITextureRWViewPtr = RHIObjectPtr<RHITextureRWView>;
 

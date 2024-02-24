@@ -50,8 +50,12 @@ class VulkanTextureRWView : public RHITextureRWView
 	VkImageView m_vk_image_view = VK_NULL_HANDLE;
 
 	VkDescriptorImageInfo m_view_info = {};
+
+	glm::uvec3 m_size = {};
 public:
 	virtual ~VulkanTextureRWView() override;
+
+	virtual glm::uvec3 GetSize() const override { return m_size; }
 
 	VulkanTextureRWView( VulkanRHI* rhi, bool make_hard_texture_ref, const RHI::TextureRWViewInfo& info );
 

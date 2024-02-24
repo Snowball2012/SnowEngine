@@ -9,6 +9,7 @@
 SE_LOG_CATEGORY( Renderer );
 
 class BlitTextureProgram;
+class ComputeOutlineProgram;
 class ReadbackClearProgram;
 class Rendergraph;
 class RGTexture;
@@ -140,6 +141,7 @@ struct RenderSceneParams
     Rendergraph* rg = nullptr;
     ISceneRenderExtension* extension = nullptr; // optional, allows to hook into scene rendering process (add ui passes / blit to swapchain, for example)
     RHIBuffer* readback_buffer = nullptr;
+    int32_t outline_id = -1;
 };
 
 class GlobalDescriptors
@@ -179,6 +181,7 @@ private:
 
     std::unique_ptr<DisplayMapping> m_display_mapping = nullptr;
     std::unique_ptr<DebugDrawing> m_debug_drawing = nullptr;
+    std::unique_ptr<ComputeOutlineProgram> m_compute_outline_prog = nullptr;
 
     std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
