@@ -130,7 +130,7 @@ RHITextureROView* VulkanRHI::CreateTextureROView( const TextureROViewInfo& info 
 
 RHITextureRWView* VulkanRHI::CreateTextureRWView( const TextureRWViewInfo& info )
 {
-    return new VulkanTextureRWView( this, info );
+    return new VulkanTextureRWView( this, /*make_hard_texture_ref=*/true, info );
 }
 
 RHIRenderTargetView* VulkanRHI::CreateRTV( const RenderTargetViewInfo& info )
@@ -170,6 +170,9 @@ VkFormat VulkanRHI::GetVkFormat( RHIFormat format )
         break;
     case RHIFormat::RGB8_SRGB:
         vk_format = VK_FORMAT_R8G8B8_SRGB;
+        break;
+    case RHIFormat::R16_UINT:
+        vk_format = VK_FORMAT_R16_UINT;
         break;
     default:
         NOTIMPL;
@@ -211,6 +214,9 @@ RHIFormat VulkanRHI::GetRHIFormat( VkFormat format )
     case VK_FORMAT_R32G32B32A32_SFLOAT:
         rhi_format = RHIFormat::RGBA32_SFLOAT;
         break;
+    case VK_FORMAT_R16_UINT:
+        rhi_format = RHIFormat::R16_UINT;
+        break;
     default:
         NOTIMPL;
     }
@@ -227,22 +233,25 @@ uint32_t VulkanRHI::GetVkFormatSize( RHIFormat format )
     case RHIFormat::Undefined:
         size = 0;
         break;
-    case RHIFormat::RGBA32_SFLOAT:
-        size = 16;
+    case RHIFormat::R16_UINT:
+        size = 2;
         break;
-    case RHIFormat::R32G32B32_SFLOAT:
-        size = 12;
-        break;
-    case RHIFormat::R32G32_SFLOAT:
-        size = 8;
+    case RHIFormat::RGB8_SRGB:
+        size = 3;
         break;
     case RHIFormat::B8G8R8A8_SRGB:
     case RHIFormat::R8G8B8A8_SRGB:
     case RHIFormat::R8G8B8A8_UNORM:
         size = 4;
         break;
-    case RHIFormat::RGB8_SRGB:
-        size = 3;
+    case RHIFormat::R32G32_SFLOAT:
+        size = 8;
+        break;
+    case RHIFormat::R32G32B32_SFLOAT:
+        size = 12;
+        break;
+    case RHIFormat::RGBA32_SFLOAT:
+        size = 16;
         break;
     default:
         NOTIMPL;

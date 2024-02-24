@@ -19,7 +19,9 @@
 #include <chrono>
 #include <codecvt>
 #include <locale>
+#include <unordered_set>
 
+#include <boost/container/flat_map.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <boost/scope_exit.hpp>
@@ -226,6 +228,7 @@ inline void HandleFatalError()
 struct LogCategory
 {
 	const char* name = "";
+	bool enabled = true;
 };
 
 enum class LogMessageType
@@ -271,6 +274,7 @@ extern Logger* g_log;
 #define SE_LOG_NEWLINE() g_log->Newline()
 
 #define SE_LOG_CATEGORY( category ) inline LogCategory g_logcategory_ ## category { .name = S_(category) }
+#define SE_LOG_CATEGORY_EX( category, enableByDefault ) inline LogCategory g_logcategory_ ## category { .name = S_( category ), .enabled = ( enableByDefault ) }
 
 SE_LOG_CATEGORY( Core );
 

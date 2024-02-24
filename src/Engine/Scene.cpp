@@ -104,21 +104,27 @@ void SceneView::SetExtents( const glm::uvec2& extents )
 
     for ( int i = 0; i < 2; ++i )
     {
-        m_rt_frame[i] = GetRHI().CreateTexture(tex_info);
+        m_rt_frame[i] = GetRHI().CreateTexture( tex_info );
 
         RHI::TextureRWViewInfo uav_info = {};
         uav_info.texture = m_rt_frame[i].get();
-        m_frame_rwview[i] = GetRHI().CreateTextureRWView(uav_info);
+        m_frame_rwview[i] = GetRHI().CreateTextureRWView( uav_info );
 
         RHI::TextureROViewInfo srv_info = {};
         srv_info.texture = m_rt_frame[i].get();
-        m_frame_roview[i] = GetRHI().CreateTextureROView(srv_info);
+        m_frame_roview[i] = GetRHI().CreateTextureROView( srv_info );
 
         RHI::RenderTargetViewInfo rtv_info = {};
         rtv_info.texture = m_rt_frame[i].get();
         rtv_info.format = tex_info.format;
-        m_frame_rtview[i] = GetRHI().CreateRTV(rtv_info);
+        m_frame_rtview[i] = GetRHI().CreateRTV( rtv_info );
     }
+
+    RHI::TextureInfo level_obj_id_info = tex_info;
+    level_obj_id_info.format = RHIFormat::R16_UINT;
+    level_obj_id_info.usage = RHITextureUsageFlags::TextureROView | RHITextureUsageFlags::TextureRWView;
+
+    m_level_objects_id_tex = GetRHI().CreateTexture( level_obj_id_info );
 
     ResetAccumulation();
 }
@@ -365,10 +371,14 @@ void Renderer::CreateSamplers()
 void Renderer::CreateDescriptorSetLayout()
 {
     {
-        RHI::DescriptorViewRange ranges[1] = {};
+        RHI::DescriptorViewRange ranges[2] = {};
         ranges[0].type = RHIShaderBindingType::TextureRW;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::RaygenShader;
+
+        ranges[1].type = RHIShaderBindingType::TextureRW;
+        ranges[1].count = 1;
+        ranges[1].stages = RHIShaderStageFlags::RaygenShader;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -514,7 +524,6 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
 
     RGExternalTexture* scene_output[2];
     const RGTextureROView* scene_output_ro_view[2];
-    const RGTextureRWView* scene_output_rw_view[2];
     const RGRenderTargetView* scene_output_rt_view[2];
     for ( int i = 0; i < 2; i++ )
     {
@@ -524,7 +533,6 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
         scene_output_desc.rhi_texture = scene_view.GetFrameColorTexture( i );
         scene_output[i] = rg.RegisterExternalTexture(scene_output_desc);
         scene_output_ro_view[i] = scene_output[i]->RegisterExternalROView( { scene_view.GetFrameColorTextureROView( i ) } );
-        scene_output_rw_view[i] = scene_output[i]->RegisterExternalRWView( { scene_view.GetFrameColorTextureRWView( i ) } );
         scene_output_rt_view[i] = scene_output[i]->RegisterExternalRTView( { scene_view.GetFrameColorTextureRTView( i ) } );
         view_frame_data.scene_output[i] = scene_output[i];
     }   
@@ -549,7 +557,15 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     initialize_readback_pass->UseBuffer( *readback_buf, RGBufferUsage::ShaderReadWrite );
 
     RGPass* rt_pass = rg.AddPass( RHI::QueueType::Graphics, "RaytraceScene" );
-    rt_pass->UseTextureView( *scene_output_rw_view[view_frame_data.scene_output_idx] );
+    rt_pass->UseTextureView( *scene_output[view_frame_data.scene_output_idx]->GetRWView() );
+
+    RGExternalTextureDesc level_objects_id_desc = {};
+    level_objects_id_desc.initial_layout = RHITextureLayout::ShaderReadOnly;
+    level_objects_id_desc.final_layout = RHITextureLayout::ShaderReadOnly;
+    level_objects_id_desc.name = "level_objects_id";
+    level_objects_id_desc.rhi_texture = parms.view->GetLevelObjIdTexture();
+    RGExternalTexture* level_objects_id = rg.RegisterExternalTexture( level_objects_id_desc );
+    rt_pass->UseTextureView( *level_objects_id->GetRWView() );
 
     DisplayMappingContext display_mapping_ctx = {};
     m_display_mapping->SetupRendergraph( view_frame_data, display_mapping_ctx );
@@ -602,6 +618,7 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     {
         RHIDescriptorSet* rt_descset = rg.AllocateFrameDescSet( *m_rt_dsl );
         rt_descset->BindTextureRWView( 0, 0, *scene_output[view_frame_data.accumulated_idx == -1 ? 0 : view_frame_data.accumulated_idx]->GetRWView()->GetRHIView()); // index must match with rgtexture used on setup stage
+        rt_descset->BindTextureRWView( 0, 1, *level_objects_id->GetRWView()->GetRHIView() );
 
         SetPSO( *cmd_list_rt, *m_rt_pipeline, view_frame_data );
 

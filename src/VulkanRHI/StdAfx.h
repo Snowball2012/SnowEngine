@@ -4,6 +4,8 @@
 
 SE_LOG_CATEGORY( VulkanRHI );
 
+SE_LOG_CATEGORY_EX( VulkanMemoryAllocator, false );
+
 #include <vma/vk_mem_alloc.h>
 
 // use this macro to define RHIObject body

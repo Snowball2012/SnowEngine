@@ -75,6 +75,8 @@ private:
     RHITextureROViewPtr m_frame_roview[2] = { nullptr, nullptr };
     RHIRenderTargetViewPtr m_frame_rtview[2] = { nullptr, nullptr };
 
+    RHITexturePtr m_level_objects_id_tex = nullptr;
+
     int m_accumulated_rt_texture_idx = -1;
 
     DebugDrawingSceneViewData m_debug_draw_data;
@@ -103,6 +105,7 @@ public:
     RHITextureROView* GetFrameColorTextureROView( uint32_t i ) const { return m_frame_roview[i].get(); }
     RHITextureRWView* GetFrameColorTextureRWView( uint32_t i ) const { return m_frame_rwview[i].get(); }
     RHIRenderTargetView* GetFrameColorTextureRTView( uint32_t i ) const { return m_frame_rtview[i].get(); }
+    RHITexture* GetLevelObjIdTexture() const { return m_level_objects_id_tex.get(); }
 
     const DebugDrawingSceneViewData& GetDebugDrawData() const { return m_debug_draw_data; }
 

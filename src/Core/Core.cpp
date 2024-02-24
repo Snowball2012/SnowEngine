@@ -68,6 +68,9 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	if ( !SE_ENSURE( fmt ) )
 		return;
 
+	if ( category.enabled == false )
+		return;
+
 	std::stringstream message;
 	if ( msg_type != LogMessageType::Info )
 	{

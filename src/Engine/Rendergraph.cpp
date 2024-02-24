@@ -101,6 +101,13 @@ RGExternalTexture* Rendergraph::RegisterExternalTexture( const RGExternalTexture
 
     entry.texture = std::move( ext_texture );
 
+    if ( desc.rhi_texture->GetBaseRWView() != nullptr )
+    {
+        RGExternalTextureRWViewDesc view_desc = {};
+        view_desc.rhi_view = desc.rhi_texture->GetBaseRWView();
+        texture_ptr->RegisterExternalRWView( view_desc );
+    }
+
     return texture_ptr;
 }
 

@@ -13,6 +13,8 @@ protected:
 
 	RHI::TextureInfo m_info = {};
 
+	RHITextureRWViewPtr m_base_rw_view = nullptr;
+
 public:
 	VulkanTextureBase() = default;
 	VulkanTextureBase(VkImage image, const RHI::TextureInfo& info);
@@ -23,6 +25,8 @@ public:
 	// Intentionally blank
 	virtual void AddRef() override {}
 	virtual void Release() override {}
+
+	RHITextureRWView* GetBaseRWView() const override { return m_base_rw_view.get(); }
 
 	VkImage GetVkImage() const { return m_image; }
 

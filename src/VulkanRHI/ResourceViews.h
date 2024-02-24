@@ -53,7 +53,7 @@ class VulkanTextureRWView : public RHITextureRWView
 public:
 	virtual ~VulkanTextureRWView() override;
 
-	VulkanTextureRWView( VulkanRHI* rhi, const RHI::TextureRWViewInfo& info );
+	VulkanTextureRWView( VulkanRHI* rhi, bool make_hard_texture_ref, const RHI::TextureRWViewInfo& info );
 
 	const VkDescriptorImageInfo* GetVkImageInfo() const { return &m_view_info; }
 };

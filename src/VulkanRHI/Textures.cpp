@@ -51,6 +51,16 @@ VulkanTexture::VulkanTexture(VulkanRHI* rhi, const RHI::TextureInfo& info)
 		// insert deferred layout transition here. it will happen at the next SubmitCommandLists
 		m_rhi->DeferImageLayoutTransition(m_image, info.initial_queue, VK_IMAGE_LAYOUT_UNDEFINED, desired_layout);
 	}
+
+	if ( bool( m_info.usage & RHITextureUsageFlags::TextureRWView ) )
+	{
+		RHI::TextureRWViewInfo view_info;
+		view_info.format = info.format;
+		view_info.texture = this;
+
+		// Not making a hard back reference here to avoid circular dependency
+		m_base_rw_view = new VulkanTextureRWView( rhi, /*make_hard_texture_ref=*/false, view_info );
+	}
 }
 
 VulkanTexture::~VulkanTexture()
