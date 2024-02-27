@@ -182,6 +182,8 @@ bool LevelObject::SetPickingId( int32_t picking_id )
         m_world->AddComponent<EditorPickingComponent>( entity, EditorPickingComponent{ picking_id } );
     }
 
+    m_picking_id = picking_id;
+
     return true;
 }
 
@@ -216,6 +218,10 @@ bool LevelObject::GenerateEntities()
             SE_LOG_ERROR( Engine, "Failed to regenerate entities from \"%s\" trait for object \"%s\", abort level obj generation", trait->GetTraitPrettyName(), m_name.c_str() );
             return false;
         }
+    }
+
+    for ( auto& entity : m_created_entities ) {
+        m_world->AddComponent<EditorPickingComponent>( entity, EditorPickingComponent{ m_picking_id } );
     }
 
     return true;

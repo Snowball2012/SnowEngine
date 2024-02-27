@@ -213,8 +213,8 @@ bool LevelEditor::Update( float delta_time_sec )
             {
                 auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
                 new_object->SetName( new_object_name.c_str(), true );
-                new_object->RegenerateEntities();
                 new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
+                new_object->RegenerateEntities();
                 scene_view_changed = true;
 
                 m_selected_object = int( m_level_objects.size() ) - 1;

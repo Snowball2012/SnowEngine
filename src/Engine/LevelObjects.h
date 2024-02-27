@@ -45,6 +45,7 @@ private:
 
     // @todo - I don't like having separate allocations for every trait.
     std::vector<std::unique_ptr<LevelObjectTrait>> m_traits;
+    int32_t m_picking_id = -1;
 
 public:
     explicit LevelObject( World* world );
