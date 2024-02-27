@@ -229,20 +229,22 @@ float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
     float NoL = ( dot( l, n ) );
     float NoH = ( dot( n, h ) );
     float NoV = ( dot( n, v ) );
+    float VoH = ( dot( v, h ) );
     
-    if ( ( NoL <= FLT_EPSILON ) || ( NoH <= FLT_EPSILON ) || ( NoV <= FLT_EPSILON ) )
+    if ( ( NoL <= FLT_EPSILON ) || ( NoH <= FLT_EPSILON ) || ( NoV <= FLT_EPSILON ) || ( VoH <= FLT_EPSILON ) )
         return float3( 0, 0, 0 );
         
     NoL = saturate( NoL );
     NoH = saturate( NoH );
     NoV = saturate( NoV );
+    VoH = saturate( VoH );
     
     float3 lambertian_diffuse = albedo / M_PI;
     
     float a = sqr( roughness );
     float a2 = sqr( a );
     
-    float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, NoH, a2 ) );
+    float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, VoH, a2 ) );
     
     float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - NoL, 5 );
 
@@ -296,9 +298,9 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
     float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i );
     
     BSDFSampleOutput output;
-    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) ) / max( pdf, 1.e-6f );
+    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) ) / pdf;
     
-    if ( dir_o_ts.y < 0 )
+    if ( dir_o_ts.y <= 0 || any( isnan( output.integration_term ) ) || any( isinf( output.integration_term ) ) )
         output.integration_term = _float3( 0 );
     
     output.dir_o = dir_o_ws;
