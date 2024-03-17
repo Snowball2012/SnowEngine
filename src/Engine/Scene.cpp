@@ -164,10 +164,12 @@ namespace
     {
         glm::mat3x4 object_to_world_mat;
         uint32_t geom_buf_index;
+        uint32_t material_index;
         uint32_t picking_id;
     };
 
     static constexpr int MAX_SCENE_GEOMS = 256;
+    static constexpr int MAX_SCENE_MATERIALS = 256;
 }
 
 GlobalDescriptors::GlobalDescriptors()
@@ -178,8 +180,9 @@ GlobalDescriptors::GlobalDescriptors()
         m_free_geom_slots[i] = uint32_t( m_free_geom_slots.size() ) - i - 1;
     }
 
+
     {
-        RHI::DescriptorViewRange ranges[2] = {};
+        RHI::DescriptorViewRange ranges[3] = {};
 
         ranges[0].type = RHIShaderBindingType::StructuredBuffer;
         ranges[0].count = MAX_SCENE_GEOMS;
@@ -189,6 +192,10 @@ GlobalDescriptors::GlobalDescriptors()
         ranges[1].count = MAX_SCENE_GEOMS;
         ranges[1].stages = RHIShaderStageFlags::AllBits;
 
+        ranges[2].type = RHIShaderBindingType::StructuredBuffer;
+        ranges[2].count = 1;
+        ranges[2].stages = RHIShaderStageFlags::AllBits;
+
         RHI::DescriptorSetLayoutInfo dsl_info = {};
         dsl_info.ranges = ranges;
         dsl_info.range_count = std::size( ranges );
@@ -197,6 +204,24 @@ GlobalDescriptors::GlobalDescriptors()
     }
 
     m_global_descset = GetRHI().CreateDescriptorSet( *m_global_dsl );
+
+    m_free_material_slots.resize( MAX_SCENE_MATERIALS );
+    for ( uint32_t i = 0; i < m_free_material_slots.size(); ++i )
+    {
+        m_free_material_slots[i] = uint32_t( m_free_material_slots.size() ) - i - 1;
+    }
+
+    RHI::BufferInfo material_buffer_info = {};
+    material_buffer_info.name = "global_material_buf";
+    material_buffer_info.size = sizeof( MaterialGPU ) * MAX_SCENE_MATERIALS;
+    material_buffer_info.usage = RHIBufferUsageFlags::StructuredBuffer;
+
+    // @todo - this should be device buffer instead of upload, given how often its updated and accessed
+    m_material_buffer = GetRHI().CreateUploadBuffer( material_buffer_info );
+
+    RHIBufferViewInfo material_buffer_view_info = {};
+    material_buffer_view_info.buffer = m_material_buffer->GetBuffer();
+    m_global_descset->BindStructuredBuffer( 2, 0, material_buffer_view_info );
 }
 
 uint32_t GlobalDescriptors::AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices )
@@ -211,6 +236,19 @@ uint32_t GlobalDescriptors::AddGeometry( const RHIBufferViewInfo& vertices, cons
     m_global_descset->BindStructuredBuffer( 1, geom_index, vertices );
 
     return geom_index;
+}
+
+uint32_t GlobalDescriptors::AddMaterial( const MaterialGPU& material_data )
+{
+    if ( m_free_material_slots.empty() )
+        return -1; // no place left
+
+    uint32_t material_index = m_free_material_slots.back();
+    m_free_material_slots.pop_back();
+
+    m_material_buffer->WriteBytes( &material_data, sizeof( MaterialGPU ), material_index * sizeof( MaterialGPU ) );
+
+    return material_index;
 }
 
 
@@ -576,6 +614,12 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     {
         size_t packed_idx = tlas_instances.get_packed_idx( mesh_instance.m_tlas_instance );
         tlas_instances_data[packed_idx].geom_buf_index = mesh_instance.m_asset->GetGlobalGeomIndex();
+        tlas_instances_data[packed_idx].material_index = -1;
+        const MaterialAsset* material = mesh_instance.m_asset->GetMaterial();
+        if ( material != nullptr )
+        {
+            tlas_instances_data[packed_idx].material_index = material->GetGlobalMaterialIndex();
+        }
         tlas_instances_data[packed_idx].picking_id = mesh_instance.picking_id;
     }
 

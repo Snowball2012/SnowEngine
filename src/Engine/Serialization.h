@@ -25,6 +25,16 @@ namespace Serialization
 
     void Serialize( const Transform& value, JsonValue& out, JsonAllocator& allocator );
     bool Deserialize( const JsonValue& serialized, Transform& value );
+
+    template< typename T >
+    bool Deserialize( const JsonValue& serialized_object, const char* value_name, T& value )
+    {
+        auto it = serialized_object.FindMember( value_name );
+        if ( it != serialized_object.MemberEnd() )
+            return Deserialize( it->value, value );
+
+        return false;
+    }
 }
 
 SE_LOG_CATEGORY( Serialization );

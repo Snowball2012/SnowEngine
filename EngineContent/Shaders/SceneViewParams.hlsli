@@ -21,6 +21,7 @@ struct TLASItemParams
 {
     row_major float3x4 object_to_world_mat;
     uint geom_buf_index;
+    uint material_index;
     int picking_id;
 };
 
@@ -28,6 +29,13 @@ struct MeshVertex
 {
     float3 position;
     float3 normal;
+};
+
+struct Material
+{
+    float3 albedo;
+    float3 f0;
+    float roughness;
 };
 
 struct DebugLine
@@ -69,6 +77,9 @@ static const int MAX_SCENE_GEOMS = 256;
 
 [[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
 [[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];
+
+// @todo - untyped data blob? with typed loads for different types of materials
+[[vk::binding( 2, 2 )]] StructuredBuffer<Material> materials;
 
 DebugLine MakeDebugVector( float3 start_ws, float3 dir_ws, float3 color_start, float3 color_end )
 {

@@ -150,10 +150,15 @@ private:
     RHIDescriptorSetLayoutPtr m_global_dsl;
     RHIDescriptorSetPtr m_global_descset;
     std::vector<uint32_t> m_free_geom_slots;
+
+    RHIUploadBufferPtr m_material_buffer;
+    std::vector<uint32_t> m_free_material_slots;
+
 public:
     GlobalDescriptors();
 
     uint32_t AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices );
+    uint32_t AddMaterial( const MaterialGPU& material_data );
 
     RHIDescriptorSet& GetDescSet() const { return *m_global_descset; }
     RHIDescriptorSetLayout* GetLayout() const { return m_global_dsl.get(); }

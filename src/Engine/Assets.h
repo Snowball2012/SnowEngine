@@ -7,6 +7,35 @@
 
 struct MeshVertex;
 
+struct MaterialGPU
+{
+	glm::vec3 albedo;
+	glm::vec3 f0;
+	float roughness;
+};
+
+class MaterialAsset : public Asset
+{
+	IMPLEMENT_ASSET_GENERATOR;
+
+	uint32_t m_global_material_index = -1;
+
+	MaterialGPU m_gpu_data = {};
+
+public:
+	virtual ~MaterialAsset() = default;
+
+	MaterialAsset( const AssetId& id, AssetManager& mgr )
+		: Asset( id, mgr )
+	{}
+
+	virtual bool Load( const JsonValue& data ) override;
+
+	uint32_t GetGlobalMaterialIndex() const { return m_global_material_index; }
+
+};
+using MaterialAssetPtr = boost::intrusive_ptr<MaterialAsset>;
+
 
 class MeshAsset : public Asset
 {
@@ -21,6 +50,8 @@ protected:
 	uint32_t m_indices_num = 0;
 
 	uint32_t m_global_geom_index = -1;
+
+	MaterialAssetPtr m_default_material;
 
 public:
 
@@ -39,6 +70,8 @@ public:
 	uint32_t GetNumIndices() const { return m_indices_num; }
 
 	uint32_t GetGlobalGeomIndex() const { return m_global_geom_index; }
+
+	const MaterialAsset* GetMaterial() const { return m_default_material.get(); }
 
 protected:
 	MeshAsset( const AssetId& id, AssetManager& mgr )

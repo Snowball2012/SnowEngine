@@ -13,6 +13,10 @@
         {
           "Id": "9ec65de2-56c2-4b48-967c-c7a9b5b43990",
           "Command": "-EnginePath D:/snow_engine"
+        },
+        {
+          "Id": "cbae8405-e44f-4f0e-95e0-9427af55a2c6",
+          "Command": "+c_breakOnErrorMessages 1"
         }
       ]
     },

@@ -1,5 +1,7 @@
 #include "Core.h"
 
+CVAR_DEFINE( c_breakOnErrorMessages, int, 0, "Break in debugger when error message is sent to the log" );
+
 std::string ToOSPath( const char* internal_path )
 {
 	// todo: move to core
@@ -114,6 +116,11 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	if ( msg_type == LogMessageType::FatalError )
 	{
 		HandleFatalError();
+	}
+
+	if ( c_breakOnErrorMessages.GetValue() > 0 && msg_type == LogMessageType::Error )
+	{
+		INSERT_DBGBREAK
 	}
 }
 

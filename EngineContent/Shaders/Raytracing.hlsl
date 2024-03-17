@@ -24,6 +24,7 @@ float3 PixelPositionToWorld( uint2 pixel_position, float2 pixel_shift, float ndc
 static const uint INVALID_PRIMITIVE = -1;
 static const uint INVALID_INSTANCE_INDEX = -1;
 static const uint INVALID_GEOM_INDEX = -1;
+static const uint INVALID_MATERIAL_INDEX = -1;
 
 struct Payload
 {
@@ -53,6 +54,7 @@ struct HitData
 {
     Payload ray_payload;
     uint geom_index;
+    uint material_index;
     int picking_id;
     float3x4 obj_to_world;
 };
@@ -62,6 +64,7 @@ HitData GetHitData( Payload ray_payload )
     HitData data;
     data.ray_payload = ray_payload;
     data.geom_index = INVALID_GEOM_INDEX;
+    data.material_index = INVALID_MATERIAL_INDEX;
     data.picking_id = -1;
     if ( ray_payload.instance_index != INVALID_INSTANCE_INDEX )
     {
@@ -70,6 +73,7 @@ HitData GetHitData( Payload ray_payload )
         data.geom_index = item_params.geom_buf_index;
         data.obj_to_world = item_params.object_to_world_mat;
         data.picking_id = item_params.picking_id;
+        data.material_index = item_params.material_index;
     }
     
     return data;
@@ -308,8 +312,6 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
     return output;
 }
 
-static const float TEST_ROUGHNESS = 0.3f;
-
 BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out bool hit_valid )
 {
     hit_valid = false;
@@ -325,18 +327,15 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     if ( hit_valid == false )
         return inputs;
     
-    float3 rabbit_albedo = float3( 0.164f, 0.06f, 0.02f );
-    float3 floor_albedo = float3( 0.05f, 0.15f, 0.05f );
+    Material material;
+    if ( hit_data.material_index != INVALID_MATERIAL_INDEX )
+    {
+        material = materials[ hit_data.material_index ];
+    }
     
-    float rabbit_roughness = 0.3f;
-    float floor_roughness = 0.03f;
-    
-    float3 rabbit_f0 = rabbit_albedo * 5;
-    float3 floor_f0 = _float3( 0.04f );
-    
-    inputs.albedo = hit_data.geom_index == 0 ?  _float3( 0 ) : floor_albedo;
-    inputs.roughness = hit_data.geom_index == 0 ? rabbit_roughness : floor_roughness;
-    inputs.f0 = hit_data.geom_index == 0 ? rabbit_f0 : floor_f0;
+    inputs.albedo = material.albedo;
+    inputs.roughness = material.roughness;
+    inputs.f0 = material.f0;
     
     inputs.normal = hit_normal_ws;
     

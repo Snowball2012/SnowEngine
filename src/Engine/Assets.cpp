@@ -52,6 +52,24 @@ bool MeshAsset::Load( const JsonValue& data )
         return false;
     }
 
+    JsonValue::ConstMemberIterator material_it = data.FindMember( "material" );
+    if ( material_it != data.MemberEnd() )
+    {
+        if ( !material_it->value.IsString() )
+        {
+            SE_LOG_ERROR( Engine, "File %s parse error: \"material\" value is not a string", m_id.GetPath() );
+        }
+        else
+        {
+            m_default_material = LoadAsset<MaterialAsset>( material_it->value.GetString() );
+        }
+    }
+
+    if ( m_default_material == nullptr )
+    {
+        SE_LOG_WARNING( Engine, "MeshAsset %s does not have a default material set", m_id.GetPath() );
+    }
+
     m_status = AssetStatus::Ready;
     return true;
 }
@@ -413,6 +431,29 @@ bool TextureAsset::LoadEXR( const char* ospath )
     {
         return false;
     }
+
+    m_status = AssetStatus::Ready;
+    return true;
+}
+
+// MaterialAsset
+
+bool MaterialAsset::Load( const JsonValue& data )
+{
+    JsonValue::ConstMemberIterator parms = data.FindMember( "parms" );
+    if ( parms == data.MemberEnd() || !parms->value.IsObject() )
+    {
+        SE_LOG_ERROR( Engine, "File %s is not a valid material asset: \"parms\" value is invalid", m_id.GetPath() );
+        return false;
+    }
+
+    bool has_albedo = Serialization::Deserialize( parms->value, "albedo", m_gpu_data.albedo );
+
+    bool has_f0 = Serialization::Deserialize( parms->value, "f0", m_gpu_data.f0 );
+
+    bool has_roughness = Serialization::Deserialize( parms->value, "roughness", m_gpu_data.roughness );
+
+    m_global_material_index = GetRenderer().GetGlobalDescriptors().AddMaterial( m_gpu_data );
 
     m_status = AssetStatus::Ready;
     return true;
