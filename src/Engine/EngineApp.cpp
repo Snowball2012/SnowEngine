@@ -63,6 +63,8 @@ void EngineApp::Run( int argc, char** argv )
     m_renderer = std::make_unique<Renderer>();
     g_engine.renderer = m_renderer.get();
 
+    SE_ENSURE( m_renderer->LoadDefaultAssets() );
+
     InitReadbacks();
 
     OnInit();

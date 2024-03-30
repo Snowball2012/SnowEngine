@@ -11,6 +11,7 @@
 #include <rapidjson/istreamwrapper.h>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
+#include <rapidjson/error/en.h>
 
 #include <tinyexr/tinyexr.h>
 

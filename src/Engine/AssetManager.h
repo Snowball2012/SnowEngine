@@ -96,7 +96,9 @@ class AssetManager
 	using AssetFactoryFunctionPtr = Asset * ( * )( const AssetId&, AssetManager& );
 	std::unordered_map<std::string, AssetFactoryFunctionPtr> m_factories;
 
-	std::mutex m_cs;
+	std::mutex m_write_cs;
+	std::mutex m_read_cs;
+	std::mutex m_orphan_cs;
 
 public:
 	AssetManager();
@@ -106,12 +108,15 @@ public:
 	AssetPtr Load( const AssetId& id );
 	void UnloadAllOrphans();
 
+	AssetPtr FindLoadedAsset( const AssetId& id );
+
 	// asset-facing
 	void Orphan( const AssetId& asset );
 
 private:
 	template <class AssetClass>
 	static Asset* CreateAsset( const AssetId& id, AssetManager& mgr );
+
 
 	void RegisterGenerators();
 };

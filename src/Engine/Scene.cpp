@@ -270,9 +270,21 @@ Renderer::Renderer()
 
     m_display_mapping = std::make_unique<DisplayMapping>();
     m_debug_drawing = std::make_unique<DebugDrawing>( m_view_dsl.get() );
+
 }
 
 Renderer::~Renderer() = default;
+
+bool Renderer::LoadDefaultAssets()
+{
+    const char* default_material_path = "#engine/Materials/Default.sea";
+    m_default_material = LoadAsset<MaterialAsset>( default_material_path );
+    if ( m_default_material == nullptr )
+    {
+        SE_LOG_FATAL_ERROR( Renderer, "Could not load default material at %s", default_material_path );
+    }
+    return true;
+}
 
 void Renderer::CreateRTPipeline()
 {
@@ -616,10 +628,11 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
         tlas_instances_data[packed_idx].geom_buf_index = mesh_instance.m_asset->GetGlobalGeomIndex();
         tlas_instances_data[packed_idx].material_index = -1;
         const MaterialAsset* material = mesh_instance.m_asset->GetMaterial();
-        if ( material != nullptr )
+        if ( material == nullptr )
         {
-            tlas_instances_data[packed_idx].material_index = material->GetGlobalMaterialIndex();
+            material = m_default_material.get();
         }
+        tlas_instances_data[packed_idx].material_index = material->GetGlobalMaterialIndex();
         tlas_instances_data[packed_idx].picking_id = mesh_instance.picking_id;
     }
 

@@ -516,10 +516,10 @@ void VisibilityRGS()
                 ( RAY_FLAG_NONE ),
                 0xFF, 0, 1, 0, ray_bounce, payload_bounce );
                 
-            if ( all( pixel_id == view_data.cursor_position_px ) )
-            {
-                AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_bounce.t, COLOR_RED, COLOR_GREEN ) );
-            }
+            //if ( all( pixel_id == view_data.cursor_position_px ) )
+            //{
+            //    AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_bounce.t, COLOR_RED, COLOR_GREEN ) );
+            //}
                 
             current_hit = GetHitData( payload_bounce );
             

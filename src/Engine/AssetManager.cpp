@@ -34,34 +34,8 @@ AssetManager::~AssetManager()
 
 AssetPtr AssetManager::Load( const AssetId& id )
 {
-	std::scoped_lock lock( m_cs );
-
-	// Find in caches
-	auto entry = m_assets.find( id );
-
-	Asset* found_asset = nullptr;
-
-	if ( entry != m_assets.end() )
-		found_asset = entry->second.asset;
-
-	if ( !found_asset )
-	{
-		entry = m_orphans.find( id );
-		if ( entry != m_orphans.end() )
-		{
-			m_assets[id] = entry->second;
-			found_asset = entry->second.asset;
-			m_orphans.erase( entry );
-		}
-	}
-
-	if ( found_asset && found_asset->GetStatus() == AssetStatus::Invalid )
-	{
-		// try reloading? maybe track the number of reload attempts
-		NOTIMPL;
-	}
-
-	if ( found_asset )
+	AssetPtr found_asset = FindLoadedAsset( id );
+	if ( found_asset != nullptr )
 		return found_asset;
 
 	// Load from disk
@@ -77,9 +51,10 @@ AssetPtr AssetManager::Load( const AssetId& id )
 
 	Json d;
 	rapidjson::IStreamWrapper isw( file );
-	if ( d.ParseStream( isw ).HasParseError() )
+	rapidjson::ParseResult parse_res = d.ParseStream( isw );
+	if ( parse_res.IsError() )
 	{
-		SE_LOG_ERROR( Engine, "File %s (OS path: %s) is not a valid asset file : json parse error", id.GetPath(), ospath );
+		SE_LOG_ERROR( Engine, "File %s (OS path: %s) is not a valid asset file : json parse error %s (%u)", id.GetPath(), ospath.c_str(), rapidjson::GetParseError_En(parse_res.Code()), parse_res.Offset());
 		return nullptr;
 	}
 
@@ -109,6 +84,8 @@ AssetPtr AssetManager::Load( const AssetId& id )
 		return nullptr;
 	}
 
+	std::scoped_lock lock_read( m_read_cs );
+	std::scoped_lock lock( m_write_cs );
 	m_assets[id].asset = created_asset;
 
 	return created_asset;
@@ -116,7 +93,7 @@ AssetPtr AssetManager::Load( const AssetId& id )
 
 void AssetManager::UnloadAllOrphans()
 {
-	std::scoped_lock lock( m_cs );
+	std::scoped_lock lock( m_orphan_cs );
 
 	for ( auto& orphan : m_orphans )
 	{
@@ -130,11 +107,14 @@ void AssetManager::UnloadAllOrphans()
 
 void AssetManager::Orphan( const AssetId& asset_id )
 {
-	std::scoped_lock lock( m_cs );
+	std::scoped_lock lock1( m_read_cs );
 
 	auto entry = m_assets.find( asset_id );
 	if ( entry != m_assets.end() )
 	{
+		std::scoped_lock lock2( m_orphan_cs );
+		std::scoped_lock lock3( m_write_cs );
+
 		m_orphans[asset_id] = entry->second;
 		m_assets.erase( entry );
 
@@ -148,6 +128,41 @@ Asset* AssetManager::CreateAsset( const AssetId& id, AssetManager& mgr )
 	return new AssetClass( id, mgr );
 }
 
+
+AssetPtr AssetManager::FindLoadedAsset( const AssetId& id )
+{
+	std::scoped_lock lock( m_read_cs );
+
+	// Find in caches
+	auto entry = m_assets.find( id );
+
+	Asset* found_asset = nullptr;
+
+	if ( entry != m_assets.end() )
+		found_asset = entry->second.asset;
+
+	if ( !found_asset )
+	{
+		std::scoped_lock lock2( m_orphan_cs );
+
+		entry = m_orphans.find( id );
+		if ( entry != m_orphans.end() )
+		{
+			std::scoped_lock lock3( m_write_cs );
+			m_assets[id] = entry->second;
+			found_asset = entry->second.asset;
+			m_orphans.erase( entry );
+		}
+	}
+
+	if ( found_asset && found_asset->GetStatus() == AssetStatus::Invalid )
+	{
+		// try reloading? maybe track the number of reload attempts
+		NOTIMPL;
+	}
+	
+	return found_asset;
+}
 
 void AssetManager::RegisterGenerators()
 {

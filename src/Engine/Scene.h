@@ -190,12 +190,16 @@ private:
 
     std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
+    MaterialAssetPtr m_default_material = nullptr;
+
     mutable std::atomic<uint32_t> m_random_seed = 0;
 
 public:
 
     Renderer();
     ~Renderer();
+
+    bool LoadDefaultAssets();
 
     // ui_cmd_list is optional
     bool RenderScene( const RenderSceneParams& parms );
