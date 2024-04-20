@@ -5,7 +5,7 @@
 [[vk::binding( 0, 0 )]] RWTexture2D<float4> output;
 [[vk::binding( 1, 0 )]] RWTexture2D<uint> level_object_ids;
 
-#define USE_IMPORTANCE_SAMPLING
+//#define USE_IMPORTANCE_SAMPLING
 #define USE_GGX_SAMPLING
 
 // pixel_shift is in range [0,1]. 0.5 means middle of the pixel
@@ -161,6 +161,21 @@ float VisibleGGXPDF(float3 V, float3 H, float a2)
 	return PDF;
 }
 
+float GGX_D( float a2, float NoH ) {
+    float denom = M_PI * sqr( sqr( NoH ) * ( a2 - 1.0f ) + 1.0f );
+    return a2 / denom;    
+}
+
+float V_SmithGGXCorrelated(float NoV, float NoL, float a2) {
+    float GGXL = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
+    float GGXV = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
+    return 0.5 / (GGXV + GGXL);
+}
+
+float GGX_Full( float a2, float NoH, float NoV, float NoL ) {
+    return GGX_D( a2, NoH ) * V_SmithGGXCorrelated( NoV, NoL, a2 );
+}
+
 float VisibleGGXPDF(float NoV, float NoH, float VoH, float a2)
 {
 	float d = (NoH * a2 - NoH) * NoH + 1;
@@ -248,9 +263,11 @@ float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
     float a = sqr( roughness );
     float a2 = sqr( a );
     
-    float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, VoH, a2 ) );
+    float3 ggx_spec = _float3( GGX_Full( a2, NoH, NoV, NoL ) );
+    //float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, VoH, a2 ) );
     
-    float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - NoL, 5 );
+    // VoH == LoH. Use H instead of N because we afre only interested in microfacets whose normal is equal to H
+    float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - VoH, 5 );
 
     return lerp( lambertian_diffuse, ggx_spec, fresnel );
 }
@@ -260,6 +277,7 @@ float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
 struct BSDFSampleOutput
 {
     float3 integration_term; // bsdf * dot( n, l ) / pdf
+    float pdf;
     float3 dir_o;
 };
 
@@ -289,7 +307,7 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
             float3 h = normalize( dir_o_ts.xyz + v_ts );
             
             float spec_pdf = VisibleGGXPDF( v_ts.xzy, h.xzy, a2 ); 
-            dir_o_ts.w = lerp( spec_pdf, dir_o_ts_diffuse.w, 0.5f/*inputs.roughness*/ );
+            dir_o_ts.w =lerp( spec_pdf, dir_o_ts_diffuse.w, 0.5f/*inputs.roughness*/ );
         }
         float pdf = dir_o_ts.w;
     #else
@@ -302,7 +320,8 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
     float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i );
     
     BSDFSampleOutput output;
-    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) ) / pdf;
+    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) );// / pdf;
+    output.pdf = pdf;
     
     if ( dir_o_ts.y <= 0 || any( isnan( output.integration_term ) ) || any( isinf( output.integration_term ) ) )
         output.integration_term = _float3( 0 );
@@ -357,6 +376,7 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
 struct PathData
 {
     float3 bsdf_acc;
+    float pdf_acc;
     float3 current_direction_ws;
     float3 current_position_ws;
     bool terminated;
@@ -379,12 +399,14 @@ void TracePath( HitData hit, float3 e, inout PathData path )
     
     path.current_direction_ws = bsdf_sample.dir_o;
     path.bsdf_acc *= bsdf_sample.integration_term;
+    path.pdf_acc *= bsdf_sample.pdf;
 }
 
 PathData PathInit( float3 ray_start_pos_ws, float3 ray_direction_ws )
 {
     PathData data;
     data.bsdf_acc = _float3( 1.0f );
+    data.pdf_acc = 1.0f;
     data.terminated = false;
     data.current_position_ws = ray_start_pos_ws;
     data.current_direction_ws = ray_direction_ws;
@@ -392,9 +414,20 @@ PathData PathInit( float3 ray_start_pos_ws, float3 ray_direction_ws )
     return data;
 }
 
-float3 GetMissRadiance()
+float3 GetMissRadiance( float3 direction )
 {
-    return _float3( 10.0f );
+    float2 uv;
+    uv.y = 0.5f - asin( direction.y ) / M_PI;
+    uv.x = ( atan2( direction.x, direction.z ) + M_PI ) / ( 2 * M_PI );
+    
+    return env_cubemap.SampleLevel( env_cubemap_sampler, uv, 0 );
+    //return _float3( 10.0f ); constant color sampling
+}
+
+float4 OutputColor( float4 cur_value, float3 radiance, uint frame_count ) {
+    uint4 new_value = uint4( radiance * 10000.0f, frame_count );
+        
+    return asfloat( new_value + asuint( cur_value) );
 }
 
 // PDF = D * NoH / (4 * VoH)
@@ -460,11 +493,12 @@ void VisibilityRGS()
         if ( view_data.use_accumulation )
         {
             float4 cur_value = output[pixel_id];
-            output[pixel_id] = float4( cur_value.xyz + GetMissRadiance(), asfloat( asuint( cur_value.w ) + 1 ) );
+            
+            output[pixel_id] = OutputColor( cur_value, GetMissRadiance( camera_ray_direction ), 1 );
         }
         else
         {
-            output[pixel_id] = float4( GetMissRadiance(), asfloat( uint( 1 ) ) );
+            output[pixel_id] = OutputColor( asfloat( uint4( 0, 0, 0, 0 ) ), GetMissRadiance( camera_ray_direction ), 1 );
         }
         
         level_object_ids[pixel_id] = -1;
@@ -504,7 +538,7 @@ void VisibilityRGS()
             
             if ( path.terminated )
             {
-                radiance_accum += float3( 1, 0, 1 ) * path.bsdf_acc;
+                radiance_accum += float3( 1, 0, 1 ) * path.bsdf_acc / ( path.pdf_acc + 1.e-8f );
                 break;
             }
             
@@ -525,7 +559,7 @@ void VisibilityRGS()
             
             if ( current_hit.geom_index == INVALID_GEOM_INDEX )
             {
-                radiance_accum += GetMissRadiance() * path.bsdf_acc;
+                radiance_accum += GetMissRadiance( ray_bounce.Direction ) * path.bsdf_acc / ( path.pdf_acc + 1.e-8f );
                 break;
             }
         }
@@ -536,11 +570,12 @@ void VisibilityRGS()
     if ( view_data.use_accumulation )
     {
         float4 cur_value = output[pixel_id];
-        output[pixel_id] = float4( cur_value.xyz + output_color, asfloat( asuint( cur_value.w ) + 1 ) );
+        
+        output[pixel_id] = OutputColor( cur_value, output_color, 1 );
     }
     else
     {
-        output[pixel_id] = float4( output_color, asfloat( uint( 1 ) ) );
+        output[pixel_id] = OutputColor( asfloat( uint4( 0, 0, 0, 0 ) ), output_color, 1 );
     }
 }
 

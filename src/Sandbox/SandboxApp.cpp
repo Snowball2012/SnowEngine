@@ -200,11 +200,20 @@ void SandboxApp::UpdateGui()
 
             ImGui::EndMenu();
         }
-        if ( ImGui::MenuItem( "WorldOutliner" ) )
-            m_show_world_outliner = true;
 
-        if ( ImGui::MenuItem( "ImGUIDemo" ) )
-            m_show_imgui_demo = true;
+        if ( ImGui::BeginMenu( "Tools" ) ) {
+
+            if ( ImGui::MenuItem( "Material Editor" ) )
+                m_show_material_editor = true;
+
+            if ( ImGui::MenuItem( "WorldOutliner" ) )
+                m_show_world_outliner = true;
+
+            if ( ImGui::MenuItem( "ImGUIDemo" ) )
+                m_show_imgui_demo = true;
+
+            ImGui::EndMenu();
+        }
 
         if ( ImGui::MenuItem( "ReloadShaders" ) )
         {
@@ -268,6 +277,12 @@ void SandboxApp::UpdateGui()
                 ImGui::Text( "World not found" );
             }
         }
+        ImGui::End();
+    }
+
+    if ( m_show_material_editor )
+    {
+        ImGui::Begin( "Material Editor", &m_show_material_editor, ImGuiWindowFlags_None );
         ImGui::End();
     }
 }

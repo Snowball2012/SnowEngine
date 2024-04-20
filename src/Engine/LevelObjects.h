@@ -29,7 +29,15 @@ public:
     virtual const char* GetTraitClassName() const = 0;
 };
 
-#define IMPLEMENT_LEVELOBJECT_TRAIT( className ) virtual const char* GetTraitClassName() const override { return S_(className); }
+#define IMPLEMENT_LEVELOBJECT_TRAIT( className ) \
+virtual const char* GetTraitClassName() const override { return S_(className); } \
+virtual const char* GetTraitPrettyName() const override { return className::PrettyName(); }
+
+
+struct TraitInfo {
+    std::string class_name;
+    std::string pretty_name;
+};
 
 // Object definition contained in a level file. Serializable. Editor allows to create, delete and modify them.
 // Each level object creates at least one world entity (and may spawn other child entities)
@@ -87,6 +95,7 @@ public:
     static void RegisterTraits();
 
     static std::unique_ptr<LevelObjectTrait> CreateTrait( const char* className );
+    static const std::vector<TraitInfo>& GetAllTraits() { return s_trait_infos; }
 
 private:
 
@@ -95,6 +104,8 @@ private:
 
     using TraitFactoryFunctionPtr = std::unique_ptr<LevelObjectTrait>( * )( );
     static std::unordered_map<std::string, TraitFactoryFunctionPtr> s_trait_factories;
+
+    static std::vector<TraitInfo> s_trait_infos;
 
     void DestroyEntities();
     bool GenerateEntities();
@@ -134,7 +145,7 @@ public:
 
     virtual void OnUpdateGUI( bool& trait_changed ) override;
 
-    virtual const char* GetTraitPrettyName() const override { return "Transform"; }
+    static const char* PrettyName() { return "Transform"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
     virtual bool Deserialize( const JsonValue& in ) override;
@@ -155,10 +166,33 @@ public:
 
     virtual void OnUpdateGUI( bool& trait_changed ) override;
 
-    virtual const char* GetTraitPrettyName() const override { return "Mesh Instance"; }
+    static const char* PrettyName() { return "Mesh Instance"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
     virtual bool Deserialize( const JsonValue& in ) override;
 
     void SetAsset( MeshAssetPtr mesh );
+};
+
+
+class EnvironmentTrait : public LevelObjectTrait
+{
+    TextureAssetPtr m_env_cubemap = nullptr;
+
+    mutable std::string m_env_cubemap_gui_path;
+
+public:
+    IMPLEMENT_LEVELOBJECT_TRAIT( EnvironmentTrait )
+
+    virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
+
+    virtual void OnUpdateGUI( bool& trait_changed ) override;
+
+    static const char* PrettyName() { return "Environment"; }
+
+    virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
+    virtual bool Deserialize( const JsonValue& in ) override;
+
+    void SetEnvCubemap( TextureAssetPtr cubemap );
+
 };

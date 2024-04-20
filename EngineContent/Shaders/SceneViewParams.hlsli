@@ -74,6 +74,8 @@ static const int MAX_SCENE_GEOMS = 256;
 [[vk::binding( 3, 1 )]] RWStructuredBuffer<DebugLine> debug_lines;
 [[vk::binding( 4, 1 )]] RWStructuredBuffer<DebugLineIndirectArgs> debug_lines_indirect_args;
 [[vk::binding( 5, 1 )]] RWStructuredBuffer<ViewFrameReadbackData> view_frame_readback_data;
+[[vk::binding( 6, 1 )]] Texture2D<float4> env_cubemap;
+[[vk::binding( 7, 1 )]] SamplerState env_cubemap_sampler;
 
 [[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
 [[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];

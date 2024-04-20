@@ -43,6 +43,8 @@ private:
 	std::unique_ptr<Scene> m_scene;
 	std::unique_ptr<SceneView> m_scene_view;
 
+	std::vector<const char*> m_all_traits_pretty_names;
+
 public:
 	LevelEditor();
 	~LevelEditor();
@@ -70,3 +72,14 @@ private:
 
 	bool HandleMousePicking();
 };
+/*
+class MaterialEditor
+{
+private:
+	std::unique_ptr<MaterialAssetPtr> m_cur_material;
+
+public:
+	void Update();
+
+	void 
+};*/

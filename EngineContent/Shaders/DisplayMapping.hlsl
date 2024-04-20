@@ -180,7 +180,7 @@ float3 TonemapUncharted2Partial( float3 x )
 [[vk::location( 0 )]] float4 DisplayMappingPS( [[vk::location( 1 )]] in float2 uv : TEXCOORD0, in float4 fragcoord : SV_POSITION ) : SV_TARGET0
 {
 	float4 input_tex_value = TextureObject.Load( int3( fragcoord.x, fragcoord.y, 0 ) ).rgba;
-	float3 input_linear = input_tex_value.rgb / float( asuint( input_tex_value.a ) );
+	float3 input_linear = ( float3( asuint( input_tex_value.rgb ) ) / 10000.0f ) / float( asuint( input_tex_value.a ) );
 	
 	if ( pass_params.show_hue_test_image )
 	{

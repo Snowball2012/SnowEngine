@@ -10,6 +10,7 @@
 // Level object
 
 std::unordered_map<std::string, LevelObject::TraitFactoryFunctionPtr> LevelObject::s_trait_factories = {};
+std::vector<TraitInfo> LevelObject::s_trait_infos = {};
 
 LevelObject::LevelObject( World* world )
     : m_world( world )
@@ -238,10 +239,11 @@ void LevelObject::RegisterTraits()
 #ifdef REGISTER_TRAIT
 #error "Macro REGISTER_TRAIT is already defined"
 #endif
-#define REGISTER_TRAIT( className ) s_trait_factories[ S_(className) ] = CreateTraitInternal<className>;
+#define REGISTER_TRAIT( className ) s_trait_factories[ S_(className) ] = CreateTraitInternal<className>; s_trait_infos.emplace_back( TraitInfo{ S_(className), className::PrettyName() } );
 
     REGISTER_TRAIT( TransformTrait );
     REGISTER_TRAIT( MeshInstanceTrait );
+    REGISTER_TRAIT( EnvironmentTrait );
 
 #undef REGISTER_ASSET_GENERATOR
 }
@@ -308,19 +310,43 @@ void TransformTrait::OnUpdateGUI( bool& trait_changed )
 
 bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
 {
-    Serialization::Serialize( m_tf, out, allocator );
-    Serialization::Serialize( m_euler, out, allocator );
+    out.SetObject();
+
+    JsonValue tf;
+    Serialization::Serialize( m_tf, tf, allocator );
+
+    JsonValue euler;
+    Serialization::Serialize( m_euler, euler, allocator );
+
+    out.AddMember( "tf", tf, allocator );
+    out.AddMember( "euler", euler, allocator );
 
     return true;
 }
 
 bool TransformTrait::Deserialize( const JsonValue& in )
 {
-    bool has_tf = Serialization::Deserialize( in, m_tf );
-    bool has_euler = Serialization::Deserialize( in, m_euler );
-    if ( has_euler )
-        m_tf.orientation = glm::quat( glm::radians( m_euler ) );
+    if ( !in.IsObject() )
+    {
+        SE_LOG_ERROR( Engine, "%s: Json value is not an object", GetTraitPrettyName() );
+        return false;
+    }
 
+    auto tf_it = in.FindMember( "tf" );
+    bool has_tf = false;
+    if ( tf_it != in.MemberEnd() )
+    {
+        has_tf = Serialization::Deserialize( tf_it->value, m_tf );
+    }
+
+    auto euler_it = in.FindMember( "euler" );
+    bool has_euler = false;
+    if ( euler_it != in.MemberEnd() )
+    {
+        has_euler = Serialization::Deserialize( euler_it->value, m_euler );
+    };
+
+    m_tf.orientation = glm::quat( glm::radians( m_euler ) );
     return has_tf;
 }
 
@@ -413,4 +439,95 @@ bool MeshInstanceTrait::Deserialize( const JsonValue& in )
 void MeshInstanceTrait::SetAsset( MeshAssetPtr mesh )
 {
     m_mesh = mesh;
+}
+
+
+// Environment trait
+
+bool EnvironmentTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const
+{
+    EnvCubemapComponent& component = levelobj.AddComponent<EnvCubemapComponent>( base_entity );
+
+    component.cubemap = m_env_cubemap;
+
+    if ( m_env_cubemap != nullptr )
+    {
+        m_env_cubemap_gui_path = m_env_cubemap->GetPath();
+    }
+
+    return true;
+}
+
+void EnvironmentTrait::OnUpdateGUI( bool& trait_changed )
+{
+    trait_changed = false;
+
+    ImGui::InputText( "Asset", &m_env_cubemap_gui_path );
+    if ( ImGui::IsItemDeactivatedAfterEdit() )
+    {
+        if ( m_env_cubemap_gui_path.empty() )
+        {
+            if ( m_env_cubemap != nullptr )
+            {
+                trait_changed = true;
+            }
+        }
+        else
+        {
+            TextureAssetPtr new_env = LoadAsset<TextureAsset>( m_env_cubemap_gui_path.c_str() );
+            if ( new_env.get() != m_env_cubemap.get() )
+            {
+                m_env_cubemap = new_env;
+                trait_changed = true;
+            }
+
+            if ( new_env == nullptr )
+            {
+                SE_LOG_ERROR( Engine, "No texture asset was found at path %s", m_env_cubemap_gui_path.c_str() );
+            }
+        }
+    }
+}
+
+bool EnvironmentTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
+{
+    out.SetObject();
+
+    std::string assetPath = "";
+    if ( m_env_cubemap != nullptr )
+    {
+        assetPath = m_env_cubemap->GetPath();
+    }
+
+    JsonValue path_json_string;
+    path_json_string.SetString( assetPath.c_str(), allocator );
+    out.AddMember( "env_cubemap", path_json_string, allocator );
+
+    return true;
+}
+
+bool EnvironmentTrait::Deserialize( const JsonValue& in )
+{
+    if ( !in.IsObject() )
+    {
+        SE_LOG_ERROR( Engine, "%s: Json value is not an object", GetTraitPrettyName() );
+        return false;
+    }
+
+    auto asset_it = in.FindMember( "env_cubemap" );
+    if ( asset_it == in.MemberEnd() || !asset_it->value.IsString() )
+    {
+        SE_LOG_ERROR( Engine, "%s: env_cubemap property not found or invalid", GetTraitPrettyName() );
+        return false;
+    }
+
+    m_env_cubemap = LoadAsset<TextureAsset>( asset_it->value.GetString() );
+    m_env_cubemap_gui_path = m_env_cubemap ? m_env_cubemap->GetPath() : "";
+
+    return true;
+}
+
+void EnvironmentTrait::SetEnvCubemap( TextureAssetPtr env_map )
+{
+    m_env_cubemap = env_map;
 }

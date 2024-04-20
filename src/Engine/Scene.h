@@ -36,6 +36,8 @@ private:
     std::unique_ptr<TLAS> m_tlas;
     SceneMeshInstanceList m_mesh_instances;
 
+    TextureAssetPtr m_env_cubemap;
+
 public:
     Scene();
 
@@ -47,6 +49,9 @@ public:
     std::span<const SceneMeshInstance> GetAllMeshInstances() const { return std::span<const SceneMeshInstance>( m_mesh_instances.data(), m_mesh_instances.data() + m_mesh_instances.size() ); }
 
     TLAS& GetTLAS() { return *m_tlas; }
+
+    void SetEnvCubemap( TextureAssetPtr cubemap ) { m_env_cubemap = std::move( cubemap ); }
+    TextureAsset* GetEnvCubemap() const { return m_env_cubemap.get(); }
 
     // Call before any render operation on the scene. This makes changes made to scene objects (mesh instances, etc.) visible to the renderer
     void Synchronize();
@@ -191,6 +196,7 @@ private:
     std::unique_ptr<GlobalDescriptors> m_global_descriptors = nullptr;
 
     MaterialAssetPtr m_default_material = nullptr;
+    TextureAssetPtr m_default_texture = nullptr;
 
     mutable std::atomic<uint32_t> m_random_seed = 0;
 

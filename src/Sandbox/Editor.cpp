@@ -82,6 +82,15 @@ LevelEditor::LevelEditor()
     m_scene_view = std::make_unique<SceneView>( m_scene.get() );
 
     m_world = std::make_unique<World>();
+
+    // Create trait creation UI
+    {
+        const std::vector<TraitInfo>& traits = LevelObject::GetAllTraits();
+        for ( const auto& trait : traits )
+        {
+            m_all_traits_pretty_names.push_back( trait.pretty_name.c_str() );
+        }
+    }
 }
 
 LevelEditor::~LevelEditor()
@@ -211,13 +220,20 @@ bool LevelEditor::Update( float delta_time_sec )
 
             if ( create_object )
             {
-                auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-                new_object->SetName( new_object_name.c_str(), true );
-                new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
-                new_object->RegenerateEntities();
-                scene_view_changed = true;
+                if ( new_object_name.empty() )
+                {
+                    SE_LOG_WARNING( Sandbox, "Can't create an entity without a name" );
+                }
+                else
+                {
+                    auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
+                    new_object->SetName( new_object_name.c_str(), true );
+                    new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
+                    new_object->RegenerateEntities();
+                    scene_view_changed = true;
 
-                m_selected_object = int( m_level_objects.size() ) - 1;
+                    m_selected_object = int( m_level_objects.size() ) - 1;
+                }
             }
 
             if ( m_selected_object >= 0 && m_selected_object < int( m_level_objects.size() ) )
@@ -230,25 +246,17 @@ bool LevelEditor::Update( float delta_time_sec )
                     bool create_trait = ImGui::Button( "Add" );
                     ImGui::SameLine();
                     static int item_current = 0;
-                    ImGui::Combo( "Trait", &item_current, "Transform\0MeshInstance\0" );
+                    ImGui::Combo( "Trait", &item_current, m_all_traits_pretty_names.data(), int( m_all_traits_pretty_names.size() ) );
 
                     if ( create_trait )
                     {
-                        switch ( item_current )
+                        const auto& trait_list = LevelObject::GetAllTraits();
+                        if ( SE_ENSURE( item_current >= 0 && item_current < trait_list.size() ) )
                         {
-                        case 0:
-                        {
-                            level_object->AddTrait( std::make_unique<TransformTrait>(), true );
+                            level_object->AddTrait( LevelObject::CreateTrait( trait_list[item_current].class_name.c_str() ), true );
+                            level_object->RegenerateEntities();
+                            scene_view_changed = true;
                         }
-                        break;
-                        case 1:
-                        {
-                            level_object->AddTrait( std::make_unique<MeshInstanceTrait>(), true );
-                        }
-                        break;
-                        }
-                        level_object->RegenerateEntities();
-                        scene_view_changed = true;
                     }
 
                     if ( level_object->OnUpdateGUI() )
@@ -335,6 +343,16 @@ void LevelEditor::UpdateScene()
             continue;
 
         smi->m_tf = tf.tf;
+    }
+
+    uint32_t num_cubemaps = 0;
+    for ( const auto& [entity_id, env_cubemap_component] : m_world->CreateView<EnvCubemapComponent>() ) {
+        num_cubemaps++;
+        m_scene->SetEnvCubemap( env_cubemap_component.cubemap );
+    }
+
+    if ( num_cubemaps > 1 ) {
+        SE_LOG_WARNING( Sandbox, "Multiple cubemaps in the level" );
     }
 
     for ( const auto& [entity_id, mesh_instance_component, picking_component] : m_world->CreateView<MeshInstanceComponent, EditorPickingComponent>() )

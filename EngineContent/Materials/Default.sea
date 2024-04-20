@@ -2,7 +2,7 @@
 	"_generator" : "MaterialAsset",
 	"parms" : {
 		"roughness" : 0.5,
-		"albedo" : [ 0.5, 0.0, 0.5 ],
+		"albedo" : [ 0.0, 0.3, 0.00 ],
 		"f0" : [ 0.04, 0.04, 0.04 ]
 	}
 }

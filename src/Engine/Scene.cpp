@@ -277,6 +277,13 @@ Renderer::~Renderer() = default;
 
 bool Renderer::LoadDefaultAssets()
 {
+    const char* default_texture_path = "#engine/Textures/Missing.sea";
+    m_default_texture = LoadAsset<TextureAsset>( default_texture_path );
+    if ( m_default_texture == nullptr )
+    {
+        SE_LOG_FATAL_ERROR( Renderer, "Could not load default texture at %s", m_default_texture );
+    }
+
     const char* default_material_path = "#engine/Materials/Default.sea";
     m_default_material = LoadAsset<MaterialAsset>( default_material_path );
     if ( m_default_material == nullptr )
@@ -549,7 +556,7 @@ void Renderer::CreateDescriptorSetLayout()
     }
 
     {
-        RHI::DescriptorViewRange ranges[6] = {};
+        RHI::DescriptorViewRange ranges[8] = {};
         ranges[0].type = RHIShaderBindingType::AccelerationStructure;
         ranges[0].count = 1;
         ranges[0].stages = RHIShaderStageFlags::AllBits;
@@ -573,6 +580,14 @@ void Renderer::CreateDescriptorSetLayout()
         ranges[5].type = RHIShaderBindingType::StructuredBuffer;
         ranges[5].count = 1;
         ranges[5].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[6].type = RHIShaderBindingType::TextureRO;
+        ranges[6].count = 1;
+        ranges[6].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[7].type = RHIShaderBindingType::Sampler;
+        ranges[7].count = 1;
+        ranges[7].stages = RHIShaderStageFlags::AllBits;
 
         RHI::DescriptorSetLayoutInfo binding_table = {};
         binding_table.ranges = ranges;
@@ -646,6 +661,15 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     view_data.view_desc_set->BindStructuredBuffer( 3, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_buf.get() } );
     view_data.view_desc_set->BindStructuredBuffer( 4, 0, RHIBufferViewInfo{ view.GetDebugDrawData().m_lines_indirect_args_buf.get() } );
     view_data.view_desc_set->BindStructuredBuffer( 5, 0, RHIBufferViewInfo{ view_data.readback_buf } );
+
+    TextureAsset* env_cubemap_tex = view.GetScene().GetEnvCubemap();
+    if ( !env_cubemap_tex )
+    {
+        env_cubemap_tex = m_default_texture.get();
+    }
+    view_data.view_desc_set->BindTextureROView( 6, 0, *env_cubemap_tex->GetTextureROView() );
+
+    view_data.view_desc_set->BindSampler( 7, 0, *m_point_sampler );
 
     view_data.view_desc_set->FlushBinds();
 }
