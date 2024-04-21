@@ -268,6 +268,16 @@ bool LevelEditor::Update( float delta_time_sec )
                 ImGui::PopID();
             }
         }
+
+
+        if ( !ImGui::GetIO().WantCaptureKeyboard && ImGui::IsKeyPressed( ImGuiKey_Delete, false ) && m_selected_object != -1 )
+        {
+            scene_view_changed = true;
+
+            std::swap( m_level_objects[m_selected_object], m_level_objects.back() );
+            m_level_objects.pop_back();
+            SE_LOG_INFO( Sandbox, "delete pressed" );
+        }
     }
 
     if ( scene_view_changed && m_scene_view != nullptr )
@@ -284,11 +294,14 @@ bool LevelEditor::Update( float delta_time_sec )
         m_selected_object = -1;
     }
 
+
     // Update world
     WorldUtils::DestroyMarkedEntities( *m_world, m_scene.get() );
     WorldUtils::SetupEntities( *m_world, m_scene.get() );
 
     UpdateScene();
+
+    m_scene_view->DebugUI();
 
     return true;
 }
