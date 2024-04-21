@@ -29,8 +29,23 @@
       "Command": "+vk_validation_enableGPUAssisted 1"
     },
     {
-      "Id": "048761fb-84e9-4f4c-b6da-d7433295b717",
-      "Command": "-StartLevel #engine/Levels/Default.sel"
+      "Id": "7cf956f5-0123-48dd-920b-d6941694452e",
+      "Command": "Levels",
+      "ExclusiveMode": true,
+      "Items": [
+        {
+          "Id": "048761fb-84e9-4f4c-b6da-d7433295b717",
+          "Command": "-StartLevel #engine/Levels/Default.sel"
+        },
+        {
+          "Id": "e53a4ee8-db24-4fd7-b74f-c667a0da4b64",
+          "Command": "-StartLevel #engine/Levels/WhiteFurnace.sel"
+        }
+      ]
+    },
+    {
+      "Id": "6a796452-40fe-4803-a289-4a97ba960b87",
+      "Command": "+r_showStats 1"
     }
   ]
 }

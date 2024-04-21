@@ -13,6 +13,8 @@
 
 CVAR_DEFINE( r_debugDisplayMapping, int, 0, "Show debug interface for display mapping" );
 
+CVAR_DEFINE( r_showStats, int, 0, "Show renderer stats" );
+
 // Scene
 
 Scene::Scene()
@@ -140,6 +142,24 @@ glm::mat4x4 SceneView::CalcProjectionMatrix() const
     float aspectRatio = float( m_extents.x ) / float( m_extents.y );
     float fovY = m_fovXRadians / aspectRatio;
     return glm::perspective( fovY, aspectRatio, 0.1f, 10.0f );
+}
+
+void SceneView::DebugUI() const
+{
+    if ( r_showStats.GetValue() > 0 )
+    {
+        bool window_open = true;
+        if ( ImGui::Begin( "Renderer stats", &window_open ) )
+        {
+            ImGui::Text( "Num samples = %lu", m_num_accumulated_frames );
+        }
+        ImGui::End();
+
+        if ( window_open == false )
+        {
+            r_showStats.SetValue( 0 );
+        }
+    }
 }
 
 
@@ -847,6 +867,8 @@ bool Renderer::RenderScene( const RenderSceneParams& parms )
     m_debug_drawing->RecordDrawPasses( *cmd_list_rt, view_frame_data, debug_drawing_ctx );
 
     cmd_list_rt->End();
+
+    scene_view.OnEndRenderFrame();
 
     return true;
 }

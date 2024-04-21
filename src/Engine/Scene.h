@@ -85,6 +85,8 @@ private:
 
     int m_accumulated_rt_texture_idx = -1;
 
+    uint64_t m_num_accumulated_frames = 0;
+
     DebugDrawingSceneViewData m_debug_draw_data;
 
 public:
@@ -95,7 +97,8 @@ public:
     void SetCameraPosition( const glm::vec3& eye );
     void SetExtents( const glm::uvec2& extents );
 
-    void ResetAccumulation() { m_accumulated_rt_texture_idx = -1; }
+    void ResetAccumulation() { m_accumulated_rt_texture_idx = -1; m_num_accumulated_frames = 0; }
+    void OnEndRenderFrame() { m_num_accumulated_frames++; }
 
     int GetAccumulatedTextureIdx() const { return m_accumulated_rt_texture_idx; }
     void SetAccumulatedTextureIdx( int idx ) { m_accumulated_rt_texture_idx = idx; }
@@ -119,6 +122,8 @@ public:
     glm::mat4x4 CalcProjectionMatrix() const;
 
     Scene& GetScene() const { return *m_scene; }
+
+    void DebugUI() const;
 };
 
 // Data associated with a scene view managed by renderer for a single frame
