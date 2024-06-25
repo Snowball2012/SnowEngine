@@ -93,14 +93,24 @@ AssetPtr AssetManager::Load( const AssetId& id )
 
 void AssetManager::UnloadAllOrphans()
 {
-	std::scoped_lock lock( m_orphan_cs );
-
-	for ( auto& orphan : m_orphans )
+	std::unordered_map<AssetId, AssetManagerEntry> orphans_copy;
+	int num_unloaded = 0;
+	while ( !m_orphans.empty() )
 	{
-		delete orphan.second.asset;
+		{
+			std::scoped_lock lock( m_orphan_cs );
+			orphans_copy = std::move( m_orphans );
+			m_orphans.clear();
+		}
+
+		for ( auto& orphan : orphans_copy )
+		{
+			delete orphan.second.asset;
+			num_unloaded++;
+		}
 	}
 
-	SE_LOG_INFO( Engine, "Unloaded %u orphans", m_orphans.size() );
+	SE_LOG_INFO( Engine, "Unloaded %i orphans", num_unloaded );
 
 	m_orphans.clear();
 }
