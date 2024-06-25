@@ -17,6 +17,7 @@ struct MeshVertex
 {
     glm::vec3 position;
     glm::vec3 normal;
+    glm::vec2 uv;
 };
 
 RHIPrimitiveAttributeInfo MeshAsset::GetPositionBufferInfo() const
@@ -98,6 +99,8 @@ bool MeshAsset::LoadFromObj( const char* path )
         return false;
     }
 
+    std::unordered_map<uint64_t, uint32_t> vertex_attribs_to_index;
+
     std::vector<MeshVertex> vertices;
     std::vector<uint16_t> indices;
 
@@ -107,15 +110,6 @@ bool MeshAsset::LoadFromObj( const char* path )
     {
         SE_LOG_ERROR( Engine, "Obj file vertex array size not multiple of 3. File: <%s> ", input_file_path.c_str() );
         return false;
-    }
-
-    for ( size_t i = 0, num_vertices = attrib.vertices.size(); i < num_vertices; i += 3 )
-    {
-        tinyobj::real_t vx = attrib.vertices[i + 0];
-        tinyobj::real_t vy = attrib.vertices[i + 1];
-        tinyobj::real_t vz = attrib.vertices[i + 2];
-
-        vertices.emplace_back( MeshVertex{ glm::vec3( vx, vy, vz ), glm::vec3( 0, 0, 1 ) } );
     }
 
     // Loop over shapes
@@ -139,24 +133,62 @@ bool MeshAsset::LoadFromObj( const char* path )
                 {
                     NOTIMPL;
                 }
-                indices.emplace_back( idx.vertex_index );
+                if ( idx.normal_index > std::numeric_limits<uint16_t>::max() )
+                {
+                    NOTIMPL;
+                }
+                if ( idx.texcoord_index > std::numeric_limits<uint16_t>::max() )
+                {
+                    NOTIMPL;
+                }
 
-                // Check if `normal_index` is zero or positive. negative = no normal data
-                //if ( idx.normal_index >= 0 ) {
-                //    tinyobj::real_t nx = attrib.normals[3 * size_t( idx.normal_index ) + 0];
-                //    tinyobj::real_t ny = attrib.normals[3 * size_t( idx.normal_index ) + 1];
-                //    tinyobj::real_t nz = attrib.normals[3 * size_t( idx.normal_index ) + 2];
-                //}
+                const uint64_t vertex_hash =
+                    ( idx.vertex_index & 0xffff )
+                    | ( ( uint64_t( idx.normal_index ) << 16 ) & 0xffff0000 )
+                    | ( ( uint64_t( idx.texcoord_index ) << 32 ) & 0xffff00000000 );
+                
+                uint16_t vertex_idx = -1;
+                auto existing_index_it = vertex_attribs_to_index.find( vertex_hash );
+                if ( existing_index_it != vertex_attribs_to_index.end() )
+                {
+                    vertex_idx = existing_index_it->second;
+                }
+                else
+                {
+                    vertex_idx = uint16_t( vertices.size() );
 
-                // Check if `texcoord_index` is zero or positive. negative = no texcoord data
-                //if ( idx.texcoord_index >= 0 ) {
-                //    tinyobj::real_t tx = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 0];
-                //    tinyobj::real_t ty = attrib.texcoords[2 * size_t( idx.texcoord_index ) + 1];
-                //}
-                // Optional: vertex colors
-                // tinyobj::real_t red   = attrib.colors[3*size_t(idx.vertex_index)+0];
-                // tinyobj::real_t green = attrib.colors[3*size_t(idx.vertex_index)+1];
-                // tinyobj::real_t blue  = attrib.colors[3*size_t(idx.vertex_index)+2];
+                    MeshVertex new_vertex = {};
+
+                    const int pos_offset = idx.vertex_index * 3;
+                    tinyobj::real_t vx = attrib.vertices[pos_offset + 0];
+                    tinyobj::real_t vy = attrib.vertices[pos_offset + 1];
+                    tinyobj::real_t vz = attrib.vertices[pos_offset + 2];
+
+                    new_vertex.position = glm::vec3( vx, vy, vz );
+                    
+                    const int normal_offset = idx.normal_index * 3;
+                    if ( normal_offset >= 0 )
+                    {
+                        tinyobj::real_t nx = attrib.normals[normal_offset + 0];
+                        tinyobj::real_t ny = attrib.normals[normal_offset + 1];
+                        tinyobj::real_t nz = attrib.normals[normal_offset + 2];
+
+                        new_vertex.normal = glm::vec3( nx, ny, nz );
+                    }
+
+                    const int texcoord_offset = idx.texcoord_index * 2;
+                    if ( texcoord_offset >= 0 )
+                    {
+                        tinyobj::real_t tu = attrib.texcoords[texcoord_offset + 0];
+                        tinyobj::real_t tv = attrib.texcoords[texcoord_offset + 1];
+
+                        new_vertex.uv = glm::vec2( tu, tv );
+                    }
+
+                    vertices.emplace_back( new_vertex );
+                }
+
+                indices.emplace_back( vertex_idx );
             }
             index_offset += fv;
         }

@@ -38,7 +38,7 @@ struct Payload
 
 float3 ReconstructBarycentrics( float2 payload_barycentrics )
 {
-    return float3( payload_barycentrics, saturate( 1.0f - payload_barycentrics.x - payload_barycentrics.y ) );
+    return float3( saturate( 1.0f - payload_barycentrics.x - payload_barycentrics.y ), payload_barycentrics.x, payload_barycentrics.y );
 }
 
 Payload PayloadInit( float max_t )
@@ -81,7 +81,7 @@ HitData GetHitData( Payload ray_payload )
     return data;
 }
 
-float3 GetHitNormal( HitData hit_data, out bool hit_valid )
+float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_normal )
 {    
     hit_valid = false;
     float3 out_normal = _float3( 0 );
@@ -97,7 +97,10 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid )
         MeshVertex v1 = geom_vertices[hit_data.geom_index][i1];
         MeshVertex v2 = geom_vertices[hit_data.geom_index][i2];
         
-        float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
+        //float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
+        
+        float3 barycentrics = ReconstructBarycentrics( hit_data.ray_payload.barycentrics );
+        float3 triangle_normal_ls = normalize( v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z );
         
         float3 triangle_normal_ws =
             normalize( mul(
@@ -110,6 +113,16 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid )
         //if ( hit_data.geom_index != 0 )
         //    triangle_normal_ws = -triangle_normal_ws;
         out_normal = triangle_normal_ws;
+        
+        
+        float3 triangle_geom_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
+        geometry_normal =
+            normalize( mul(
+                float3x3(
+                    hit_data.obj_to_world[0].xyz,
+                    hit_data.obj_to_world[1].xyz,
+                    hit_data.obj_to_world[2].xyz ),
+                triangle_geom_normal_ls ) );
     }
     
     return out_normal;
@@ -231,6 +244,7 @@ struct BSDFInputs
     float3 albedo;
     float roughness;
     float3 normal;
+    float3 geom_normal;
     float3 f0;
     float3x3 tnb; // Tangent frame. N is _second_ vector to work nice with Y-up local space
 };
@@ -358,11 +372,13 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     hit_valid = false;
     BSDFInputs inputs;
     
-    float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid );
-    if ( dot( hit_normal_ws, hit_direction_ws ) > 0 )
+    float3 geometry_normal_ws;
+    float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid, geometry_normal_ws );
+    if ( dot( geometry_normal_ws, hit_direction_ws ) > 0 )
     {
         hit_valid = false;
         hit_normal_ws = -hit_normal_ws;
+        geometry_normal_ws = -geometry_normal_ws;
     }
     
     if ( hit_valid == false )
@@ -379,16 +395,17 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     inputs.f0 = material.f0;
     
     inputs.normal = hit_normal_ws;
+    inputs.geom_normal = geometry_normal_ws;
     
-    float3 tan_unnormalized = cross( float3( 0, 1, 0 ), hit_normal_ws );
+    float3 tan_unnormalized = cross( float3( 0, 1, 0 ), geometry_normal_ws );
     if ( dot( tan_unnormalized, tan_unnormalized ) < 1.e-6f )
     {
-        tan_unnormalized = cross( float3( 0, 0, 1 ), hit_normal_ws );
+        tan_unnormalized = cross( float3( 0, 0, 1 ), geometry_normal_ws );
     }
     float3 tan = normalize( tan_unnormalized );
-    float3 bitan = normalize( cross( tan, hit_normal_ws ) );
+    float3 bitan = normalize( cross( tan, geometry_normal_ws ) );
                 
-    float3x3 tnb = float3x3( tan, hit_normal_ws, bitan );
+    float3x3 tnb = float3x3( tan, geometry_normal_ws, bitan );
     
     inputs.tnb = tnb;
     
@@ -414,7 +431,7 @@ void TracePath( HitData hit, float3 e, inout PathData path )
         return;
     }
     
-    float3 current_position_ws = path.current_position_ws + path.current_direction_ws * hit.ray_payload.t + bsdf_inputs.normal * 1.e-4f;
+    float3 current_position_ws = path.current_position_ws + path.current_direction_ws * hit.ray_payload.t + bsdf_inputs.geom_normal * 1.e-4f;
     path.current_position_ws = current_position_ws;
     
     bool use_regularization = path.bounce > 0;

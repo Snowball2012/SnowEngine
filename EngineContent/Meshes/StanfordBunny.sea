@@ -1,5 +1,5 @@
 {
 	"_generator" : "MeshAsset",
-	"source" : "#engine/Meshes/stanford_bunny.obj",
+	"source" : "#engine/Meshes/bunny_with_normals.obj",
 	"material" : "#engine/Materials/Default.sea"
 }
