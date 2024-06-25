@@ -288,7 +288,7 @@ Renderer::Renderer()
     CreateSamplers();
     CreateRTPipeline();
 
-    m_display_mapping = std::make_unique<DisplayMapping>();
+    m_display_mapping = std::make_unique<DisplayMapping>( m_view_dsl.get() );
     m_debug_drawing = std::make_unique<DebugDrawing>( m_view_dsl.get() );
 
 }
@@ -640,6 +640,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     svp.view_proj_inv_mat = glm::inverse( view_proj );
 
     svp.cursor_position_px = glm::ivec2( view.GetCursorPosition() );
+
+    m_random_seed = uint32_t( view.m_num_accumulated_frames );
 
     svp.random_uint = HashUint32( m_random_seed++ );
 

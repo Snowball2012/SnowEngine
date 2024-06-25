@@ -26,6 +26,8 @@ static const uint INVALID_INSTANCE_INDEX = -1;
 static const uint INVALID_GEOM_INDEX = -1;
 static const uint INVALID_MATERIAL_INDEX = -1;
 
+static bool g_cursor_hover = false;
+
 struct Payload
 {
     float2 barycentrics;
@@ -234,7 +236,7 @@ struct BSDFInputs
 };
 
 // Opaque. Does not contain NoL term ( it's not a part of BSDF, it's just a rendering equation term and should be applied outside
-float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
+float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v, bool regularize )
 {
     // simple lambertian bsdf + GGX mixed on Fresnel
     
@@ -261,15 +263,33 @@ float3 EvaluateBSDF( BSDFInputs inputs, float3 l, float3 v )
     float3 lambertian_diffuse = albedo / M_PI;
     
     float a = sqr( roughness );
+    
+    if ( regularize ) // ref - pbrt. Helps with noise on smooth surfaces in indirect lighting scenarios (IBLs with strong light sources, for example)
+    {
+        if ( a < 0.3f )
+        {
+            a = clamp( 2.0f * a, 0.1f, 0.3f );
+        }
+    }
+    
     float a2 = sqr( a );
     
     float3 ggx_spec = _float3( GGX_Full( a2, NoH, NoV, NoL ) );
-    //float3 ggx_spec = _float3( VisibleGGXPDF( NoV, NoH, VoH, a2 ) );
     
-    // VoH == LoH. Use H instead of N because we afre only interested in microfacets whose normal is equal to H
-    float3 fresnel = f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - VoH, 5 );
+    // VoH == LoH. Use two fresnel terms because using only LoH does not conserve energy
+    float3 fresnelVoH = saturate( f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - saturate( VoH ), 5 ) );
+    float3 fresnelNoV = saturate( f0 + ( _float3( 1.0f ) - f0 ) * pow( 1.0f - saturate( NoV ), 5 ) );
+    
+    float3 bsdf = lambertian_diffuse * ( _float3( 1.0f ) - fresnelNoV ) + ggx_spec * fresnelVoH;
+    
+    if ( g_cursor_hover ) {
+        view_frame_readback_data[0].fresnel = fresnelNoV.x;
+        view_frame_readback_data[0].lambert = CalcLinearBrightness( lambertian_diffuse );
+        view_frame_readback_data[0].ggx = ggx_spec.x;
+        view_frame_readback_data[0].bsdf = CalcLinearBrightness( bsdf );        
+    }
 
-    return lerp( lambertian_diffuse, ggx_spec, fresnel );
+    return bsdf;
 }
 
 // dir_i is incoming ray direction (view)
@@ -281,7 +301,7 @@ struct BSDFSampleOutput
     float3 dir_o;
 };
 
-BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e )
+BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e, bool regularize )
 {
     #if defined USE_IMPORTANCE_SAMPLING
         float4 dir_o_ts = float4( 0, 0, 0, 0 );
@@ -317,14 +337,16 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
     
     float3 dir_o_ws = normalize( mul( dir_o_ts.xyz, inputs.tnb ) );
     
-    float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i );
+    float3 bsdf = EvaluateBSDF( inputs, dir_o_ws, -dir_i, regularize );
     
     BSDFSampleOutput output;
-    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) );// / pdf;
+    output.integration_term = bsdf * saturate( dot( inputs.normal, dir_o_ws ) );
     output.pdf = pdf;
     
     if ( dir_o_ts.y <= 0 || any( isnan( output.integration_term ) ) || any( isinf( output.integration_term ) ) )
+    {
         output.integration_term = _float3( 0 );
+    }
     
     output.dir_o = dir_o_ws;
     
@@ -375,11 +397,11 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
 
 struct PathData
 {
-    float3 bsdf_acc;
-    float pdf_acc;
+    float3 throughput;
     float3 current_direction_ws;
     float3 current_position_ws;
     bool terminated;
+    int bounce;
 };
 
 void TracePath( HitData hit, float3 e, inout PathData path )
@@ -395,21 +417,21 @@ void TracePath( HitData hit, float3 e, inout PathData path )
     float3 current_position_ws = path.current_position_ws + path.current_direction_ws * hit.ray_payload.t + bsdf_inputs.normal * 1.e-4f;
     path.current_position_ws = current_position_ws;
     
-    BSDFSampleOutput bsdf_sample = SampleBSDFMonteCarlo( bsdf_inputs, path.current_direction_ws, e );
+    bool use_regularization = path.bounce > 0;
+    BSDFSampleOutput bsdf_sample = SampleBSDFMonteCarlo( bsdf_inputs, path.current_direction_ws, e, use_regularization );
     
     path.current_direction_ws = bsdf_sample.dir_o;
-    path.bsdf_acc *= bsdf_sample.integration_term;
-    path.pdf_acc *= bsdf_sample.pdf;
+    path.throughput *= bsdf_sample.integration_term / ( bsdf_sample.pdf + 1.e-8f );
 }
 
 PathData PathInit( float3 ray_start_pos_ws, float3 ray_direction_ws )
 {
     PathData data;
-    data.bsdf_acc = _float3( 1.0f );
-    data.pdf_acc = 1.0f;
+    data.throughput = _float3( 1.0f );
     data.terminated = false;
     data.current_position_ws = ray_start_pos_ws;
     data.current_direction_ws = ray_direction_ws;
+    data.bounce = 0;
     
     return data;
 }
@@ -467,6 +489,8 @@ void VisibilityRGS()
 {
     uint2 pixel_id = DispatchRaysIndex().xy;
     
+    g_cursor_hover = all( pixel_id == view_data.cursor_position_px ); 
+    
     float2 pixel_shift = GetUnitRandomUniform( pixel_id );
     
     float3 camera_ray_origin = PixelPositionToWorld( pixel_id, pixel_shift, 0, view_data.viewport_size_px, view_data.view_proj_inv_mat );
@@ -508,7 +532,7 @@ void VisibilityRGS()
     
     level_object_ids[pixel_id] = initial_hit.picking_id;
     
-    if ( all( pixel_id == view_data.cursor_position_px ) )
+    if ( g_cursor_hover )
     {
         view_frame_readback_data[0].picking_id_under_cursor = initial_hit.picking_id;
     }
@@ -529,16 +553,18 @@ void VisibilityRGS()
             
             // @todo - third random variable
             
+            path.bounce = bounce_i;
+            
             TracePath( current_hit, e3d, path );
             
-            if ( all( path.bsdf_acc < FLT_EPSILON ) )
+            if ( all( path.throughput < FLT_EPSILON ) )
             {
                 break;
             }
             
             if ( path.terminated )
             {
-                radiance_accum += float3( 1, 0, 1 ) * path.bsdf_acc / ( path.pdf_acc + 1.e-8f );
+                radiance_accum += float3( 1, 0, 1 ) * path.throughput;
                 break;
             }
             
@@ -559,7 +585,12 @@ void VisibilityRGS()
             
             if ( current_hit.geom_index == INVALID_GEOM_INDEX )
             {
-                radiance_accum += GetMissRadiance( ray_bounce.Direction ) * path.bsdf_acc / ( path.pdf_acc + 1.e-8f );
+                radiance_accum += GetMissRadiance( ray_bounce.Direction ) * path.throughput;
+                
+                if ( g_cursor_hover ) {
+                    view_frame_readback_data[0].throughput = max( path.throughput.x, max( path.throughput.y, path.throughput.z ) );
+                    view_frame_readback_data[0].radiance =  max( radiance_accum.x, max( radiance_accum.y, radiance_accum.z ) );
+                }
                 break;
             }
         }

@@ -58,6 +58,13 @@ struct DebugLineIndirectArgs
 struct ViewFrameReadbackData
 {
     int picking_id_under_cursor;
+    
+    float fresnel;
+    float lambert;
+    float ggx;
+    float bsdf;
+    float throughput;
+    float radiance;
 };
 
 // bindings description:

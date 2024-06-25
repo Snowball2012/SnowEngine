@@ -140,6 +140,8 @@ bool LevelEditor::OpenLevel( const char* filepath )
         new_object->SetPickingId( int32_t( m_level_objects.size() ) - 1 );
     }
 
+    m_scene_view->ResetAccumulation();
+
     return true;
 }
 
@@ -325,6 +327,16 @@ bool LevelEditor::Draw( Rendergraph& framegraph, ISceneRenderExtension* required
 void LevelEditor::UpdateReadback( const ViewFrameReadbackData& readback_data )
 {
     m_mouse_hover_picking_id = readback_data.picking_id_under_cursor;
+
+    if ( ImGui::IsKeyDown( ImGuiKey_P ) ) {
+        SE_LOG_INFO( Sandbox, "fresnel %.3f, lambert %.3f, ggx %.3f, bsdf %.3f, throughput %.3f, radiance %.3f",
+            readback_data.fresnel,
+            readback_data.lambert,
+            readback_data.ggx,
+            readback_data.bsdf,
+            readback_data.throughput,
+            readback_data.radiance );
+    }
 }
 
 bool LevelEditor::SetViewportExtents( glm::uvec2 extents )

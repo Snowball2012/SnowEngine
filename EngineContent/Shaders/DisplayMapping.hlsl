@@ -2,6 +2,8 @@
 
 #include "ACES.hlsli"
 
+#include "SceneViewParams.hlsli"
+
 [[vk::binding( 0 )]]
 Texture2D<float4> TextureObject;
 [[vk::binding( 1 )]]
@@ -12,6 +14,7 @@ struct DisplayMappingParams
     uint method;
 	uint show_hue_test_image;
 	float white_point;
+	uint apply_magnifier;
 };
 [[vk::binding( 2 )]] ConstantBuffer<DisplayMappingParams> pass_params;
 
@@ -170,6 +173,28 @@ float3 TonemapUncharted2Partial( float3 x )
     return ( ( x * ( A * x + C * B ) + D * E ) / ( x * ( A * x + B ) + D * F ) ) - E / F;
 }
 
+bool ApplyMagnifier( int2 pixel_coords, out int2 magnifier_pixel_coords, out bool is_magnifier_reticle )
+{
+	if ( pass_params.apply_magnifier == false )
+	{
+		return false;
+	}
+	
+	is_magnifier_reticle = false;
+	int2 offsetted_source_coords = pixel_coords - int2( 8, 32 );
+	if ( offsetted_source_coords.x < 72 && offsetted_source_coords.y < 72 && all( offsetted_source_coords > 0 ) )
+	{
+		magnifier_pixel_coords = ( view_data.cursor_position_px.xy - 4 + offsetted_source_coords.xy / 8 );
+		
+		if ( ( abs( magnifier_pixel_coords.x - view_data.cursor_position_px.x ) == 1 ) && ( abs( magnifier_pixel_coords.y - view_data.cursor_position_px.y ) == 1 ) ) {
+			is_magnifier_reticle = true;
+		}
+		
+		return true;
+	}
+	return false;
+}
+
 [[vk::location( 0 )]] float4 DisplayMappingVS( in uint vertex_id : SV_VertexID, [[vk::location( 1 )]] out float2 uv : TEXCOORD0 ) : SV_POSITION
 {
 	float4 pos = float4( full_screen_triangle_ndc[vertex_id], 0.5f, 1 );
@@ -179,7 +204,17 @@ float3 TonemapUncharted2Partial( float3 x )
 
 [[vk::location( 0 )]] float4 DisplayMappingPS( [[vk::location( 1 )]] in float2 uv : TEXCOORD0, in float4 fragcoord : SV_POSITION ) : SV_TARGET0
 {
-	float4 input_tex_value = TextureObject.Load( int3( fragcoord.x, fragcoord.y, 0 ) ).rgba;
+	int2 sample_coords = int2( fragcoord.x, fragcoord.y );
+	
+	int2 magnifier_coords;
+	bool is_reticle;
+	
+	if ( ApplyMagnifier( sample_coords, magnifier_coords, is_reticle ) )
+	{
+		sample_coords = magnifier_coords;
+	}
+
+	float4 input_tex_value = TextureObject.Load( int3( sample_coords, 0 ) ).rgba;
 	float3 input_linear = ( float3( asuint( input_tex_value.rgb ) ) / 10000.0f ) / float( asuint( input_tex_value.a ) );
 	
 	if ( pass_params.show_hue_test_image )
@@ -242,6 +277,9 @@ float3 TonemapUncharted2Partial( float3 x )
 	{
 		output = ApplyAgx( input_linear, log2( pass_params.white_point ) );
 	}
+	
+	if ( is_reticle )
+		output = float3( 1, 0, 0 );
 
     return float4( output, 1.0f );
 }

@@ -25,6 +25,10 @@
       "Command": "+r_debugDisplayMapping 1"
     },
     {
+      "Id": "e06e572d-e1d3-4cc6-82cf-5df46d508ce9",
+      "Command": "+r_showMagnifier 1"
+    },
+    {
       "Id": "f0bc76bb-53d7-4625-9f60-d65f8d9ceca3",
       "Command": "+vk_validation_enableGPUAssisted 1"
     },

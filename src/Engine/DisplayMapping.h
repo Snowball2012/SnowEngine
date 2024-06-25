@@ -54,7 +54,7 @@ private:
     bool m_dbg_show_hue_test_image = false;
 
 public:
-    DisplayMapping();
+    DisplayMapping( RHIDescriptorSetLayout* view_dsl );
     ~DisplayMapping();
 
     void SetupRendergraph( SceneViewFrameData& data, DisplayMappingContext& ctx ) const;

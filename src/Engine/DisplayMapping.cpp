@@ -8,6 +8,8 @@
 
 #include <ImguiBackend/ImguiBackend.h>
 
+CVAR_DEFINE( r_showMagnifier, uint32_t, 0, "Show magnifier to inspect pixel-level details" );
+
 // @todo - unify code with other screen-space programs, the code is identical
 class DisplayMappingProgram : public ShaderProgram
 {
@@ -26,6 +28,7 @@ public:
         uint32_t method;
         uint32_t show_hue_test_image;
         float white_point;
+        uint32_t apply_magnifier;
     };
 
     struct Params
@@ -37,9 +40,11 @@ public:
         DisplayMapping::Method method = DisplayMapping::Method::Linear;
         float white_point = 1.0f;
         bool dbg_show_hue_test_image = false;
+
+        RHIDescriptorSet* view_ds = nullptr;
     };    
 
-    DisplayMappingProgram()
+    DisplayMappingProgram( RHIDescriptorSetLayout * view_dsl )
         : ShaderProgram()
     {
         m_type = ShaderProgramType::Raster;
@@ -66,7 +71,7 @@ public:
             m_dsl = GetRHI().CreateDescriptorSetLayout( binding_table );
 
             RHI::ShaderBindingLayoutInfo layout_info = {};
-            RHIDescriptorSetLayout* dsls[1] = { m_dsl.get() };
+            RHIDescriptorSetLayout* dsls[2] = { m_dsl.get(), view_dsl };
             layout_info.tables = dsls;
             layout_info.table_count = std::size( dsls );
 
@@ -119,6 +124,7 @@ public:
         pass_params_ub.method = uint32_t( parms.method );
         pass_params_ub.white_point = parms.white_point;
         pass_params_ub.show_hue_test_image = parms.dbg_show_hue_test_image ? 1 : 0;
+        pass_params_ub.apply_magnifier = r_showMagnifier.GetValue();
 
         UploadBufferRange pass_ub = rg.AllocateUploadBufferUniform<DisplayMappingParams>();
         pass_ub.UploadData( pass_params_ub );
@@ -142,6 +148,8 @@ public:
         pass_descset->BindSampler( 1, 0, *parms.sampler );
         pass_descset->BindUniformBufferView( 2, 0, pass_ub.view );
         cmd_list.BindDescriptorSet( 0, *pass_descset );
+
+        cmd_list.BindDescriptorSet( 1, *parms.view_ds );
 
         cmd_list.Draw( 3, 1, 0, 0 );
 
@@ -181,9 +189,9 @@ private:
     }
 };
 
-DisplayMapping::DisplayMapping()
+DisplayMapping::DisplayMapping( RHIDescriptorSetLayout* view_dsl )
 {
-    m_program = std::make_unique<DisplayMappingProgram>();
+    m_program = std::make_unique<DisplayMappingProgram>( view_dsl );
 }
 
 DisplayMapping::~DisplayMapping() = default;
@@ -235,6 +243,7 @@ void DisplayMapping::DisplayMappingPass( RHICommandList& cmd_list, const SceneVi
         prog_parms.method = m_method;
         prog_parms.white_point = m_white_point;
         prog_parms.dbg_show_hue_test_image = m_dbg_show_hue_test_image;
+        prog_parms.view_ds = data.view_desc_set;
 
         m_program->Run( cmd_list, *data.rg, prog_parms );
         ctx.main_pass->EndPass();

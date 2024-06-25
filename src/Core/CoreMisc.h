@@ -189,6 +189,24 @@ inline bool SetFromString( const char* str, int& val )
 }
 
 // Explicitly instantiate SetFromString for necessary types. Used for console variables and a bunch of other systems
+inline bool SetFromString( const char* str, uint32_t& val )
+{
+	if ( str == nullptr )
+		return false;
+
+	val = strtoul( str, nullptr, 10 );
+
+	if ( val == 0 )
+	{
+		if ( errno == EINVAL || errno == ERANGE )
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+// Explicitly instantiate SetFromString for necessary types. Used for console variables and a bunch of other systems
 inline bool SetFromString( const char* str, bool& val )
 {
 	if ( str == nullptr )

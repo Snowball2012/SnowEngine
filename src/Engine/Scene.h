@@ -85,11 +85,11 @@ private:
 
     int m_accumulated_rt_texture_idx = -1;
 
-    uint64_t m_num_accumulated_frames = 0;
 
     DebugDrawingSceneViewData m_debug_draw_data;
 
 public:
+    uint64_t m_num_accumulated_frames = 0;
     SceneView( Scene* scene );
 
     void SetLookAt( const glm::vec3& eye, const glm::vec3& center );
@@ -177,6 +177,13 @@ public:
 struct ViewFrameReadbackData
 {
     int32_t picking_id_under_cursor;
+
+    float fresnel;
+    float lambert;
+    float ggx;
+    float bsdf;
+    float throughput;
+    float radiance;
 };
 
 class Renderer
