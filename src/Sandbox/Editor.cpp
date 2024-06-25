@@ -274,9 +274,9 @@ bool LevelEditor::Update( float delta_time_sec )
         {
             scene_view_changed = true;
 
+            SE_LOG_INFO( Sandbox, "Object deleted: %s", m_level_objects[m_selected_object]->GetName() );
             std::swap( m_level_objects[m_selected_object], m_level_objects.back() );
             m_level_objects.pop_back();
-            SE_LOG_INFO( Sandbox, "delete pressed" );
         }
     }
 
