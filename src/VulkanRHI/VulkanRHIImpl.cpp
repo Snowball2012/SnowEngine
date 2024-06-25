@@ -622,7 +622,7 @@ bool VulkanRHI::GetVkASGeometry(
             {
                 vk_triangles.indexData.deviceAddress = RHIImpl( triangles.idx_buf )->GetDeviceAddress();
                 vk_triangles.indexType = VulkanRHI::GetVkIndexType( triangles.idx_type );
-                primitive_count = uint32_t( triangles.idx_buf->GetSize() / VulkanRHI::GetVkIndexTypeByteSize( triangles.idx_type ) );
+                primitive_count = uint32_t( triangles.idx_buf->GetSize() / VulkanRHI::GetVkIndexTypeByteSize( triangles.idx_type ) ) / 3;
             }
             if ( SE_ENSURE( triangles.vtx_buf ) )
             {
@@ -633,7 +633,7 @@ bool VulkanRHI::GetVkASGeometry(
 
                 if ( !triangles.idx_buf )
                 {
-                    primitive_count = vk_triangles.maxVertex + 1;
+                    primitive_count = ( vk_triangles.maxVertex + 1 ) / 3;
                 }
             }
         }
