@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="DebugASAN|x64">
@@ -20,7 +20,7 @@
     <ClCompile Include="..\..\src\Engine\AutomationBridge.cpp" />
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
-    <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
+    <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />`r`n    <ClCompile Include="..\..\src\Engine\FbxImporter.cpp" />`r`n    <ClCompile Include="..\..\src\ThirdParty\ufbx\ufbx.c" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\Render\DebugDrawing.cpp">
