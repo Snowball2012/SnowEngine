@@ -41,6 +41,11 @@ private:
 	bool m_fb_resized = false;
 
 	std::unique_ptr<class ImguiBackend> m_imgui;
+	std::unique_ptr<class AutomationBridge> m_automation_bridge;
+	bool m_console_open = false;
+	bool m_console_scroll_to_bottom = false;
+	std::string m_console_input;
+	std::vector<std::string> m_startup_commands;
 
 protected:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
@@ -95,4 +100,5 @@ private:
 	void CreateSyncObjects();
 
 	void InitImGUI();
+	void DrawConsoleUI();
 };

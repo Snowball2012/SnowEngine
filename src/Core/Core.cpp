@@ -92,25 +92,31 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	va_end( args );
 
 	message << buf << "\n";
+	const std::string formatted_message = message.str();
+
+	if ( m_callback )
+	{
+		m_callback( formatted_message.c_str(), m_callback_user_data );
+	}
 
 	if ( m_file && m_file->good() )
 	{
-		( *m_file ) << message.str();
+		( *m_file ) << formatted_message;
 	}
 	if ( m_write_to_std )
 	{
 		if ( msg_type == LogMessageType::Error || msg_type == LogMessageType::FatalError )
 		{
-			std::cerr << message.str();
+			std::cerr << formatted_message;
 		}
 		else
 		{
-			std::cout << message.str();
+			std::cout << formatted_message;
 		}
 	}
 	if ( m_write_debugstr )
 	{
-		OutputDebugStringA( message.str().c_str() );
+		OutputDebugStringA( formatted_message.c_str() );
 	}
 
 	if ( msg_type == LogMessageType::FatalError )

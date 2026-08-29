@@ -31,7 +31,7 @@ void SandboxApp::ParseCommandLineDerived( int argc, char** argv )
                 i += 1;
 
 
-                SE_LOG_INFO( Sandbox, "Set level path from command line: %s", m_current_level_path );
+                SE_LOG_INFO( Sandbox, "Set level path from command line: %s", m_current_level_path.c_str() );
             }
             else
             {

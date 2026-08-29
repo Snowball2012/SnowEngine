@@ -47,7 +47,7 @@ ImguiProcessEventResult ImguiBackend::ProcessEvent( SDL_Event* event )
 
     ImguiProcessEventResult res;
     res.wantsCaptureKeyboard = ImGui::GetIO().WantCaptureKeyboard;
-    res.wantsCaptureMouse = ImGui::GetIO().WantCaptureKeyboard;
+    res.wantsCaptureMouse = ImGui::GetIO().WantCaptureMouse;
 
     return res;
 }

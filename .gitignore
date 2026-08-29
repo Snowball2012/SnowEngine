@@ -276,3 +276,6 @@ snow_engine.sln.startup.json
 
 # nsight projects
 *.ngfx-proj
+.snowengine_mcp/
+SourceContent/Bistro/
+EngineAutomationTest.log

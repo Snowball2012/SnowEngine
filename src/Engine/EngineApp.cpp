@@ -3,6 +3,7 @@
 #include "EngineApp.h"
 
 #include "AssetManager.h"
+#include "AutomationBridge.h"
 #include "LevelObjects.h"
 #include "Rendergraph.h"
 #include "Scene.h"
@@ -11,6 +12,9 @@
 #include <D3D12RHI/D3D12RHI.h>
 
 #include <ImguiBackend/ImguiBackend.h>
+
+#include <imgui/imgui.h>
+#include <imgui/misc/cpp/imgui_stdlib.h>
 
 #include <vulkan/vulkan.h>
 
@@ -69,6 +73,20 @@ void EngineApp::Run( int argc, char** argv )
 
     OnInit();
 
+    std::filesystem::path content_path( m_cmd_line_args.engine_content_path );
+    if ( content_path.filename().empty() )
+        content_path = content_path.parent_path();
+    const std::filesystem::path engine_root = content_path.parent_path();
+    m_automation_bridge = std::make_unique<AutomationBridge>( *m_console, engine_root );
+
+    // Startup commands may rely on the world, renderer, or derived application.
+    // Execute them only after every initialization hook has completed.
+    for ( const std::string& command : m_startup_commands )
+    {
+        m_console->ProcessCommand( command.c_str() );
+    }
+    m_startup_commands.clear();
+
     MainLoop();
 
     OnCleanup();
@@ -87,15 +105,33 @@ void EngineApp::ParseCommandLine( int argc, char** argv )
     {
         if ( argv[i][0] == '+' )
         {
-            if ( argc > ( i + 1 ) )
+            const char* name = argv[i] + 1;
+            if ( m_console->HasCommand( name ) )
             {
-                m_console->AddCVarInitialValueOverride( argv[i] + 1, argv[i + 1] );
+                std::string command = name;
+                while ( argc > ( i + 1 )
+                    && argv[i + 1][0] != '+'
+                    && _strcmpi( argv[i + 1], "-EnginePath" )
+                    && _strcmpi( argv[i + 1], "-LogPath" )
+                    && _strcmpi( argv[i + 1], "-StartLevel" ) )
+                {
+                    command += " \"";
+                    command += argv[++i];
+                    command += "\"";
+                }
+                m_startup_commands.emplace_back( std::move( command ) );
 
-                std::cout << "[App]: Set cvar from command line: " << argv[i] + 1 << " = " << argv[i + 1] << std::endl;
+                std::cout << "[App]: Queued startup command: " << m_startup_commands.back() << std::endl;
+            }
+            else if ( argc > ( i + 1 ) && argv[i + 1][0] != '+' && argv[i + 1][0] != '-' )
+            {
+                m_console->AddCVarInitialValueOverride( name, argv[i + 1] );
+                std::cout << "[App]: Set cvar from command line: " << name << " = " << argv[i + 1] << std::endl;
+                i += 1;
             }
             else
             {
-                std::cerr << "[Error][App]: Can't set cvar from command line because " << argv[i] << " is the last token" << std::endl;
+                std::cerr << "[Error][App]: Unknown startup command or missing CVar value: " << argv[i] << std::endl;
             }
         }
         else if ( !_strcmpi( argv[i], "-EnginePath" ) )
@@ -214,6 +250,11 @@ void EngineApp::MainLoop()
         {
             auto imgui_event_res = m_imgui->ProcessEvent( &event );
 
+            if ( event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKQUOTE && event.key.repeat == 0 )
+            {
+                m_console_open = !m_console_open;
+            }
+
             if ( event.type == SDL_QUIT )
             {
                 running = false;
@@ -244,6 +285,8 @@ void EngineApp::MainLoop()
 void EngineApp::Cleanup()
 {
     SE_LOG_INFO( Engine, "RHI shutdown started" );
+
+    m_automation_bridge.reset();
 
     m_readback_data.clear();
 
@@ -276,9 +319,57 @@ void EngineApp::Cleanup()
 
 void EngineApp::Update()
 {
+    if ( m_automation_bridge )
+        m_automation_bridge->Tick();
     m_renderer->DebugUI();
+    DrawConsoleUI();
     OnUpdate();
     DrawFrame();
+}
+
+void EngineApp::DrawConsoleUI()
+{
+    if ( !m_console_open )
+        return;
+
+    ImGui::SetNextWindowSize( ImVec2( 720.0f, 420.0f ), ImGuiCond_FirstUseEver );
+    if ( !ImGui::Begin( "SnowEngine Console", &m_console_open ) )
+    {
+        ImGui::End();
+        return;
+    }
+
+    if ( ImGui::Button( "Clear" ) )
+        m_console->ClearOutput();
+    ImGui::SameLine();
+    ImGui::TextUnformatted( "Enter a command, or a CVar name and optional value." );
+
+    const float footer_height = ImGui::GetFrameHeightWithSpacing();
+    ImGui::BeginChild( "ConsoleOutput", ImVec2( 0, -footer_height ), true, ImGuiWindowFlags_HorizontalScrollbar );
+    const std::vector<std::string> output = m_console->GetOutputSnapshot();
+    for ( const std::string& line : output )
+        ImGui::TextUnformatted( line.c_str() );
+    if ( m_console_scroll_to_bottom )
+    {
+        ImGui::SetScrollHereY( 1.0f );
+        m_console_scroll_to_bottom = false;
+    }
+    ImGui::EndChild();
+
+    ImGui::SetNextItemWidth( -1.0f );
+    const bool submitted = ImGui::InputText( "##ConsoleInput", &m_console_input, ImGuiInputTextFlags_EnterReturnsTrue );
+    if ( ImGui::IsWindowAppearing() )
+        ImGui::SetKeyboardFocusHere( -1 );
+    if ( submitted )
+    {
+        if ( !m_console_input.empty() )
+            m_console->ProcessCommand( m_console_input.c_str() );
+        m_console_input.clear();
+        m_console_scroll_to_bottom = true;
+        ImGui::SetKeyboardFocusHere( -1 );
+    }
+
+    ImGui::End();
 }
 
 void EngineApp::InitImGUI()
@@ -357,12 +448,14 @@ void EngineApp::InitCoreGlobals()
     create_info.mirror_to_stdout = true;
     create_info.path = m_cmd_line_args.log_path.c_str();
     g_log = new Logger( create_info );
+    g_log->SetCallback( &Console::LogCallback, m_console.get() );
 }
 
 void EngineApp::InitConsole()
 {
     m_console = std::make_unique<Console>();
     m_console->AddCVars( g_cvars_head );
+    m_console->AddCommands( g_console_commands_head );
 }
 
 void EngineApp::InitEngineGlobals()

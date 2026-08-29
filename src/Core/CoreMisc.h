@@ -259,10 +259,15 @@ enum class LogMessageType
 
 class Logger
 {
+public:
+	using Callback = void (*)( const char* line, void* user_data );
+
 private:
 	std::optional<std::ofstream> m_file;
 	bool m_write_to_std = true;
 	bool m_write_debugstr = true;
+	Callback m_callback = nullptr;
+	void* m_callback_user_data = nullptr;
 
 public:
 	struct CreateInfo
@@ -276,6 +281,7 @@ public:
 	void Log( const LogCategory& category, LogMessageType msg_type, const char* fmt, ... );
 	void Newline();
 	void Flush();
+	void SetCallback( Callback callback, void* user_data ) { m_callback = callback; m_callback_user_data = user_data; }
 
 private:
 	static const char* TypeToString( LogMessageType type );
