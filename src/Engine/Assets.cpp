@@ -51,6 +51,8 @@ bool MeshAsset::Load( const JsonValue& data )
         return false;
     }
 
+    const auto load_start = std::chrono::steady_clock::now();
+    SE_LOG_INFO( Engine, "Loading mesh asset %s from %s", m_id.GetPath(), source->value.GetString() );
     if ( !LoadFromObj( source->value.GetString() ) )
     {
         return false;
@@ -75,6 +77,10 @@ bool MeshAsset::Load( const JsonValue& data )
     }
 
     m_status = AssetStatus::Ready;
+    const auto load_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - load_start ).count();
+    SE_LOG_INFO( Engine, "Loaded mesh asset %s (%u indices) in %lld ms",
+        m_id.GetPath(), m_indices_num, static_cast<long long>( load_ms ) );
     return true;
 }
 
@@ -294,6 +300,8 @@ bool TextureAsset::Load( const JsonValue& data )
         srgb = srgb_it->value.GetBool();
     }
 
+    const auto load_start = std::chrono::steady_clock::now();
+    SE_LOG_INFO( Engine, "Loading texture asset %s from %s", m_id.GetPath(), source->value.GetString() );
     if ( !LoadFromFile( source->value.GetString(), srgb ) )
     {
         return false;
@@ -310,6 +318,10 @@ bool TextureAsset::Load( const JsonValue& data )
     }
 
     m_status = AssetStatus::Ready;
+    const auto load_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - load_start ).count();
+    SE_LOG_INFO( Engine, "Loaded texture asset %s in %lld ms",
+        m_id.GetPath(), static_cast<long long>( load_ms ) );
     return true;
 }
 
@@ -618,6 +630,7 @@ bool MaterialAsset::Load( const JsonValue& data )
     bool has_f0 = Serialization::Deserialize( parms->value, "f0", m_gpu_data.f0 );
 
     bool has_roughness = Serialization::Deserialize( parms->value, "roughness", m_gpu_data.roughness );
+    Serialization::Deserialize( parms->value, "emissive", m_gpu_data.emissive );
 
     auto load_texture = [&]( const char* property, TextureAssetPtr& destination, uint32_t& texture_index )
     {
@@ -641,7 +654,8 @@ bool MaterialAsset::Load( const JsonValue& data )
 
     if ( !load_texture( "albedo_texture", m_albedo_texture, m_gpu_data.albedo_texture_index )
         || !load_texture( "specular_texture", m_specular_texture, m_gpu_data.specular_texture_index )
-        || !load_texture( "normal_texture", m_normal_texture, m_gpu_data.normal_texture_index ) )
+        || !load_texture( "normal_texture", m_normal_texture, m_gpu_data.normal_texture_index )
+        || !load_texture( "emissive_texture", m_emissive_texture, m_gpu_data.emissive_texture_index ) )
     {
         return false;
     }

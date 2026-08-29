@@ -116,14 +116,21 @@ void Extensions::LoadRT( VkDevice device )
 
 // Debug Utils
 
-DEFINE_VK_FUNCTION2( VkResult, vkSetDebugUtilsObjectNameEXT,
-    VkDevice, device,
-    const VkDebugUtilsObjectNameInfoEXT*, pNameInfo );
+PFN_vkSetDebugUtilsObjectNameEXT pfn_vkSetDebugUtilsObjectNameEXT = nullptr;
+
+VkResult vkSetDebugUtilsObjectNameEXT(
+    VkDevice device, const VkDebugUtilsObjectNameInfoEXT* name_info )
+{
+    if ( !pfn_vkSetDebugUtilsObjectNameEXT )
+        return VK_ERROR_EXTENSION_NOT_PRESENT;
+    return pfn_vkSetDebugUtilsObjectNameEXT( device, name_info );
+}
 
 
 void Extensions::LoadDebugUtils( VkDevice device )
 {
-    DEVICE_LEVEL_VULKAN_FUNCTION( vkSetDebugUtilsObjectNameEXT );
+    pfn_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
+        vkGetDeviceProcAddr( device, "vkSetDebugUtilsObjectNameEXT" ) );
 }
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION

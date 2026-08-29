@@ -41,6 +41,8 @@ struct Material
     uint specular_texture_index;
     uint normal_texture_index;
     uint2 _pad;
+    float3 emissive;
+    uint emissive_texture_index;
 };
 
 struct DebugLine

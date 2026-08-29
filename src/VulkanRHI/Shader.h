@@ -1,5 +1,7 @@
 #pragma once
 
+#include <deque>
+
 #include "StdAfx.h"
 
 #include <RHI/RHI.h>
@@ -124,9 +126,10 @@ class VulkanDescriptorSet : public RHIDescriptorSet
     // we need this to make sure pBufferInfo and such are valid at the time of FlushBinds
     bc::small_vector<RHIObjectPtr<RHIObject>, 4> m_referenced_objects;
 
-    // must be static to avoid reallocations (VkWriteDescriptorSet uses raw pointers to these structures)
+    // Entries must keep stable addresses because pending VkWriteDescriptorSet
+    // instances point into these containers until FlushBinds().
     bc::static_vector<VkWriteDescriptorSetAccelerationStructureKHR, 4> m_as_infos;
-    bc::static_vector<VkDescriptorBufferInfo, 16> m_buffer_infos;
+    std::deque<VkDescriptorBufferInfo> m_buffer_infos;
 
 public:
     virtual ~VulkanDescriptorSet() override;

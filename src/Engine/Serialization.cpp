@@ -6,9 +6,9 @@ namespace Serialization
 {
     bool Deserialize( const JsonValue& serialized, float& value )
     {
-        if ( !serialized.IsFloat() )
+        if ( !serialized.IsNumber() )
         {
-            SE_LOG_ERROR( Serialization, "value is not a float" );
+            SE_LOG_ERROR( Serialization, "value is not numeric" );
             return false;
         }
 

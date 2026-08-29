@@ -20,13 +20,43 @@ namespace
         ufbx_vec2 uv;
     };
 
+    struct ImportVertexKey
+    {
+        double values[8];
+        bool operator==( const ImportVertexKey& rhs ) const = default;
+    };
+
+    struct ImportVertexKeyHash
+    {
+        size_t operator()( const ImportVertexKey& key ) const
+        {
+            size_t hash = 0;
+            const auto combine = [&]( double value )
+            {
+                hash ^= std::hash<double>{}( value ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+            };
+            for ( double value : key.values )
+                combine( value );
+            return hash;
+        }
+    };
+
+    ImportVertexKey MakeVertexKey( const ImportVertex& vertex )
+    {
+        return { {
+            vertex.position.x, vertex.position.y, vertex.position.z,
+            vertex.normal.x, vertex.normal.y, vertex.normal.z,
+            vertex.uv.x, vertex.uv.y,
+        } };
+    }
+
     struct MaterialGroup
     {
         ufbx_material* material = nullptr;
         std::string name;
         std::vector<ImportVertex> vertices;
         std::vector<uint32_t> indices;
-        std::unordered_map<uint64_t, uint32_t> vertex_map;
+        std::unordered_map<ImportVertexKey, uint32_t, ImportVertexKeyHash> vertex_map;
     };
 
     std::string ToString( ufbx_string value )
@@ -139,14 +169,6 @@ namespace
                 for ( uint32_t corner = 0; corner < 3; ++corner )
                 {
                     const uint32_t vertex_index = triangle_indices[triangle * 3 + corner];
-                    const uint64_t vertex_key = ( uint64_t( node.typed_id ) << 32 ) | vertex_index;
-                    auto existing = group.vertex_map.find( vertex_key );
-                    if ( existing != group.vertex_map.end() )
-                    {
-                        group.indices.push_back( existing->second );
-                        continue;
-                    }
-
                     ImportVertex vertex = {};
                     vertex.position = ufbx_transform_position(
                         &node.geometry_to_world, ufbx_get_vertex_vec3( &mesh.vertex_position, vertex_index ) );
@@ -161,6 +183,14 @@ namespace
                     }
                     if ( mesh.vertex_uv.exists )
                         vertex.uv = ufbx_get_vertex_vec2( &mesh.vertex_uv, vertex_index );
+
+                    const ImportVertexKey vertex_key = MakeVertexKey( vertex );
+                    auto existing = group.vertex_map.find( vertex_key );
+                    if ( existing != group.vertex_map.end() )
+                    {
+                        group.indices.push_back( existing->second );
+                        continue;
+                    }
 
                     const uint32_t new_index = static_cast<uint32_t>( group.vertices.size() );
                     group.vertices.push_back( vertex );
@@ -242,6 +272,8 @@ namespace
         const ufbx_material_map* roughness_map = group.material ? &group.material->pbr.roughness : nullptr;
         const ufbx_material_map* metalness_map = group.material ? &group.material->pbr.metalness : nullptr;
         const ufbx_material_map* normal_map = group.material ? &group.material->pbr.normal_map : nullptr;
+        const ufbx_material_map* emission_color_map = group.material ? &group.material->pbr.emission_color : nullptr;
+        const ufbx_material_map* emission_factor_map = group.material ? &group.material->pbr.emission_factor : nullptr;
 
         ufbx_vec3 base_color = base_map && base_map->has_value ? base_map->value_vec3 : ufbx_vec3{ 1.0, 1.0, 1.0 };
         const double roughness = roughness_map && roughness_map->has_value
@@ -259,6 +291,21 @@ namespace
         const std::string normal_texture = CopyTextureAsset(
             source_directory, output_directory, output_name,
             normal_map ? normal_map->texture : nullptr, material_file_base + "_Normal.dds", false );
+        ufbx_texture* emission_source = emission_color_map && emission_color_map->texture
+            ? emission_color_map->texture : ( emission_factor_map ? emission_factor_map->texture : nullptr );
+        const std::string emissive_texture = CopyTextureAsset(
+            source_directory, output_directory, output_name,
+            emission_source, material_file_base + "_Emissive.dds", true );
+
+        ufbx_vec3 emissive = emission_color_map && emission_color_map->has_value
+            ? emission_color_map->value_vec3 : ufbx_vec3{ 0.0, 0.0, 0.0 };
+        double emission_factor = emission_factor_map && emission_factor_map->has_value
+            ? emission_factor_map->value_real : 1.0;
+        if ( !emissive_texture.empty() && ( !emission_color_map || !emission_color_map->has_value ) )
+            emissive = { 1.0, 1.0, 1.0 };
+        emissive.x *= emission_factor;
+        emissive.y *= emission_factor;
+        emissive.z *= emission_factor;
 
         const ufbx_vec3 diffuse_color = {
             base_color.x * ( 1.0 - metalness ),
@@ -277,13 +324,16 @@ namespace
                 file << "{\n  \"_generator\": \"MaterialAsset\",\n  \"parms\": {\n"
                     << "    \"roughness\": " << roughness << ",\n"
                     << "    \"albedo\": [" << diffuse_color.x << ", " << diffuse_color.y << ", " << diffuse_color.z << "],\n"
-                    << "    \"f0\": [" << f0.x << ", " << f0.y << ", " << f0.z << "]";
+                    << "    \"f0\": [" << f0.x << ", " << f0.y << ", " << f0.z << "],\n"
+                    << "    \"emissive\": [" << emissive.x << ", " << emissive.y << ", " << emissive.z << "]";
                 if ( !albedo_texture.empty() )
                     file << ",\n    \"albedo_texture\": \"" << JsonEscape( albedo_texture ) << "\"";
                 if ( !specular_texture.empty() )
                     file << ",\n    \"specular_texture\": \"" << JsonEscape( specular_texture ) << "\"";
                 if ( !normal_texture.empty() )
                     file << ",\n    \"normal_texture\": \"" << JsonEscape( normal_texture ) << "\"";
+                if ( !emissive_texture.empty() )
+                    file << ",\n    \"emissive_texture\": \"" << JsonEscape( emissive_texture ) << "\"";
                 file << "\n  }\n}\n";
             } ) )
         {

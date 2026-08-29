@@ -18,6 +18,8 @@ struct MaterialGPU
 	uint32_t specular_texture_index = uint32_t(-1);
 	uint32_t normal_texture_index = uint32_t(-1);
 	uint32_t _pad[2] = {};
+	glm::vec3 emissive = {};
+	uint32_t emissive_texture_index = uint32_t(-1);
 };
 
 class MaterialAsset : public Asset
@@ -30,6 +32,7 @@ class MaterialAsset : public Asset
 	TextureAssetPtr m_albedo_texture;
 	TextureAssetPtr m_specular_texture;
 	TextureAssetPtr m_normal_texture;
+	TextureAssetPtr m_emissive_texture;
 
 public:
 	virtual ~MaterialAsset() = default;

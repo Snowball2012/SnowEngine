@@ -102,6 +102,7 @@ void Logger::Log( const LogCategory& category, LogMessageType msg_type, const ch
 	if ( m_file && m_file->good() )
 	{
 		( *m_file ) << formatted_message;
+		m_file->flush();
 	}
 	if ( m_write_to_std )
 	{
@@ -135,6 +136,7 @@ void Logger::Newline()
 	if ( m_file && m_file->good() )
 	{
 		( *m_file ) << '\n';
+		m_file->flush();
 	}
 	if ( m_write_to_std )
 	{

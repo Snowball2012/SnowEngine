@@ -146,6 +146,57 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_n
     return out_normal;
 }
 
+float GetHitOpacity( HitData hit_data )
+{
+    if ( hit_data.geom_index == INVALID_GEOM_INDEX || hit_data.material_index == INVALID_MATERIAL_INDEX )
+        return 1.0f;
+
+    Material material = materials[hit_data.material_index];
+    if ( material.albedo_texture_index == 0xffffffff )
+        return 1.0f;
+
+    uint base_index = hit_data.ray_payload.primitive_index * 3;
+    uint i0 = geom_indices[hit_data.geom_index][base_index + 0];
+    uint i1 = geom_indices[hit_data.geom_index][base_index + 1];
+    uint i2 = geom_indices[hit_data.geom_index][base_index + 2];
+    float3 barycentrics = ReconstructBarycentrics( hit_data.ray_payload.barycentrics );
+    float2 uv =
+        geom_vertices[hit_data.geom_index][i0].uv * barycentrics.x
+        + geom_vertices[hit_data.geom_index][i1].uv * barycentrics.y
+        + geom_vertices[hit_data.geom_index][i2].uv * barycentrics.z;
+    return material_textures[material.albedo_texture_index].SampleLevel( material_sampler, uv, 0 ).a;
+}
+
+bool TraceOpaqueSurface( float3 origin, float3 direction, float max_distance, out HitData hit )
+{
+    float traveled = 0.0f;
+    [loop]
+    for ( uint layer = 0; layer < 32; ++layer )
+    {
+        RayDesc ray = { origin + direction * traveled, 0, direction, max_distance - traveled };
+        Payload payload = PayloadInit( max_distance - traveled );
+        TraceRay( scene_tlas, RAY_FLAG_NONE, 0xFF, 0, 1, 0, ray, payload );
+
+        if ( payload.instance_index == INVALID_INSTANCE_INDEX )
+        {
+            hit = GetHitData( payload );
+            return false;
+        }
+
+        hit = GetHitData( payload );
+        if ( GetHitOpacity( hit ) >= 0.5f )
+        {
+            hit.ray_payload.t += traveled;
+            return true;
+        }
+
+        traveled += payload.t + 1.e-4f;
+        if ( traveled >= max_distance )
+            return false;
+    }
+    return false;
+}
+
 float3 SampleSphereUniform( float2 e )
 {
 	float phi = 2.0f * M_PI * e.x;
@@ -385,9 +436,10 @@ BSDFSampleOutput SampleBSDFMonteCarlo( BSDFInputs inputs, float3 dir_i, float3 e
     return output;
 }
 
-BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out bool hit_valid )
+BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out bool hit_valid, out float3 emissive )
 {
     hit_valid = false;
+    emissive = _float3( 0 );
     BSDFInputs inputs;
     
     float3 geometry_normal_ws;
@@ -414,6 +466,7 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     inputs.albedo = material.albedo;
     inputs.roughness = material.roughness;
     inputs.f0 = material.f0;
+    emissive = material.emissive;
 
     if ( material.albedo_texture_index != 0xffffffff )
     {
@@ -426,6 +479,10 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
         inputs.roughness = specular_sample.g;
         inputs.f0 = lerp( inputs.f0, inputs.albedo, specular_sample.b );
         inputs.albedo *= 1.0f - specular_sample.b;
+    }
+    if ( material.emissive_texture_index != 0xffffffff )
+    {
+        emissive *= material_textures[material.emissive_texture_index].SampleLevel( material_sampler, hit_uv, 0 ).rgb;
     }
     
     inputs.normal = hit_normal_ws;
@@ -468,10 +525,12 @@ struct PathData
     int bounce;
 };
 
-void TracePath( HitData hit, float3 e, inout PathData path )
+void TracePath( HitData hit, float3 e, inout PathData path, out float3 radiance_contribution )
 {
     bool is_hit_valid = false;
-    BSDFInputs bsdf_inputs = SampleHitMaterial( hit, path.current_direction_ws, is_hit_valid );
+    float3 emissive;
+    BSDFInputs bsdf_inputs = SampleHitMaterial( hit, path.current_direction_ws, is_hit_valid, emissive );
+    radiance_contribution = emissive * path.throughput;
     if ( ! is_hit_valid )
     {
         path.terminated = true;
@@ -566,17 +625,11 @@ void VisibilityRGS()
     float max_t = length( camera_ray_direction );
     camera_ray_direction = normalize( camera_ray_direction );
 
-    RayDesc camera_ray = { camera_ray_origin, 0, camera_ray_direction, max_t };
-
-    Payload payload = PayloadInit( max_t );
-
-    TraceRay( scene_tlas,
-        ( RAY_FLAG_NONE ),
-        0xFF, 0, 1, 0, camera_ray, payload );
+    HitData initial_hit;
+    const bool initial_surface_found = TraceOpaqueSurface(
+        camera_ray_origin, camera_ray_direction, max_t, initial_hit );
     
-    HitData initial_hit = GetHitData( payload );
-    
-    if ( initial_hit.geom_index == INVALID_GEOM_INDEX )
+    if ( !initial_surface_found )
     {
         if ( view_data.use_accumulation )
         {
@@ -619,7 +672,9 @@ void VisibilityRGS()
             
             path.bounce = bounce_i;
             
-            TracePath( current_hit, e3d, path );
+            float3 hit_radiance;
+            TracePath( current_hit, e3d, path, hit_radiance );
+            radiance_accum += hit_radiance;
             
             if ( all( path.throughput < FLT_EPSILON ) )
             {
@@ -632,24 +687,13 @@ void VisibilityRGS()
                 break;
             }
             
-            RayDesc ray_bounce = { path.current_position_ws, 0, path.current_direction_ws, max_t };
+            HitData next_hit;
+            const bool next_surface_found = TraceOpaqueSurface(
+                path.current_position_ws, path.current_direction_ws, max_t, next_hit );
             
-            Payload payload_bounce = PayloadInit( max_t );
-        
-            TraceRay( scene_tlas,
-                ( RAY_FLAG_NONE ),
-                0xFF, 0, 1, 0, ray_bounce, payload_bounce );
-                
-            //if ( all( pixel_id == view_data.cursor_position_px ) )
-            //{
-            //    AddDebugLine( MakeDebugVector( ray_bounce.Origin, ray_bounce.Direction * payload_bounce.t, COLOR_RED, COLOR_GREEN ) );
-            //}
-                
-            current_hit = GetHitData( payload_bounce );
-            
-            if ( current_hit.geom_index == INVALID_GEOM_INDEX )
+            if ( !next_surface_found )
             {
-                radiance_accum += GetMissRadiance( ray_bounce.Direction ) * path.throughput;
+                radiance_accum += GetMissRadiance( path.current_direction_ws ) * path.throughput;
                 
                 if ( g_cursor_hover ) {
                     view_frame_readback_data[0].throughput = max( path.throughput.x, max( path.throughput.y, path.throughput.z ) );
@@ -657,6 +701,7 @@ void VisibilityRGS()
                 }
                 break;
             }
+            current_hit = next_hit;
         }
     }
     
