@@ -278,4 +278,7 @@ snow_engine.sln.startup.json
 *.ngfx-proj
 .snowengine_mcp/
 SourceContent/Bistro/
+EngineContent/Imported/
 EngineAutomationTest.log
+EngineTextureTest.log
+BistroImport.log

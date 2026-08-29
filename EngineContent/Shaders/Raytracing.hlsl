@@ -81,10 +81,13 @@ HitData GetHitData( Payload ray_payload )
     return data;
 }
 
-float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_normal )
+float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_normal, out float2 uv, out float3 tangent_ws, out float3 bitangent_ws )
 {    
     hit_valid = false;
     float3 out_normal = _float3( 0 );
+    uv = _float2( 0 );
+    tangent_ws = _float3( 0 );
+    bitangent_ws = _float3( 0 );
     if ( hit_data.geom_index != INVALID_GEOM_INDEX )
     {
         hit_valid = true;
@@ -100,6 +103,7 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_n
         //float3 triangle_normal_ls = normalize( cross( v1.position - v0.position, v2.position - v0.position ) );
         
         float3 barycentrics = ReconstructBarycentrics( hit_data.ray_payload.barycentrics );
+        uv = v0.uv * barycentrics.x + v1.uv * barycentrics.y + v2.uv * barycentrics.z;
         float3 triangle_normal_ls = normalize( v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z );
         
         float3 triangle_normal_ws =
@@ -123,6 +127,20 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_n
                     hit_data.obj_to_world[1].xyz,
                     hit_data.obj_to_world[2].xyz ),
                 triangle_geom_normal_ls ) );
+
+        float3 edge1 = v1.position - v0.position;
+        float3 edge2 = v2.position - v0.position;
+        float2 uv_edge1 = v1.uv - v0.uv;
+        float2 uv_edge2 = v2.uv - v0.uv;
+        float uv_det = uv_edge1.x * uv_edge2.y - uv_edge1.y * uv_edge2.x;
+        if ( abs( uv_det ) > 1.e-8f )
+        {
+            float3 tangent_ls = ( edge1 * uv_edge2.y - edge2 * uv_edge1.y ) / uv_det;
+            float3 bitangent_ls = ( edge2 * uv_edge1.x - edge1 * uv_edge2.x ) / uv_det;
+            float3x3 object_to_world = float3x3( hit_data.obj_to_world[0].xyz, hit_data.obj_to_world[1].xyz, hit_data.obj_to_world[2].xyz );
+            tangent_ws = normalize( mul( object_to_world, tangent_ls ) );
+            bitangent_ws = normalize( mul( object_to_world, bitangent_ls ) );
+        }
     }
     
     return out_normal;
@@ -373,7 +391,10 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     BSDFInputs inputs;
     
     float3 geometry_normal_ws;
-    float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid, geometry_normal_ws );
+    float2 hit_uv;
+    float3 tangent_ws;
+    float3 bitangent_ws;
+    float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid, geometry_normal_ws, hit_uv, tangent_ws, bitangent_ws );
     if ( dot( geometry_normal_ws, hit_direction_ws ) > 0 )
     {
         hit_valid = false;
@@ -393,6 +414,19 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     inputs.albedo = material.albedo;
     inputs.roughness = material.roughness;
     inputs.f0 = material.f0;
+
+    if ( material.albedo_texture_index != 0xffffffff )
+    {
+        float4 albedo_sample = material_textures[material.albedo_texture_index].SampleLevel( material_sampler, hit_uv, 0 );
+        inputs.albedo *= albedo_sample.rgb;
+    }
+    if ( material.specular_texture_index != 0xffffffff )
+    {
+        float3 specular_sample = material_textures[material.specular_texture_index].SampleLevel( material_sampler, hit_uv, 0 ).rgb;
+        inputs.roughness = specular_sample.g;
+        inputs.f0 = lerp( inputs.f0, inputs.albedo, specular_sample.b );
+        inputs.albedo *= 1.0f - specular_sample.b;
+    }
     
     inputs.normal = hit_normal_ws;
     inputs.geom_normal = geometry_normal_ws;
@@ -404,6 +438,19 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     }
     float3 tan = normalize( tan_unnormalized );
     float3 bitan = normalize( cross( tan, geometry_normal_ws ) );
+
+    if ( dot( tangent_ws, tangent_ws ) > 1.e-6f )
+    {
+        tan = normalize( tangent_ws - hit_normal_ws * dot( tangent_ws, hit_normal_ws ) );
+        bitan = normalize( bitangent_ws - hit_normal_ws * dot( bitangent_ws, hit_normal_ws ) );
+    }
+
+    if ( material.normal_texture_index != 0xffffffff )
+    {
+        float3 normal_ts = material_textures[material.normal_texture_index].SampleLevel( material_sampler, hit_uv, 0 ).xyz * 2.0f - 1.0f;
+        hit_normal_ws = normalize( normal_ts.x * tan + normal_ts.y * bitan + normal_ts.z * hit_normal_ws );
+        inputs.normal = hit_normal_ws;
+    }
                 
     float3x3 tnb = float3x3( tan, geometry_normal_ws, bitan );
     

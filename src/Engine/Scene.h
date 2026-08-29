@@ -163,12 +163,15 @@ private:
 
     RHIUploadBufferPtr m_material_buffer;
     std::vector<uint32_t> m_free_material_slots;
+    std::vector<uint32_t> m_free_texture_slots;
+    RHISamplerPtr m_material_sampler;
 
 public:
     GlobalDescriptors();
 
     uint32_t AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices );
     uint32_t AddMaterial( const MaterialGPU& material_data );
+    uint32_t AddTexture( RHITextureROView& texture );
 
     RHIDescriptorSet& GetDescSet() const { return *m_global_descset; }
     RHIDescriptorSetLayout* GetLayout() const { return m_global_dsl.get(); }

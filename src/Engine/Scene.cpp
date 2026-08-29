@@ -190,6 +190,7 @@ namespace
 
     static constexpr int MAX_SCENE_GEOMS = 256;
     static constexpr int MAX_SCENE_MATERIALS = 256;
+    static constexpr int MAX_SCENE_TEXTURES = 512;
 }
 
 GlobalDescriptors::GlobalDescriptors()
@@ -202,7 +203,7 @@ GlobalDescriptors::GlobalDescriptors()
 
 
     {
-        RHI::DescriptorViewRange ranges[3] = {};
+        RHI::DescriptorViewRange ranges[5] = {};
 
         ranges[0].type = RHIShaderBindingType::StructuredBuffer;
         ranges[0].count = MAX_SCENE_GEOMS;
@@ -216,6 +217,14 @@ GlobalDescriptors::GlobalDescriptors()
         ranges[2].count = 1;
         ranges[2].stages = RHIShaderStageFlags::AllBits;
 
+        ranges[3].type = RHIShaderBindingType::TextureRO;
+        ranges[3].count = MAX_SCENE_TEXTURES;
+        ranges[3].stages = RHIShaderStageFlags::AllBits;
+
+        ranges[4].type = RHIShaderBindingType::Sampler;
+        ranges[4].count = 1;
+        ranges[4].stages = RHIShaderStageFlags::AllBits;
+
         RHI::DescriptorSetLayoutInfo dsl_info = {};
         dsl_info.ranges = ranges;
         dsl_info.range_count = std::size( ranges );
@@ -224,6 +233,15 @@ GlobalDescriptors::GlobalDescriptors()
     }
 
     m_global_descset = GetRHI().CreateDescriptorSet( *m_global_dsl );
+
+    m_free_texture_slots.resize( MAX_SCENE_TEXTURES );
+    for ( uint32_t i = 0; i < m_free_texture_slots.size(); ++i )
+    {
+        m_free_texture_slots[i] = uint32_t( m_free_texture_slots.size() ) - i - 1;
+    }
+    RHI::SamplerInfo sampler_info = {};
+    m_material_sampler = GetRHI().CreateSampler( sampler_info );
+    m_global_descset->BindSampler( 4, 0, *m_material_sampler );
 
     m_free_material_slots.resize( MAX_SCENE_MATERIALS );
     for ( uint32_t i = 0; i < m_free_material_slots.size(); ++i )
@@ -269,6 +287,17 @@ uint32_t GlobalDescriptors::AddMaterial( const MaterialGPU& material_data )
     m_material_buffer->WriteBytes( &material_data, sizeof( MaterialGPU ), material_index * sizeof( MaterialGPU ) );
 
     return material_index;
+}
+
+uint32_t GlobalDescriptors::AddTexture( RHITextureROView& texture )
+{
+    if ( m_free_texture_slots.empty() )
+        return uint32_t( -1 );
+
+    const uint32_t texture_index = m_free_texture_slots.back();
+    m_free_texture_slots.pop_back();
+    m_global_descset->BindTextureROView( 3, texture_index, texture );
+    return texture_index;
 }
 
 

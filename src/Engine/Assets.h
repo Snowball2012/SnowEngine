@@ -6,6 +6,8 @@
 
 
 struct MeshVertex;
+class TextureAsset;
+using TextureAssetPtr = boost::intrusive_ptr<TextureAsset>;
 
 struct MaterialGPU
 {
@@ -13,6 +15,9 @@ struct MaterialGPU
 	glm::vec3 f0;
 	float roughness;
 	uint32_t albedo_texture_index = uint32_t(-1);
+	uint32_t specular_texture_index = uint32_t(-1);
+	uint32_t normal_texture_index = uint32_t(-1);
+	uint32_t _pad[2] = {};
 };
 
 class MaterialAsset : public Asset
@@ -22,6 +27,9 @@ class MaterialAsset : public Asset
 	uint32_t m_global_material_index = -1;
 
 	MaterialGPU m_gpu_data = {};
+	TextureAssetPtr m_albedo_texture;
+	TextureAssetPtr m_specular_texture;
+	TextureAssetPtr m_normal_texture;
 
 public:
 	virtual ~MaterialAsset() = default;
@@ -112,6 +120,7 @@ class TextureAsset : public Asset
 
 	RHITexturePtr m_rhi_texture = nullptr;
 	RHITextureROViewPtr m_rhi_view = nullptr;
+	uint32_t m_global_texture_index = uint32_t(-1);
 
 public:
 	virtual ~TextureAsset() = default;
@@ -122,13 +131,14 @@ public:
 
 	virtual bool Load( const JsonValue& data ) override;
 
-	bool LoadFromFile( const char* path );
+	bool LoadFromFile( const char* path, bool srgb = true );
 
 	const RHITexture* GetTexture() const { return m_rhi_texture.get(); }
 	RHITextureROView* GetTextureROView() const { return m_rhi_view.get(); }
+	uint32_t GetGlobalTextureIndex() const { return m_global_texture_index; }
 
 private:
-	bool LoadWithSTB( const char* ospath );
+	bool LoadWithSTB( const char* ospath, bool srgb );
+	bool LoadDDS( const char* ospath, bool srgb );
 	bool LoadEXR( const char* ospath );
 };
-using TextureAssetPtr = boost::intrusive_ptr<TextureAsset>;

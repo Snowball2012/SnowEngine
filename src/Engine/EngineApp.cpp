@@ -18,6 +18,8 @@
 
 #include <vulkan/vulkan.h>
 
+void LinkFbxImporterCommands();
+
 struct SwapChainSupportDetails
 {
     VkSurfaceCapabilitiesKHR capabilities = {};
@@ -34,6 +36,8 @@ EngineApp::~EngineApp() = default;
 
 void EngineApp::Run( int argc, char** argv )
 {
+    LinkFbxImporterCommands();
+
     // Several systems have to start here
 
     // Logs

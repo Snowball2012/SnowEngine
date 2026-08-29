@@ -9,6 +9,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tinyobjloader/tiny_obj_loader.h>
 
+#define BCDEC_IMPLEMENTATION
+#include <ThirdParty/bcdec/bcdec.h>
+
 #include <stb/stb_image.h>
 
 // MeshAsset
@@ -36,7 +39,7 @@ size_t MeshAsset::GetPositionBufferStride() const
 
 const RHIIndexBufferType MeshAsset::GetIndexBufferType() const
 {
-    return m_indices_num > std::numeric_limits<uint16_t>::max() ? RHIIndexBufferType::UInt32 : RHIIndexBufferType::UInt16;
+    return RHIIndexBufferType::UInt32;
 }
 
 bool MeshAsset::Load( const JsonValue& data )
@@ -99,7 +102,24 @@ bool MeshAsset::LoadFromObj( const char* path )
         return false;
     }
 
-    std::unordered_map<uint64_t, uint32_t> vertex_attribs_to_index;
+    struct VertexKey
+    {
+        int position;
+        int normal;
+        int texcoord;
+        bool operator==( const VertexKey& rhs ) const = default;
+    };
+    struct VertexKeyHash
+    {
+        size_t operator()( const VertexKey& key ) const
+        {
+            size_t hash = std::hash<int>{}( key.position );
+            hash ^= std::hash<int>{}( key.normal ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= std::hash<int>{}( key.texcoord ) + 0x9e3779b9 + ( hash << 6 ) + ( hash >> 2 );
+            return hash;
+        }
+    };
+    std::unordered_map<VertexKey, uint32_t, VertexKeyHash> vertex_attribs_to_index;
 
     std::vector<MeshVertex> vertices;
     std::vector<uint32_t> indices;
@@ -129,13 +149,10 @@ bool MeshAsset::LoadFromObj( const char* path )
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-                const uint64_t vertex_hash =
-                    ( idx.vertex_index & 0xffff )
-                    | ( ( uint64_t( idx.normal_index ) << 16 ) & 0xffff0000 )
-                    | ( ( uint64_t( idx.texcoord_index ) << 32 ) & 0xffff00000000 );
+                const VertexKey vertex_key = { idx.vertex_index, idx.normal_index, idx.texcoord_index };
                 
                 uint32_t vertex_idx = uint32_t(-1);
-                auto existing_index_it = vertex_attribs_to_index.find( vertex_hash );
+                auto existing_index_it = vertex_attribs_to_index.find( vertex_key );
                 if ( existing_index_it != vertex_attribs_to_index.end() )
                 {
                     vertex_idx = existing_index_it->second;
@@ -173,7 +190,7 @@ bool MeshAsset::LoadFromObj( const char* path )
                     }
 
                     vertices.emplace_back( new_vertex );
-                    vertex_attribs_to_index.emplace( vertex_hash, vertex_idx );
+                    vertex_attribs_to_index.emplace( vertex_key, vertex_idx );
                 }
 
                 indices.emplace_back( vertex_idx );
@@ -270,7 +287,14 @@ bool TextureAsset::Load( const JsonValue& data )
         return false;
     }
 
-    if ( !LoadFromFile( source->value.GetString() ) )
+    bool srgb = true;
+    JsonValue::ConstMemberIterator srgb_it = data.FindMember( "srgb" );
+    if ( srgb_it != data.MemberEnd() && srgb_it->value.IsBool() )
+    {
+        srgb = srgb_it->value.GetBool();
+    }
+
+    if ( !LoadFromFile( source->value.GetString(), srgb ) )
     {
         return false;
     }
@@ -278,12 +302,18 @@ bool TextureAsset::Load( const JsonValue& data )
     RHI::TextureROViewInfo view_info = {};
     view_info.texture = m_rhi_texture.get();
     m_rhi_view = GetRHI().CreateTextureROView( view_info );
+    m_global_texture_index = GetRenderer().GetGlobalDescriptors().AddTexture( *m_rhi_view );
+    if ( m_global_texture_index == uint32_t( -1 ) )
+    {
+        SE_LOG_ERROR( Engine, "Global texture descriptor capacity exhausted while loading %s", m_id.GetPath() );
+        return false;
+    }
 
     m_status = AssetStatus::Ready;
     return true;
 }
 
-bool TextureAsset::LoadFromFile( const char* path )
+bool TextureAsset::LoadFromFile( const char* path, bool srgb )
 {
     std::string input_file_path = ToOSPath( path );
 
@@ -312,10 +342,16 @@ bool TextureAsset::LoadFromFile( const char* path )
         return LoadEXR( input_file_path.c_str() );
     }
 
-    return LoadWithSTB( input_file_path.c_str() );
+    static constexpr uint32_t SIGNATURE_DDS = 0x20534444;
+    if ( signature == SIGNATURE_DDS )
+    {
+        return LoadDDS( input_file_path.c_str(), srgb );
+    }
+
+    return LoadWithSTB( input_file_path.c_str(), srgb );
 }
 
-bool TextureAsset::LoadWithSTB( const char* ospath )
+bool TextureAsset::LoadWithSTB( const char* ospath, bool srgb )
 {
     bool file_hdr = stbi_is_hdr( ospath );
 
@@ -343,7 +379,7 @@ bool TextureAsset::LoadWithSTB( const char* ospath )
     tex_info.dimensions = RHITextureDimensions::T2D;
     if ( file_channels == 4 || file_channels == 3 )
     {
-        tex_info.format = RHIFormat::R8G8B8A8_SRGB;
+        tex_info.format = srgb ? RHIFormat::R8G8B8A8_SRGB : RHIFormat::R8G8B8A8_UNORM;
     }
     else
     {
@@ -373,6 +409,116 @@ bool TextureAsset::LoadWithSTB( const char* ospath )
 
     m_status = AssetStatus::Ready;
     return true;
+}
+
+bool TextureAsset::LoadDDS( const char* ospath, bool srgb )
+{
+    std::ifstream file( ospath, std::ios::binary | std::ios::ate );
+    if ( !file )
+    {
+        SE_LOG_ERROR( Engine, "Could not load DDS file at <%s>", ospath );
+        return false;
+    }
+
+    const std::streamsize file_size = file.tellg();
+    if ( file_size < 128 )
+    {
+        SE_LOG_ERROR( Engine, "DDS file is truncated: <%s>", ospath );
+        return false;
+    }
+    file.seekg( 0 );
+    std::vector<uint8_t> bytes( static_cast<size_t>( file_size ) );
+    file.read( reinterpret_cast<char*>( bytes.data() ), file_size );
+    if ( !file )
+    {
+        SE_LOG_ERROR( Engine, "Could not read DDS file at <%s>", ospath );
+        return false;
+    }
+
+    auto read_u32 = [&]( size_t offset )
+    {
+        uint32_t value = 0;
+        memcpy( &value, bytes.data() + offset, sizeof( value ) );
+        return value;
+    };
+
+    const uint32_t width = read_u32( 16 );
+    const uint32_t height = read_u32( 12 );
+    const uint32_t fourcc = read_u32( 84 );
+    const uint32_t dxt1 = uint32_t( 'D' ) | ( uint32_t( 'X' ) << 8 ) | ( uint32_t( 'T' ) << 16 ) | ( uint32_t( '1' ) << 24 );
+    const uint32_t dxt5 = uint32_t( 'D' ) | ( uint32_t( 'X' ) << 8 ) | ( uint32_t( 'T' ) << 16 ) | ( uint32_t( '5' ) << 24 );
+    const uint32_t ati2 = uint32_t( 'A' ) | ( uint32_t( 'T' ) << 8 ) | ( uint32_t( 'I' ) << 16 ) | ( uint32_t( '2' ) << 24 );
+    const uint32_t block_size = fourcc == dxt1 ? 8u : ( fourcc == dxt5 || fourcc == ati2 ? 16u : 0u );
+    if ( width == 0 || height == 0 || block_size == 0 )
+    {
+        SE_LOG_ERROR( Engine, "Unsupported DDS format in <%s>; expected BC1/DXT1, BC3/DXT5 or BC5/ATI2", ospath );
+        return false;
+    }
+
+    const uint32_t blocks_x = ( width + 3 ) / 4;
+    const uint32_t blocks_y = ( height + 3 ) / 4;
+    const size_t compressed_size = size_t( blocks_x ) * blocks_y * block_size;
+    if ( bytes.size() < 128 + compressed_size )
+    {
+        SE_LOG_ERROR( Engine, "DDS top mip is truncated: <%s>", ospath );
+        return false;
+    }
+
+    std::vector<uint8_t> pixels( size_t( width ) * height * 4, 255 );
+    const uint8_t* src = bytes.data() + 128;
+    for ( uint32_t by = 0; by < blocks_y; ++by )
+    {
+        for ( uint32_t bx = 0; bx < blocks_x; ++bx, src += block_size )
+        {
+            uint8_t rgba[4 * 4 * 4] = {};
+            if ( fourcc == dxt1 )
+            {
+                bcdec_bc1( src, rgba, 4 * 4 );
+            }
+            else if ( fourcc == dxt5 )
+            {
+                bcdec_bc3( src, rgba, 4 * 4 );
+            }
+            else
+            {
+                uint8_t rg[4 * 4 * 2] = {};
+                bcdec_bc5( src, rg, 4 * 2 );
+                for ( uint32_t i = 0; i < 16; ++i )
+                {
+                    const float nx = float( rg[i * 2 + 0] ) / 127.5f - 1.0f;
+                    const float ny = float( rg[i * 2 + 1] ) / 127.5f - 1.0f;
+                    const float nz = sqrtf( std::max( 0.0f, 1.0f - nx * nx - ny * ny ) );
+                    rgba[i * 4 + 0] = rg[i * 2 + 0];
+                    rgba[i * 4 + 1] = rg[i * 2 + 1];
+                    rgba[i * 4 + 2] = uint8_t( nz * 255.0f + 0.5f );
+                    rgba[i * 4 + 3] = 255;
+                }
+            }
+
+            for ( uint32_t y = 0; y < 4 && by * 4 + y < height; ++y )
+            {
+                for ( uint32_t x = 0; x < 4 && bx * 4 + x < width; ++x )
+                {
+                    const size_t dst_pixel = ( size_t( by * 4 + y ) * width + bx * 4 + x ) * 4;
+                    memcpy( pixels.data() + dst_pixel, rgba + ( y * 4 + x ) * 4, 4 );
+                }
+            }
+        }
+    }
+
+    RHI::TextureInfo tex_info = {};
+    tex_info.dimensions = RHITextureDimensions::T2D;
+    tex_info.format = srgb ? RHIFormat::R8G8B8A8_SRGB : RHIFormat::R8G8B8A8_UNORM;
+    tex_info.width = width;
+    tex_info.height = height;
+    tex_info.depth = 1;
+    tex_info.mips = 1;
+    tex_info.array_layers = 1;
+    tex_info.usage = RHITextureUsageFlags::TextureROView;
+    tex_info.initial_layout = RHITextureLayout::ShaderReadOnly;
+    tex_info.initial_queue = RHI::QueueType::Graphics;
+    m_rhi_texture = RHIUtils::CreateInitializedGPUTexture( tex_info, pixels.data(), pixels.size() );
+    return m_rhi_texture != nullptr;
 }
 
 bool TextureAsset::LoadEXR( const char* ospath )
@@ -472,6 +618,33 @@ bool MaterialAsset::Load( const JsonValue& data )
     bool has_f0 = Serialization::Deserialize( parms->value, "f0", m_gpu_data.f0 );
 
     bool has_roughness = Serialization::Deserialize( parms->value, "roughness", m_gpu_data.roughness );
+
+    auto load_texture = [&]( const char* property, TextureAssetPtr& destination, uint32_t& texture_index )
+    {
+        JsonValue::ConstMemberIterator texture_it = parms->value.FindMember( property );
+        if ( texture_it == parms->value.MemberEnd() )
+            return true;
+        if ( !texture_it->value.IsString() )
+        {
+            SE_LOG_ERROR( Engine, "Material %s property %s must be an asset path string", m_id.GetPath(), property );
+            return false;
+        }
+        destination = LoadAsset<TextureAsset>( texture_it->value.GetString() );
+        if ( destination == nullptr )
+        {
+            SE_LOG_ERROR( Engine, "Material %s could not load texture %s", m_id.GetPath(), texture_it->value.GetString() );
+            return false;
+        }
+        texture_index = destination->GetGlobalTextureIndex();
+        return true;
+    };
+
+    if ( !load_texture( "albedo_texture", m_albedo_texture, m_gpu_data.albedo_texture_index )
+        || !load_texture( "specular_texture", m_specular_texture, m_gpu_data.specular_texture_index )
+        || !load_texture( "normal_texture", m_normal_texture, m_gpu_data.normal_texture_index ) )
+    {
+        return false;
+    }
 
     m_global_material_index = GetRenderer().GetGlobalDescriptors().AddMaterial( m_gpu_data );
 

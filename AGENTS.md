@@ -92,6 +92,18 @@ Scene conversion is an explicit, one-time developer action; it must not run auto
 
 Import commands must report actionable errors for missing files, unsupported material features, texture failures, and output-write failures. Avoid committing third-party Bistro source assets unless repository policy explicitly calls for them.
 
+FBX conversion command:
+
+```text
+import_fbx D:/snow_engine/SourceContent/Bistro/Bistro_v5_2/BistroExterior.fbx BistroExterior
+```
+
+The output is written below `EngineContent/Imported/BistroExterior`; load it
+normally afterward with
+`-StartLevel #engine/Imported/BistroExterior/BistroExterior.sel`. Existing
+output is protected by default. Pass `--force` only when intentionally
+regenerating it.
+
 ## Common checks
 
 ```powershell

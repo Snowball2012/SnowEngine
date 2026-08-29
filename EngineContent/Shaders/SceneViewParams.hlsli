@@ -38,6 +38,9 @@ struct Material
     float3 f0;
     float roughness;
     uint albedo_texture_index;
+    uint specular_texture_index;
+    uint normal_texture_index;
+    uint2 _pad;
 };
 
 struct DebugLine
@@ -91,6 +94,8 @@ static const int MAX_SCENE_GEOMS = 256;
 
 // @todo - untyped data blob? with typed loads for different types of materials
 [[vk::binding( 2, 2 )]] StructuredBuffer<Material> materials;
+[[vk::binding( 3, 2 )]] Texture2D<float4> material_textures[512];
+[[vk::binding( 4, 2 )]] SamplerState material_sampler;
 
 DebugLine MakeDebugVector( float3 start_ws, float3 dir_ws, float3 color_start, float3 color_end )
 {
