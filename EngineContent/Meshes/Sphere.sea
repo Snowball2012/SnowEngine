@@ -1,0 +1,5 @@
+{
+	"_generator" : "MeshAsset",
+	"source" : "#engine/Meshes/Sphere.obj",
+	"material" : "#engine/Materials/WhiteFurnaceTest.sea"
+}

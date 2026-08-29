@@ -1,0 +1,55 @@
+{
+    "_generator": "LevelAsset",
+    "objects": [
+        {
+            "name": "DemoMesh",
+            "traits": [
+                {
+                    "_type": "TransformTrait",
+                    "value": {
+                        "tf": {
+                            "t": [
+                                0.0,
+                                -0.026000000536441803,
+                                0.0
+                            ],
+                            "o": [
+                                0.0,
+                                0.20278729498386383,
+                                0.0,
+                                0.97922283411026
+                            ],
+                            "s": [
+                                1.0,
+                                1.0,
+                                1.0
+                            ]
+                        },
+                        "euler": [
+                            0.0,
+                            23.399999618530273,
+                            0.0
+                        ]
+                    }
+                },
+                {
+                    "_type": "MeshInstanceTrait",
+                    "value": {
+                        "asset": "#engine/Meshes/Sphere.sea"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Environment",
+            "traits": [
+                {
+                    "_type": "EnvironmentTrait",
+                    "value": {
+                        "env_cubemap": "#engine/Textures/ConstantColor/White.sea"
+                    }
+                }
+            ]
+        }
+    ]
+}

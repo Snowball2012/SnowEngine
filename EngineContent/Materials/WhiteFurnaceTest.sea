@@ -1,0 +1,8 @@
+{
+	"_generator" : "MaterialAsset",
+	"parms" : {
+		"roughness" : 0.2,
+		"albedo" : [ 1.0, 1.0, 1.0 ],
+		"f0" : [ 0.04, 0.04, 0.04 ]
+	}
+}
