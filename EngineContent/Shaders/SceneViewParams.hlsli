@@ -37,6 +37,7 @@ struct Material
     float3 albedo;
     float3 f0;
     float roughness;
+    uint albedo_texture_index;
 };
 
 struct DebugLine
@@ -85,7 +86,7 @@ static const int MAX_SCENE_GEOMS = 256;
 [[vk::binding( 6, 1 )]] Texture2D<float4> env_cubemap;
 [[vk::binding( 7, 1 )]] SamplerState env_cubemap_sampler;
 
-[[vk::binding( 0, 2 )]] StructuredBuffer<uint16_t> geom_indices[MAX_SCENE_GEOMS];
+[[vk::binding( 0, 2 )]] StructuredBuffer<uint> geom_indices[MAX_SCENE_GEOMS];
 [[vk::binding( 1, 2 )]] StructuredBuffer<MeshVertex> geom_vertices[MAX_SCENE_GEOMS];
 
 // @todo - untyped data blob? with typed loads for different types of materials

@@ -89,9 +89,9 @@ float3 GetHitNormal( HitData hit_data, out bool hit_valid, out float3 geometry_n
     {
         hit_valid = true;
         uint base_index = hit_data.ray_payload.primitive_index * 3;
-        uint16_t i0 = geom_indices[hit_data.geom_index][base_index + 0];
-        uint16_t i1 = geom_indices[hit_data.geom_index][base_index + 1];
-        uint16_t i2 = geom_indices[hit_data.geom_index][base_index + 2];
+        uint i0 = geom_indices[hit_data.geom_index][base_index + 0];
+        uint i1 = geom_indices[hit_data.geom_index][base_index + 1];
+        uint i2 = geom_indices[hit_data.geom_index][base_index + 2];
         
         MeshVertex v0 = geom_vertices[hit_data.geom_index][i0];
         MeshVertex v1 = geom_vertices[hit_data.geom_index][i1];

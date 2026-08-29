@@ -102,7 +102,7 @@ bool MeshAsset::LoadFromObj( const char* path )
     std::unordered_map<uint64_t, uint32_t> vertex_attribs_to_index;
 
     std::vector<MeshVertex> vertices;
-    std::vector<uint16_t> indices;
+    std::vector<uint32_t> indices;
 
     // vertices array stores 3 elements per vertex
     vertices.reserve( attrib.vertices.size() / 3 );
@@ -129,25 +129,12 @@ bool MeshAsset::LoadFromObj( const char* path )
                 // access to vertex
                 tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
 
-                if ( idx.vertex_index > std::numeric_limits<uint16_t>::max() )
-                {
-                    NOTIMPL;
-                }
-                if ( idx.normal_index > std::numeric_limits<uint16_t>::max() )
-                {
-                    NOTIMPL;
-                }
-                if ( idx.texcoord_index > std::numeric_limits<uint16_t>::max() )
-                {
-                    NOTIMPL;
-                }
-
                 const uint64_t vertex_hash =
                     ( idx.vertex_index & 0xffff )
                     | ( ( uint64_t( idx.normal_index ) << 16 ) & 0xffff0000 )
                     | ( ( uint64_t( idx.texcoord_index ) << 32 ) & 0xffff00000000 );
                 
-                uint16_t vertex_idx = -1;
+                uint32_t vertex_idx = uint32_t(-1);
                 auto existing_index_it = vertex_attribs_to_index.find( vertex_hash );
                 if ( existing_index_it != vertex_attribs_to_index.end() )
                 {
@@ -155,7 +142,7 @@ bool MeshAsset::LoadFromObj( const char* path )
                 }
                 else
                 {
-                    vertex_idx = uint16_t( vertices.size() );
+                    vertex_idx = uint32_t( vertices.size() );
 
                     MeshVertex new_vertex = {};
 
@@ -186,6 +173,7 @@ bool MeshAsset::LoadFromObj( const char* path )
                     }
 
                     vertices.emplace_back( new_vertex );
+                    vertex_attribs_to_index.emplace( vertex_hash, vertex_idx );
                 }
 
                 indices.emplace_back( vertex_idx );
@@ -197,7 +185,7 @@ bool MeshAsset::LoadFromObj( const char* path )
     return LoadFromData( vertices, indices );
 }
 
-bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::span<uint16_t>& indices )
+bool MeshAsset::LoadFromData( const std::span<MeshVertex>& vertices, const std::span<uint32_t>& indices )
 {
     RHI::BufferInfo vertex_buf_info = {};
     vertex_buf_info.size = sizeof( MeshVertex ) * vertices.size();
@@ -241,7 +229,7 @@ bool CubeAsset::Load( const JsonValue& data )
         MeshVertex{.position = {  0.5f,  0.5f,  0.5f }, .normal = { 0.0f, 0.0f, 0.0f } },
     };
 
-    static std::array<uint16_t, m_cube_indices_count> indices =
+    static std::array<uint32_t, m_cube_indices_count> indices =
     {
         0, 1, 2,
         2, 1, 3,

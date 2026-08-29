@@ -12,6 +12,7 @@ struct MaterialGPU
 	glm::vec3 albedo;
 	glm::vec3 f0;
 	float roughness;
+	uint32_t albedo_texture_index = uint32_t(-1);
 };
 
 class MaterialAsset : public Asset
@@ -80,7 +81,7 @@ protected:
 
 	bool LoadFromObj( const char* path );
 
-	bool LoadFromData( const std::span<MeshVertex>& vertices, const std::span<uint16_t>& indices );
+	bool LoadFromData( const std::span<MeshVertex>& vertices, const std::span<uint32_t>& indices );
 };
 using MeshAssetPtr = boost::intrusive_ptr<MeshAsset>;
 
