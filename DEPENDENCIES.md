@@ -9,18 +9,25 @@ repository does not identify a version.
 | --- | --- | --- |
 | Boost | 1.67.0 | `boost_1_67_0/` |
 | DirectX Shader Compiler (DXC) | unknown/unpinned | `dxc/` |
-| Dear ImGui | unknown/unpinned | `imgui/` |
-| GLM | unknown/unpinned | `glm/` |
-| RapidJSON | unknown/unpinned | `rapidjson/` |
-| SDL2 | unknown/unpinned (headers and libraries supplied with the Vulkan SDK layout) | `VulkanSDK/1.3.216.0/` |
+| DirectX Tool Kit for DirectX 12 | unknown/unpinned | `dxtk12/` |
+| Dear ImGui | 1.89.4 WIP (`IMGUI_VERSION_NUM` 18932) | `imgui/` |
+| ImGuiFileDialog | 0.6.6 | `ImGuiFileDialog/` |
+| GLM | Vulkan SDK bundled version | `VulkanSDK/1.3.216.0/Include/glm/` |
+| RapidJSON | 1.1.0 | `rapidjson/` |
+| SDL2 | Vulkan SDK bundled version | `VulkanSDK/1.3.216.0/` |
 | Vulkan SDK | 1.3.216.0 | `VulkanSDK/1.3.216.0/` |
-| Vulkan Memory Allocator | unknown/unpinned | `VulkanMemoryAllocator/` |
-| stb | unknown/unpinned | `stb/` |
-| ufbx | unknown/unpinned | `ufbx/` |
-| bcdec | unknown/unpinned | `bcdec/` |
+| Vulkan Memory Allocator | 3.0.1 | `VulkanSDK/1.3.216.0/Include/vma/` |
+| stb | unknown snapshot (`STBI_VERSION` 1) | `stb/` |
+| TinyEXR | unknown/unpinned | `tinyexr/` |
+| tinyobjloader | unknown/unpinned | `tinyobjloader/` |
+| ufbx | 0.18.2 | `ufbx/` |
+| bcdec | 0.98 | `bcdec/` |
 
 The solution also contains project-local copies of stb headers for
 `RHITestApp`; those are not installed through the shared dependency path.
-Runtime libraries such as `SDL2.lib`, `vulkan-1.lib`, and `dxcompiler.lib`
+Windows SDK components such as Direct3D 12, DXGI, DirectXMath, and WRL are
+provided by the Visual Studio 2022/Windows SDK installation rather than the
+repository `3rdparty/` tree. Runtime libraries such as `SDL2.lib`,
+`vulkan-1.lib`, and `dxcompiler.lib`
 must be available in the corresponding SDK/library locations configured in
 the Visual Studio project files.

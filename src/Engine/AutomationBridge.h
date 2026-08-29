@@ -1,7 +1,5 @@
 #pragma once
 
-#include <filesystem>
-
 class Console;
 
 // A local file-based bridge used by the SnowEngine MCP server. Requests are

@@ -21,12 +21,6 @@
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
-    <ClCompile Include="..\..\3rdparty\ufbx\ufbx.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <CompileAs>CompileAsC</CompileAs>
-      <WarningLevel>TurnOffAllWarnings</WarningLevel>
-      <TreatWarningAsError>false</TreatWarningAsError>
-    </ClCompile>
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\Render\DebugDrawing.cpp">

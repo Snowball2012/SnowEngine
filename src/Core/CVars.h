@@ -23,7 +23,7 @@ private:
 
 public:
     ConsoleVariableBase( const char* name, const char* description )
-    { 
+    {
         m_name = name;
         m_next = g_cvars_head;
         m_description = description;
@@ -40,7 +40,18 @@ public:
     ConsoleVariableBase* GetNext() const { return m_next; }
 };
 
-template<typename T>
+template <typename T>
+void ConsoleValueToString( const T& value, std::string& output )
+{
+    output = std::to_string( value );
+}
+
+inline void ConsoleValueToString( const std::string& value, std::string& output )
+{
+    output = value;
+}
+
+template <typename T>
 class ConsoleVariable : public ConsoleVariableBase
 {
 private:
@@ -55,7 +66,7 @@ public:
     const T& GetValue() const { return m_value; }
     void SetValue( T&& value ) { m_value = std::forward<T>( value ); }
 
-    virtual void GetValue( std::string& str_value ) const override { str_value = std::to_string( m_value ); }
+    virtual void GetValue( std::string& str_value ) const override { ConsoleValueToString( m_value, str_value ); }
     virtual bool SetValue( const char* str_value ) override { return SetFromString( str_value, m_value ); }
 };
 
@@ -66,7 +77,7 @@ public:
 class ConsoleCommand;
 extern ConsoleCommand* g_console_commands_head;
 
-using ConsoleCommandCallback = bool (*)( const std::vector<std::string>& args, std::string& output );
+using ConsoleCommandCallback = bool (*)( std::span<const std::string> args, std::string& output );
 
 class ConsoleCommand
 {
@@ -90,16 +101,16 @@ public:
     const char* GetDescription() const { return m_description; }
     ConsoleCommand* GetNext() const { return m_next; }
 
-    bool Execute( const std::vector<std::string>& args, std::string& output ) const
+    bool Execute( std::span<const std::string> args, std::string& output ) const
     {
         return m_callback && m_callback( args, output );
     }
 };
 
 #define CONSOLE_COMMAND_DEFINE( name, description ) \
-    bool name ## _ConsoleCommandImpl( const std::vector<std::string>& args, std::string& output ); \
+    bool name ## _ConsoleCommandImpl( std::span<const std::string> args, std::string& output ); \
     ConsoleCommand name( S_( name ), description, &name ## _ConsoleCommandImpl ); \
-    bool name ## _ConsoleCommandImpl( const std::vector<std::string>& args, std::string& output )
+    bool name ## _ConsoleCommandImpl( std::span<const std::string> args, std::string& output )
 
 class Console
 {
@@ -113,6 +124,7 @@ private:
 
     mutable std::mutex m_output_mutex;
     std::vector<std::string> m_output;
+    std::vector<std::string> m_queued_commands;
 
 public:
     // This can be used to allow override cvar values with command line arguments
@@ -121,6 +133,8 @@ public:
     void AddCVars( ConsoleVariableBase* cvar_head );
     void AddCommands( ConsoleCommand* command_head );
     bool ProcessCommand( const char* cmd );
+    void QueueCommand( std::string_view command );
+    void ExecuteQueuedCommands();
 
     bool HasCVar( const char* name ) const;
     bool HasCommand( const char* name ) const;
@@ -128,8 +142,14 @@ public:
     bool SetCVarValue( const char* name, const char* value, std::string& output );
 
     void AddOutput( std::string_view line );
-    std::vector<std::string> GetOutputSnapshot() const;
     void ClearOutput();
+
+    template <typename Callback>
+    void ReadOutput( Callback&& callback ) const
+    {
+        std::scoped_lock lock( m_output_mutex );
+        callback( std::span<const std::string>( m_output ) );
+    }
 
     static void LogCallback( const char* line, void* user_data );
 

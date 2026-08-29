@@ -106,7 +106,8 @@ bool LevelEditor::OpenLevel( const char* filepath )
 {
     SE_LOG_INFO( Sandbox, "Open level %s", filepath );
 
-    std::ifstream file( filepath );
+    const std::string os_path = ToOSPath( filepath );
+    std::ifstream file( os_path );
     if ( !file.good() )
     {
         SE_LOG_ERROR( Engine, "Can't open level file %s", filepath );
@@ -133,7 +134,7 @@ bool LevelEditor::OpenLevel( const char* filepath )
     for ( auto& v : object_property->value.GetArray() )
     {
         auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-        if ( !new_object->Deserialize( v, false ) )
+        if ( !new_object->Deserialize( v, false, filepath ) )
         {
             m_level_objects.pop_back();
             continue;

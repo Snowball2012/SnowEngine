@@ -10,6 +10,8 @@ Logger* g_log;
 EngineGlobals g_engine;
 ConsoleVariableBase* g_cvars_head = nullptr;
 
+CVAR_DEFINE( StartLevel, std::string, "#engine/Levels/Default.sel", "Level loaded by Sandbox at startup" );
+
 SandboxApp::SandboxApp()
     : EngineApp()
 {
@@ -18,29 +20,6 @@ SandboxApp::SandboxApp()
 
 SandboxApp::~SandboxApp() = default;
 
-void SandboxApp::ParseCommandLineDerived( int argc, char** argv )
-{
-    for ( int i = 1; i < argc; ++i )
-    {
-        if ( !_strcmpi( argv[i], "-StartLevel" ) )
-        {
-            if ( argc > ( i + 1 ) )
-            {
-                // read next arg
-                m_current_level_path = argv[i + 1];
-                i += 1;
-
-
-                SE_LOG_INFO( Sandbox, "Set level path from command line: %s", m_current_level_path.c_str() );
-            }
-            else
-            {
-                SE_LOG_ERROR( Sandbox, "Can't set level path from command line because -StartLevel is the last token" );
-            }
-        }
-    }
-}
-
 void SandboxApp::OnInit()
 {
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
@@ -48,9 +27,10 @@ void SandboxApp::OnInit()
     m_editor = std::make_unique<LevelEditor>();
     m_editor->SetViewportExtents( m_swapchain->GetExtent() );
 
-    if ( !m_editor->OpenLevel( ToOSPath( m_current_level_path.c_str() ).c_str() ) )
+    const std::string& start_level = StartLevel.GetValue();
+    if ( !m_editor->OpenLevel( start_level.c_str() ) )
     {
-        SE_LOG_ERROR( Sandbox, "Could not open level at path %s", m_current_level_path.c_str() );
+        SE_LOG_ERROR( Sandbox, "Could not open level at path %s", start_level.c_str() );
     }
 
     SE_LOG_INFO( Sandbox, "Sandbox initialization complete" );
@@ -183,7 +163,7 @@ void SandboxApp::UpdateGui()
         {
             if ( ImGui::MenuItem( "New" ) )
             {
-                m_editor->OpenLevel( ToOSPath( "#engine/Levels/Default.sel" ).c_str() );
+                m_editor->OpenLevel( "#engine/Levels/Default.sel" );
             }
 
             if ( ImGui::MenuItem( "Open" ) )

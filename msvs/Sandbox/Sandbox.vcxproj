@@ -152,6 +152,12 @@ xcopy $(SolutionDir)3rdparty\dxc\bin\x64\dxil.dll $(TargetDir) /y /r</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\3rdparty\ufbx\ufbx.c">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAs>CompileAsC</CompileAs>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
     <ClCompile Include="..\..\src\Sandbox\Editor.cpp" />
     <ClCompile Include="..\..\src\Sandbox\FbxImporter.cpp" />
     <ClCompile Include="..\..\src\Sandbox\Main.cpp" />

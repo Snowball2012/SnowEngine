@@ -8,8 +8,6 @@
 
 #include <RHI/RHI.h>
 
-#include <span>
-
 struct IVulkanWindowInterface
 {
 	virtual struct VkSurfaceKHR_T* CreateSurface(void* window_handle, struct VkInstance_T* instance) = 0; // use _T* to avoid including entire vulkan api here

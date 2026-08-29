@@ -4,11 +4,6 @@
 
 #include <ufbx/ufbx.h>
 
-#include <filesystem>
-#include <fstream>
-#include <iomanip>
-#include <unordered_map>
-
 namespace
 {
     namespace fs = std::filesystem;
@@ -327,13 +322,13 @@ namespace
                     << "    \"f0\": [" << f0.x << ", " << f0.y << ", " << f0.z << "],\n"
                     << "    \"emissive\": [" << emissive.x << ", " << emissive.y << ", " << emissive.z << "]";
                 if ( !albedo_texture.empty() )
-                    file << ",\n    \"albedo_texture\": \"" << JsonEscape( "../Textures/" + albedo_texture ) << "\"";
+                    file << ",\n    \"albedo_texture\": \"" << JsonEscape( "Textures/" + albedo_texture ) << "\"";
                 if ( !specular_texture.empty() )
-                    file << ",\n    \"specular_texture\": \"" << JsonEscape( "../Textures/" + specular_texture ) << "\"";
+                    file << ",\n    \"specular_texture\": \"" << JsonEscape( "Textures/" + specular_texture ) << "\"";
                 if ( !normal_texture.empty() )
-                    file << ",\n    \"normal_texture\": \"" << JsonEscape( "../Textures/" + normal_texture ) << "\"";
+                    file << ",\n    \"normal_texture\": \"" << JsonEscape( "Textures/" + normal_texture ) << "\"";
                 if ( !emissive_texture.empty() )
-                    file << ",\n    \"emissive_texture\": \"" << JsonEscape( "../Textures/" + emissive_texture ) << "\"";
+                    file << ",\n    \"emissive_texture\": \"" << JsonEscape( "Textures/" + emissive_texture ) << "\"";
                 file << "\n  }\n}\n";
             } ) )
         {
@@ -529,4 +524,3 @@ CONSOLE_COMMAND_DEFINE( import_fbx,
     }
     return ConvertFbx( fs::path( args[0] ), args[1], args.size() == 3, output );
 }
-`r`n

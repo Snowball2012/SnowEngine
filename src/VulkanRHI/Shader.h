@@ -1,7 +1,5 @@
 #pragma once
 
-#include <deque>
-
 #include "StdAfx.h"
 
 #include <RHI/RHI.h>

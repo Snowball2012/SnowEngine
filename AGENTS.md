@@ -8,8 +8,8 @@ The executable engine/renderer project is `Sandbox.vcxproj`.
 
 ## Agent workspace rules
 
-- The primary agent may only read or write inside `D:/snow_engine`, except that it may inspect existing files and add new files under `D:/3rdparty`.
-- Never remove files from `D:/3rdparty`.
+- The primary agent may only read or write inside `D:/snow_engine`. The repository path `D:/snow_engine/3rdparty` is a link to the shared third-party directory and is explicitly within scope for dependency work.
+- Install third-party libraries under `D:/snow_engine/3rdparty/<library>` and never remove or overwrite unrelated existing third-party files.
 - Every subagent must use a separate Git worktree under `I:/snow_engine_agent_worktrees/<agent-name>` and may only touch its own worktree. Creating and working inside that assigned worktree is the sole exception to the `D:/snow_engine` boundary.
 - Before editing, confirm that the current branch is not `master`. Commits are allowed only on non-`master` branches.
 - Never push changes to a remote repository.
@@ -17,6 +17,10 @@ The executable engine/renderer project is `Sandbox.vcxproj`.
 - Prefer simpler models and lower reasoning effort for subagents; keep high-effort reasoning in the orchestrating agent.
 - Downloads are allowed up to 64 GB total for the task. Ask the user before exceeding that limit.
 - Do not make significant core-architecture changes without discussing them with the user first.
+- Keep text files LF-only, use four spaces for indentation in new or modified C/C++ and shader code, remove trailing whitespace, and follow the surrounding naming and brace style.
+- Put STL headers used throughout a compiled project in that project's precompiled header. When a project has no precompiled header, include STL headers in `.cpp` files instead of public headers whenever possible; prefer forward declarations and extern function prototypes when a full include is unnecessary.
+- Do not copy `std::vector`, `std::string`, or other dynamically allocated containers merely for read access. Prefer spans, string views, `c_str()`, const references, or a lock-scoped callback/view.
+- Do not shorten a lock by copying a container without strong evidence that the shorter critical section is worth the allocation and copy. Locks are acceptable for bounded non-hot read paths; avoid locks themselves on genuinely hot paths.
 
 ## Build
 

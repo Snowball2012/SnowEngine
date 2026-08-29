@@ -16,6 +16,7 @@
 #include <set>
 #include <queue>
 #include <memory>
+#include <string>
 #include <chrono>
 #include <codecvt>
 #include <locale>
@@ -225,6 +226,15 @@ inline bool SetFromString( const char* str, bool& val )
 	}
 
 	return false;
+}
+
+inline bool SetFromString( const char* str, std::string& val )
+{
+    if ( str == nullptr )
+        return false;
+
+    val = str;
+    return true;
 }
 
 struct CorePaths

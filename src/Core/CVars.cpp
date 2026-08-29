@@ -120,8 +120,7 @@ bool Console::ProcessCommand( const char* cmd )
     const auto command_it = m_commands.find( key );
     if ( command_it != m_commands.end() )
     {
-        std::vector<std::string> args( std::next( tokens.begin() ), tokens.end() );
-        const bool success = command_it->second->Execute( args, output );
+        const bool success = command_it->second->Execute( std::span<const std::string>( tokens ).subspan( 1 ), output );
         if ( output.empty() )
             output = success ? "Command completed" : "Command failed";
         AddOutput( output );
@@ -151,6 +150,20 @@ bool Console::ProcessCommand( const char* cmd )
     AddOutput( "Error: " + output );
     SE_LOG_ERROR( Core, "%s", output.c_str() );
     return false;
+}
+
+void Console::QueueCommand( std::string_view command )
+{
+    if ( !command.empty() )
+        m_queued_commands.emplace_back( command );
+}
+
+void Console::ExecuteQueuedCommands()
+{
+    std::vector<std::string> queued_commands;
+    queued_commands.swap( m_queued_commands );
+    for ( const std::string& command : queued_commands )
+        ProcessCommand( command.c_str() );
 }
 
 bool Console::HasCVar( const char* name ) const
@@ -217,12 +230,6 @@ void Console::AddOutput( std::string_view line )
     constexpr size_t max_output_lines = 4096;
     if ( m_output.size() > max_output_lines )
         m_output.erase( m_output.begin(), m_output.begin() + ( m_output.size() - max_output_lines ) );
-}
-
-std::vector<std::string> Console::GetOutputSnapshot() const
-{
-    std::scoped_lock lock( m_output_mutex );
-    return m_output;
 }
 
 void Console::ClearOutput()

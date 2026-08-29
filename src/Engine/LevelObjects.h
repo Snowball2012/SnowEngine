@@ -22,7 +22,7 @@ public:
     virtual void OnUpdateGUI( bool& trait_changed ) = 0;
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const = 0;
-    virtual bool Deserialize( const JsonValue& in ) = 0;
+    virtual bool Deserialize( const JsonValue& in, const char* owner_path ) = 0;
 
     //
     virtual const char* GetTraitPrettyName() const = 0;
@@ -74,7 +74,7 @@ public:
     bool OnUpdateGUI();
 
     bool Serialize( JsonValue& out, JsonAllocator& allocator ) const;
-    bool Deserialize( const JsonValue& in, bool defer_regeneration );
+    bool Deserialize( const JsonValue& in, bool defer_regeneration, const char* owner_path = nullptr );
 
     bool RegenerateEntities();
 
@@ -148,7 +148,7 @@ public:
     static const char* PrettyName() { return "Transform"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
-    virtual bool Deserialize( const JsonValue& in ) override;
+    virtual bool Deserialize( const JsonValue& in, const char* owner_path ) override;
 };
 
 
@@ -169,7 +169,7 @@ public:
     static const char* PrettyName() { return "Mesh Instance"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
-    virtual bool Deserialize( const JsonValue& in ) override;
+    virtual bool Deserialize( const JsonValue& in, const char* owner_path ) override;
 
     void SetAsset( MeshAssetPtr mesh );
 };
@@ -191,7 +191,7 @@ public:
     static const char* PrettyName() { return "Environment"; }
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const override;
-    virtual bool Deserialize( const JsonValue& in ) override;
+    virtual bool Deserialize( const JsonValue& in, const char* owner_path ) override;
 
     void SetEnvCubemap( TextureAssetPtr cubemap );
 

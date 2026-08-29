@@ -9,9 +9,6 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/prettywriter.h>
 
-#include <filesystem>
-#include <fstream>
-
 namespace
 {
     using JsonDocument = rapidjson::Document;
@@ -148,12 +145,18 @@ void AutomationBridge::ProcessRequest( const std::filesystem::path& request_path
         }
         else
         {
-            const size_t output_start = m_console.GetOutputSnapshot().size();
+            size_t output_start = 0;
+            m_console.ReadOutput( [&output_start]( std::span<const std::string> output )
+            {
+                output_start = output.size();
+            } );
             success = m_console.ProcessCommand( command.c_str() );
-            const std::vector<std::string> output = m_console.GetOutputSnapshot();
             JsonValue lines( rapidjson::kArrayType );
-            for ( size_t i = std::min( output_start, output.size() ); i < output.size(); ++i )
-                lines.PushBack( JsonValue( output[i].c_str(), allocator ), allocator );
+            m_console.ReadOutput( [&]( std::span<const std::string> output )
+            {
+                for ( size_t i = std::min( output_start, output.size() ); i < output.size(); ++i )
+                    lines.PushBack( JsonValue( output[i].c_str(), allocator ), allocator );
+            } );
             result.AddMember( "lines", lines, allocator );
         }
     }
@@ -199,13 +202,17 @@ void AutomationBridge::ProcessRequest( const std::filesystem::path& request_path
                 since = static_cast<size_t>( since_it->value.GetUint64() );
         }
 
-        const std::vector<std::string> output = m_console.GetOutputSnapshot();
-        since = std::min( since, output.size() );
         JsonValue lines( rapidjson::kArrayType );
-        for ( size_t i = since; i < output.size(); ++i )
-            lines.PushBack( JsonValue( output[i].c_str(), allocator ), allocator );
+        size_t next = 0;
+        m_console.ReadOutput( [&]( std::span<const std::string> output )
+        {
+            since = std::min( since, output.size() );
+            for ( size_t i = since; i < output.size(); ++i )
+                lines.PushBack( JsonValue( output[i].c_str(), allocator ), allocator );
+            next = output.size();
+        } );
         result.AddMember( "lines", lines, allocator );
-        result.AddMember( "next", static_cast<uint64_t>( output.size() ), allocator );
+        result.AddMember( "next", static_cast<uint64_t>( next ), allocator );
         success = true;
     }
     else

@@ -2,6 +2,8 @@
 
 #include <Core/RHICommon.h>
 
+#include <deque>
+
 SE_LOG_CATEGORY( VulkanRHI );
 
 SE_LOG_CATEGORY_EX( VulkanMemoryAllocator, false );

@@ -110,7 +110,7 @@ bool LevelObject::Serialize( JsonValue& out, JsonAllocator& allocator ) const
     return true;
 }
 
-bool LevelObject::Deserialize( const JsonValue& in, bool defer_regeneration )
+bool LevelObject::Deserialize( const JsonValue& in, bool defer_regeneration, const char* owner_path )
 {
     auto name_it = in.FindMember( "name" );
     if ( name_it == in.MemberEnd() || !name_it->value.IsString() )
@@ -152,7 +152,7 @@ bool LevelObject::Deserialize( const JsonValue& in, bool defer_regeneration )
             return false;
         }
 
-        if ( !trait->Deserialize( value_it->value ) )
+        if ( !trait->Deserialize( value_it->value, owner_path ) )
         {
             SE_LOG_ERROR( Engine, "Failed to deserialize trait %s", type_it->value.GetString() );
             return false;
@@ -324,8 +324,10 @@ bool TransformTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
     return true;
 }
 
-bool TransformTrait::Deserialize( const JsonValue& in )
+bool TransformTrait::Deserialize( const JsonValue& in, const char* owner_path )
 {
+    (void)owner_path;
+
     if ( !in.IsObject() )
     {
         SE_LOG_ERROR( Engine, "%s: Json value is not an object", GetTraitPrettyName() );
@@ -358,11 +360,6 @@ bool MeshInstanceTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelo
     MeshInstanceSetupComponent& component = levelobj.AddComponent<MeshInstanceSetupComponent>( base_entity );
 
     component.asset = m_mesh;
-
-    if ( m_mesh != nullptr )
-    {
-        m_gui_path = m_mesh->GetPath();
-    }
 
     return true;
 }
@@ -402,20 +399,14 @@ bool MeshInstanceTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) co
 {
     out.SetObject();
 
-    std::string assetPath = "";
-    if ( m_mesh != nullptr )
-    {
-        assetPath = m_mesh->GetPath();
-    }
-
     JsonValue path_json_string;
-    path_json_string.SetString( assetPath.c_str(), allocator );
+    path_json_string.SetString( m_gui_path.c_str(), allocator );
     out.AddMember( "asset", path_json_string, allocator );
 
     return true;
 }
 
-bool MeshInstanceTrait::Deserialize( const JsonValue& in )
+bool MeshInstanceTrait::Deserialize( const JsonValue& in, const char* owner_path )
 {
     if ( !in.IsObject() )
     {
@@ -430,8 +421,11 @@ bool MeshInstanceTrait::Deserialize( const JsonValue& in )
         return false;
     }
 
-    m_mesh = LoadAsset<MeshAsset>( asset_it->value.GetString() );
-    m_gui_path = m_mesh ? m_mesh->GetPath() : "";
+    m_gui_path = asset_it->value.GetString();
+    const std::string resolved_path = owner_path != nullptr
+        ? ResolveAssetReference( owner_path, m_gui_path.c_str() )
+        : m_gui_path;
+    m_mesh = LoadAsset<MeshAsset>( resolved_path.c_str() );
 
     return true;
 }
@@ -439,6 +433,7 @@ bool MeshInstanceTrait::Deserialize( const JsonValue& in )
 void MeshInstanceTrait::SetAsset( MeshAssetPtr mesh )
 {
     m_mesh = mesh;
+    m_gui_path = m_mesh ? m_mesh->GetPath() : "";
 }
 
 
@@ -449,11 +444,6 @@ bool EnvironmentTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelob
     EnvCubemapComponent& component = levelobj.AddComponent<EnvCubemapComponent>( base_entity );
 
     component.cubemap = m_env_cubemap;
-
-    if ( m_env_cubemap != nullptr )
-    {
-        m_env_cubemap_gui_path = m_env_cubemap->GetPath();
-    }
 
     return true;
 }
@@ -493,20 +483,14 @@ bool EnvironmentTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) con
 {
     out.SetObject();
 
-    std::string assetPath = "";
-    if ( m_env_cubemap != nullptr )
-    {
-        assetPath = m_env_cubemap->GetPath();
-    }
-
     JsonValue path_json_string;
-    path_json_string.SetString( assetPath.c_str(), allocator );
+    path_json_string.SetString( m_env_cubemap_gui_path.c_str(), allocator );
     out.AddMember( "env_cubemap", path_json_string, allocator );
 
     return true;
 }
 
-bool EnvironmentTrait::Deserialize( const JsonValue& in )
+bool EnvironmentTrait::Deserialize( const JsonValue& in, const char* owner_path )
 {
     if ( !in.IsObject() )
     {
@@ -521,8 +505,11 @@ bool EnvironmentTrait::Deserialize( const JsonValue& in )
         return false;
     }
 
-    m_env_cubemap = LoadAsset<TextureAsset>( asset_it->value.GetString() );
-    m_env_cubemap_gui_path = m_env_cubemap ? m_env_cubemap->GetPath() : "";
+    m_env_cubemap_gui_path = asset_it->value.GetString();
+    const std::string resolved_path = owner_path != nullptr
+        ? ResolveAssetReference( owner_path, m_env_cubemap_gui_path.c_str() )
+        : m_env_cubemap_gui_path;
+    m_env_cubemap = LoadAsset<TextureAsset>( resolved_path.c_str() );
 
     return true;
 }
@@ -530,4 +517,5 @@ bool EnvironmentTrait::Deserialize( const JsonValue& in )
 void EnvironmentTrait::SetEnvCubemap( TextureAssetPtr env_map )
 {
     m_env_cubemap = env_map;
+    m_env_cubemap_gui_path = m_env_cubemap ? m_env_cubemap->GetPath() : "";
 }

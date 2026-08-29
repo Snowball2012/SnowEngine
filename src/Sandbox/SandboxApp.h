@@ -16,8 +16,6 @@ class MaterialEditor;
 class SandboxApp : public EngineApp
 {
 private:
-	std::string m_current_level_path = std::string( "#engine/Levels/Default.sel" );
-
 	// GUI state
 	bool m_show_imgui_demo = false;
 	bool m_show_world_outliner = false;
@@ -33,8 +31,6 @@ public:
 	~SandboxApp();
 
 private:
-	virtual void ParseCommandLineDerived( int argc, char** argv ) override;
-
 	virtual void OnInit() override;
 
 	virtual void OnCleanup() override;

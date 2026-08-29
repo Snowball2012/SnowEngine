@@ -18,6 +18,8 @@
 
 #include <vulkan/vulkan.h>
 
+CVAR_DEFINE( EnginePath, std::string, ".", "SnowEngine root content path" );
+CVAR_DEFINE( LogPath, std::string, "Engine.log", "Engine log file path" );
 
 struct SwapChainSupportDetails
 {
@@ -34,7 +36,7 @@ EngineApp::EngineApp()
 EngineApp::~EngineApp() = default;
 
 void EngineApp::Run( int argc, char** argv )
-{`r`n
+{
     // Several systems have to start here
 
     // Logs
@@ -49,9 +51,6 @@ void EngineApp::Run( int argc, char** argv )
     ParseCommandLine( argc, argv );
 
     InitCoreGlobals();
-
-    // We parse app-specific arguments here because we want logger, content paths and other core functionality to be initialized everywhere inside derived app
-    ParseCommandLineDerived( argc, argv );
 
     SDL_Init( SDL_INIT_EVERYTHING );
     m_main_wnd = SDL_CreateWindow( GetMainWindowName(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_window_size.x, m_window_size.y, SDL_WINDOW_VULKAN | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
@@ -74,7 +73,7 @@ void EngineApp::Run( int argc, char** argv )
 
     OnInit();
 
-    std::filesystem::path content_path( m_cmd_line_args.engine_content_path );
+    std::filesystem::path content_path( g_core_paths.engine_content );
     if ( content_path.filename().empty() )
         content_path = content_path.parent_path();
     const std::filesystem::path engine_root = content_path.parent_path();
@@ -102,69 +101,46 @@ void EngineApp::Run( int argc, char** argv )
 
 void EngineApp::ParseCommandLine( int argc, char** argv )
 {
+    const auto is_registered_argument = [this]( const char* argument )
+    {
+        if ( argument == nullptr || ( argument[0] != '+' && argument[0] != '-' ) || argument[1] == '\0' )
+            return false;
+        return m_console->HasCommand( argument + 1 ) || m_console->HasCVar( argument + 1 );
+    };
+
     for ( int i = 1; i < argc; ++i )
     {
-        if ( argv[i][0] == '+' )
-        {
-            const char* name = argv[i] + 1;
-            if ( m_console->HasCommand( name ) )
-            {
-                std::string command = name;
-                while ( argc > ( i + 1 )
-                    && argv[i + 1][0] != '+'
-                    && _strcmpi( argv[i + 1], "-EnginePath" )
-                    && _strcmpi( argv[i + 1], "-LogPath" )
-                    && _strcmpi( argv[i + 1], "-StartLevel" ) )
-                {
-                    command += " \"";
-                    command += argv[++i];
-                    command += "\"";
-                }
-                m_startup_commands.emplace_back( std::move( command ) );
+        if ( argv[i][0] != '+' && argv[i][0] != '-' )
+            continue;
 
-                std::cout << "[App]: Queued startup command: " << m_startup_commands.back() << std::endl;
-            }
-            else if ( argc > ( i + 1 ) && argv[i + 1][0] != '+' && argv[i + 1][0] != '-' )
+        const char* name = argv[i] + 1;
+        if ( m_console->HasCommand( name ) )
+        {
+            std::string command = name;
+            while ( argc > i + 1 && !is_registered_argument( argv[i + 1] ) )
             {
-                m_console->AddCVarInitialValueOverride( name, argv[i + 1] );
-                std::cout << "[App]: Set cvar from command line: " << name << " = " << argv[i + 1] << std::endl;
-                i += 1;
+                command += " \"";
+                command += argv[++i];
+                command += "\"";
+            }
+            m_startup_commands.emplace_back( std::move( command ) );
+            std::cout << "[App]: Queued startup command: " << m_startup_commands.back() << std::endl;
+        }
+        else if ( m_console->HasCVar( name ) )
+        {
+            if ( argc > i + 1 && !is_registered_argument( argv[i + 1] ) )
+            {
+                m_console->AddCVarInitialValueOverride( name, argv[++i] );
+                std::cout << "[App]: Set startup CVar: " << name << " = " << argv[i] << std::endl;
             }
             else
             {
-                std::cerr << "[Error][App]: Unknown startup command or missing CVar value: " << argv[i] << std::endl;
+                std::cerr << "[Error][App]: Missing value for startup CVar: " << argv[i] << std::endl;
             }
         }
-        else if ( !_strcmpi( argv[i], "-EnginePath" ) )
+        else
         {
-            if ( argc > ( i + 1 ) )
-            {
-                // read next arg
-                m_cmd_line_args.engine_content_path = argv[i + 1];
-                m_cmd_line_args.engine_content_path += "/EngineContent/";
-                i += 1;
-
-                std::cout << "[App]: Set engine content path from command line: " << m_cmd_line_args.engine_content_path << std::endl;
-            }
-            else
-            {
-                std::cerr << "[Error][App]: Can't set engine content path from command line because -EnginePath is the last token" << std::endl;
-            }
-        }
-        else if ( !_strcmpi( argv[i], "-LogPath" ) )
-        {
-            if ( argc > ( i + 1 ) )
-            {
-                // read next arg
-                m_cmd_line_args.log_path = argv[i + 1];
-                i += 1;
-
-                std::cout << "[App]: Set log path from command line: " << m_cmd_line_args.log_path << std::endl;
-            }
-            else
-            {
-                std::cerr << "[Error][App]: Can't set log path from command line because -LogPath is the last token" << std::endl;
-            }
+            std::cerr << "[Error][App]: Unknown startup command or CVar: " << argv[i] << std::endl;
         }
     }
 }
@@ -217,9 +193,6 @@ void EngineApp::InitRHI()
         create_info.logger = g_log;
         create_info.core_paths = &g_core_paths;
         
-        // we need to override default cvar values before rhi initialization
-        m_console->AddCVars( VulkanRHI_GetCVarListHead() );
-
         m_rhi = CreateVulkanRHI_RAII( create_info );
     }
     else
@@ -278,6 +251,9 @@ void EngineApp::MainLoop()
                 // forward mouse event
             }
         }
+        if ( m_automation_bridge )
+            m_automation_bridge->Tick();
+        m_console->ExecuteQueuedCommands();
         Update();
     }
     m_rhi->WaitIdle();
@@ -320,8 +296,6 @@ void EngineApp::Cleanup()
 
 void EngineApp::Update()
 {
-    if ( m_automation_bridge )
-        m_automation_bridge->Tick();
     m_renderer->DebugUI();
     DrawConsoleUI();
     OnUpdate();
@@ -347,9 +321,11 @@ void EngineApp::DrawConsoleUI()
 
     const float footer_height = ImGui::GetFrameHeightWithSpacing();
     ImGui::BeginChild( "ConsoleOutput", ImVec2( 0, -footer_height ), true, ImGuiWindowFlags_HorizontalScrollbar );
-    const std::vector<std::string> output = m_console->GetOutputSnapshot();
-    for ( const std::string& line : output )
-        ImGui::TextUnformatted( line.c_str() );
+    m_console->ReadOutput( []( std::span<const std::string> output )
+    {
+        for ( const std::string& line : output )
+            ImGui::TextUnformatted( line.c_str() );
+    } );
     if ( m_console_scroll_to_bottom )
     {
         ImGui::SetScrollHereY( 1.0f );
@@ -364,7 +340,7 @@ void EngineApp::DrawConsoleUI()
     if ( submitted )
     {
         if ( !m_console_input.empty() )
-            m_console->ProcessCommand( m_console_input.c_str() );
+            m_console->QueueCommand( m_console_input );
         m_console_input.clear();
         m_console_scroll_to_bottom = true;
         ImGui::SetKeyboardFocusHere( -1 );
@@ -443,11 +419,14 @@ void EngineApp::DrawFrame()
 
 void EngineApp::InitCoreGlobals()
 {
-    g_core_paths.engine_content = m_cmd_line_args.engine_content_path;
+    std::filesystem::path engine_content = std::filesystem::path( EnginePath.GetValue() ) / "EngineContent";
+    g_core_paths.engine_content = engine_content.generic_string();
+    if ( !g_core_paths.engine_content.ends_with( '/' ) )
+        g_core_paths.engine_content += '/';
 
     Logger::CreateInfo create_info = {};
     create_info.mirror_to_stdout = true;
-    create_info.path = m_cmd_line_args.log_path.c_str();
+    create_info.path = LogPath.GetValue().c_str();
     g_log = new Logger( create_info );
     g_log->SetCallback( &Console::LogCallback, m_console.get() );
 }
@@ -456,6 +435,9 @@ void EngineApp::InitConsole()
 {
     m_console = std::make_unique<Console>();
     m_console->AddCVars( g_cvars_head );
+    // RHI CVars must be registered before command-line parsing so their
+    // startup overrides are applied before RHI initialization.
+    m_console->AddCVars( VulkanRHI_GetCVarListHead() );
     m_console->AddCommands( g_console_commands_head );
 }
 

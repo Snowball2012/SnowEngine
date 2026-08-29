@@ -4,12 +4,6 @@
 
 #include <RHI/RHI.h>
 
-struct CommandLineArguments
-{
-	std::string engine_content_path;
-	std::string log_path;
-};
-
 class Rendergraph;
 
 struct AppGPUReadbackData
@@ -51,7 +45,6 @@ protected:
 	RHIObjectPtr<RHISwapChain> m_swapchain = nullptr;
 	static const uint32_t m_max_frames_in_flight = 2;
 	RHIPtr m_rhi;
-	CommandLineArguments m_cmd_line_args;
 
 	std::unique_ptr<class AssetManager> m_asset_mgr = nullptr;
 	std::unique_ptr<class Renderer> m_renderer = nullptr;
@@ -64,8 +57,6 @@ public:
 	void Run( int argc, char** argv );
 
 protected:
-	virtual void ParseCommandLineDerived( int argc, char** argv ) {}
-
 	virtual const char* GetMainWindowName() const { return "SnowEngine"; }
 	virtual const char* GetAppName() const { return "SnowEngine"; }
 
