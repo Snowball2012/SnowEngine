@@ -141,7 +141,7 @@ glm::mat4x4 SceneView::CalcProjectionMatrix() const
 {
     float aspectRatio = float( m_extents.x ) / float( m_extents.y );
     float fovY = m_fovXRadians / aspectRatio;
-    return glm::perspective( fovY, aspectRatio, 0.1f, 10.0f );
+    return glm::perspective( fovY, aspectRatio, 0.1f, 100.0f );
 }
 
 void SceneView::DebugUI() const

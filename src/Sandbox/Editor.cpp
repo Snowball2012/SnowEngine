@@ -25,6 +25,7 @@ void EditorCamera::SetupView( SceneView& view ) const
 bool EditorCamera::UpdateGUI()
 {
     ImGui::DragFloat( "Cam turning speed", &m_cam_turn_speed, std::max( 0.001f, m_cam_turn_speed ) );
+    ImGui::DragFloat( "Cam move speed", &m_cam_move_speed, std::max( 0.001f, m_cam_move_speed ) );
     return ImGui::SliderFloat( "FoV (degrees)", &m_fov_degrees, 1.0f, 179.0f, "%.1f" );
 }
 
