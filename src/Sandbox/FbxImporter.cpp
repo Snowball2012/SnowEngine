@@ -2,7 +2,7 @@
 
 #include <Core/CVars.h>
 
-#include <ThirdParty/ufbx/ufbx.h>
+#include <ufbx/ufbx.h>
 
 #include <filesystem>
 #include <fstream>

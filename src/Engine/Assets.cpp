@@ -10,7 +10,7 @@
 #include <tinyobjloader/tiny_obj_loader.h>
 
 #define BCDEC_IMPLEMENTATION
-#include <ThirdParty/bcdec/bcdec.h>
+#include <bcdec/bcdec.h>
 
 #include <stb/stb_image.h>
 
