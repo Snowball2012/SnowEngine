@@ -505,7 +505,11 @@ RHICommandList* VulkanRHI::GetCommandList( QueueType type )
 
 void VulkanRHI::LoadExtensions()
 {
-    Extensions::LoadDebugUtils( m_vk_device );
+    if ( m_debug_utils_extension_available )
+    {
+        Extensions::LoadDebugUtils( m_vk_device );
+        m_debug_utils_loaded = true;
+    }
     if ( m_raytracing_supported )
         Extensions::LoadRT( m_vk_device );
 }
@@ -698,7 +702,7 @@ void VulkanRHI::CreateVkInstance( const VulkanRHICreateInfo& info )
     create_info.pApplicationInfo = &app_info;
 
     // extensions
-    auto extensions = GetRequiredExtensions( info.enable_validation );
+    auto extensions = GetRequiredExtensions();
     extensions.insert( extensions.end(), info.required_external_extensions.begin(), info.required_external_extensions.end() );
 
     create_info.enabledExtensionCount = uint32_t( extensions.size() );
@@ -760,12 +764,33 @@ void VulkanRHI::LogSupportedVkInstanceExtensions() const
     }
 }
 
-std::vector<const char*> VulkanRHI::GetRequiredExtensions( bool enable_validation_layers ) const
+std::vector<const char*> VulkanRHI::GetRequiredExtensions()
 {
     std::vector<const char*> extensions = {};
 
-    if ( enable_validation_layers )
+    uint32_t extension_count = 0;
+    VK_VERIFY( vkEnumerateInstanceExtensionProperties( nullptr, &extension_count, nullptr ) );
+
+    std::vector<VkExtensionProperties> available_extensions( extension_count );
+    VK_VERIFY( vkEnumerateInstanceExtensionProperties(
+        nullptr, &extension_count, available_extensions.data() ) );
+
+    m_debug_utils_extension_available = std::any_of(
+        available_extensions.begin(), available_extensions.end(),
+        []( const VkExtensionProperties& extension )
+        {
+            return strcmp( extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME ) == 0;
+        } );
+
+    if ( m_debug_utils_extension_available )
+    {
         extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+    }
+    else
+    {
+        SE_LOG_WARNING( VulkanRHI, "%s is unavailable; Vulkan object names will be disabled",
+            VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+    }
 
     return extensions;
 }

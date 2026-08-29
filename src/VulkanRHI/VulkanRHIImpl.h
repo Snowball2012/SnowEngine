@@ -102,6 +102,8 @@ private:
 	std::set<class VulkanComputePSO*> m_loaded_compute_psos;
 
 	bool m_raytracing_supported = false;
+	bool m_debug_utils_extension_available = false;
+	bool m_debug_utils_loaded = false;
 
 public:
 	VulkanRHI( const VulkanRHICreateInfo& info );
@@ -110,6 +112,7 @@ public:
 	virtual void LoadExtensions();
 
 	virtual bool SupportsRaytracing() const override { return m_raytracing_supported; }
+	bool IsDebugUtilsLoaded() const { return m_debug_utils_loaded; }
 
 	virtual RHISwapChain* GetMainSwapChain() override { return m_main_swap_chain.get(); }
 
@@ -245,7 +248,7 @@ private:
 
 	void LogSupportedVkInstanceExtensions() const;
 
-	std::vector<const char*> GetRequiredExtensions( bool enable_validation_layers ) const;
+	std::vector<const char*> GetRequiredExtensions();
 	std::vector<const char*> GetSupportedLayers( const std::vector<const char*> wanted_layers ) const;
 
 	void PickPhysicalDevice( VkSurfaceKHR surface, bool need_raytracing );

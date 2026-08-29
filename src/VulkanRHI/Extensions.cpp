@@ -8,7 +8,7 @@
 
 #define DEFINE_VK_FUNCTION2( rettype, name, t0, p0, t1, p1 ) \
     PFN_##name pfn_##name = nullptr; \
-    rettype name ( t0 p0, t1 p1 ) { return pfn_##name( p0, p1 ); }
+    rettype name ( t0 p0, t1 p1 ) { SE_ENSURE( pfn_##name != nullptr ); return pfn_##name( p0, p1 ); }
 
 #define DEFINE_VK_FUNCTION3( rettype, name, t0, p0, t1, p1, t2, p2 ) \
     PFN_##name pfn_##name = nullptr; \
@@ -96,7 +96,7 @@ DEFINE_VK_FUNCTION8( void, vkCmdTraceRaysKHR,
 #else
 #define DEVICE_LEVEL_VULKAN_FUNCTION( name )                                  \
 pfn_##name = ( decltype( pfn_##name ) )vkGetDeviceProcAddr( device, #name );  \
-VERIFY_NOT_EQUAL( name, nullptr );
+VERIFY_NOT_EQUAL( pfn_##name, nullptr );
 #endif
 
 void Extensions::LoadRT( VkDevice device )
@@ -116,21 +116,14 @@ void Extensions::LoadRT( VkDevice device )
 
 // Debug Utils
 
-PFN_vkSetDebugUtilsObjectNameEXT pfn_vkSetDebugUtilsObjectNameEXT = nullptr;
-
-VkResult vkSetDebugUtilsObjectNameEXT(
-    VkDevice device, const VkDebugUtilsObjectNameInfoEXT* name_info )
-{
-    if ( !pfn_vkSetDebugUtilsObjectNameEXT )
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    return pfn_vkSetDebugUtilsObjectNameEXT( device, name_info );
-}
+DEFINE_VK_FUNCTION2( VkResult, vkSetDebugUtilsObjectNameEXT,
+    VkDevice, device,
+    const VkDebugUtilsObjectNameInfoEXT*, pNameInfo );
 
 
 void Extensions::LoadDebugUtils( VkDevice device )
 {
-    pfn_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(
-        vkGetDeviceProcAddr( device, "vkSetDebugUtilsObjectNameEXT" ) );
+    DEVICE_LEVEL_VULKAN_FUNCTION( vkSetDebugUtilsObjectNameEXT );
 }
 
 #undef DEVICE_LEVEL_VULKAN_FUNCTION
