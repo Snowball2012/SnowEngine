@@ -8,7 +8,8 @@ The executable engine/renderer project is `Sandbox.vcxproj`.
 
 ## Agent workspace rules
 
-- The primary agent may only read or write inside `D:/snow_engine`.
+- The primary agent may only read or write inside `D:/snow_engine`, except that it may inspect existing files and add new files under `D:/3rdparty`.
+- Never remove files from `D:/3rdparty`.
 - Every subagent must use a separate Git worktree under `I:/snow_engine_agent_worktrees/<agent-name>` and may only touch its own worktree. Creating and working inside that assigned worktree is the sole exception to the `D:/snow_engine` boundary.
 - Before editing, confirm that the current branch is not `master`. Commits are allowed only on non-`master` branches.
 - Never push changes to a remote repository.
