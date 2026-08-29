@@ -17,7 +17,6 @@ struct MaterialGPU
 	uint32_t albedo_texture_index = uint32_t(-1);
 	uint32_t specular_texture_index = uint32_t(-1);
 	uint32_t normal_texture_index = uint32_t(-1);
-	uint32_t _pad[2] = {};
 	glm::vec3 emissive = {};
 	uint32_t emissive_texture_index = uint32_t(-1);
 };

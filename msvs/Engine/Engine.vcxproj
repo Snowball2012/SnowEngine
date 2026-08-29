@@ -21,7 +21,7 @@
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
-    <ClCompile Include="..\..\src\Engine\FbxImporter.cpp" />
+
     <ClCompile Include="..\..\src\ThirdParty\ufbx\ufbx.c">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAs>CompileAsC</CompileAs>

@@ -53,7 +53,7 @@ bool MeshAsset::Load( const JsonValue& data )
 
     const auto load_start = std::chrono::steady_clock::now();
     SE_LOG_INFO( Engine, "Loading mesh asset %s from %s", m_id.GetPath(), source->value.GetString() );
-    if ( !LoadFromObj( source->value.GetString() ) )
+    if ( !LoadFromObj( ResolveAssetReference( m_id, source->value.GetString() ).c_str() ) )
     {
         return false;
     }
@@ -67,7 +67,7 @@ bool MeshAsset::Load( const JsonValue& data )
         }
         else
         {
-            m_default_material = LoadAsset<MaterialAsset>( material_it->value.GetString() );
+            m_default_material = LoadAsset<MaterialAsset>( ResolveAssetReference( m_id, material_it->value.GetString() ).c_str() );
         }
     }
 
@@ -302,7 +302,7 @@ bool TextureAsset::Load( const JsonValue& data )
 
     const auto load_start = std::chrono::steady_clock::now();
     SE_LOG_INFO( Engine, "Loading texture asset %s from %s", m_id.GetPath(), source->value.GetString() );
-    if ( !LoadFromFile( source->value.GetString(), srgb ) )
+    if ( !LoadFromFile( ResolveAssetReference( m_id, source->value.GetString() ).c_str(), srgb ) )
     {
         return false;
     }
@@ -642,7 +642,7 @@ bool MaterialAsset::Load( const JsonValue& data )
             SE_LOG_ERROR( Engine, "Material %s property %s must be an asset path string", m_id.GetPath(), property );
             return false;
         }
-        destination = LoadAsset<TextureAsset>( texture_it->value.GetString() );
+        destination = LoadAsset<TextureAsset>( ResolveAssetReference( m_id, texture_it->value.GetString() ).c_str() );
         if ( destination == nullptr )
         {
             SE_LOG_ERROR( Engine, "Material %s could not load texture %s", m_id.GetPath(), texture_it->value.GetString() );

@@ -18,7 +18,6 @@
 
 #include <vulkan/vulkan.h>
 
-void LinkFbxImporterCommands();
 
 struct SwapChainSupportDetails
 {
@@ -35,9 +34,7 @@ EngineApp::EngineApp()
 EngineApp::~EngineApp() = default;
 
 void EngineApp::Run( int argc, char** argv )
-{
-    LinkFbxImporterCommands();
-
+{`r`n
     // Several systems have to start here
 
     // Logs

@@ -14,7 +14,6 @@ struct SceneViewParams
     int2 cursor_position_px;
     uint random_uint;
     uint use_accumulation;
-    uint2 _pad;
 };
 
 struct TLASItemParams
@@ -40,7 +39,6 @@ struct Material
     uint albedo_texture_index;
     uint specular_texture_index;
     uint normal_texture_index;
-    uint2 _pad;
     float3 emissive;
     uint emissive_texture_index;
 };

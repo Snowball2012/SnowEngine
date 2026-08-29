@@ -249,7 +249,7 @@ namespace
             return {};
 
         const std::string wrapper_name = SanitizeName( destination.stem().string() ) + ".sea";
-        const std::string source_asset = "#engine/Imported/" + output_name + "/Textures/" + destination.filename().generic_string();
+        const std::string source_asset = destination.filename().generic_string();
         if ( !WriteTextFile( texture_directory / wrapper_name, [&]( std::ostream& file )
             {
                 file << "{\n  \"_generator\": \"TextureAsset\",\n"
@@ -259,7 +259,7 @@ namespace
         {
             return {};
         }
-        return "#engine/Imported/" + output_name + "/Textures/" + wrapper_name;
+        return wrapper_name;
     }
 
     bool WriteMaterialAndMeshAssets(
@@ -340,8 +340,8 @@ namespace
             return false;
         }
 
-        const std::string obj_asset = "#engine/Imported/" + output_name + "/" + group.name + ".obj";
-        const std::string material_asset = "#engine/Imported/" + output_name + "/" + group.name + ".material.sea";
+        const std::string obj_asset = group.name + ".obj";
+        const std::string material_asset = group.name + ".material.sea";
         return WriteTextFile( output_directory / ( group.name + ".mesh.sea" ), [&]( std::ostream& file )
         {
             file << "{\n  \"_generator\": \"MeshAsset\",\n"
@@ -366,7 +366,7 @@ namespace
                 if ( !first )
                     file << ",\n";
                 first = false;
-                const std::string mesh_asset = "#engine/Imported/" + output_name + "/" + group.name + ".mesh.sea";
+                const std::string mesh_asset = group.name + ".mesh.sea";
                 file << "    {\n      \"name\": \"" << JsonEscape( group.name ) << "\",\n      \"traits\": [\n"
                     << "        {\n          \"_type\": \"TransformTrait\",\n          \"value\": {\n"
                     << "            \"tf\": { \"t\": [0.0, 0.0, 0.0], \"o\": [0.0, 0.0, 0.0, 1.0], \"s\": [1.0, 1.0, 1.0] },\n"
@@ -529,9 +529,4 @@ CONSOLE_COMMAND_DEFINE( import_fbx,
     }
     return ConvertFbx( fs::path( args[0] ), args[1], args.size() == 3, output );
 }
-
-void LinkFbxImporterCommands()
-{
-    // Referenced by EngineApp so this translation unit is retained when linking
-    // the Engine static library, allowing its command registrars to run.
-}
+`r`n
