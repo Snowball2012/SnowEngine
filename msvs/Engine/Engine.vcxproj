@@ -20,7 +20,9 @@
     <ClCompile Include="..\..\src\Engine\AutomationBridge.cpp" />
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
-    <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />`r`n    <ClCompile Include="..\..\src\Engine\FbxImporter.cpp" />`r`n    <ClCompile Include="..\..\src\ThirdParty\ufbx\ufbx.c" />
+    <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
+    <ClCompile Include="..\..\src\Engine\FbxImporter.cpp" />
+    <ClCompile Include="..\..\src\ThirdParty\ufbx\ufbx.c" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
     <ClCompile Include="..\..\src\Engine\Render\DebugDrawing.cpp">
