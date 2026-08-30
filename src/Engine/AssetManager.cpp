@@ -4,24 +4,6 @@
 
 #include "Assets.h"
 
-std::string ResolveAssetReference( const AssetId& owner, const char* reference )
-{
-    return ResolveAssetReference( owner.GetPath(), reference );
-}
-
-std::string ResolveAssetReference( const char* owner, const char* reference )
-{
-    if ( reference == nullptr || reference[0] == '\0' )
-        return {};
-
-    const std::filesystem::path reference_path( reference );
-    if ( reference_path.is_absolute() || reference[0] == '#' )
-        return reference_path.generic_string();
-
-    const std::filesystem::path owner_path( owner );
-    return ( owner_path.parent_path() / reference_path ).lexically_normal().generic_string();
-}
-
 void Asset::Release()
 {
 	if ( --m_refs <= 0 )

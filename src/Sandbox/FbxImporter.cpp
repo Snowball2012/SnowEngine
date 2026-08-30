@@ -244,7 +244,7 @@ namespace
             return {};
 
         const std::string wrapper_name = SanitizeName( destination.stem().string() ) + ".sea";
-        const std::string source_asset = destination.filename().generic_string();
+        const std::string source_asset = "#engine/Imported/" + output_name + "/Textures/" + destination.filename().generic_string();
         if ( !WriteTextFile( texture_directory / wrapper_name, [&]( std::ostream& file )
             {
                 file << "{\n  \"_generator\": \"TextureAsset\",\n"
@@ -254,7 +254,7 @@ namespace
         {
             return {};
         }
-        return wrapper_name;
+        return "#engine/Imported/" + output_name + "/Textures/" + wrapper_name;
     }
 
     bool WriteMaterialAndMeshAssets(
@@ -322,21 +322,21 @@ namespace
                     << "    \"f0\": [" << f0.x << ", " << f0.y << ", " << f0.z << "],\n"
                     << "    \"emissive\": [" << emissive.x << ", " << emissive.y << ", " << emissive.z << "]";
                 if ( !albedo_texture.empty() )
-                    file << ",\n    \"albedo_texture\": \"" << JsonEscape( "Textures/" + albedo_texture ) << "\"";
+                    file << ",\n    \"albedo_texture\": \"" << JsonEscape( albedo_texture ) << "\"";
                 if ( !specular_texture.empty() )
-                    file << ",\n    \"specular_texture\": \"" << JsonEscape( "Textures/" + specular_texture ) << "\"";
+                    file << ",\n    \"specular_texture\": \"" << JsonEscape( specular_texture ) << "\"";
                 if ( !normal_texture.empty() )
-                    file << ",\n    \"normal_texture\": \"" << JsonEscape( "Textures/" + normal_texture ) << "\"";
+                    file << ",\n    \"normal_texture\": \"" << JsonEscape( normal_texture ) << "\"";
                 if ( !emissive_texture.empty() )
-                    file << ",\n    \"emissive_texture\": \"" << JsonEscape( "Textures/" + emissive_texture ) << "\"";
+                    file << ",\n    \"emissive_texture\": \"" << JsonEscape( emissive_texture ) << "\"";
                 file << "\n  }\n}\n";
             } ) )
         {
             return false;
         }
 
-        const std::string obj_asset = group.name + ".obj";
-        const std::string material_asset = group.name + ".material.sea";
+        const std::string obj_asset = "#engine/Imported/" + output_name + "/" + group.name + ".obj";
+        const std::string material_asset = "#engine/Imported/" + output_name + "/" + group.name + ".material.sea";
         return WriteTextFile( output_directory / ( group.name + ".mesh.sea" ), [&]( std::ostream& file )
         {
             file << "{\n  \"_generator\": \"MeshAsset\",\n"
@@ -361,7 +361,7 @@ namespace
                 if ( !first )
                     file << ",\n";
                 first = false;
-                const std::string mesh_asset = group.name + ".mesh.sea";
+                const std::string mesh_asset = "#engine/Imported/" + output_name + "/" + group.name + ".mesh.sea";
                 file << "    {\n      \"name\": \"" << JsonEscape( group.name ) << "\",\n      \"traits\": [\n"
                     << "        {\n          \"_type\": \"TransformTrait\",\n          \"value\": {\n"
                     << "            \"tf\": { \"t\": [0.0, 0.0, 0.0], \"o\": [0.0, 0.0, 0.0, 1.0], \"s\": [1.0, 1.0, 1.0] },\n"

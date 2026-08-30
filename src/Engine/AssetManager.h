@@ -21,9 +21,6 @@ public:
 	bool operator==( const AssetId& rhs ) const = default;
 };
 
-std::string ResolveAssetReference( const AssetId& owner, const char* reference );
-std::string ResolveAssetReference( const char* owner, const char* reference );
-
 template<>
 struct std::hash<AssetId>
 {

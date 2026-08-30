@@ -134,7 +134,7 @@ bool LevelEditor::OpenLevel( const char* filepath )
     for ( auto& v : object_property->value.GetArray() )
     {
         auto& new_object = m_level_objects.emplace_back( std::make_unique<LevelObject>( m_world.get() ) );
-        if ( !new_object->Deserialize( v, false, filepath ) )
+        if ( !new_object->Deserialize( v, false ) )
         {
             m_level_objects.pop_back();
             continue;
