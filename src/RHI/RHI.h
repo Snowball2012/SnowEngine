@@ -622,6 +622,12 @@ public:
         NOTIMPL;
     }
 
+    virtual void CopyTextureToBuffer(
+        const RHITexture& texture, RHIBuffer& buf,
+        const RHIBufferTextureCopyRegion* regions, size_t region_count ) {
+        NOTIMPL;
+    }
+
     virtual void CopyTextureToTexture(
         const RHITexture& src, const RHITexture& dst,
         const RHITextureTextureCopyRegion* regions, size_t region_count ) {

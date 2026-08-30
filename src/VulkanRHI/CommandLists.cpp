@@ -340,6 +340,45 @@ void VulkanCommandList::CopyBufferToTexture( const RHIBuffer& buf, RHITexture& t
         uint32_t( vk_regions.size() ), vk_regions.data() );
 }
 
+void VulkanCommandList::CopyTextureToBuffer( const RHITexture& texture, RHIBuffer& buf, const RHIBufferTextureCopyRegion* regions, size_t region_count )
+{
+    boost::container::small_vector<VkBufferImageCopy, 4> vk_regions;
+    vk_regions.resize( region_count );
+    for ( size_t i = 0; i < region_count; ++i )
+    {
+        VkBufferImageCopy& vk_region = vk_regions[i];
+        const RHIBufferTextureCopyRegion& rhi_region = regions[i];
+
+        vk_region.bufferOffset = rhi_region.buffer_offset;
+        vk_region.bufferRowLength = uint32_t( rhi_region.buffer_row_stride );
+        vk_region.bufferImageHeight = uint32_t( rhi_region.buffer_texture_height );
+
+        vk_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        vk_region.imageSubresource.mipLevel = rhi_region.texture_subresource.mip_base;
+        vk_region.imageSubresource.baseArrayLayer = rhi_region.texture_subresource.array_base;
+        vk_region.imageSubresource.layerCount = rhi_region.texture_subresource.array_count;
+
+        if ( rhi_region.texture_subresource.mip_count > 1 )
+            NOTIMPL;
+
+        vk_region.imageOffset = {
+            int32_t( rhi_region.texture_offset[0] ),
+            int32_t( rhi_region.texture_offset[1] ),
+            int32_t( rhi_region.texture_offset[2] ) };
+
+        vk_region.imageExtent = {
+            uint32_t( rhi_region.texture_extent[0] ),
+            uint32_t( rhi_region.texture_extent[1] ),
+            uint32_t( rhi_region.texture_extent[2] ) };
+    }
+
+    vkCmdCopyImageToBuffer(
+        m_vk_cmd_buffer,
+        RHIImpl( texture ).GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        RHIImpl( buf ).GetVkBuffer(),
+        uint32_t( vk_regions.size() ), vk_regions.data() );
+}
+
 void VulkanCommandList::SetViewports( size_t first_viewport, const RHIViewport* viewports, size_t viewports_count )
 {
     boost::container::small_vector<VkViewport, 4> vk_viewports;

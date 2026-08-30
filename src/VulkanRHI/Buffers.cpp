@@ -105,6 +105,6 @@ void VulkanReadbackBuffer::ReadBytes( void* dst, size_t size, size_t offset )
     VmaAllocationInfo info;
     m_buffer->GetAllocationInfo( info );
     VERIFY_NOT_EQUAL( info.pMappedData, nullptr );
+    VK_VERIFY( vmaInvalidateAllocation( m_rhi->GetVMA(), m_buffer->GetAllocation(), offset, size ) );
     memcpy( dst, ( uint8_t* )info.pMappedData + offset, size );
 }
-

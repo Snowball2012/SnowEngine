@@ -113,6 +113,10 @@ public:
 		const RHIBuffer& buf, RHITexture& texture,
 		const RHIBufferTextureCopyRegion* regions, size_t region_count) override;
 
+    virtual void CopyTextureToBuffer(
+        const RHITexture& texture, RHIBuffer& buf,
+        const RHIBufferTextureCopyRegion* regions, size_t region_count) override;
+
 	virtual void SetViewports(size_t first_viewport, const RHIViewport* viewports, size_t viewports_count) override;
 	virtual void SetScissors(size_t first_scissor, const RHIRect2D* scissors, size_t scissors_count) override;
 

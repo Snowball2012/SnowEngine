@@ -71,6 +71,13 @@ Example shape:
 - Use the console to execute registered commands, inspect engine logs, and read or change CVars while the engine is running.
 - Startup `+commandName` commands must execute only after full engine initialization, not during static registration or early subsystem startup.
 - Commands intended for automation should produce explicit success/failure output in the log and through the local automation bridge.
+- `GetViewPos` prints the current camera transform as a directly reusable
+  `SetViewPos x y z qx qy qz qw` command. Quaternion components use
+  `qx qy qz qw` order.
+- Capture the renderer before or after ImGui composition with
+  `screenshot without_imgui [output.png]` or
+  `screenshot with_imgui [output.png]`. Relative output paths are written
+  below `EngineContent/Screenshots`.
 
 ## MCP automation
 
@@ -82,7 +89,9 @@ python tools/snowengine_mcp/server.py --engine-path D:/snow_engine
 ```
 
 It exposes tools to ping the engine, execute console commands, read or change
-CVars, and retrieve logs. The local request/response transport lives under
+CVars, retrieve logs, and capture screenshots. The `capture_screenshot` tool
+accepts `without_imgui` or `with_imgui` mode and returns an MCP
+`image/png` content block. The local request/response transport lives under
 `.snowengine_mcp/` and is ignored by Git. Do not commit its runtime files.
 
 ## Scene conversion workflow

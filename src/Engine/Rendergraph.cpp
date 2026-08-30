@@ -159,6 +159,8 @@ namespace
             return RHITextureLayout::ShaderReadWrite;
         case RGTextureUsage::RenderTarget:
             return RHITextureLayout::RenderTarget;
+        case RGTextureUsage::TransferSrc:
+            return RHITextureLayout::TransferSrc;
         }
         NOTIMPL;
     }

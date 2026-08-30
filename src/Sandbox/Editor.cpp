@@ -6,8 +6,95 @@
 
 #include <ImguiBackend/ImguiBackend.h>
 
+namespace
+{
+    LevelEditor* g_level_editor = nullptr;
+
+    bool ParseViewFloat( const std::string& text, float& value )
+    {
+        errno = 0;
+        char* end = nullptr;
+        value = std::strtof( text.c_str(), &end );
+        return end != text.c_str() && *end == '\0' && errno != ERANGE && std::isfinite( value );
+    }
+}
+
+CONSOLE_COMMAND_DEFINE( GetViewPos, "Print the camera transform as a SetViewPos command" )
+{
+    if ( !args.empty() )
+    {
+        output = "Usage: GetViewPos";
+        return false;
+    }
+    if ( !g_level_editor )
+    {
+        output = "The level editor is not initialized";
+        return false;
+    }
+
+    const glm::vec3& position = g_level_editor->GetViewPosition();
+    const glm::quat& orientation = g_level_editor->GetViewOrientation();
+    std::ostringstream stream;
+    stream << std::setprecision( 9 )
+        << "SetViewPos "
+        << position.x << ' ' << position.y << ' ' << position.z << ' '
+        << orientation.x << ' ' << orientation.y << ' ' << orientation.z << ' ' << orientation.w;
+    output = stream.str();
+    return true;
+}
+
+CONSOLE_COMMAND_DEFINE( SetViewPos, "Set camera position and quaternion: SetViewPos x y z qx qy qz qw" )
+{
+    if ( args.size() != 7 )
+    {
+        output = "Usage: SetViewPos x y z qx qy qz qw";
+        return false;
+    }
+    if ( !g_level_editor )
+    {
+        output = "The level editor is not initialized";
+        return false;
+    }
+
+    float values[7] = {};
+    for ( size_t i = 0; i < args.size(); ++i )
+    {
+        if ( !ParseViewFloat( args[i], values[i] ) )
+        {
+            output = "SetViewPos arguments must be finite floating-point values";
+            return false;
+        }
+    }
+
+    glm::quat orientation( values[6], values[3], values[4], values[5] );
+    const float orientation_length = glm::length( orientation );
+    if ( !std::isfinite( orientation_length ) || orientation_length <= 0.000001f )
+    {
+        output = "SetViewPos orientation must be a non-zero quaternion";
+        return false;
+    }
+
+    const glm::vec3 position( values[0], values[1], values[2] );
+    orientation /= orientation_length;
+    g_level_editor->SetViewTransform( position, orientation );
+
+    std::ostringstream stream;
+    stream << std::setprecision( 9 )
+        << "SetViewPos "
+        << position.x << ' ' << position.y << ' ' << position.z << ' '
+        << orientation.x << ' ' << orientation.y << ' ' << orientation.z << ' ' << orientation.w;
+    output = stream.str();
+    return true;
+}
 
 // EditorCamera
+
+EditorCamera::EditorCamera()
+{
+    m_cam_orientation = glm::quatLookAt(
+        SphericalToCartesian( 1.0f, m_cam_angles_radians.x, m_cam_angles_radians.y ),
+        glm::vec3( 0, 1, 0 ) );
+}
 
 void EditorCamera::SetupView( SceneView& view ) const
 {
@@ -70,8 +157,24 @@ void EditorCamera::Update( float delta_time )
         m_camera_moved = true;
     }
 
-    m_cam_orientation = glm::quatLookAt( SphericalToCartesian( 1.0f, m_cam_angles_radians.x, m_cam_angles_radians.y ), glm::vec3( 0, 1, 0 ) );
+    if ( ImGui::GetIO().MouseDown[1] )
+    {
+        m_cam_orientation = glm::quatLookAt(
+            SphericalToCartesian( 1.0f, m_cam_angles_radians.x, m_cam_angles_radians.y ),
+            glm::vec3( 0, 1, 0 ) );
+    }
     m_cam_pos += glm::rotate( m_cam_orientation, camera_movement_ls );
+}
+
+void EditorCamera::SetViewTransform( const glm::vec3& position, const glm::quat& orientation )
+{
+    m_cam_pos = position;
+    m_cam_orientation = orientation;
+
+    const glm::vec3 direction = glm::normalize( glm::rotate( m_cam_orientation, glm::vec3( 0, 0, 1 ) ) );
+    m_cam_angles_radians.x = std::atan2( direction.z, direction.x );
+    m_cam_angles_radians.y = std::acos( std::clamp( direction.y, -1.0f, 1.0f ) );
+    m_camera_moved = true;
 }
 
 
@@ -79,6 +182,9 @@ void EditorCamera::Update( float delta_time )
 
 LevelEditor::LevelEditor()
 {
+    VERIFY_EQUALS( g_level_editor, nullptr );
+    g_level_editor = this;
+
     m_scene = std::make_unique<Scene>();
     m_scene_view = std::make_unique<SceneView>( m_scene.get() );
 
@@ -100,6 +206,9 @@ LevelEditor::~LevelEditor()
     m_scene_view = nullptr;
     m_scene = nullptr;
     m_world = nullptr;
+
+    if ( g_level_editor == this )
+        g_level_editor = nullptr;
 }
 
 bool LevelEditor::OpenLevel( const char* filepath )
@@ -350,6 +459,11 @@ bool LevelEditor::SetViewportExtents( glm::uvec2 extents )
 void LevelEditor::ResetAccumulation()
 {
     m_scene_view->ResetAccumulation();
+}
+
+void LevelEditor::SetViewTransform( const glm::vec3& position, const glm::quat& orientation )
+{
+    m_editor_camera.SetViewTransform( position, orientation );
 }
 
 void LevelEditor::UpdateCamera( float delta_time_sec )

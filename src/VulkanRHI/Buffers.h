@@ -23,6 +23,7 @@ public:
     void GetAllocationInfo( VmaAllocationInfo& info ) const;
 
     VkBuffer GetVkBuffer() const { return m_vk_buffer; }
+    VmaAllocation GetAllocation() const { return m_allocation; }
 
     VkDeviceAddress GetDeviceAddress() const { return m_device_address; }
 };

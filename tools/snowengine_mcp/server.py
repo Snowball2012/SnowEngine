@@ -8,6 +8,7 @@ SnowEngine process. It has no third-party Python dependencies.
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -67,15 +68,32 @@ TOOLS: list[dict[str, Any]] = [
             "additionalProperties": False,
         },
     },
+    {
+        "name": "capture_screenshot",
+        "description": "Capture the current renderer output and return it as a PNG image, with or without ImGui.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "mode": {
+                    "type": "string",
+                    "enum": ["without_imgui", "with_imgui"],
+                    "default": "without_imgui",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
 ]
 
 
 class EngineBridge:
     def __init__(self, engine_path: Path, timeout: float) -> None:
         bridge_path = engine_path.resolve() / ".snowengine_mcp"
+        self.screenshots_path = bridge_path / "screenshots"
         self.requests_path = bridge_path / "requests"
         self.responses_path = bridge_path / "responses"
         self.timeout = timeout
+        self.screenshots_path.mkdir(parents=True, exist_ok=True)
         self.requests_path.mkdir(parents=True, exist_ok=True)
         self.responses_path.mkdir(parents=True, exist_ok=True)
 
@@ -109,6 +127,29 @@ class EngineBridge:
         raise TimeoutError(
             f"SnowEngine did not answer within {self.timeout:g}s. "
             "Start Sandbox with -EnginePath pointing at this repository."
+        )
+
+    def capture_screenshot(self, mode: str) -> tuple[dict[str, Any], Path, bytes]:
+        screenshot_path = self.screenshots_path / f"{uuid.uuid4()}.png"
+        engine_path = screenshot_path.as_posix()
+        response = self.call(
+            "execute_console_command",
+            {"command": f'screenshot {mode} "{engine_path}"'},
+        )
+        if not response.get("ok"):
+            return response, screenshot_path, b""
+
+        deadline = time.monotonic() + self.timeout
+        while time.monotonic() < deadline:
+            try:
+                if screenshot_path.exists():
+                    return response, screenshot_path, screenshot_path.read_bytes()
+            except OSError:
+                pass
+            time.sleep(0.025)
+
+        raise TimeoutError(
+            f"SnowEngine queued the screenshot but did not write it within {self.timeout:g}s."
         )
 
 
@@ -167,6 +208,39 @@ def handle_request(bridge: EngineBridge, request: dict[str, Any]) -> dict[str, A
             arguments["value"] = str(value)
 
     try:
+        if tool_name == "capture_screenshot":
+            mode = arguments.get("mode", "without_imgui")
+            if mode not in {"without_imgui", "with_imgui"}:
+                return error_response(request_id, -32602, f"Unknown screenshot mode: {mode}")
+
+            engine_response, screenshot_path, png_data = bridge.capture_screenshot(mode)
+            ok = bool(engine_response.get("ok"))
+            metadata = {
+                "ok": ok,
+                "mode": mode,
+                "path": str(screenshot_path),
+                "engine": engine_response,
+            }
+            content: list[dict[str, Any]] = [
+                {
+                    "type": "text",
+                    "text": json.dumps(metadata, ensure_ascii=False, indent=2),
+                },
+            ]
+            if ok:
+                content.append(
+                    {
+                        "type": "image",
+                        "data": base64.b64encode(png_data).decode("ascii"),
+                        "mimeType": "image/png",
+                    }
+                )
+            return {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "result": {"content": content, "isError": not ok},
+            }
+
         engine_response = bridge.call(str(tool_name), arguments)
         ok = bool(engine_response.get("ok"))
         text = json.dumps(engine_response, ensure_ascii=False, indent=2)

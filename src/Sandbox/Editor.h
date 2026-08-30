@@ -17,13 +17,18 @@ private:
 	mutable bool m_camera_moved = false; // @todo: remove mutable, return move flag in Update
 
 public:
+    EditorCamera();
 
-	void SetupView( SceneView& view ) const;
+    void SetupView( SceneView& view ) const;
 
-	// returns true if camera has been changed
-	bool UpdateGUI();
+    // returns true if camera has been changed
+    bool UpdateGUI();
 
-	void Update( float delta_time );
+    void Update( float delta_time );
+
+    const glm::vec3& GetPosition() const { return m_cam_pos; }
+    const glm::quat& GetOrientation() const { return m_cam_orientation; }
+    void SetViewTransform( const glm::vec3& position, const glm::quat& orientation );
 };
 
 class LevelEditor
@@ -46,23 +51,27 @@ private:
 	std::vector<const char*> m_all_traits_pretty_names;
 
 public:
-	LevelEditor();
-	~LevelEditor();
+    LevelEditor();
+    ~LevelEditor();
 
-	bool OpenLevel( const char* filepath );
-	bool SaveLevel( const char* filepath ) const;
+    bool OpenLevel( const char* filepath );
+    bool SaveLevel( const char* filepath ) const;
 
-	bool Update( float delta_time_sec );
-	bool Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension, RHIBuffer* readback_buffer );
+    bool Update( float delta_time_sec );
+    bool Draw( Rendergraph& framegraph, ISceneRenderExtension* required_extension, RHIBuffer* readback_buffer );
 
-	void UpdateReadback( const ViewFrameReadbackData& readback_data );
+    void UpdateReadback( const ViewFrameReadbackData& readback_data );
 
-	bool SetViewportExtents( glm::uvec2 extents );
+    bool SetViewportExtents( glm::uvec2 extents );
 
-	void ResetAccumulation();
+    void ResetAccumulation();
 
-	// @todo: can't return const world because const views are not supported in ecs yet
-	World* GetWorld() const { return m_world.get(); }
+    const glm::vec3& GetViewPosition() const { return m_editor_camera.GetPosition(); }
+    const glm::quat& GetViewOrientation() const { return m_editor_camera.GetOrientation(); }
+    void SetViewTransform( const glm::vec3& position, const glm::quat& orientation );
+
+    // @todo: can't return const world because const views are not supported in ecs yet
+    World* GetWorld() const { return m_world.get(); }
 
 private:
 

@@ -34,7 +34,8 @@ enum class RGTextureUsage
     Undefined = 0,
     ShaderRead,
     ShaderReadWrite,
-    RenderTarget
+    RenderTarget,
+    TransferSrc
 };
 
 class RGTextureROView
