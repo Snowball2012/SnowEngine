@@ -177,7 +177,11 @@ namespace
                         vertex.normal = { 0.0, 1.0, 0.0 };
                     }
                     if ( mesh.vertex_uv.exists )
+                    {
                         vertex.uv = ufbx_get_vertex_vec2( &mesh.vertex_uv, vertex_index );
+                        // FBX UVs use a bottom-left origin; engine texture data uses top-left.
+                        vertex.uv.y = 1.0 - vertex.uv.y;
+                    }
 
                     const ImportVertexKey vertex_key = MakeVertexKey( vertex );
                     auto existing = group.vertex_map.find( vertex_key );
