@@ -140,6 +140,7 @@ public:
     bool HasCommand( const char* name ) const;
     bool GetCVarValue( const char* name, std::string& value ) const;
     bool SetCVarValue( const char* name, const char* value, std::string& output );
+    void GetAutocompleteOptions( std::string_view prefix, std::vector<std::string>& options ) const;
 
     void AddOutput( std::string_view line );
     void ClearOutput();

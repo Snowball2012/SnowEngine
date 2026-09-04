@@ -2,6 +2,7 @@
 
 #include "CoreMisc.h"
 
+#include <algorithm>
 #include <cctype>
 
 ConsoleCommand* g_console_commands_head = nullptr;
@@ -221,6 +222,53 @@ bool Console::SetCVarValue( const char* name, const char* value, std::string& ou
     AddOutput( output );
     SE_LOG_INFO( Core, "%s", output.c_str() );
     return true;
+}
+
+void Console::GetAutocompleteOptions( std::string_view prefix, std::vector<std::string>& options ) const
+{
+    options.clear();
+    if ( prefix.empty() )
+        return;
+
+    std::string prefix_key( prefix );
+    for ( char& c : prefix_key )
+        c = static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) );
+
+    struct AutocompleteMatch
+    {
+        std::string_view key;
+        std::string_view name;
+    };
+
+    std::vector<AutocompleteMatch> matches;
+    const auto add_match = [&matches, &prefix_key]( std::string_view key, std::string_view name )
+    {
+        if ( key.starts_with( prefix_key ) )
+            matches.push_back( { key, name } );
+    };
+
+    for ( const auto& [key, cvar] : m_cvars )
+        add_match( key, cvar->GetName() );
+    for ( const auto& [key, command] : m_commands )
+        add_match( key, command->GetName() );
+    add_match( "listcvars", "listcvars" );
+    add_match( "listcommands", "listcommands" );
+
+    std::sort( matches.begin(), matches.end(), []( const AutocompleteMatch& left, const AutocompleteMatch& right )
+    {
+        if ( left.key == right.key )
+            return left.name < right.name;
+        return left.key < right.key;
+    } );
+
+    std::string_view previous_key;
+    for ( const AutocompleteMatch& match : matches )
+    {
+        if ( !options.empty() && match.key == previous_key )
+            continue;
+        options.emplace_back( match.name );
+        previous_key = match.key;
+    }
 }
 
 void Console::AddOutput( std::string_view line )

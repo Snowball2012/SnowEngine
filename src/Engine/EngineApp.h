@@ -5,6 +5,7 @@
 #include <RHI/RHI.h>
 
 class Rendergraph;
+struct ImGuiInputTextCallbackData;
 
 struct AppGPUReadbackData
 {
@@ -39,6 +40,9 @@ private:
 	bool m_console_open = false;
 	bool m_console_scroll_to_bottom = false;
 	std::string m_console_input;
+    std::vector<std::string> m_console_autocomplete_options;
+    size_t m_console_autocomplete_selection = 0;
+    bool m_console_autocomplete_scroll_to_selection = false;
 	std::vector<std::string> m_startup_commands;
 
 protected:
@@ -92,4 +96,7 @@ private:
 
 	void InitImGUI();
 	void DrawConsoleUI();
+    void RefreshConsoleAutocomplete( std::string_view input );
+    int HandleConsoleInput( ImGuiInputTextCallbackData* data );
+    static int ConsoleInputCallback( ImGuiInputTextCallbackData* data );
 };

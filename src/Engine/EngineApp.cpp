@@ -334,7 +334,14 @@ void EngineApp::DrawConsoleUI()
     ImGui::EndChild();
 
     ImGui::SetNextItemWidth( -1.0f );
-    const bool submitted = ImGui::InputText( "##ConsoleInput", &m_console_input, ImGuiInputTextFlags_EnterReturnsTrue );
+    constexpr ImGuiInputTextFlags input_flags = ImGuiInputTextFlags_EnterReturnsTrue
+        | ImGuiInputTextFlags_CallbackCompletion
+        | ImGuiInputTextFlags_CallbackHistory
+        | ImGuiInputTextFlags_CallbackEdit;
+    const bool submitted = ImGui::InputText( "##ConsoleInput", &m_console_input, input_flags, &EngineApp::ConsoleInputCallback, this );
+    const ImVec2 input_min = ImGui::GetItemRectMin();
+    const ImVec2 input_size = ImGui::GetItemRectSize();
+    const bool input_active = ImGui::IsItemActive();
     if ( ImGui::IsWindowAppearing() )
         ImGui::SetKeyboardFocusHere( -1 );
     if ( submitted )
@@ -342,11 +349,114 @@ void EngineApp::DrawConsoleUI()
         if ( !m_console_input.empty() )
             m_console->QueueCommand( m_console_input );
         m_console_input.clear();
+        m_console_autocomplete_options.clear();
+        m_console_autocomplete_selection = 0;
         m_console_scroll_to_bottom = true;
         ImGui::SetKeyboardFocusHere( -1 );
     }
 
+    if ( input_active && !m_console_autocomplete_options.empty() )
+    {
+        constexpr float autocomplete_alpha = 0.86f;
+        const float autocomplete_max_height = ImGui::GetTextLineHeightWithSpacing() * 10.0f
+            + ImGui::GetStyle().WindowPadding.y * 2.0f;
+        ImGui::SetNextWindowPos( input_min, ImGuiCond_Always, ImVec2( 0.0f, 1.0f ) );
+        ImGui::SetNextWindowBgAlpha( autocomplete_alpha );
+        ImGui::SetNextWindowSizeConstraints(
+            ImVec2( input_size.x, 0.0f ),
+            ImVec2( input_size.x, autocomplete_max_height ) );
+        constexpr ImGuiWindowFlags autocomplete_flags = ImGuiWindowFlags_AlwaysAutoResize
+            | ImGuiWindowFlags_NoDecoration
+            | ImGuiWindowFlags_NoFocusOnAppearing
+            | ImGuiWindowFlags_NoInputs
+            | ImGuiWindowFlags_NoSavedSettings
+            | ImGuiWindowFlags_Tooltip;
+
+        if ( ImGui::Begin( "##ConsoleAutocomplete", nullptr, autocomplete_flags ) )
+        {
+            for ( size_t i = 0; i < m_console_autocomplete_options.size(); ++i )
+            {
+                const bool selected = i == m_console_autocomplete_selection;
+                ImGui::Selectable( m_console_autocomplete_options[i].c_str(), selected );
+                if ( selected && m_console_autocomplete_scroll_to_selection )
+                    ImGui::SetScrollHereY( 0.5f );
+            }
+        }
+        ImGui::End();
+        m_console_autocomplete_scroll_to_selection = false;
+    }
+
     ImGui::End();
+}
+
+void EngineApp::RefreshConsoleAutocomplete( std::string_view input )
+{
+    const std::string selected_option = m_console_autocomplete_options.empty()
+        ? std::string()
+        : m_console_autocomplete_options[m_console_autocomplete_selection];
+
+    const size_t first_space = input.find_first_of( " \t\r\n" );
+    if ( first_space != std::string_view::npos )
+    {
+        m_console_autocomplete_options.clear();
+        m_console_autocomplete_selection = 0;
+        return;
+    }
+
+    m_console->GetAutocompleteOptions( input, m_console_autocomplete_options );
+    m_console_autocomplete_selection = 0;
+    if ( !selected_option.empty() )
+    {
+        const auto selected_it = std::find(
+            m_console_autocomplete_options.begin(),
+            m_console_autocomplete_options.end(),
+            selected_option );
+        if ( selected_it != m_console_autocomplete_options.end() )
+            m_console_autocomplete_selection = static_cast<size_t>( selected_it - m_console_autocomplete_options.begin() );
+    }
+}
+
+int EngineApp::HandleConsoleInput( ImGuiInputTextCallbackData* data )
+{
+    if ( data->EventFlag == ImGuiInputTextFlags_CallbackEdit )
+    {
+        RefreshConsoleAutocomplete( std::string_view( data->Buf, data->BufTextLen ) );
+    }
+    else if ( data->EventFlag == ImGuiInputTextFlags_CallbackHistory && !m_console_autocomplete_options.empty() )
+    {
+        if ( data->EventKey == ImGuiKey_UpArrow )
+        {
+            if ( m_console_autocomplete_selection == 0 )
+                m_console_autocomplete_selection = m_console_autocomplete_options.size() - 1;
+            else
+                --m_console_autocomplete_selection;
+        }
+        else if ( data->EventKey == ImGuiKey_DownArrow )
+        {
+            m_console_autocomplete_selection = ( m_console_autocomplete_selection + 1 )
+                % m_console_autocomplete_options.size();
+        }
+        m_console_autocomplete_scroll_to_selection = true;
+    }
+    else if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
+    {
+        RefreshConsoleAutocomplete( std::string_view( data->Buf, data->BufTextLen ) );
+        if ( !m_console_autocomplete_options.empty() )
+        {
+            const std::string completion = m_console_autocomplete_options[m_console_autocomplete_selection];
+            data->DeleteChars( 0, data->BufTextLen );
+            data->InsertChars( 0, completion.c_str() );
+            data->InsertChars( data->CursorPos, " " );
+            m_console_autocomplete_options.clear();
+            m_console_autocomplete_selection = 0;
+        }
+    }
+    return 0;
+}
+
+int EngineApp::ConsoleInputCallback( ImGuiInputTextCallbackData* data )
+{
+    return static_cast<EngineApp*>( data->UserData )->HandleConsoleInput( data );
 }
 
 void EngineApp::InitImGUI()
