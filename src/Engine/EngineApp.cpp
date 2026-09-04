@@ -4,6 +4,7 @@
 
 #include "AssetManager.h"
 #include "AutomationBridge.h"
+#include "EngineConsoleUI.h"
 #include "LevelObjects.h"
 #include "Rendergraph.h"
 #include "Scene.h"
@@ -12,9 +13,6 @@
 #include <D3D12RHI/D3D12RHI.h>
 
 #include <ImguiBackend/ImguiBackend.h>
-
-#include <imgui/imgui.h>
-#include <imgui/misc/cpp/imgui_stdlib.h>
 
 #include <vulkan/vulkan.h>
 
@@ -226,7 +224,7 @@ void EngineApp::MainLoop()
 
             if ( event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_BACKQUOTE && event.key.repeat == 0 )
             {
-                m_console_open = !m_console_open;
+                m_console_ui->Toggle();
             }
 
             if ( event.type == SDL_QUIT )
@@ -264,6 +262,7 @@ void EngineApp::Cleanup()
     SE_LOG_INFO( Engine, "RHI shutdown started" );
 
     m_automation_bridge.reset();
+    m_console_ui.reset();
 
     m_readback_data.clear();
 
@@ -297,166 +296,9 @@ void EngineApp::Cleanup()
 void EngineApp::Update()
 {
     m_renderer->DebugUI();
-    DrawConsoleUI();
+    m_console_ui->Draw();
     OnUpdate();
     DrawFrame();
-}
-
-void EngineApp::DrawConsoleUI()
-{
-    if ( !m_console_open )
-        return;
-
-    ImGui::SetNextWindowSize( ImVec2( 720.0f, 420.0f ), ImGuiCond_FirstUseEver );
-    if ( !ImGui::Begin( "SnowEngine Console", &m_console_open ) )
-    {
-        ImGui::End();
-        return;
-    }
-
-    if ( ImGui::Button( "Clear" ) )
-        m_console->ClearOutput();
-    ImGui::SameLine();
-    ImGui::TextUnformatted( "Enter a command, or a CVar name and optional value." );
-
-    const float footer_height = ImGui::GetFrameHeightWithSpacing();
-    ImGui::BeginChild( "ConsoleOutput", ImVec2( 0, -footer_height ), true, ImGuiWindowFlags_HorizontalScrollbar );
-    m_console->ReadOutput( []( std::span<const std::string> output )
-    {
-        for ( const std::string& line : output )
-            ImGui::TextUnformatted( line.c_str() );
-    } );
-    if ( m_console_scroll_to_bottom )
-    {
-        ImGui::SetScrollHereY( 1.0f );
-        m_console_scroll_to_bottom = false;
-    }
-    ImGui::EndChild();
-
-    ImGui::SetNextItemWidth( -1.0f );
-    constexpr ImGuiInputTextFlags input_flags = ImGuiInputTextFlags_EnterReturnsTrue
-        | ImGuiInputTextFlags_CallbackCompletion
-        | ImGuiInputTextFlags_CallbackHistory
-        | ImGuiInputTextFlags_CallbackEdit;
-    const bool submitted = ImGui::InputText( "##ConsoleInput", &m_console_input, input_flags, &EngineApp::ConsoleInputCallback, this );
-    const ImVec2 input_min = ImGui::GetItemRectMin();
-    const ImVec2 input_size = ImGui::GetItemRectSize();
-    const bool input_active = ImGui::IsItemActive();
-    if ( ImGui::IsWindowAppearing() )
-        ImGui::SetKeyboardFocusHere( -1 );
-    if ( submitted )
-    {
-        if ( !m_console_input.empty() )
-            m_console->QueueCommand( m_console_input );
-        m_console_input.clear();
-        m_console_autocomplete_options.clear();
-        m_console_autocomplete_selection = 0;
-        m_console_scroll_to_bottom = true;
-        ImGui::SetKeyboardFocusHere( -1 );
-    }
-
-    if ( input_active && !m_console_autocomplete_options.empty() )
-    {
-        constexpr float autocomplete_alpha = 0.86f;
-        const float autocomplete_max_height = ImGui::GetTextLineHeightWithSpacing() * 10.0f
-            + ImGui::GetStyle().WindowPadding.y * 2.0f;
-        ImGui::SetNextWindowPos( input_min, ImGuiCond_Always, ImVec2( 0.0f, 1.0f ) );
-        ImGui::SetNextWindowBgAlpha( autocomplete_alpha );
-        ImGui::SetNextWindowSizeConstraints(
-            ImVec2( input_size.x, 0.0f ),
-            ImVec2( input_size.x, autocomplete_max_height ) );
-        constexpr ImGuiWindowFlags autocomplete_flags = ImGuiWindowFlags_AlwaysAutoResize
-            | ImGuiWindowFlags_NoDecoration
-            | ImGuiWindowFlags_NoFocusOnAppearing
-            | ImGuiWindowFlags_NoInputs
-            | ImGuiWindowFlags_NoSavedSettings
-            | ImGuiWindowFlags_Tooltip;
-
-        if ( ImGui::Begin( "##ConsoleAutocomplete", nullptr, autocomplete_flags ) )
-        {
-            for ( size_t i = 0; i < m_console_autocomplete_options.size(); ++i )
-            {
-                const bool selected = i == m_console_autocomplete_selection;
-                ImGui::Selectable( m_console_autocomplete_options[i].c_str(), selected );
-                if ( selected && m_console_autocomplete_scroll_to_selection )
-                    ImGui::SetScrollHereY( 0.5f );
-            }
-        }
-        ImGui::End();
-        m_console_autocomplete_scroll_to_selection = false;
-    }
-
-    ImGui::End();
-}
-
-void EngineApp::RefreshConsoleAutocomplete( std::string_view input )
-{
-    const std::string selected_option = m_console_autocomplete_options.empty()
-        ? std::string()
-        : m_console_autocomplete_options[m_console_autocomplete_selection];
-
-    const size_t first_space = input.find_first_of( " \t\r\n" );
-    if ( first_space != std::string_view::npos )
-    {
-        m_console_autocomplete_options.clear();
-        m_console_autocomplete_selection = 0;
-        return;
-    }
-
-    m_console->GetAutocompleteOptions( input, m_console_autocomplete_options );
-    m_console_autocomplete_selection = 0;
-    if ( !selected_option.empty() )
-    {
-        const auto selected_it = std::find(
-            m_console_autocomplete_options.begin(),
-            m_console_autocomplete_options.end(),
-            selected_option );
-        if ( selected_it != m_console_autocomplete_options.end() )
-            m_console_autocomplete_selection = static_cast<size_t>( selected_it - m_console_autocomplete_options.begin() );
-    }
-}
-
-int EngineApp::HandleConsoleInput( ImGuiInputTextCallbackData* data )
-{
-    if ( data->EventFlag == ImGuiInputTextFlags_CallbackEdit )
-    {
-        RefreshConsoleAutocomplete( std::string_view( data->Buf, data->BufTextLen ) );
-    }
-    else if ( data->EventFlag == ImGuiInputTextFlags_CallbackHistory && !m_console_autocomplete_options.empty() )
-    {
-        if ( data->EventKey == ImGuiKey_UpArrow )
-        {
-            if ( m_console_autocomplete_selection == 0 )
-                m_console_autocomplete_selection = m_console_autocomplete_options.size() - 1;
-            else
-                --m_console_autocomplete_selection;
-        }
-        else if ( data->EventKey == ImGuiKey_DownArrow )
-        {
-            m_console_autocomplete_selection = ( m_console_autocomplete_selection + 1 )
-                % m_console_autocomplete_options.size();
-        }
-        m_console_autocomplete_scroll_to_selection = true;
-    }
-    else if ( data->EventFlag == ImGuiInputTextFlags_CallbackCompletion )
-    {
-        RefreshConsoleAutocomplete( std::string_view( data->Buf, data->BufTextLen ) );
-        if ( !m_console_autocomplete_options.empty() )
-        {
-            const std::string completion = m_console_autocomplete_options[m_console_autocomplete_selection];
-            data->DeleteChars( 0, data->BufTextLen );
-            data->InsertChars( 0, completion.c_str() );
-            data->InsertChars( data->CursorPos, " " );
-            m_console_autocomplete_options.clear();
-            m_console_autocomplete_selection = 0;
-        }
-    }
-    return 0;
-}
-
-int EngineApp::ConsoleInputCallback( ImGuiInputTextCallbackData* data )
-{
-    return static_cast<EngineApp*>( data->UserData )->HandleConsoleInput( data );
 }
 
 void EngineApp::InitImGUI()
@@ -549,6 +391,7 @@ void EngineApp::InitConsole()
     // startup overrides are applied before RHI initialization.
     m_console->AddCVars( VulkanRHI_GetCVarListHead() );
     m_console->AddCommands( g_console_commands_head );
+    m_console_ui = std::make_unique<EngineConsoleUI>( *m_console );
 }
 
 void EngineApp::InitEngineGlobals()

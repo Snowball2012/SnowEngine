@@ -20,6 +20,7 @@
     <ClCompile Include="..\..\src\Engine\AutomationBridge.cpp" />
     <ClCompile Include="..\..\src\Engine\DescriptorSetPool.cpp" />
     <ClCompile Include="..\..\src\Engine\DisplayMapping.cpp" />
+    <ClCompile Include="..\..\src\Engine\EngineConsoleUI.cpp" />
     <ClCompile Include="..\..\src\Engine\EngineApp.cpp" />
     <ClCompile Include="..\..\src\Engine\LevelObjects.cpp" />
     <ClCompile Include="..\..\src\Engine\Rendergraph.cpp" />
@@ -66,6 +67,7 @@
     <ClInclude Include="..\..\src\Engine\AutomationBridge.h" />
     <ClInclude Include="..\..\src\Engine\DescriptorSetPool.h" />
     <ClInclude Include="..\..\src\Engine\DisplayMapping.h" />
+    <ClInclude Include="..\..\src\Engine\EngineConsoleUI.h" />
     <ClInclude Include="..\..\src\Engine\EngineApp.h" />
     <ClInclude Include="..\..\src\Engine\LevelObjects.h" />
     <ClInclude Include="..\..\src\Engine\Rendergraph.h" />
