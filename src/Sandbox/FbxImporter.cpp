@@ -458,7 +458,8 @@ namespace
 
         ufbx_load_opts options = {};
         options.generate_missing_normals = true;
-        options.target_axes = ufbx_axes_right_handed_y_up;
+        options.target_axes = ufbx_axes_left_handed_y_up;
+        options.handedness_conversion_axis = UFBX_MIRROR_AXIS_X;
         options.target_unit_meters = 1.0;
 
         ufbx_error error = {};
