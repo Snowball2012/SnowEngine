@@ -636,6 +636,17 @@ bool MaterialAsset::Load( const JsonValue& data )
         return false;
     }
 
+    auto twosided = parms->value.FindMember( "twosided" );
+    if ( twosided != parms->value.MemberEnd() )
+    {
+        if ( !twosided->value.IsBool() )
+        {
+            SE_LOG_ERROR( Engine, "File %s contains a twosided value that is not a boolean", m_id.GetPath() );
+            return false;
+        }
+        description.twosided = twosided->value.GetBool();
+    }
+
     auto read_texture = [&]( const char* property, std::string& destination )
     {
         auto it = parms->value.FindMember( property );
@@ -677,6 +688,7 @@ bool MaterialAsset::ApplyDescription( const MaterialDescription& description )
     gpu.f0 = description.f0;
     gpu.roughness = description.roughness;
     gpu.emissive = description.emissive;
+    gpu.twosided = description.twosided ? 1u : 0u;
 
     TextureAssetPtr textures[4] = {};
     uint32_t* indices[4] = { &gpu.albedo_texture_index, &gpu.specular_texture_index, &gpu.normal_texture_index, &gpu.emissive_texture_index };

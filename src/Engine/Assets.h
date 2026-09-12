@@ -19,6 +19,7 @@ struct MaterialGPU
 	uint32_t normal_texture_index = uint32_t(-1);
 	glm::vec3 emissive = {};
 	uint32_t emissive_texture_index = uint32_t(-1);
+	uint32_t twosided = 0;
 };
 
 struct MaterialDescription
@@ -27,6 +28,7 @@ struct MaterialDescription
     glm::vec3 f0 = glm::vec3( 0.04f );
     float roughness = 0.5f;
     glm::vec3 emissive = glm::vec3( 0.0f );
+    bool twosided = false;
     std::string albedo_texture;
     std::string specular_texture;
     std::string normal_texture;

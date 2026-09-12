@@ -447,21 +447,30 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
     float3 tangent_ws;
     float3 bitangent_ws;
     float3 hit_normal_ws = GetHitNormal( hit_data, hit_valid, geometry_normal_ws, hit_uv, tangent_ws, bitangent_ws );
-    if ( dot( geometry_normal_ws, hit_direction_ws ) > 0 )
-    {
-        hit_valid = false;
-        hit_normal_ws = -hit_normal_ws;
-        geometry_normal_ws = -geometry_normal_ws;
-    }
-    
-    if ( hit_valid == false )
-        return inputs;
-    
+
+    bool is_twosided = false;
     Material material;
     if ( hit_data.material_index != INVALID_MATERIAL_INDEX )
     {
         material = materials[ hit_data.material_index ];
+        is_twosided = material.twosided != 0;
     }
+
+    if ( dot( geometry_normal_ws, hit_direction_ws ) > 0 )
+    {
+        if ( !is_twosided )
+        {
+            hit_valid = false;
+        }
+        else
+        {
+            hit_normal_ws = -hit_normal_ws;
+            geometry_normal_ws = -geometry_normal_ws;
+        }
+    }
+    
+    if ( hit_valid == false )
+        return inputs;
     
     inputs.albedo = material.albedo;
     inputs.roughness = material.roughness;

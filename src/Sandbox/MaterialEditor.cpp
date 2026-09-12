@@ -102,6 +102,7 @@ namespace
         Serialization::Serialize( description.f0, f0, document.GetAllocator() );
         parameters.AddMember( "f0", f0, document.GetAllocator() );
         parameters.AddMember( "roughness", description.roughness, document.GetAllocator() );
+        parameters.AddMember( "twosided", description.twosided, document.GetAllocator() );
         JsonValue emissive;
         Serialization::Serialize( description.emissive, emissive, document.GetAllocator() );
         parameters.AddMember( "emissive", emissive, document.GetAllocator() );
@@ -442,6 +443,7 @@ void MaterialEditor::OnUpdate( LevelEditor& editor )
                 bool changed = ImGui::ColorEdit3( "Albedo", &m_edit.albedo.x );
                 changed |= ImGui::ColorEdit3( "F0", &m_edit.f0.x );
                 changed |= ImGui::DragFloat( "Roughness", &m_edit.roughness, 0.01f, 0.02f, 1.0f );
+                changed |= ImGui::Checkbox( "Two-sided", &m_edit.twosided );
                 changed |= ImGui::DragFloat3( "Emissive", &m_edit.emissive.x, 0.01f, 0.0f, 100.0f );
                 if ( changed )
                     ApplyEdit();

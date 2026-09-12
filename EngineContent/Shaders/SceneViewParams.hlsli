@@ -41,6 +41,7 @@ struct Material
     uint normal_texture_index;
     float3 emissive;
     uint emissive_texture_index;
+    uint twosided;
 };
 
 struct DebugLine
