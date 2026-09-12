@@ -7,6 +7,15 @@
 #include "Serialization.h"
 
 class LevelObject;
+class MaterialAsset;
+using MaterialAssetPtr = boost::intrusive_ptr<MaterialAsset>;
+
+class ILevelObjectEditorActions
+{
+public:
+    virtual ~ILevelObjectEditorActions() = default;
+    virtual void OpenMaterial( MaterialAssetPtr material ) = 0;
+};
 
 // Immutable object for everyone except Editor. Defines some traits for level object (transform, mesh, light properties, etc.) for a piece of functionality
 // Children must override OnGenerate to add ECS components to base entity or spawn new entities
@@ -19,7 +28,7 @@ public:
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const = 0;
 
     // Called when user can see and edit trait props
-    virtual void OnUpdateGUI( bool& trait_changed ) = 0;
+    virtual void OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* editor_actions ) = 0;
 
     virtual bool Serialize( JsonValue& out, JsonAllocator& allocator ) const = 0;
     virtual bool Deserialize( const JsonValue& in ) = 0;
@@ -71,7 +80,7 @@ public:
     bool AddTrait( std::unique_ptr<LevelObjectTrait>&& trait, bool defer_regeneration );
 
     // Returns true if entity needs to be regenerated
-    bool OnUpdateGUI();
+    bool OnUpdateGUI( ILevelObjectEditorActions* editor_actions );
 
     bool Serialize( JsonValue& out, JsonAllocator& allocator ) const;
     bool Deserialize( const JsonValue& in, bool defer_regeneration );
@@ -96,7 +105,6 @@ public:
 
     static std::unique_ptr<LevelObjectTrait> CreateTrait( const char* className );
     static const std::vector<TraitInfo>& GetAllTraits() { return s_trait_infos; }
-
 private:
 
     template<typename T> 
@@ -106,7 +114,6 @@ private:
     static std::unordered_map<std::string, TraitFactoryFunctionPtr> s_trait_factories;
 
     static std::vector<TraitInfo> s_trait_infos;
-
     void DestroyEntities();
     bool GenerateEntities();
 };
@@ -143,7 +150,7 @@ public:
 
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
-    virtual void OnUpdateGUI( bool& trait_changed ) override;
+    virtual void OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* editor_actions ) override;
 
     static const char* PrettyName() { return "Transform"; }
 
@@ -164,7 +171,7 @@ public:
 
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
-    virtual void OnUpdateGUI( bool& trait_changed ) override;
+    virtual void OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* editor_actions ) override;
 
     static const char* PrettyName() { return "Mesh Instance"; }
 
@@ -186,7 +193,7 @@ public:
 
     virtual bool OnGenerate( WorldEntity base_entity, LevelObject& levelobj ) const override;
 
-    virtual void OnUpdateGUI( bool& trait_changed ) override;
+    virtual void OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* editor_actions ) override;
 
     static const char* PrettyName() { return "Environment"; }
 

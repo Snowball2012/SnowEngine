@@ -289,6 +289,14 @@ uint32_t GlobalDescriptors::AddMaterial( const MaterialGPU& material_data )
     return material_index;
 }
 
+bool GlobalDescriptors::UpdateMaterial( uint32_t material_index, const MaterialGPU& material_data )
+{
+    if ( material_index >= MAX_SCENE_MATERIALS || !m_material_buffer )
+        return false;
+    m_material_buffer->WriteBytes( &material_data, sizeof( MaterialGPU ), material_index * sizeof( MaterialGPU ) );
+    return true;
+}
+
 uint32_t GlobalDescriptors::AddTexture( RHITextureROView& texture )
 {
     if ( m_free_texture_slots.empty() )

@@ -21,6 +21,18 @@ struct MaterialGPU
 	uint32_t emissive_texture_index = uint32_t(-1);
 };
 
+struct MaterialDescription
+{
+    glm::vec3 albedo = glm::vec3( 0.18f );
+    glm::vec3 f0 = glm::vec3( 0.04f );
+    float roughness = 0.5f;
+    glm::vec3 emissive = glm::vec3( 0.0f );
+    std::string albedo_texture;
+    std::string specular_texture;
+    std::string normal_texture;
+    std::string emissive_texture;
+};
+
 class MaterialAsset : public Asset
 {
 	IMPLEMENT_ASSET_GENERATOR;
@@ -28,6 +40,7 @@ class MaterialAsset : public Asset
 	uint32_t m_global_material_index = -1;
 
 	MaterialGPU m_gpu_data = {};
+    MaterialDescription m_description;
 	TextureAssetPtr m_albedo_texture;
 	TextureAssetPtr m_specular_texture;
 	TextureAssetPtr m_normal_texture;
@@ -43,6 +56,9 @@ public:
 	virtual bool Load( const JsonValue& data ) override;
 
 	uint32_t GetGlobalMaterialIndex() const { return m_global_material_index; }
+    const MaterialDescription& GetDescription() const { return m_description; }
+    const MaterialGPU& GetGPUData() const { return m_gpu_data; }
+    bool ApplyDescription( const MaterialDescription& description );
 
 };
 using MaterialAssetPtr = boost::intrusive_ptr<MaterialAsset>;
@@ -83,6 +99,7 @@ public:
 	uint32_t GetGlobalGeomIndex() const { return m_global_geom_index; }
 
 	const MaterialAsset* GetMaterial() const { return m_default_material.get(); }
+    const MaterialAssetPtr& GetMaterialAsset() const { return m_default_material; }
 
 protected:
 	MeshAsset( const AssetId& id, AssetManager& mgr )

@@ -3,6 +3,7 @@
 #include "StdAfx.h"
 
 #include "Editor.h"
+#include "MaterialEditor.h"
 
 #include <Engine/EngineApp.h>
 #include <Engine/Assets.h>
@@ -11,7 +12,6 @@
 #include <Engine/LevelObjects.h>
 #include <ImguiBackend/ImguiBackend.h>
 
-class MaterialEditor;
 
 class SandboxApp : public EngineApp
 {
@@ -36,10 +36,9 @@ private:
     // GUI state
     bool m_show_imgui_demo = false;
     bool m_show_world_outliner = false;
-    bool m_show_material_editor = false;
 
     std::unique_ptr<LevelEditor> m_editor;
-    //std::unique_ptr<MaterialEditor> m_material_editor;
+    std::unique_ptr<MaterialEditor> m_material_editor;
 
     decltype( std::chrono::high_resolution_clock::now() ) m_last_tick_time;
 

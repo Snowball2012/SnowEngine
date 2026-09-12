@@ -50,6 +50,8 @@ private:
 
 	std::vector<const char*> m_all_traits_pretty_names;
 
+    ILevelObjectEditorActions* m_editor_actions = nullptr;
+
 public:
     LevelEditor();
     ~LevelEditor();
@@ -65,6 +67,7 @@ public:
     bool SetViewportExtents( glm::uvec2 extents );
 
     void ResetAccumulation();
+    void SetEditorActions( ILevelObjectEditorActions* editor_actions ) { m_editor_actions = editor_actions; }
 
     const glm::vec3& GetViewPosition() const { return m_editor_camera.GetPosition(); }
     const glm::quat& GetViewOrientation() const { return m_editor_camera.GetOrientation(); }

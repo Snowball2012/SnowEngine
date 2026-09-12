@@ -136,6 +136,8 @@ void SandboxApp::OnInit()
     SE_LOG_INFO( Sandbox, "Sandbox initialization started" );
 
     m_editor = std::make_unique<LevelEditor>();
+    m_material_editor = std::make_unique<MaterialEditor>();
+    m_editor->SetEditorActions( m_material_editor.get() );
     m_editor->SetViewportExtents( m_swapchain->GetExtent() );
 
     const std::string& start_level = StartLevel.GetValue();
@@ -151,6 +153,8 @@ void SandboxApp::OnCleanup()
 {
     SE_LOG_INFO( Sandbox, "Sandbox shutdown started" );
 
+    m_editor->SetEditorActions( nullptr );
+    m_material_editor = nullptr;
     m_editor = nullptr;
 
     SE_LOG_INFO( Sandbox, "Sandbox shutdown complete" );
@@ -331,6 +335,7 @@ void SandboxApp::OnUpdate()
     m_last_tick_time = current_time;
 
     m_editor->Update( delta_time );
+    if ( m_material_editor ) m_material_editor->OnUpdate( *m_editor );
 }
 
 
@@ -450,7 +455,10 @@ void SandboxApp::UpdateGui()
         if ( ImGui::BeginMenu( "Tools" ) ) {
 
             if ( ImGui::MenuItem( "Material Editor" ) )
-                m_show_material_editor = true;
+            {
+                if ( m_material_editor )
+                    m_material_editor->Show();
+            }
 
             if ( ImGui::MenuItem( "WorldOutliner" ) )
                 m_show_world_outliner = true;
@@ -526,9 +534,5 @@ void SandboxApp::UpdateGui()
         ImGui::End();
     }
 
-    if ( m_show_material_editor )
-    {
-        ImGui::Begin( "Material Editor", &m_show_material_editor, ImGuiWindowFlags_None );
-        ImGui::End();
-    }
+
 }

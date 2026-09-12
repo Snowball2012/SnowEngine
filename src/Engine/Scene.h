@@ -171,6 +171,7 @@ public:
 
     uint32_t AddGeometry( const RHIBufferViewInfo& vertices, const RHIBufferViewInfo& indices );
     uint32_t AddMaterial( const MaterialGPU& material_data );
+    bool UpdateMaterial( uint32_t material_index, const MaterialGPU& material_data );
     uint32_t AddTexture( RHITextureROView& texture );
 
     RHIDescriptorSet& GetDescSet() const { return *m_global_descset; }
@@ -232,6 +233,8 @@ public:
     RHISampler* GetPointSampler() const;
 
     GlobalDescriptors& GetGlobalDescriptors() const { return *m_global_descriptors; }
+
+    const MaterialAssetPtr& GetDefaultMaterial() const { return m_default_material; }
 
     const DebugDrawing& GetDebugDrawing() const { return *m_debug_drawing; }
 

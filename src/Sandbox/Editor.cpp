@@ -372,7 +372,7 @@ bool LevelEditor::Update( float delta_time_sec )
                         }
                     }
 
-                    if ( level_object->OnUpdateGUI() )
+                    if ( level_object->OnUpdateGUI( m_editor_actions ) )
                     {
                         level_object->RegenerateEntities();
                         scene_view_changed = true;

@@ -621,47 +621,95 @@ bool MaterialAsset::Load( const JsonValue& data )
     JsonValue::ConstMemberIterator parms = data.FindMember( "parms" );
     if ( parms == data.MemberEnd() || !parms->value.IsObject() )
     {
-        SE_LOG_ERROR( Engine, "File %s is not a valid material asset: \"parms\" value is invalid", m_id.GetPath() );
+        SE_LOG_ERROR( Engine, "File %s is not a valid material: \"parms\" is missing or not an object", m_id.GetPath() );
         return false;
     }
 
-    bool has_albedo = Serialization::Deserialize( parms->value, "albedo", m_gpu_data.albedo );
-
-    bool has_f0 = Serialization::Deserialize( parms->value, "f0", m_gpu_data.f0 );
-
-    bool has_roughness = Serialization::Deserialize( parms->value, "roughness", m_gpu_data.roughness );
-    Serialization::Deserialize( parms->value, "emissive", m_gpu_data.emissive );
-
-    auto load_texture = [&]( const char* property, TextureAssetPtr& destination, uint32_t& texture_index )
+    MaterialDescription description;
+    const bool has_albedo = Serialization::Deserialize( parms->value, "albedo", description.albedo );
+    const bool has_f0 = Serialization::Deserialize( parms->value, "f0", description.f0 );
+    const bool has_roughness = Serialization::Deserialize( parms->value, "roughness", description.roughness );
+    Serialization::Deserialize( parms->value, "emissive", description.emissive );
+    if ( !has_albedo || !has_f0 || !has_roughness )
     {
-        JsonValue::ConstMemberIterator texture_it = parms->value.FindMember( property );
-        if ( texture_it == parms->value.MemberEnd() )
+        SE_LOG_ERROR( Engine, "File %s is missing valid albedo, f0, or roughness values", m_id.GetPath() );
+        return false;
+    }
+
+    auto read_texture = [&]( const char* property, std::string& destination )
+    {
+        auto it = parms->value.FindMember( property );
+        if ( it == parms->value.MemberEnd() )
             return true;
-        if ( !texture_it->value.IsString() )
-        {
-            SE_LOG_ERROR( Engine, "Material %s property %s must be an asset path string", m_id.GetPath(), property );
+        if ( !it->value.IsString() )
             return false;
-        }
-        destination = LoadAsset<TextureAsset>( texture_it->value.GetString() );
-        if ( destination == nullptr )
-        {
-            SE_LOG_ERROR( Engine, "Material %s could not load texture %s", m_id.GetPath(), texture_it->value.GetString() );
-            return false;
-        }
-        texture_index = destination->GetGlobalTextureIndex();
+        destination = it->value.GetString();
         return true;
     };
 
-    if ( !load_texture( "albedo_texture", m_albedo_texture, m_gpu_data.albedo_texture_index )
-        || !load_texture( "specular_texture", m_specular_texture, m_gpu_data.specular_texture_index )
-        || !load_texture( "normal_texture", m_normal_texture, m_gpu_data.normal_texture_index )
-        || !load_texture( "emissive_texture", m_emissive_texture, m_gpu_data.emissive_texture_index ) )
+    if ( !read_texture( "albedo_texture", description.albedo_texture ) ||
+        !read_texture( "specular_texture", description.specular_texture ) ||
+        !read_texture( "normal_texture", description.normal_texture ) ||
+        !read_texture( "emissive_texture", description.emissive_texture ) )
     {
+        SE_LOG_ERROR( Engine, "File %s contains a material texture path that is not a string", m_id.GetPath() );
+        return false;
+    }
+    return ApplyDescription( description );
+}
+
+bool MaterialAsset::ApplyDescription( const MaterialDescription& description )
+{
+    const auto finite_vector = []( const glm::vec3& value )
+    {
+        return std::isfinite( value.x ) && std::isfinite( value.y ) && std::isfinite( value.z );
+    };
+    if ( !finite_vector( description.albedo ) || !finite_vector( description.f0 ) ||
+        !finite_vector( description.emissive ) || !std::isfinite( description.roughness ) ||
+        description.roughness < 0.02f || description.roughness > 1.0f )
+    {
+        SE_LOG_ERROR( Engine, "Material %s contains invalid numeric values", m_id.GetPath() );
         return false;
     }
 
-    m_global_material_index = GetRenderer().GetGlobalDescriptors().AddMaterial( m_gpu_data );
+    MaterialGPU gpu = {};
+    gpu.albedo = description.albedo;
+    gpu.f0 = description.f0;
+    gpu.roughness = description.roughness;
+    gpu.emissive = description.emissive;
 
+    TextureAssetPtr textures[4] = {};
+    uint32_t* indices[4] = { &gpu.albedo_texture_index, &gpu.specular_texture_index, &gpu.normal_texture_index, &gpu.emissive_texture_index };
+    const std::string* paths[4] = { &description.albedo_texture, &description.specular_texture, &description.normal_texture, &description.emissive_texture };
+    for ( int i = 0; i < 4; ++i )
+    {
+        if ( paths[i]->empty() )
+            continue;
+        textures[i] = LoadAsset<TextureAsset>( paths[i]->c_str() );
+        if ( textures[i] == nullptr )
+        {
+            SE_LOG_ERROR( Engine, "Could not load texture %s for material %s", paths[i]->c_str(), m_id.GetPath() );
+            return false;
+        }
+        *indices[i] = textures[i]->GetGlobalTextureIndex();
+    }
+
+    if ( m_global_material_index == uint32_t( -1 ) )
+    {
+        m_global_material_index = GetRenderer().GetGlobalDescriptors().AddMaterial( gpu );
+        if ( m_global_material_index == uint32_t( -1 ) )
+        {
+            SE_LOG_ERROR( Engine, "Global material capacity exhausted while loading %s", m_id.GetPath() );
+            return false;
+        }
+    }
+
+    m_description = description;
+    m_gpu_data = gpu;
+    m_albedo_texture = std::move( textures[0] );
+    m_specular_texture = std::move( textures[1] );
+    m_normal_texture = std::move( textures[2] );
+    m_emissive_texture = std::move( textures[3] );
     m_status = AssetStatus::Ready;
     return true;
 }

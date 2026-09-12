@@ -3,6 +3,7 @@
 #include "LevelObjects.h"
 
 #include "Assets.h"
+#include "Scene.h"
 
 #include <imgui/imgui.h>
 #include <imgui/misc/cpp/imgui_stdlib.h>
@@ -56,7 +57,7 @@ bool LevelObject::AddTrait( std::unique_ptr<LevelObjectTrait>&& trait, bool defe
     return true;
 }
 
-bool LevelObject::OnUpdateGUI()
+bool LevelObject::OnUpdateGUI( ILevelObjectEditorActions* editor_actions )
 {
     bool needs_regeneration = false;
     for ( const auto& trait : m_traits )
@@ -64,7 +65,7 @@ bool LevelObject::OnUpdateGUI()
         bool trait_changed = false;
         if ( ImGui::TreeNode( trait.get(), "%s", trait->GetTraitPrettyName()) )
         {
-            trait->OnUpdateGUI( trait_changed );
+            trait->OnUpdateGUI( trait_changed, editor_actions );
             ImGui::TreePop();
         }
 
@@ -276,7 +277,7 @@ bool TransformTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelobj 
     return true;
 }
 
-void TransformTrait::OnUpdateGUI( bool& trait_changed )
+void TransformTrait::OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* )
 {
     trait_changed = false;
 
@@ -367,12 +368,43 @@ bool MeshInstanceTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelo
     return true;
 }
 
-void MeshInstanceTrait::OnUpdateGUI( bool& trait_changed )
+void MeshInstanceTrait::OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* editor_actions )
 {
     trait_changed = false;
 
     ImGui::InputText( "Asset", &m_gui_path );
-    if ( ImGui::IsItemDeactivatedAfterEdit() )
+    const bool mesh_path_edited = ImGui::IsItemDeactivatedAfterEdit();
+    if ( m_mesh != nullptr )
+    {
+        MaterialAssetPtr material = m_mesh->GetMaterialAsset();
+        bool using_fallback = false;
+        if ( material == nullptr )
+        {
+            material = GetRenderer().GetDefaultMaterial();
+            using_fallback = true;
+        }
+
+        ImGui::TextUnformatted( "Material" );
+        ImGui::SameLine();
+        if ( material != nullptr )
+        {
+            const std::string material_name = std::filesystem::path( material->GetPath() ).filename().string();
+            if ( ImGui::SmallButton( material_name.c_str() ) && editor_actions != nullptr )
+                editor_actions->OpenMaterial( material );
+            if ( ImGui::IsItemHovered() )
+                ImGui::SetTooltip( "%s", material->GetPath() );
+            if ( using_fallback )
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled( "(fallback)" );
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled( "Unavailable" );
+        }
+    }
+    if ( mesh_path_edited )
     {
         if ( m_gui_path.empty() )
         {
@@ -452,7 +484,7 @@ bool EnvironmentTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelob
     return true;
 }
 
-void EnvironmentTrait::OnUpdateGUI( bool& trait_changed )
+void EnvironmentTrait::OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActions* )
 {
     trait_changed = false;
 
