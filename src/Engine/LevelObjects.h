@@ -185,6 +185,7 @@ public:
 class EnvironmentTrait : public LevelObjectTrait
 {
     TextureAssetPtr m_env_cubemap = nullptr;
+    float m_intensity = 1.0f;
 
     mutable std::string m_env_cubemap_gui_path;
 

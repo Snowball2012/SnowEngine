@@ -14,6 +14,8 @@ struct SceneViewParams
     int2 cursor_position_px;
     uint random_uint;
     uint use_accumulation;
+    float env_intensity;
+    uint pad0;
 };
 
 struct TLASItemParams

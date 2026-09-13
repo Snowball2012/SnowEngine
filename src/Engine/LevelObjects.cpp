@@ -475,6 +475,7 @@ bool EnvironmentTrait::OnGenerate( WorldEntity base_entity, LevelObject& levelob
     EnvCubemapComponent& component = levelobj.AddComponent<EnvCubemapComponent>( base_entity );
 
     component.cubemap = m_env_cubemap;
+    component.intensity = m_intensity;
 
     if ( m_env_cubemap != nullptr )
     {
@@ -513,6 +514,7 @@ void EnvironmentTrait::OnUpdateGUI( bool& trait_changed, ILevelObjectEditorActio
             }
         }
     }
+    trait_changed |= ImGui::InputFloat( "Intensity", &m_intensity );
 }
 
 bool EnvironmentTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) const
@@ -522,6 +524,9 @@ bool EnvironmentTrait::Serialize( JsonValue& out, JsonAllocator& allocator ) con
     JsonValue path_json_string;
     path_json_string.SetString( m_env_cubemap != nullptr ? m_env_cubemap->GetPath() : "", allocator );
     out.AddMember( "env_cubemap", path_json_string, allocator );
+    JsonValue intensity_val;
+    intensity_val.SetFloat( m_intensity );
+    out.AddMember( "intensity", intensity_val, allocator );
 
     return true;
 }
@@ -539,6 +544,16 @@ bool EnvironmentTrait::Deserialize( const JsonValue& in )
     {
         SE_LOG_ERROR( Engine, "%s: env_cubemap property not found or invalid", GetTraitPrettyName() );
         return false;
+    }
+
+    auto intensity_it = in.FindMember( "intensity" );
+    if ( intensity_it == in.MemberEnd() || !asset_it->value.IsFloat() )
+    {
+        m_intensity = 1.0f;
+    }
+    else
+    {
+        m_intensity = intensity_it->value.GetFloat();
     }
 
     m_env_cubemap = LoadAsset<TextureAsset>( asset_it->value.GetString() );

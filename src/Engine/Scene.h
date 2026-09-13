@@ -37,6 +37,7 @@ private:
     SceneMeshInstanceList m_mesh_instances;
 
     TextureAssetPtr m_env_cubemap;
+    float m_env_intensity = 1.0f;
 
 public:
     Scene();
@@ -50,8 +51,9 @@ public:
 
     TLAS& GetTLAS() { return *m_tlas; }
 
-    void SetEnvCubemap( TextureAssetPtr cubemap ) { m_env_cubemap = std::move( cubemap ); }
+    void SetEnvCubemap( TextureAssetPtr cubemap, float intensity ) { m_env_cubemap = std::move( cubemap ); m_env_intensity = intensity; }
     TextureAsset* GetEnvCubemap() const { return m_env_cubemap.get(); }
+    float GetEnvIntensity() const { return m_env_intensity; }
 
     // Call before any render operation on the scene. This makes changes made to scene objects (mesh instances, etc.) visible to the renderer
     void Synchronize();

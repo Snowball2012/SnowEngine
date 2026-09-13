@@ -455,6 +455,7 @@ BSDFInputs SampleHitMaterial( HitData hit_data, float3 hit_direction_ws, out boo
         material = materials[ hit_data.material_index ];
         is_twosided = material.twosided != 0;
     }
+    is_twosided = true;
 
     if ( dot( geometry_normal_ws, hit_direction_ws ) > 0 )
     {
@@ -574,7 +575,7 @@ float3 GetMissRadiance( float3 direction )
     uv.y = 0.5f - asin( direction.y ) / M_PI;
     uv.x = ( atan2( direction.x, direction.z ) + M_PI ) / ( 2 * M_PI );
     
-    return env_cubemap.SampleLevel( env_cubemap_sampler, uv, 0 );
+    return env_cubemap.SampleLevel( env_cubemap_sampler, uv, 0 ) * view_data.env_intensity;
     //return _float3( 10.0f ); constant color sampling
 }
 

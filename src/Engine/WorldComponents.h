@@ -34,6 +34,7 @@ struct MeshInstanceSetupComponent
 struct EnvCubemapComponent
 {
 	TextureAssetPtr cubemap = nullptr;
+    float intensity = 1.0f;
 };
 
 struct EditorPickingComponent

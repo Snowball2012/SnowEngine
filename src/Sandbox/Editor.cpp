@@ -489,7 +489,7 @@ void LevelEditor::UpdateScene()
     uint32_t num_cubemaps = 0;
     for ( const auto& [entity_id, env_cubemap_component] : m_world->CreateView<EnvCubemapComponent>() ) {
         num_cubemaps++;
-        m_scene->SetEnvCubemap( env_cubemap_component.cubemap );
+        m_scene->SetEnvCubemap( env_cubemap_component.cubemap, env_cubemap_component.intensity );
     }
 
     if ( num_cubemaps > 1 ) {

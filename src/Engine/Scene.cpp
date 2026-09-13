@@ -177,7 +177,8 @@ namespace
         glm::ivec2 cursor_position_px;
         uint32_t random_uint;
         uint32_t use_accumulation;
-        uint32_t pad[2];
+        float env_intensity;
+        uint32_t pad0;
     };
 
     struct GPUTLASItemParams
@@ -683,6 +684,8 @@ void Renderer::UpdateSceneViewParams( const SceneViewFrameData& view_data )
     svp.random_uint = HashUint32( m_random_seed++ );
 
     svp.use_accumulation = view_data.accumulated_idx != -1 ? 1 : 0;
+
+    svp.env_intensity = view.GetScene().GetEnvIntensity();
 
     UploadBufferRange gpu_buffer = view_data.rg->AllocateUploadBufferUniform<GPUSceneViewParams>();
 
